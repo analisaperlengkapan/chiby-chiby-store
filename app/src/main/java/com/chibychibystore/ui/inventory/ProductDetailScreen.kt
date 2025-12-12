@@ -1,0 +1,327 @@
+package com.chibychibystore.ui.inventory
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.chibychibystore.data.model.Kategori
+import com.chibychibystore.data.model.Gudang
+import com.chibychibystore.data.model.Produk
+import com.chibychibystore.ui.components.shared.AppTopBar
+import com.chibychibystore.ui.components.ErrorMessage
+import com.chibychibystore.ui.components.LoadingIndicator
+import com.chibychibystore.ui.components.dialogs.ConfirmDialog
+import com.chibychibystore.ui.navigation.Screen
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProductDetailScreen(
+    navController: NavController,
+    productId: Long,
+    viewModel: ProductDetailViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Load product when screen opens
+    LaunchedEffect(productId) {
+        viewModel.loadProduct(productId)
+    }
+
+    Scaffold(
+        topBar = {
+            ProductDetailTopBar(
+                uiState = uiState,
+                onBackClick = { navController.navigateUp() },
+                onEditClick = { viewModel.toggleEditMode() },
+                onSaveClick = { viewModel.saveProduct(uiState.product ?: return@ProductDetailTopBar) },
+                onCancelClick = { viewModel.cancelEdit() },
+                onDeleteClick = { showDeleteDialog = true }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when {
+                uiState.isLoading -> {
+                    LoadingIndicator()
+                }
+                uiState.error != null -> {
+                    ErrorMessage(
+                        message = uiState.error!!,
+                        onRetry = { viewModel.loadProduct(productId) }
+                    )
+                }
+                uiState.product != null -> {
+                    ProductDetailContent(
+                        product = uiState.product!!,
+                        isEditing = uiState.isEditing,
+                        onProductChange = { updatedProduct ->
+                            // Update the product in state
+                            viewModel.uiState.value.copy(product = updatedProduct)
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteDialog) {
+        ConfirmDialog(
+            title = "Hapus Produk?",
+            message = "Produk ${uiState.product?.nama} akan dihapus. Tindakan ini tidak dapat dibatalkan.",
+            confirmText = "Hapus",
+            dismissText = "Batal",
+            onConfirm = {
+                viewModel.deleteProduct()
+                showDeleteDialog = false
+                navController.navigateUp()
+            },
+            onDismiss = { showDeleteDialog = false }
+        )
+    }
+
+    // Success message display
+    uiState.successMessage?.let { message ->
+        LaunchedEffect(message) {
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+            viewModel.clearSuccessMessage()
+            // Small delay before navigation to let user see the message
+            kotlinx.coroutines.delay(1000)
+            if (uiState.isSaved || uiState.isDeleted) {
+                navController.navigateUp()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProductDetailTopBar(
+    uiState: ProductDetailUiState,
+    onBackClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onSaveClick: () -> Unit,
+    onCancelClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    AppTopBar(
+        title = if (uiState.isEditing) "Edit Produk" else "Detail Produk",
+        navigationIcon = Icons.Default.ArrowBack,
+        onNavigationClick = onBackClick,
+        actions = {
+            if (uiState.isEditing) {
+                IconButton(onClick = onSaveClick) {
+                    Icon(Icons.Default.Save, contentDescription = "Simpan")
+                }
+                IconButton(onClick = onCancelClick) {
+                    Icon(Icons.Default.Cancel, contentDescription = "Batal")
+                }
+            } else {
+                IconButton(onClick = onEditClick) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                }
+                IconButton(onClick = onDeleteClick) {
+                    Icon(Icons.Default.Delete, contentDescription = "Hapus")
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun ProductDetailContent(
+    product: Produk,
+    isEditing: Boolean,
+    onProductChange: (Produk) -> Unit
+) {
+    var editedProduct by remember { mutableStateOf(product) }
+
+    // Update edited product when product changes
+    LaunchedEffect(product) {
+        editedProduct = product
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Basic Information Section
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Informasi Dasar",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                )
+
+                ProductTextField(
+                    label = "Nama Produk",
+                    value = editedProduct.nama,
+                    onValueChange = { editedProduct = editedProduct.copy(nama = it) },
+                    enabled = isEditing,
+                    isRequired = true
+                )
+
+                ProductTextField(
+                    label = "Barcode",
+                    value = editedProduct.barcode ?: "",
+                    onValueChange = { editedProduct = editedProduct.copy(barcode = it.takeIf { it.isNotBlank() }) },
+                    enabled = isEditing,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            }
+        }
+
+        // Pricing Section
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Harga",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                )
+
+                ProductTextField(
+                    label = "Harga Beli",
+                    value = editedProduct.hargaBeli.toString(),
+                    onValueChange = { value ->
+                        value.toDoubleOrNull()?.let { price ->
+                            editedProduct = editedProduct.copy(hargaBeli = price)
+                        }
+                    },
+                    enabled = isEditing,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isRequired = true
+                )
+
+                ProductTextField(
+                    label = "Harga Jual",
+                    value = editedProduct.hargaJual.toString(),
+                    onValueChange = { value ->
+                        value.toDoubleOrNull()?.let { price ->
+                            editedProduct = editedProduct.copy(hargaJual = price)
+                        }
+                    },
+                    enabled = isEditing,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isRequired = true
+                )
+            }
+        }
+
+        // Inventory Section
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Inventori",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                )
+
+                ProductTextField(
+                    label = "Stok",
+                    value = editedProduct.stok.toString(),
+                    onValueChange = { value ->
+                        value.toIntOrNull()?.let { stock ->
+                            editedProduct = editedProduct.copy(stok = stock)
+                        }
+                    },
+                    enabled = isEditing,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isRequired = true
+                )
+
+                ProductTextField(
+                    label = "Stok Minimum",
+                    value = editedProduct.minStok.toString(),
+                    onValueChange = { value ->
+                        value.toIntOrNull()?.let { minStock ->
+                            editedProduct = editedProduct.copy(minStok = minStock)
+                        }
+                    },
+                    enabled = isEditing,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            }
+        }
+
+        // Update the product in parent when edited
+        if (isEditing) {
+            LaunchedEffect(editedProduct) {
+                onProductChange(editedProduct)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProductTextField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    enabled: Boolean = true,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    isRequired: Boolean = false
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = {
+            Row {
+                Text(label)
+                if (isRequired) {
+                    Text(" *", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        enabled = enabled,
+        keyboardOptions = keyboardOptions,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
+    )
+}

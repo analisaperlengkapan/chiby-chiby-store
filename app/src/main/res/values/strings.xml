@@ -1,0 +1,116 @@
+<resources>
+    <string name="app_name">Chiby Chiby Store</string>
+    <string name="login">Masuk</string>
+    <string name="username">Nama Pengguna</string>
+    <string name="password">Kata Sandi</string>
+    <string name="dashboard">Dasbor</string>
+    <string name="inventory">Inventaris</string>
+    <string name="sales">Penjualan</string>
+    <string name="reports">Laporan</string>
+    <string name="settings">Pengaturan</string>
+
+    <!-- POS Screen -->
+    <string name="pos_title">Point of Sale</string>
+    <string name="pos_search_products">Cari produk...</string>
+    <string name="pos_add_product">Tambah Produk</string>
+    <string name="pos_quantity">Qty</string>
+    <string name="pos_price">Harga</string>
+    <string name="pos_total">Total</string>
+    <string name="pos_subtotal">Subtotal</string>
+    <string name="pos_tax">Pajak (10%)</string>
+    <string name="pos_discount">Diskon</string>
+    <string name="pos_grand_total">Total Akhir</string>
+    <string name="pos_payment_method">Metode Pembayaran</string>
+    <string name="pos_cash">Tunai</string>
+    <string name="pos_card">Kartu</string>
+    <string name="pos_process_payment">Proses Pembayaran</string>
+    <string name="pos_sale_completed">Penjualan Berhasil!</string>
+    <string name="pos_sale_id">ID Penjualan: %d</string>
+    <string name="pos_sale_success_message">Transaksi telah berhasil diproses. Apakah Anda ingin mencetak struk?</string>
+    <string name="pos_print_receipt">Cetak Struk</string>
+    <string name="pos_printing_receipt">Mencetak...</string>
+    <string name="pos_new_transaction">Transaksi Baru</string>
+
+    <!-- Common -->
+    <string name="common_close">Tutup</string>
+    <string name="common_cancel">Batal</string>
+    <string name="common_save">Simpan</string>
+    <string name="common_delete">Hapus</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_add">Tambah</string>
+    <string name="common_search">Cari</string>
+    <string name="common_filter">Filter</string>
+    <string name="common_loading">Memuat...</string>
+    <string name="common_error">Error</string>
+    <string name="common_retry">Coba Lagi</string>
+    <string name="common_ok">OK</string>
+    <string name="common_yes">Ya</string>
+    <string name="common_no">Tidak</string>
+
+    <!-- Barcode Scanner -->
+    <string name="barcode_scanner_title">Scan Barcode</string>
+    <string name="barcode_scan_instructions">Arahkan kamera ke barcode produk</string>
+    <string name="barcode_last_scanned">Terakhir scan: %s</string>
+    <string name="barcode_processing">Memproses...</string>
+    <string name="barcode_manual_input">Input Manual</string>
+    <string name="barcode_manual_input_title">Masukkan Barcode Manual</string>
+    <string name="barcode_manual_input_message">Jika kamera tidak dapat membaca barcode, masukkan kode secara manual</string>
+    <string name="barcode_enter_code">Kode Barcode</string>
+    <string name="barcode_camera_permission_title">Izin Kamera Diperlukan</string>
+    <string name="barcode_camera_permission_message">Untuk dapat memindai barcode, aplikasi memerlukan akses ke kamera. Berikan izin kamera untuk melanjutkan.</string>
+    <string name="barcode_grant_permission">Berikan Izin</string>
+
+    <!-- Barcode Print -->
+    <string name="barcode_print_title">Cetak Label Barcode</string>
+    <string name="barcode_select_product">Pilih Produk</string>
+    <string name="barcode_search_product">Cari produk...</string>
+    <string name="barcode_no_products_found">Tidak ada produk ditemukan</string>
+    <string name="barcode_label_settings">Pengaturan Label</string>
+    <string name="barcode_label_size">Ukuran Label</string>
+    <string name="barcode_quantity">Jumlah</string>
+    <string name="barcode_print_labels">Cetak %d Label</string>
+    <string name="barcode_printing_labels">Mencetak label...</string>
+    <string name="barcode_label_preview">Pratinjau Label</string>
+    <string name="barcode_preview_note">Pratinjau label %1$s (%2$d lembar)</string>
+    <string name="barcode_print_success">Label berhasil dicetak</string>
+    <string name="barcode_print_error">Gagal mencetak label: %s</string>
+
+    <!-- Reports -->
+    <string name="reports_title">Laporan</string>
+    <string name="reports_select_type">Pilih Tipe Laporan</string>
+    <string name="reports_start_date">Tanggal Mulai</string>
+    <string name="reports_end_date">Tanggal Akhir</string>
+    <string name="reports_loading">Memuat laporan...</string>
+    <string name="reports_error">Gagal memuat laporan</string>
+    <string name="reports_no_data">Tidak ada data untuk periode ini</string>
+    <string name="reports_export">Ekspor</string>
+    <string name="reports_export_pdf">Ekspor PDF</string>
+    <string name="reports_export_excel">Ekspor Excel</string>
+
+    <!-- Report Types -->
+    <string name="report_gross_sales">Penjualan Kotor</string>
+    <string name="report_profit_margin">Margin Keuntungan</string>
+    <string name="report_net_profit">Keuntungan Bersih</string>
+    <string name="report_sales_by_product">Penjualan per Produk</string>
+    <string name="report_sales_by_category">Penjualan per Kategori</string>
+    <string name="report_sales_trend">Trend Penjualan</string>
+    <string name="report_income_statement">Laporan Laba Rugi</string>
+    <string name="report_cash_flow">Arus Kas</string>
+    <string name="report_expense_report">Laporan Pengeluaran</string>
+    <string name="report_balance_sheet">Neraca</string>
+
+    <!-- Report Labels -->
+    <string name="report_total_sales">Total Penjualan</string>
+    <string name="report_total_transactions">Total Transaksi</string>
+    <string name="report_average_transaction">Rata-rata Transaksi</string>
+    <string name="report_total_revenue">Total Pendapatan</string>
+    <string name="report_total_cost">Total Biaya</string>
+    <string name="report_gross_profit">Laba Kotor</string>
+    <string name="report_assets">Aset</string>
+    <string name="report_liabilities">Liabilitas</string>
+    <string name="report_equity">Ekuitas</string>
+    <string name="report_inventory_value">Nilai Inventaris</string>
+    <string name="report_cash_balance">Saldo Kas</string>
+    <string name="report_period">Periode</string>
+    <string name="report_as_of_date">Per Tanggal</string>
+</resources>
