@@ -16,9 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.ExpenseCategory
-import com.chibychibystore.ui.components.AppTopBar
-import com.chibychibystore.ui.components.ErrorMessage
-import com.chibychibystore.ui.components.LoadingIndicator
+import com.chibychibystore.ui.components.shared.*
 import com.chibychibystore.ui.components.dialogs.ConfirmDialog
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -196,32 +194,6 @@ fun ExpenseDetailScreen(
         }
     }
 
-    // Delete Confirmation Dialog
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Hapus Pengeluaran") },
-            text = { Text("Apakah Anda yakin ingin menghapus pengeluaran ini? Tindakan ini tidak dapat dibatalkan.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteExpense {
-                            navController.navigateUp()
-                        }
-                        showDeleteDialog = false
-                    }
-                ) {
-                    Text("Hapus", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Batal")
-                }
-            }
-        )
-    }
-
     // Delete confirmation dialog
     if (showDeleteDialog) {
         ConfirmDialog(
@@ -230,9 +202,10 @@ fun ExpenseDetailScreen(
             confirmText = "Hapus",
             dismissText = "Batal",
             onConfirm = {
-                viewModel.deleteExpense()
-                showDeleteDialog = false
-                navController.navigateUp()
+                viewModel.deleteExpense {
+                    showDeleteDialog = false
+                    navController.navigateUp()
+                }
             },
             onDismiss = { showDeleteDialog = false }
         )

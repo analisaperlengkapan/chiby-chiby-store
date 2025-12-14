@@ -852,20 +852,22 @@ class PosViewModel @Inject constructor(
         }
 
         // Get cashier ID from auth service
-        val cashierId = authService.getCurrentUser()?.id ?: run {
-            _uiState.value = currentState.copy(error = "User tidak terautentikasi")
-            return
-        }
-
         viewModelScope.launch {
+            // Get cashier ID from auth service
+            val currentUser = authService.getCurrentUser()
+            val cashierId = currentUser?.id ?: run {
+                _uiState.value = currentState.copy(error = "User tidak terautentikasi")
+                return@launch
+            }
+
             _uiState.value = currentState.copy(isProcessingPayment = true, error = null)
 
             try {
                 // Create sale items from cart
                 val saleItems = currentState.cartItems.map { cartItem ->
                     ItemPenjualan(
-                        penjualanId = 0, // Will be set by repository
-                        produkId = cartItem.product.id,
+                        saleId = 0, // Will be set by repository
+                        productId = cartItem.product.id,
                         quantity = cartItem.quantity,
                         unitPrice = cartItem.unitPrice,
                         totalPrice = cartItem.totalPrice
@@ -874,9 +876,9 @@ class PosViewModel @Inject constructor(
 
                 // Create sale
                 val sale = Penjualan(
-                    saleDate = getCurrentDateTime(),
+                    saleDate = java.util.Date(),
                     totalAmount = currentState.total,
-                    paymentMethod = currentState.paymentMethod,
+                    paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.valueOf(currentState.paymentMethod),
                     cashierId = cashierId
                 )
 

@@ -14,9 +14,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Gudang
-import com.chibychibystore.ui.components.AppTopBar
-import com.chibychibystore.ui.components.ErrorMessage
-import com.chibychibystore.ui.components.LoadingIndicator
+import com.chibychibystore.ui.components.shared.AppTopBar
+import com.chibychibystore.ui.components.shared.ErrorMessage
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,7 +153,7 @@ fun EditWarehouseScreen(
                             val validationResult = validateInputs(warehouseName, warehouseLocation, warehouseCapacity)
                             if (validationResult.isValid) {
                                 val capacity = warehouseCapacity.toIntOrNull() ?: 0
-                                viewModel.updateWarehouse(warehouseId, warehouseName, warehouseLocation, capacity)
+                                viewModel.updateWarehouse(warehouseId.toLong(), warehouseName, warehouseLocation, capacity)
                             } else {
                                 nameError = validationResult.nameError
                                 locationError = validationResult.locationError

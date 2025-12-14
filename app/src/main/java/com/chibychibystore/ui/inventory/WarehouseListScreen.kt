@@ -67,7 +67,7 @@ fun WarehouseListScreen(
                         warehouses = uiState.warehouses,
                         allWarehouseStock = uiState.allWarehouseStock,
                         onWarehouseClick = { warehouse ->
-                            navController.navigate(Screen.Warehouse.createRoute(warehouse.id))
+                            navController.navigate(Screen.WarehouseDetail.createRoute(warehouse.id.toString()))
                         },
                         onRefresh = { viewModel.refresh() }
                     )
@@ -190,6 +190,7 @@ private fun WarehouseListItem(
     onClick: () -> Unit
 ) {
     CardItem(
+        title = warehouse.name,
         onClick = onClick,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -206,24 +207,15 @@ private fun WarehouseListItem(
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = warehouse.nama,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
 
-                    warehouse.lokasi?.let { location ->
-                        if (location.isNotBlank()) {
-                            Text(
-                                text = location,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                    if (!warehouse.location.isNullOrBlank()) {
+                        Text(
+                            text = warehouse.location!!,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
 
@@ -236,7 +228,7 @@ private fun WarehouseListItem(
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    val totalStock = products.sumOf { it.stok }
+                    val totalStock = products.sumOf { it.stockQuantity }
                     Text(
                         text = "Total stok: $totalStock",
                         style = MaterialTheme.typography.bodySmall,
@@ -251,7 +243,7 @@ private fun WarehouseListItem(
                 // Show top 3 products
                 val topProducts = products.take(3)
                 Text(
-                    text = "Produk: ${topProducts.joinToString(", ") { it.nama }}",
+                    text = "Produk: ${topProducts.joinToString(", ") { it.name }}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,

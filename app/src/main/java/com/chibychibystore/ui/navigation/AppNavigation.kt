@@ -1,12 +1,15 @@
 package com.chibychibystore.ui.navigation
 
 import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.ui.inventory.AddProductScreen
 import com.chibychibystore.ui.inventory.InventoryScreen
@@ -19,7 +22,9 @@ import com.chibychibystore.ui.barcode.BarcodePrintScreen
 import com.chibychibystore.ui.screens.BackupScreen
 import com.chibychibystore.ui.screens.DashboardScreen
 import com.chibychibystore.ui.screens.UserManagementScreen
+import com.chibychibystore.ui.screens.SettingsScreen
 import com.chibychibystore.ui.reports.ReportsScreen
+import com.chibychibystore.ui.sales.SalesHistoryScreen
 import com.chibychibystore.ui.screens.auth.LoginScreen
 import com.chibychibystore.ui.expense.ExpenseListScreen
 import com.chibychibystore.ui.expense.ExpenseDetailScreen
@@ -32,7 +37,7 @@ import javax.inject.Inject
 @Composable
 fun AppNavigation(
     navController: NavHostController = rememberNavController(),
-    drawerState: DrawerState = rememberDrawerState(),
+    drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed),
     authService: AuthService
 ) {
     NavHost(
@@ -240,7 +245,7 @@ fun AppNavigation(
                     }
                 }
             ) {
-                BarcodePrintScreen(navController = navController)
+                BarcodePrintScreen(onNavigateBack = { navController.popBackStack() })
             }
         }
 

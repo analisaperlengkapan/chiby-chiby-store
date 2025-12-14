@@ -111,8 +111,8 @@ fun ReportsScreen(
                     DateRangeFilter(
                         startDate = uiState.startDate,
                         endDate = uiState.endDate,
-                        onStartDateChange = { viewModel.updateStartDate(it) },
-                        onEndDateChange = { viewModel.updateEndDate(it) }
+                        onStartDateChange = { viewModel.setStartDate(it) },
+                        onEndDateChange = { viewModel.setEndDate(it) }
                     )
                 }
 
@@ -214,7 +214,7 @@ private fun DateRangeFilter(
 @Composable
 private fun GrossSalesReport(data: Any?) {
     when (data) {
-        is GrossSales -> {
+        is com.chibychibystore.service.GrossSalesReport -> {
             Column(modifier = Modifier.padding(16.dp)) {
                 MetricCard(
                     title = "Total Penjualan",
@@ -233,23 +233,23 @@ private fun GrossSalesReport(data: Any?) {
 @Composable
 private fun ProfitMarginReport(data: Any?) {
     when (data) {
-        is ProfitMargin -> {
+        is com.chibychibystore.service.ProfitMarginReport -> {
             Column(modifier = Modifier.padding(16.dp)) {
                 MetricCard(
                     title = "Pendapatan",
-                    value = "Rp ${"%,.0f".format(data.revenue)}"
+                    value = "Rp ${"%,.0f".format(data.totalRevenue)}"
                 )
                 MetricCard(
                     title = "HPP",
-                    value = "Rp ${"%,.0f".format(data.costOfGoodsSold)}"
+                    value = "Rp ${"%,.0f".format(data.totalCost)}"
                 )
                 MetricCard(
                     title = "Laba Kotor",
-                    value = "Rp ${"%,.0f".format(data.profit)}"
+                    value = "Rp ${"%,.0f".format(data.grossProfit)}"
                 )
                 MetricCard(
                     title = "Margin",
-                    value = "${"%.2f".format(data.marginPercentage)}%"
+                    value = "${"%.2f".format(data.profitMargin)}%"
                 )
             }
         }
@@ -260,7 +260,7 @@ private fun ProfitMarginReport(data: Any?) {
 @Composable
 private fun NetProfitReport(data: Any?) {
     when (data) {
-        is NetProfit -> {
+        is com.chibychibystore.service.NetProfitReport -> {
             Column(modifier = Modifier.padding(16.dp)) {
                 MetricCard(
                     title = "Laba Kotor",
@@ -268,7 +268,7 @@ private fun NetProfitReport(data: Any?) {
                 )
                 MetricCard(
                     title = "Total Biaya",
-                    value = "Rp ${"%,.0f".format(data.expenses)}"
+                    value = "Rp ${"%,.0f".format(data.totalExpenses)}"
                 )
                 MetricCard(
                     title = "Laba Bersih",
@@ -276,7 +276,7 @@ private fun NetProfitReport(data: Any?) {
                 )
                 MetricCard(
                     title = "Margin Bersih",
-                    value = "${"%.2f".format(data.netMargin)}%"
+                    value = "${"%.2f".format(data.profitMargin)}%"
                 )
             }
         }
@@ -297,7 +297,8 @@ private fun SalesByProductReport(data: Any?) {
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     BarChart(
-                        data = productSales.take(10).map { it.productName to it.totalRevenue },
+                        title = "Top 10 Produk",
+                        data = productSales.take(10).map { it.productName to it.totalRevenue.toFloat() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(300.dp)
@@ -324,7 +325,8 @@ private fun SalesByCategoryReport(data: Any?) {
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     BarChart(
-                        data = categorySales.map { it.categoryName to it.totalRevenue },
+                        title = "Penjualan per Kategori",
+                        data = categorySales.map { it.categoryName to it.totalRevenue.toFloat() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(300.dp)
@@ -342,8 +344,8 @@ private fun SalesByCategoryReport(data: Any?) {
 private fun SalesTrendReport(data: Any?) {
     when (data) {
         is List<*> -> {
-            if (data.isNotEmpty() && data.first() is DailySales) {
-                val dailySales = data as List<DailySales>
+            if (data.isNotEmpty() && data.first() is TrendData) {
+                val trendData = data as List<TrendData>
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Trend Penjualan Harian",
@@ -351,7 +353,8 @@ private fun SalesTrendReport(data: Any?) {
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     LineChart(
-                        data = dailySales.map { it.date.toString() to it.totalSales },
+                        title = "Trend Penjualan Harian",
+                        data = trendData.map { it.date.toString() to it.sales.toFloat() },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(300.dp)
@@ -440,7 +443,7 @@ private fun ExpenseReport(data: Any?) {
                 )
                 PieChart(
                     title = "Distribusi Pengeluaran",
-                    data = data.expensesByCategory,
+                    data = data.expensesByCategory.entries.map { it.key.displayName to it.value.toFloat() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(300.dp)

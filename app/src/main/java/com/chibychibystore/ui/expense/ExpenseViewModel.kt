@@ -60,28 +60,23 @@ class ExpenseViewModel @Inject constructor(
                     LocalDate.ofEpochDay(endDate.time / (24 * 60 * 60 * 1000))
                 )
 
-                if (result.isSuccess) {
-                    var filteredExpenses = result.getOrNull() ?: emptyList()
+                val filteredExpensesList = result // Result is List<Pengeluaran> directly
 
-                    // Filter by category if selected
-                    _uiState.value.selectedCategory?.let { category ->
-                        filteredExpenses = filteredExpenses.filter { it.category == category }
-                    }
+                var filteredExpenses = filteredExpensesList
 
-                    // Calculate total
-                    val total = filteredExpenses.sumOf { it.amount }
-
-                    _uiState.value = _uiState.value.copy(
-                        expenses = filteredExpenses,
-                        totalExpenses = total,
-                        isLoading = false
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        error = result.exceptionOrNull()?.message ?: "Gagal memuat pengeluaran",
-                        isLoading = false
-                    )
+                // Filter by category if selected
+                _uiState.value.selectedCategory?.let { category ->
+                    filteredExpenses = filteredExpenses.filter { it.category == category }
                 }
+
+                // Calculate total
+                val total = filteredExpenses.sumOf { it.amount }
+
+                _uiState.value = _uiState.value.copy(
+                    expenses = filteredExpenses,
+                    totalExpenses = total,
+                    isLoading = false
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     error = e.message ?: "Terjadi kesalahan",

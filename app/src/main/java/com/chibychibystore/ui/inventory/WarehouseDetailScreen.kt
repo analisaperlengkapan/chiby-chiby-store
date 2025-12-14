@@ -1,5 +1,6 @@
 package com.chibychibystore.ui.inventory
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,7 +18,7 @@ import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.AppTopBar
-import com.chibychibystore.ui.components.CardItem
+import com.chibychibystore.ui.components.shared.CardItem
 import com.chibychibystore.ui.components.ErrorMessage
 import com.chibychibystore.ui.components.LoadingIndicator
 
@@ -136,8 +137,8 @@ fun WarehouseDetailScreen(
                 viewModel.transferStock(
                     productId = selectedProductForTransfer!!.id,
                     fromWarehouseId = selectedWarehouse!!.id,
-                    toWarehouseId = toWarehouseId,
-                    quantity = quantity
+                    toWarehouseId = toWarehouseId.toLong(),
+                    quantity = quantity.toInt()
                 )
             },
             onDismiss = {
@@ -159,7 +160,11 @@ private fun WarehouseDetailContent(
         modifier = Modifier.fillMaxSize()
     ) {
         // Warehouse info header
-        WarehouseInfoHeader(warehouse = warehouse, productCount = products.size)
+        WarehouseInfoHeader(
+            warehouse = warehouse,
+            productCount = products.size,
+            totalStock = products.sumOf { it.stockQuantity }
+        )
 
         // Products list
         if (products.isEmpty()) {
@@ -185,7 +190,8 @@ private fun WarehouseDetailContent(
 @Composable
 private fun WarehouseInfoHeader(
     warehouse: Gudang,
-    productCount: Int
+    productCount: Int,
+    totalStock: Int
 ) {
     Card(
         modifier = Modifier
@@ -201,21 +207,19 @@ private fun WarehouseInfoHeader(
                 .padding(16.dp)
         ) {
             Text(
-                text = warehouse.nama,
+                text = warehouse.name,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
 
-            warehouse.lokasi?.let { location ->
-                if (location.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = location,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
+            if (!warehouse.location.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = warehouse.location!!,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -230,7 +234,6 @@ private fun WarehouseInfoHeader(
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
 
-                val totalStock = products.sumOf { it.stok }
                 Text(
                     text = "Total stok: $totalStock",
                     style = MaterialTheme.typography.bodyMedium,
@@ -247,9 +250,14 @@ private fun WarehouseProductItem(
     onClick: () -> Unit,
     onTransferClick: () -> Unit
 ) {
-    CardItem(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -261,7 +269,7 @@ private fun WarehouseProductItem(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = product.nama,
+                    text = product.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -282,16 +290,16 @@ private fun WarehouseProductItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Stok: ${product.stok}",
+                        text = "Stok: ${product.stockQuantity}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (product.stok <= product.minStok) {
+                        color = if (product.stockQuantity <= product.minStock) {
                             MaterialTheme.colorScheme.error
                         } else {
                             MaterialTheme.colorScheme.onSurface
                         }
                     )
 
-                    if (product.stok <= product.minStok) {
+                    if (product.stockQuantity <= product.minStock) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(
                             imageVector = Icons.Default.Warning,
@@ -307,7 +315,7 @@ private fun WarehouseProductItem(
                 horizontalAlignment = Alignment.End
             ) {
                 Text(
-                    text = "Rp ${product.hargaJual}",
+                    text = formatCurrency(product.sellingPrice),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.primary
@@ -413,4 +421,9 @@ private fun WarehouseEmptyProductsState() {
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
     }
+}
+
+private fun formatCurrency(amount: Double): String {
+    val format = java.text.NumberFormat.getCurrencyInstance(java.util.Locale("id", "ID"))
+    return format.format(amount)
 }

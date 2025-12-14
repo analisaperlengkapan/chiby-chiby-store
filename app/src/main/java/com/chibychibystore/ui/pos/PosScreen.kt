@@ -19,13 +19,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.CardItem
 import com.chibychibystore.ui.components.shared.ErrorMessage
 import com.chibychibystore.ui.components.shared.LoadingIndicator
-import com.chibychibystore.ui.theme.Primary
-import com.chibychibystore.ui.theme.PrimaryLight
+
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -266,7 +266,7 @@ private fun ProductSearchItem(
                 text = formatCurrency(product.sellingPrice),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = Primary
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -412,7 +412,7 @@ private fun CartItemRow(
                 text = formatCurrency(cartItem.totalPrice),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
-                color = Primary
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -426,7 +426,7 @@ private fun PaymentSummary(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = PrimaryLight)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -502,7 +502,7 @@ private fun PaymentSummary(
                     formatCurrency(uiState.total),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Primary
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -513,7 +513,7 @@ private fun PaymentSummary(
                 onClick = onProcessPayment,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = uiState.cartItems.isNotEmpty() && !uiState.isProcessingPayment,
-                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 if (uiState.isProcessingPayment) {
                     CircularProgressIndicator(
