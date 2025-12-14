@@ -29,78 +29,6 @@ abstract class ServiceModule {
 
     @Binds
     @Singleton
-    abstract fun bindDataSeedingService(
-        dataSeedingService: DataSeedingService
-    ): DataSeedingService
-
-    @Binds
-    @Singleton
-    abstract fun bindPenggunaRepository(
-        penggunaRepository: PenggunaRepository
-    ): PenggunaRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindUserSessionRepository(
-        userSessionRepository: UserSessionRepository
-    ): UserSessionRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindKategoriRepository(
-        kategoriRepository: KategoriRepository
-    ): KategoriRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindGudangRepository(
-        gudangRepository: GudangRepository
-    ): GudangRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindProdukRepository(
-        produkRepository: ProdukRepository
-    ): ProdukRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindPemasokRepository(
-        pemasokRepository: PemasokRepository
-    ): PemasokRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindPenjualanRepository(
-        penjualanRepository: PenjualanRepository
-    ): PenjualanRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindItemPenjualanRepository(
-        itemPenjualanRepository: ItemPenjualanRepository
-    ): ItemPenjualanRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindItemPembelianRepository(
-        itemPembelianRepository: ItemPembelianRepository
-    ): ItemPembelianRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindPembelianRepository(
-        pembelianRepository: PembelianRepository
-    ): PembelianRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindPengeluaranRepository(
-        pengeluaranRepository: PengeluaranRepository
-    ): PengeluaranRepository
-
-    @Binds
-    @Singleton
     abstract fun bindProductService(
         productServiceImpl: ProductServiceImpl
     ): ProductService
@@ -116,24 +44,6 @@ abstract class ServiceModule {
     abstract fun bindSaleService(
         saleServiceImpl: SaleServiceImpl
     ): SaleService
-
-    @Binds
-    @Singleton
-    abstract fun bindReportingService(
-        reportingService: ReportingService
-    ): ReportingService
-
-    @Binds
-    @Singleton
-    abstract fun bindExpenseService(
-        expenseService: ExpenseService
-    ): ExpenseService
-
-    @Binds
-    @Singleton
-    abstract fun bindCashManagementService(
-        cashManagementService: CashManagementService
-    ): CashManagementService
 
     @Binds
     @Singleton
