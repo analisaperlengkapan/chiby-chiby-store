@@ -36,14 +36,14 @@ fun AddProductScreen(
     LaunchedEffect(Unit) {
         val emptyProduct = Produk(
             id = 0,
-            nama = "",
+            name = "",
             barcode = null,
             kategoriId = 0,
-            hargaBeli = 0.0,
-            hargaJual = 0.0,
-            stok = 0,
+            costPrice = 0.0,
+            sellingPrice = 0.0,
+            stockQuantity = 0,
             gudangId = 0,
-            minStok = 0,
+            minStock = 0,
             createdAt = "",
             updatedAt = ""
         )
@@ -92,14 +92,14 @@ fun AddProductScreen(
                 else -> {
                     val product = uiState.product ?: Produk(
                         id = 0,
-                        nama = "",
+                        name = "",
                         barcode = null,
                         kategoriId = 0,
-                        hargaBeli = 0.0,
-                        hargaJual = 0.0,
-                        stok = 0,
+                        costPrice = 0.0,
+                        sellingPrice = 0.0,
+                        stockQuantity = 0,
                         gudangId = 0,
-                        minStok = 0,
+                        minStock = 0,
                         createdAt = "",
                         updatedAt = ""
                     )
@@ -171,7 +171,7 @@ private fun AddProductContent(
                 ProductTextField(
                     label = "Nama Produk",
                     value = editedProduct.name,
-                    onValueChange = { editedProduct = editedProduct.copy(nama = it) },
+                    onValueChange = { editedProduct = editedProduct.copy(name = it) },
                     isRequired = true
                 )
 
@@ -205,7 +205,7 @@ private fun AddProductContent(
                     value = editedProduct.costPrice.toString(),
                     onValueChange = { value ->
                         value.toDoubleOrNull()?.let { price ->
-                            editedProduct = editedProduct.copy(hargaBeli = price)
+                            editedProduct = editedProduct.copy(costPrice = price)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -217,7 +217,7 @@ private fun AddProductContent(
                     value = editedProduct.sellingPrice.toString(),
                     onValueChange = { value ->
                         value.toDoubleOrNull()?.let { price ->
-                            editedProduct = editedProduct.copy(hargaJual = price)
+                            editedProduct = editedProduct.copy(sellingPrice = price)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -247,7 +247,7 @@ private fun AddProductContent(
                     value = editedProduct.stockQuantity.toString(),
                     onValueChange = { value ->
                         value.toIntOrNull()?.let { stock ->
-                            editedProduct = editedProduct.copy(stok = stock)
+                            editedProduct = editedProduct.copy(stockQuantity = stock)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -256,10 +256,10 @@ private fun AddProductContent(
 
                 ProductTextField(
                     label = "Stok Minimum",
-                    value = editedProduct.minStok.toString(),
+                    value = editedProduct.minStock.toString(),
                     onValueChange = { value ->
                         value.toIntOrNull()?.let { minStock ->
-                            editedProduct = editedProduct.copy(minStok = minStock)
+                            editedProduct = editedProduct.copy(minStock = minStock)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)

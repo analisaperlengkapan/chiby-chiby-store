@@ -128,7 +128,7 @@ fun EditWarehouseScreen(
         val warehouse = viewModel.getWarehouseById(warehouseId)
         warehouse?.let {
             warehouseName = it.name
-            warehouseLocation = it.lokasi
+            warehouseLocation = it.location
             warehouseCapacity = it.kapasitas.toString()
         }
     }

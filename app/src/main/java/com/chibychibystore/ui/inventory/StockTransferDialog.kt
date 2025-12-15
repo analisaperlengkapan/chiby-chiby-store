@@ -235,7 +235,7 @@ private fun WarehouseSelectionCard(
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
                 )
 
-                warehouse.lokasi?.let { location ->
+                warehouse.location?.let { location ->
                     if (location.isNotBlank()) {
                         Text(
                             text = location,

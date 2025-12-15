@@ -238,7 +238,7 @@ private fun WarehouseInfoHeader(
                 )
 
                 Text(
-                    text = "Total stok: $totalStock",
+                    text = "Total stockQuantity: $totalStock",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )

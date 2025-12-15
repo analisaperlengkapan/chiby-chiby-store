@@ -190,7 +190,7 @@ private fun ProductDetailContent(
                 ProductTextField(
                     label = "Nama Produk",
                     value = editedProduct.name,
-                    onValueChange = { editedProduct = editedProduct.copy(nama = it) },
+                    onValueChange = { editedProduct = editedProduct.copy(name = it) },
                     enabled = isEditing,
                     isRequired = true
                 )
@@ -226,7 +226,7 @@ private fun ProductDetailContent(
                     value = editedProduct.costPrice.toString(),
                     onValueChange = { value ->
                         value.toDoubleOrNull()?.let { price ->
-                            editedProduct = editedProduct.copy(hargaBeli = price)
+                            editedProduct = editedProduct.copy(costPrice = price)
                         }
                     },
                     enabled = isEditing,
@@ -239,7 +239,7 @@ private fun ProductDetailContent(
                     value = editedProduct.sellingPrice.toString(),
                     onValueChange = { value ->
                         value.toDoubleOrNull()?.let { price ->
-                            editedProduct = editedProduct.copy(hargaJual = price)
+                            editedProduct = editedProduct.copy(sellingPrice = price)
                         }
                     },
                     enabled = isEditing,
@@ -270,7 +270,7 @@ private fun ProductDetailContent(
                     value = editedProduct.stockQuantity.toString(),
                     onValueChange = { value ->
                         value.toIntOrNull()?.let { stock ->
-                            editedProduct = editedProduct.copy(stok = stock)
+                            editedProduct = editedProduct.copy(stockQuantity = stock)
                         }
                     },
                     enabled = isEditing,
@@ -280,10 +280,10 @@ private fun ProductDetailContent(
 
                 ProductTextField(
                     label = "Stok Minimum",
-                    value = editedProduct.minStok.toString(),
+                    value = editedProduct.minStock.toString(),
                     onValueChange = { value ->
                         value.toIntOrNull()?.let { minStock ->
-                            editedProduct = editedProduct.copy(minStok = minStock)
+                            editedProduct = editedProduct.copy(minStock = minStock)
                         }
                     },
                     enabled = isEditing,

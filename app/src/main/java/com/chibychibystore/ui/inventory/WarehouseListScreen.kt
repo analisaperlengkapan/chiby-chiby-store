@@ -231,7 +231,7 @@ private fun WarehouseListItem(
 
                     val totalStock = products.sumOf { it.stockQuantity }
                     Text(
-                        text = "Total stok: $totalStock",
+                        text = "Total stockQuantity: $totalStock",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

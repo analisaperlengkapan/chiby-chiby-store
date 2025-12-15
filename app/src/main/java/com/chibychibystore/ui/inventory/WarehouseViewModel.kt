@@ -144,7 +144,7 @@ class WarehouseViewModel @Inject constructor(
             warehouseService.observeWarehouseStock(warehouseId)
                 .catch { e ->
                     _uiState.value = _uiState.value.copy(
-                        error = "Gagal mengamati perubahan stok: ${e.message}"
+                        error = "Gagal mengamati perubahan stockQuantity: ${e.message}"
                     )
                 }
                 .collectLatest { products ->

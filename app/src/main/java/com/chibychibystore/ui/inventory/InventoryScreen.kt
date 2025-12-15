@@ -210,7 +210,7 @@ private fun ProductListItem(
                 }
 
                 // Stock indicator
-                StockIndicator(stock = product.stockQuantity, minStock = product.minStok)
+                StockIndicator(stock = product.stockQuantity, minStock = product.minStock)
             }
 
             Spacer(modifier = Modifier.height(8.dp))

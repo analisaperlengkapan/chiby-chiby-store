@@ -67,7 +67,7 @@ import kotlin.random.Random
  *
  * // Low Stock: Products where stock <= min_stock
  * lowStockItems = productsRepository.getAll()
- *     .filter { it.stockQuantity <= it.minStok }
+ *     .filter { it.stockQuantity <= it.minStock }
  *     .sortedBy { it.stockQuantity } // Most critical first
  *
  * // Recent Transactions: Last 10 sales ordered by date desc
@@ -524,7 +524,7 @@ class DashboardViewModel @Inject constructor() : ViewModel() {
      * // Real implementation
      * suspend fun getLowStockProducts(): List<Produk> {
      *     return productService.getProducts()
-     *         .filter { it.stockQuantity <= it.minStok }
+     *         .filter { it.stockQuantity <= it.minStock }
      *         .sortedBy { it.stockQuantity } // Most critical first
      *         .take(10) // Limit for dashboard display
      * }
