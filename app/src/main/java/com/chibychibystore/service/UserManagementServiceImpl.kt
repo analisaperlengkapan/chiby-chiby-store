@@ -24,11 +24,11 @@ class UserManagementServiceImpl @Inject constructor(
         return try {
             val allUsers = penggunaRepository.getAllPengguna().first()
             val totalUsers = allUsers.size
-            val activeUsers = allUsers.count { it.isActive }
-            val owners = allUsers.count { it.role == "OWNER" }
-            val managers = allUsers.count { it.role == "MANAGER" }
-            val cashiers = allUsers.count { it.role == "CASHIER" }
-            val warehouseStaff = allUsers.count { it.role == "WAREHOUSE_STAFF" }
+            val activeUsers = totalUsers // All users are considered active since no isActive field
+            val owners = allUsers.count { it.role == Role.OWNER }
+            val managers = allUsers.count { it.role == Role.MANAGER }
+            val cashiers = allUsers.count { it.role == Role.CASHIER }
+            val warehouseStaff = allUsers.count { it.role == Role.WAREHOUSE }
             
             Result.success(UserStats(
                 totalUsers = totalUsers,
@@ -48,7 +48,7 @@ class UserManagementServiceImpl @Inject constructor(
 
     override fun canDeleteLastOwner(): Flow<Boolean> {
         return penggunaRepository.getAllPengguna().map { users ->
-            users.count { it.role == "OWNER" } > 1
+            users.count { it.role == Role.OWNER } > 1
         }
     }
 
@@ -116,7 +116,7 @@ class UserManagementServiceImpl @Inject constructor(
 
             val updatedUser = existingUser.copy(
                 username = username ?: existingUser.username,
-                role = role?.name ?: existingUser.role,
+                role = role ?: existingUser.role,
                 updatedAt = java.util.Date()
             )
 
@@ -139,7 +139,7 @@ class UserManagementServiceImpl @Inject constructor(
             }
 
             // Check permissions (only OWNER can delete users)
-            if (currentUser?.role != "OWNER") {
+            if (currentUser?.role != Role.OWNER) {
                 return Result.failure(Exception("Hanya Owner yang dapat menghapus user"))
             }
 
@@ -170,7 +170,7 @@ class UserManagementServiceImpl @Inject constructor(
         return try {
             // Check permissions
             val currentUser = authService.getCurrentUser()
-            if (currentUser?.role != "OWNER") {
+            if (currentUser?.role != Role.OWNER) {
                 return Result.failure(Exception("Hanya Owner yang dapat menonaktifkan user"))
             }
 
@@ -191,7 +191,7 @@ class UserManagementServiceImpl @Inject constructor(
         return try {
             // Check permissions
             val currentUser = authService.getCurrentUser()
-            if (currentUser?.role != "OWNER") {
+            if (currentUser?.role != Role.OWNER) {
                 return Result.failure(Exception("Hanya Owner yang dapat mengaktifkan user"))
             }
 
