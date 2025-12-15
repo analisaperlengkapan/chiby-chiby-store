@@ -1,23 +1,22 @@
 package com.chibychibystore.service
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Typeface
 import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.ProdukRepository
-import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.MultiFormatWriter
 import com.google.zxing.WriterException
-import com.google.zxing.client.j2se.MatrixToImageWriter
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.awt.Color
-import java.awt.Font
-import java.awt.Graphics2D
-import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
-import javax.imageio.ImageIO
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,15 +38,18 @@ class BarcodeServiceImpl @Inject constructor(
     ): Result<BarcodeData> = withContext(Dispatchers.IO) {
         try {
             // Get product data
-            val product = produkRepository.getProdukById(productId)
-                ?: return@withContext Result.failure(
-                    ChibyChibyException.ProductNotFound("Product with ID $productId not found")
+            val productResult = produkRepository.getProdukById(productId)
+            if (productResult.isFailure) {
+                return@withContext Result.failure(
+                    ChibyChibyException.DatabaseError("Product dengan ID $productId tidak ditemukan")
                 )
+            }
+            val product = productResult.getOrThrow()
 
             // Validate barcode format for product
             if (product.barcode.isNullOrBlank()) {
                 return@withContext Result.failure(
-                    ChibyChibyException.ValidationError("Product does not have a barcode assigned")
+                    ChibyChibyException.ValidationError("barcode", "Produk tidak memiliki barcode")
                 )
             }
 
@@ -76,11 +78,11 @@ class BarcodeServiceImpl @Inject constructor(
 
         } catch (e: WriterException) {
             Result.failure(
-                ChibyChibyException.BarcodeError("Failed to generate barcode: ${e.message}")
+                ChibyChibyException.BusinessLogicError("Gagal generate barcode: ${e.message}")
             )
         } catch (e: Exception) {
             Result.failure(
-                ChibyChibyException.BarcodeError("Unexpected error generating barcode: ${e.message}")
+                ChibyChibyException.DatabaseError("Gagal generate barcode", e)
             )
         }
     }
@@ -146,12 +148,13 @@ class BarcodeServiceImpl @Inject constructor(
         value: String,
         format: BarcodeFormat,
         size: LabelSize
-    ): BufferedImage {
+    ): Bitmap {
         val zxingFormat = when (format) {
-            BarcodeFormat.EAN_13 -> BarcodeFormat.EAN_13
-            BarcodeFormat.CODE_128 -> BarcodeFormat.CODE_128
-            BarcodeFormat.QR_CODE -> BarcodeFormat.QR_CODE
-            BarcodeFormat.DATA_MATRIX -> BarcodeFormat.DATA_MATRIX
+            BarcodeFormat.EAN_13 -> com.google.zxing.BarcodeFormat.EAN_13
+            BarcodeFormat.CODE_128 -> com.google.zxing.BarcodeFormat.CODE_128
+            BarcodeFormat.QR_CODE -> com.google.zxing.BarcodeFormat.QR_CODE
+            BarcodeFormat.DATA_MATRIX -> com.google.zxing.BarcodeFormat.DATA_MATRIX
+            else -> com.google.zxing.BarcodeFormat.QR_CODE
         }
 
         val hints = mapOf(
@@ -159,40 +162,61 @@ class BarcodeServiceImpl @Inject constructor(
             EncodeHintType.CHARACTER_SET to "UTF-8"
         )
 
+        val width = size.width * 10
+        val height = size.height * 10
         val bitMatrix: BitMatrix = if (format == BarcodeFormat.QR_CODE) {
-            qrWriter.encode(value, zxingFormat, size.width * 10, size.height * 10, hints)
+            qrWriter.encode(value, zxingFormat, width, height, hints)
         } else {
-            writer.encode(value, zxingFormat, size.width * 10, size.height * 10, hints)
+            writer.encode(value, zxingFormat, width, height, hints)
         }
 
-        return MatrixToImageWriter.toBufferedImage(bitMatrix)
+        return bitMatrixToBitmap(bitMatrix)
+    }
+
+    /**
+     * Convert BitMatrix to Android Bitmap
+     */
+    private fun bitMatrixToBitmap(bitMatrix: BitMatrix): Bitmap {
+        val width = bitMatrix.width
+        val height = bitMatrix.height
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                bitmap.setPixel(x, y, if (bitMatrix[x, y]) Color.BLACK else Color.WHITE)
+            }
+        }
+
+        return bitmap
     }
 
     /**
      * Create labeled barcode with product information
      */
     private fun createLabeledBarcode(
-        barcodeImage: BufferedImage,
+        barcodeImage: Bitmap,
         product: Produk,
         size: LabelSize
-    ): BufferedImage {
+    ): Bitmap {
         val labelHeight = 60 // Space for text below barcode
         val totalHeight = barcodeImage.height + labelHeight
         val totalWidth = barcodeImage.width
 
-        val labeledImage = BufferedImage(totalWidth, totalHeight, BufferedImage.TYPE_INT_RGB)
-        val g2d = labeledImage.graphics as Graphics2D
+        val labeledImage = Bitmap.createBitmap(totalWidth, totalHeight, Bitmap.Config.RGB_565)
+        val canvas = Canvas(labeledImage)
 
         // Set white background
-        g2d.color = Color.WHITE
-        g2d.fillRect(0, 0, totalWidth, totalHeight)
+        canvas.drawColor(Color.WHITE)
 
         // Draw barcode
-        g2d.drawImage(barcodeImage, 0, 0, null)
+        canvas.drawBitmap(barcodeImage, 0f, 0f, null)
 
         // Draw product info
-        g2d.color = Color.BLACK
-        g2d.font = Font("Arial", Font.BOLD, 12)
+        val paint = Paint().apply {
+            color = Color.BLACK
+            textSize = 32f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
 
         // Product name (truncate if too long)
         val displayName = if (product.name.length > 20) {
@@ -201,27 +225,25 @@ class BarcodeServiceImpl @Inject constructor(
             product.name
         }
 
-        val nameWidth = g2d.fontMetrics.stringWidth(displayName)
+        val nameWidth = paint.measureText(displayName)
         val nameX = (totalWidth - nameWidth) / 2
-        g2d.drawString(displayName, nameX, barcodeImage.height + 20)
+        canvas.drawText(displayName, nameX, (barcodeImage.height + 20).toFloat(), paint)
 
         // Price
         val priceText = "Rp ${String.format("%,.0f", product.sellingPrice)}"
-        val priceWidth = g2d.fontMetrics.stringWidth(priceText)
+        val priceWidth = paint.measureText(priceText)
         val priceX = (totalWidth - priceWidth) / 2
-        g2d.drawString(priceText, priceX, barcodeImage.height + 40)
-
-        g2d.dispose()
+        canvas.drawText(priceText, priceX, (barcodeImage.height + 40).toFloat(), paint)
 
         return labeledImage
     }
 
     /**
-     * Convert BufferedImage to PNG byte array
+     * Convert Bitmap to PNG byte array
      */
-    private fun convertToPngBytes(image: BufferedImage): ByteArray {
+    private fun convertToPngBytes(image: Bitmap): ByteArray {
         val outputStream = ByteArrayOutputStream()
-        ImageIO.write(image, "PNG", outputStream)
+        image.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
         return outputStream.toByteArray()
     }
 }

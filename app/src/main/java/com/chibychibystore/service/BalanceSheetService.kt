@@ -1,6 +1,7 @@
 package com.chibychibystore.service
 
-import com.chibychibystore.data.Result
+import com.chibychibystore.data.model.Result
+import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.ProdukRepository
 import java.time.LocalDate
 import javax.inject.Inject
@@ -16,6 +17,15 @@ class BalanceSheetService @Inject constructor(
     private val cashManagementService: CashManagementService
 ) {
 
+    data class BalanceSheetData(
+        val assets: Double,
+        val liabilities: Double,
+        val equity: Double,
+        val inventoryValue: Double,
+        val cashBalance: Double,
+        val asOfDate: LocalDate
+    )
+
     /**
      * Hitung total assets
      * Assets = Cash + Inventory Value + Other assets
@@ -23,7 +33,8 @@ class BalanceSheetService @Inject constructor(
     suspend fun calculateTotalAssets(asOfDate: LocalDate): Result<Double> {
         return try {
             // Get inventory value (cost basis)
-            val inventoryValue = calculateInventoryValue()
+            val inventoryValueResult = calculateInventoryValue()
+            val inventoryValue = inventoryValueResult.getOrNull() ?: 0.0
 
             // Get cash position
             val cashBalance = cashManagementService.getCurrentCashPosition().getOrNull() ?: 0.0
@@ -32,9 +43,9 @@ class BalanceSheetService @Inject constructor(
             // Other assets (equipment, etc.) not tracked yet
             val totalAssets = cashBalance + inventoryValue
 
-            Result.Success(totalAssets)
+            Result.success(totalAssets)
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung total assets: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung total assets", e))
         }
     }
 
@@ -45,11 +56,11 @@ class BalanceSheetService @Inject constructor(
         return try {
             // Get all products and calculate total inventory value
             val products = productRepository.getAllProduk()
-            val inventoryValue = products.sumOf { it.costPrice * it.stockQuantity }
+            val inventoryValue = products.sumOf { product -> product.costPrice * product.stockQuantity }
 
-            Result.Success(inventoryValue)
+            Result.success(inventoryValue)
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung nilai inventory: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung nilai inventory", e))
         }
     }
 
@@ -67,9 +78,9 @@ class BalanceSheetService @Inject constructor(
             // - Other short/long term liabilities
             val totalLiabilities = 0.0
 
-            Result.Success(totalLiabilities)
+            Result.success(totalLiabilities)
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung total liabilities: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung total liabilities", e))
         }
     }
 
@@ -83,16 +94,16 @@ class BalanceSheetService @Inject constructor(
             val liabilities = calculateTotalLiabilities(asOfDate).getOrNull() ?: 0.0
 
             val equity = assets - liabilities
-            Result.Success(equity)
+            Result.success(equity)
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung equity: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung equity", e))
         }
     }
 
     /**
      * Generate balance sheet lengkap
      */
-    suspend fun generateBalanceSheet(asOfDate: LocalDate): Result<ReportingService.BalanceSheet> {
+    suspend fun generateBalanceSheet(asOfDate: LocalDate): Result<BalanceSheetData> {
         return try {
             val assets = calculateTotalAssets(asOfDate).getOrNull() ?: 0.0
             val liabilities = calculateTotalLiabilities(asOfDate).getOrNull() ?: 0.0
@@ -100,7 +111,7 @@ class BalanceSheetService @Inject constructor(
             val inventoryValue = calculateInventoryValue().getOrNull() ?: 0.0
             val cashBalance = cashManagementService.getCurrentCashPosition().getOrNull() ?: 0.0
 
-            Result.Success(ReportingService.BalanceSheet(
+            Result.success(BalanceSheetData(
                 assets = assets,
                 liabilities = liabilities,
                 equity = equity,
@@ -109,7 +120,7 @@ class BalanceSheetService @Inject constructor(
                 asOfDate = asOfDate
             ))
         } catch (e: Exception) {
-            Result.Error("Gagal membuat balance sheet: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal membuat balance sheet", e))
         }
     }
 
@@ -123,9 +134,9 @@ class BalanceSheetService @Inject constructor(
             val equity = calculateEquity(asOfDate).getOrNull() ?: 0.0
 
             val ratio = if (equity != 0.0) liabilities / equity else 0.0
-            Result.Success(ratio)
+            Result.success(ratio)
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung debt-to-equity ratio: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung debt-to-equity ratio", e))
         }
     }
 
@@ -140,9 +151,9 @@ class BalanceSheetService @Inject constructor(
             val currentLiabilities = calculateTotalLiabilities(asOfDate).getOrNull() ?: 0.0
 
             val ratio = if (currentLiabilities != 0.0) currentAssets / currentLiabilities else 0.0
-            Result.Success(ratio)
+            Result.success(ratio)
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung current ratio: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung current ratio", e))
         }
     }
 }

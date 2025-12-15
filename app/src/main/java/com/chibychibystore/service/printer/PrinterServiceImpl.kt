@@ -388,13 +388,13 @@ class PrinterServiceImpl @Inject constructor(
         label.add(EscPosCommands.CENTER)
 
         // Product name (truncate if too long)
-        val productName = product.nama.take(width / 2) // Rough character limit
+        val productName = product.name.take(width / 2) // Rough character limit
         label.add(EscPosCommands.BOLD_ON)
         label.add("$productName\n".toByteArray())
         label.add(EscPosCommands.BOLD_OFF)
 
         // Price
-        val priceText = "Rp ${product.hargaJual.toInt()}"
+        val priceText = "Rp ${product.sellingPrice.toInt()}"
         label.add("$priceText\n".toByteArray())
 
         // Generate and print barcode

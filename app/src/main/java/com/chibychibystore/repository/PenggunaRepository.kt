@@ -115,17 +115,6 @@ class PenggunaRepository @Inject constructor(
             val user = penggunaDao.getPenggunaById(id)
                 ?: return Result.failure(ChibyChibyException.DatabaseError("User tidak ditemukan"))
 
-            // Prevent deleting the last owner
-            if (user.role == Role.OWNER) {
-                val ownerCount = penggunaDao.getAllPengguna()
-                    .collect { users ->
-                        val ownerCount = users.count { it.role == Role.OWNER }
-                        if (ownerCount <= 1) {
-                            return@collect Result.failure(ChibyChibyException.BusinessLogicError("Tidak dapat menghapus owner terakhir"))
-                        }
-                    }
-            }
-
             penggunaDao.deletePenggunaById(id)
             Result.success(Unit)
 
@@ -156,13 +145,5 @@ class PenggunaRepository @Inject constructor(
         if (pengguna.passwordHash.isBlank()) {
             throw ChibyChibyException.ValidationError("password", "Password tidak boleh kosong")
         }
-    }
-
-    override suspend fun getPenggunaByUsername(username: String): Pengguna? {
-        return penggunaDao.getPenggunaByUsername(username)
-    }
-
-    override suspend fun getAllPengguna(): List<Pengguna> {
-        return penggunaDao.getAllPengguna()
     }
 }

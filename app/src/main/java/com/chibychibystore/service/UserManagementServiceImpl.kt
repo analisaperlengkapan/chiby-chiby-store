@@ -1,8 +1,9 @@
 package com.chibychibystore.service
 
-import com.chibychibystore.data.Result
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
+import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.PenggunaRepository
 import com.chibychibystore.repository.UserSessionRepository
 import kotlinx.coroutines.flow.Flow
@@ -19,8 +20,37 @@ class UserManagementServiceImpl @Inject constructor(
     override fun getAllUsers(): Flow<List<Pengguna>> =
         penggunaRepository.getAllPengguna()
 
+    override suspend fun getUserStats(): Result<UserStats> {
+        return try {
+            val allUsers = penggunaRepository.getAllPengguna().first()
+            val totalUsers = allUsers.size
+            val activeUsers = allUsers.count { it.isActive }
+            val owners = allUsers.count { it.role == "OWNER" }
+            val managers = allUsers.count { it.role == "MANAGER" }
+            val cashiers = allUsers.count { it.role == "CASHIER" }
+            val warehouseStaff = allUsers.count { it.role == "WAREHOUSE_STAFF" }
+            
+            Result.success(UserStats(
+                totalUsers = totalUsers,
+                activeUsers = activeUsers,
+                owners = owners,
+                managers = managers,
+                cashiers = cashiers,
+                warehouseStaff = warehouseStaff
+            ))
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getUserStats", e))
+        }
+    }
+
     override fun getUsersByRole(role: Role): Flow<List<Pengguna>> =
         penggunaRepository.getPenggunaByRole(role)
+
+    override fun canDeleteLastOwner(): Flow<Boolean> {
+        return penggunaRepository.getAllPengguna().map { users ->
+            users.count { it.role == "OWNER" } > 1
+        }
+    }
 
     override suspend fun createUser(
         username: String,
@@ -31,33 +61,36 @@ class UserManagementServiceImpl @Inject constructor(
         return try {
             // Validate input
             if (username.isBlank()) {
-                return Result.Error("Username tidak boleh kosong")
+                return Result.failure(ChibyChibyException.ValidationError("username", "Username tidak boleh kosong"))
             }
             if (password.length < 6) {
-                return Result.Error("Password minimal 6 karakter")
+                return Result.failure(ChibyChibyException.ValidationError("password", "Password minimal 6 karakter"))
             }
 
             // Check if username already exists
-            val existingUser = penggunaRepository.getPenggunaByUsername(username)
-            if (existingUser != null) {
-                return Result.Error("Username sudah digunakan")
+            val existingUserResult = penggunaRepository.getPenggunaByUsername(username)
+            if (existingUserResult.isSuccess) {
+                return Result.failure(ChibyChibyException.ValidationError("username", "Username sudah digunakan"))
             }
 
-            // Hash password
-            val passwordHash = authService.hashPassword(password)
+            // Hash password using SHA-256
+            val passwordHash = java.security.MessageDigest.getInstance("SHA-256")
+                .digest(password.toByteArray())
+                .joinToString("") { "%02x".format(it) }
 
             val user = Pengguna(
                 username = username,
                 passwordHash = passwordHash,
-                role = role.name,
+                role = role,
                 permissions = "[]", // Default empty permissions
                 createdAt = java.util.Date(),
                 updatedAt = java.util.Date()
             )
 
-            penggunaRepository.insertPengguna(user)
+            val result = penggunaRepository.createPengguna(user)
+            result as com.chibychibystore.data.model.Result<Long>
         } catch (e: Exception) {
-            Result.Error("Gagal membuat user: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal membuat user", e))
         }
     }
 
@@ -87,9 +120,9 @@ class UserManagementServiceImpl @Inject constructor(
                 updatedAt = java.util.Date()
             )
 
-            penggunaRepository.updatePengguna(updatedUser)
+            penggunaRepository.updatePengguna(updatedUser) as com.chibychibystore.data.model.Result<Unit>
         } catch (e: Exception) {
-            Result.Error("Gagal update user: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal update user", e))
         }
     }
 
@@ -110,9 +143,9 @@ class UserManagementServiceImpl @Inject constructor(
                 return Result.Error("Hanya Owner yang dapat menghapus user")
             }
 
-            penggunaRepository.deletePengguna(userId)
+            penggunaRepository.deletePengguna(userId) as com.chibychibystore.data.model.Result<Unit>
         } catch (e: Exception) {
-            Result.Error("Gagal menghapus user: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal menghapus user", e))
         }
     }
 

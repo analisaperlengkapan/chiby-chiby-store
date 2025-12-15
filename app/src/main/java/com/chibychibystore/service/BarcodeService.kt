@@ -1,6 +1,7 @@
 package com.chibychibystore.service
 
 import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.model.Result
 
 /**
  * Service untuk mengelola operasi barcode

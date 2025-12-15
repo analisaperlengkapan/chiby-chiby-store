@@ -172,9 +172,9 @@ class SaleServiceImpl @Inject constructor(
 
             // Validasi dan update inventory stock
             for (item in items) {
-                val productResult = produkRepository.getProdukById(item.produkId)
+                val productResult = produkRepository.getProdukById(item.productId)
                 if (productResult.isFailure) {
-                    return Result.failure(Exception("Produk dengan ID ${item.produkId} tidak ditemukan"))
+                    return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
                 }
 
                 val product = productResult.getOrThrow()
@@ -184,7 +184,7 @@ class SaleServiceImpl @Inject constructor(
 
                 // Update stock
                 val newStock = product.stockQuantity - item.quantity
-                produkRepository.updateStock(item.produkId, newStock)
+                produkRepository.updateStock(item.productId, newStock)
             }
 
             // Create sale
@@ -215,7 +215,7 @@ class SaleServiceImpl @Inject constructor(
      *     if (saleWithItems != null) {
      *         println("Sale found: ${saleWithItems.penjualan.totalAmount}")
      *         saleWithItems.items.forEach { item ->
-     *             println("Item: ${item.produkId}, Qty: ${item.quantity}")
+     *             println("Item: ${item.productId}, Qty: ${item.quantity}")
      *         }
      *     } else {
      *         println("Sale not found")
@@ -493,11 +493,11 @@ class SaleServiceImpl @Inject constructor(
 
             // Restore inventory stock
             for (item in saleWithItems.items) {
-                val productResult = produkRepository.getProdukById(item.produkId)
+                val productResult = produkRepository.getProdukById(item.productId)
                 if (productResult.isSuccess) {
                     val product = productResult.getOrThrow()
                     val newStock = product.stockQuantity + item.quantity
-                    produkRepository.updateStock(item.produkId, newStock)
+                    produkRepository.updateStock(item.productId, newStock)
                 }
             }
 
@@ -572,11 +572,11 @@ class SaleServiceImpl @Inject constructor(
 
             // Restore inventory stock
             for (item in saleWithItems.items) {
-                val productResult = produkRepository.getProdukById(item.produkId)
+                val productResult = produkRepository.getProdukById(item.productId)
                 if (productResult.isSuccess) {
                     val product = productResult.getOrThrow()
                     val newStock = product.stockQuantity + item.quantity
-                    produkRepository.updateStock(item.produkId, newStock)
+                    produkRepository.updateStock(item.productId, newStock)
                 }
             }
 

@@ -304,7 +304,7 @@ class PdfExportService @Inject constructor(
             summaryTable.addCell(createHeaderCell("Rata-rata per Transaksi"))
             summaryTable.addCell(createDataCell("Rp ${"%,.0f".format(data.averageTransaction)}"))
 
-            document.add(summaryTable)
+            document.add(summaryTable as com.itextpdf.layout.element.IBlockElement)
 
             // Footer
             addFooter(document)
@@ -342,7 +342,7 @@ class PdfExportService @Inject constructor(
             table.addCell(createHeaderCell("Margin Keuntungan"))
             table.addCell(createDataCell("${"%.1f".format(data.profitMargin)}%"))
 
-            document.add(table)
+            document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
 
         } finally {
@@ -378,7 +378,7 @@ class PdfExportService @Inject constructor(
             table.addCell(createHeaderCell("Margin Keuntungan"))
             table.addCell(createDataCell("${"%.1f".format(data.profitMargin)}%"))
 
-            document.add(table)
+            document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
 
         } finally {
@@ -415,10 +415,10 @@ class PdfExportService @Inject constructor(
                 table.addCell(createDataCell("${product.quantitySold}"))
                 table.addCell(createDataCell("Rp ${"%,.0f".format(product.totalRevenue)}"))
                 table.addCell(createDataCell("Rp ${"%,.0f".format(product.totalCost)}"))
-                table.addCell(createDataCell("Rp ${"%,.0f".format(product.profit)}"))
+                table.addCell(createDataCell("Rp ${"%.0f".format(product.profit)}"))
             }
 
-            document.add(table)
+            document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
 
         } finally {
@@ -453,10 +453,10 @@ class PdfExportService @Inject constructor(
                 table.addCell(createDataCell("${category.quantitySold}"))
                 table.addCell(createDataCell("Rp ${"%,.0f".format(category.totalRevenue)}"))
                 table.addCell(createDataCell("Rp ${"%,.0f".format(category.totalCost)}"))
-                table.addCell(createDataCell("Rp ${"%,.0f".format(category.profit)}"))
+                table.addCell(createDataCell("Rp ${"%.0f".format(category.profit)}"))
             }
 
-            document.add(table)
+            document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
 
         } finally {
@@ -490,7 +490,7 @@ class PdfExportService @Inject constructor(
                 table.addCell(createDataCell("${trend.transactions}"))
             }
 
-            document.add(table)
+            document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
 
         } finally {
@@ -527,9 +527,9 @@ class PdfExportService @Inject constructor(
             table.addCell(createDataCell("Rp ${"%,.0f".format(data.operatingExpenses)}"))
 
             table.addCell(createHeaderCell("Laba Bersih"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(data.netIncome)}"))
+            table.addCell(createDataCell("Rp ${"%.0f".format(data.netIncome)}"))
 
-            document.add(table)
+            document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
 
         } finally {
@@ -566,9 +566,9 @@ class PdfExportService @Inject constructor(
             table.addCell(createDataCell("Rp ${"%,.0f".format(data.netCashFlow)}"))
 
             table.addCell(createHeaderCell("Saldo Akhir"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(data.endingCash)}"))
+            table.addCell(createDataCell("Rp ${"%.0f".format(data.endingCash)}"))
 
-            document.add(table)
+            document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
 
         } finally {
@@ -594,9 +594,9 @@ class PdfExportService @Inject constructor(
             summaryTable.setWidth(UnitValue.createPercentValue(100f))
 
             summaryTable.addCell(createHeaderCell("Total Pengeluaran"))
-            summaryTable.addCell(createDataCell("Rp ${"%,.0f".format(data.totalExpenses)}"))
+            summaryTable.addCell(createDataCell("Rp ${"%.0f".format(data.totalExpenses)}"))
 
-            document.add(summaryTable)
+            document.add(summaryTable as com.itextpdf.layout.element.IBlockElement)
             document.add(Paragraph("\n"))
 
             // Expenses by category
@@ -608,10 +608,10 @@ class PdfExportService @Inject constructor(
 
             data.expensesByCategory.forEach { (category, amount) ->
                 categoryTable.addCell(createDataCell(category.displayName))
-                categoryTable.addCell(createDataCell("Rp ${"%,.0f".format(amount)}"))
+                categoryTable.addCell(createDataCell("Rp ${"%.0f".format(amount)}"))
             }
 
-            document.add(categoryTable)
+            document.add(categoryTable as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
 
         } finally {
@@ -644,9 +644,9 @@ class PdfExportService @Inject constructor(
             table.addCell(createDataCell("Rp ${"%,.0f".format(data.equity)}"))
 
             table.addCell(createHeaderCell("Nilai Inventaris"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(data.inventoryValue)}"))
+            table.addCell(createDataCell("Rp ${"%.0f".format(data.inventoryValue)}"))
 
-            document.add(table)
+            document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
 
         } finally {

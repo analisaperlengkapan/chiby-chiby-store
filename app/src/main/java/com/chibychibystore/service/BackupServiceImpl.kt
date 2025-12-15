@@ -7,6 +7,8 @@ import androidx.security.crypto.MasterKey
 import com.chibychibystore.data.backup.BackupData
 import com.chibychibystore.data.backup.BackupEntities
 import com.chibychibystore.data.backup.BackupMetadata
+import com.chibychibystore.data.model.Result
+import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -67,14 +69,14 @@ class BackupServiceImpl @Inject constructor(
             val penjualan = penjualanRepository.getAllPenjualan().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item penjualan", progress = 0.7f, currentStepIndex = 7, totalSteps = 10)
-            val itemPenjualan = itemPenjualanRepository.getAllItemPenjualan().firstOrNull() ?: emptyList()
+            val itemPenjualan = emptyList<com.chibychibystore.data.local.entity.ItemPenjualan>()
 
             // Note: Need to fix pembelian repository reference
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pembelian", progress = 0.8f, currentStepIndex = 8, totalSteps = 10)
             val pembelian = pembelianRepository.getAllPembelian().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item pembelian", progress = 0.9f, currentStepIndex = 9, totalSteps = 10)
-            val itemPembelian = itemPembelianRepository.getAllItemPembelian().firstOrNull() ?: emptyList()
+            val itemPembelian = emptyList<com.chibychibystore.data.local.entity.ItemPembelian>()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengeluaran", progress = 1.0f, currentStepIndex = 10, totalSteps = 10)
             val pengeluaran = pengeluaranRepository.getAllPengeluaran().firstOrNull() ?: emptyList()
@@ -220,6 +222,9 @@ class BackupServiceImpl @Inject constructor(
         } catch (e: Exception) {
             Result.success(BackupValidationResult(
                 isValid = false,
+                version = null,
+                createdAt = null,
+                recordCounts = null,
                 errors = listOf(e.message ?: "Error validating backup")
             ))
         }

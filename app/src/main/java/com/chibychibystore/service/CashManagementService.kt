@@ -1,7 +1,8 @@
 package com.chibychibystore.service
 
-import com.chibychibystore.data.Result
 import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.model.Result
+import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.PengeluaranRepository
 import com.chibychibystore.repository.PenjualanRepository
 import java.time.LocalDate
@@ -50,9 +51,9 @@ class CashManagementService @Inject constructor(
                 .sumOf { it.amount }
 
             val operatingCashFlow = salesRevenue - operatingExpenses - inventoryPurchases
-            Result.Success(operatingCashFlow)
+            Result.success(operatingCashFlow)
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung operating cash flow: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung operating cash flow", e))
         }
     }
 
@@ -71,9 +72,9 @@ class CashManagementService @Inject constructor(
 
             // Investing cash flow is negative (cash outflows)
             val investingCashFlow = -equipmentExpenses
-            Result.Success(investingCashFlow)
+            Result.success(investingCashFlow)
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung investing cash flow: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung investing cash flow", e))
         }
     }
 
@@ -87,9 +88,9 @@ class CashManagementService @Inject constructor(
             // For now, financing cash flow is 0 as we don't track owner investments/withdrawals
             // This can be extended later when we add owner equity tracking
             val financingCashFlow = 0.0
-            Result.Success(financingCashFlow)
+            Result.success(financingCashFlow)
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung financing cash flow: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung financing cash flow", e))
         }
     }
 
@@ -104,9 +105,9 @@ class CashManagementService @Inject constructor(
             val financingCF = calculateFinancingCashFlow(startDate, endDate).getOrNull() ?: 0.0
 
             val netCashFlow = operatingCF + investingCF + financingCF
-            Result.Success(netCashFlow)
+            Result.success(netCashFlow)
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung net cash flow: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung net cash flow", e))
         }
     }
 
@@ -122,7 +123,7 @@ class CashManagementService @Inject constructor(
 
             val period = "${startDate.toString()} - ${endDate.toString()}"
 
-            Result.Success(CashFlowSummary(
+            Result.success(CashFlowSummary(
                 operatingCashFlow = operatingCF,
                 investingCashFlow = investingCF,
                 financingCashFlow = financingCF,
@@ -130,7 +131,7 @@ class CashManagementService @Inject constructor(
                 period = period
             ))
         } catch (e: Exception) {
-            Result.Error("Gagal membuat cash flow summary: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal membuat cash flow summary", e))
         }
     }
 
@@ -142,9 +143,9 @@ class CashManagementService @Inject constructor(
         return try {
             // Placeholder: in real implementation, this would track actual cash balance
             // For now, return 0 as we don't have cash tracking yet
-            Result.Success(0.0)
+            Result.success(0.0)
         } catch (e: Exception) {
-            Result.Error("Gagal mendapatkan posisi kas: ${e.message}")
+            Result.failure(ChibyChibyException.DatabaseError("Gagal mendapatkan posisi kas", e))
         }
     }
 }

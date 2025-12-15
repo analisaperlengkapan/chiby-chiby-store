@@ -16,31 +16,17 @@ class ItemPembelianRepository @Inject constructor(
 ) {
 
     /**
-     * Get semua item pembelian
-     */
-    fun getAllItemPembelian(): Flow<List<ItemPembelian>> = itemPembelianDao.getAllItemPembelian()
-
-    /**
-     * Get item pembelian by ID
-     */
-    suspend fun getItemPembelianById(id: Long): Result<ItemPembelian> {
-        return try {
-            val item = itemPembelianDao.getItemPembelianById(id)
-            if (item != null) {
-                Result.success(item)
-            } else {
-                Result.failure(ChibyChibyException.DatabaseError("Item pembelian dengan ID $id tidak ditemukan"))
-            }
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getItemPembelianById", e))
-        }
-    }
-
-    /**
      * Get items by pembelian ID
      */
-    fun getItemsByPembelianId(pembelianId: Long): Flow<List<ItemPembelian>> =
-        itemPembelianDao.getItemsByPembelianId(pembelianId)
+    fun getItemsByPurchaseId(purchaseId: Long): Flow<List<ItemPembelian>> =
+        itemPembelianDao.getItemsByPurchaseId(purchaseId)
+
+    /**
+     * Get items by product ID
+     */
+    fun getItemsByProductId(productId: Long): Flow<List<ItemPembelian>> =
+        itemPembelianDao.getItemsByProductId(productId)
+
 
     /**
      * Create item pembelian baru
@@ -58,46 +44,27 @@ class ItemPembelianRepository @Inject constructor(
         }
     }
 
-    /**
-     * Update item pembelian
-     */
-    suspend fun updateItemPembelian(item: ItemPembelian): Result<ItemPembelian> {
-        return try {
-            // Validasi data
-            validateItemPembelian(item)
-
-            itemPembelianDao.updateItemPembelian(item)
-            Result.success(item)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("updateItemPembelian", e))
-        }
-    }
 
     /**
-     * Delete item pembelian
+     * Delete items by purchase ID
      */
-    suspend fun deleteItemPembelian(id: Long): Result<Unit> {
+    suspend fun deleteItemsByPurchaseId(purchaseId: Long): Result<Unit> {
         return try {
-            itemPembelianDao.deleteItemPembelian(id)
+            itemPembelianDao.deleteItemsByPurchaseId(purchaseId)
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("deleteItemPembelian", e))
+            Result.failure(ChibyChibyException.DatabaseError("deleteItemsByPurchaseId", e))
         }
     }
 
-    /**
-     * Get items by produk ID
-     */
-    fun getItemsByProdukId(produkId: Long): Flow<List<ItemPembelian>> =
-        itemPembelianDao.getItemsByProdukId(produkId)
 
     /**
      * Validasi item pembelian
      */
     private fun validateItemPembelian(item: ItemPembelian) {
-        require(item.pembelianId > 0) { "ID pembelian harus valid" }
-        require(item.produkId > 0) { "ID produk harus valid" }
-        require(item.jumlah > 0) { "Jumlah harus lebih dari 0" }
-        require(item.hargaBeli >= 0) { "Harga beli tidak boleh negatif" }
+        require(item.purchaseId > 0) { "ID pembelian harus valid" }
+        require(item.productId > 0) { "ID produk harus valid" }
+        require(item.quantity > 0) { "Jumlah harus lebih dari 0" }
+        require(item.unitPrice >= 0) { "Harga beli tidak boleh negatif" }
     }
 }

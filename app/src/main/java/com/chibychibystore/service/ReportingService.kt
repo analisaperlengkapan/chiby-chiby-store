@@ -1,7 +1,8 @@
 package com.chibychibystore.service
 
-import com.chibychibystore.data.Result
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.error.ChibyChibyException
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -103,10 +104,10 @@ data class TaxReport(
  */
 @Singleton
 class ReportingService @Inject constructor(
-    private val saleRepository: com.chibychibystore.data.repository.PenjualanRepository,
-    private val purchaseRepository: com.chibychibystore.data.repository.PembelianRepository,
+    private val saleRepository: com.chibychibystore.repository.PenjualanRepository,
+    private val purchaseRepository: com.chibychibystore.repository.PembelianRepository,
     private val expenseRepository: com.chibychibystore.repository.PengeluaranRepository,
-    private val productRepository: com.chibychibystore.data.repository.ProdukRepository,
+    private val productRepository: com.chibychibystore.repository.ProdukRepository,
     private val balanceSheetService: BalanceSheetService,
     private val cashManagementService: CashManagementService
 ) {
@@ -122,14 +123,14 @@ class ReportingService @Inject constructor(
 
             val period = "${startDate.toString()} - ${endDate.toString()}"
 
-            Result.Success(GrossSalesReport(
+            Result.success(GrossSalesReport(
                 totalSales = totalSales,
                 totalTransactions = totalTransactions,
                 averageTransaction = averageTransaction,
                 period = period
             ))
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung penjualan kotor: ${e.message}")
+            Result.failure(ChibyChibyException.BusinessLogicError("Gagal menghitung penjualan kotor: ${e.message}"))
         }
     }
 

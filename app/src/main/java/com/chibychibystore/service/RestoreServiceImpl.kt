@@ -35,7 +35,7 @@ class RestoreServiceImpl @Inject constructor(
     private val _restoreProgress = MutableStateFlow(RestoreProgress())
     override fun observeRestoreProgress(): StateFlow<RestoreProgress> = _restoreProgress
 
-    override suspend fun restoreFromBackup(backupPath: String): Result<RestoreResult> {
+    override suspend fun restoreFromBackup(backupPath: String): com.chibychibystore.data.model.Result<RestoreResult> {
         return try {
             _restoreProgress.value = RestoreProgress(isInProgress = true, totalSteps = 12)
 
@@ -43,7 +43,7 @@ class RestoreServiceImpl @Inject constructor(
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memvalidasi file backup", progress = 0.1f, currentStepIndex = 1, totalSteps = 12)
             val validation = validateBackupFile(backupPath)
             if (!validation.isValid) {
-                return Result.failure(Exception("File backup tidak valid: ${validation.errors.joinToString()}"))
+                return com.chibychibystore.data.model.Result.failure(Exception("File backup tidak valid: ${validation.errors.joinToString()}"))
             }
 
             // Step 2: Decrypt and parse backup data
@@ -102,14 +102,14 @@ class RestoreServiceImpl @Inject constructor(
 
             _restoreProgress.value = RestoreProgress(isInProgress = false)
 
-            Result.success(RestoreResult(
+            com.chibychibystore.data.model.Result.success(RestoreResult(
                 success = true,
                 recordsRestored = recordsRestored
             ))
 
         } catch (e: Exception) {
             _restoreProgress.value = RestoreProgress(isInProgress = false)
-            Result.failure(e)
+            com.chibychibystore.data.model.Result.failure(e)
         }
     }
 

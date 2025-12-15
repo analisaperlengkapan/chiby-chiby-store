@@ -53,26 +53,11 @@ class PembelianRepository @Inject constructor(
     }
 
     /**
-     * Update pembelian
-     */
-    suspend fun updatePembelian(pembelian: Pembelian): Result<Pembelian> {
-        return try {
-            // Validasi data
-            validatePembelian(pembelian)
-
-            pembelianDao.updatePembelian(pembelian)
-            Result.success(pembelian)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("updatePembelian", e))
-        }
-    }
-
-    /**
      * Delete pembelian
      */
     suspend fun deletePembelian(id: Long): Result<Unit> {
         return try {
-            pembelianDao.deletePembelian(id)
+            pembelianDao.deletePembelianById(id)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("deletePembelian", e))

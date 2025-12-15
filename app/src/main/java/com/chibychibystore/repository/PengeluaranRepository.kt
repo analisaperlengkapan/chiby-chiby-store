@@ -5,6 +5,8 @@ import com.chibychibystore.data.local.entity.ExpenseCategory
 import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
@@ -64,7 +66,7 @@ class PengeluaranRepository @Inject constructor(
     suspend fun getExpensesInDateRange(startDate: LocalDate, endDate: LocalDate): List<Pengeluaran> {
         val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
         val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
-        return pengeluaranDao.getPengeluaranByDateRange(start, end)
+        return pengeluaranDao.getPengeluaranByDateRange(start, end).first()
     }
 
     /**
@@ -80,7 +82,7 @@ class PengeluaranRepository @Inject constructor(
         return try {
             // Validasi data
             if (pengeluaran.amount <= 0) {
-                return Result.failure(ChibyChibyException.ValidationError("Jumlah pengeluaran harus lebih dari 0"))
+                return Result.failure(ChibyChibyException.ValidationError("amount", "Jumlah pengeluaran harus lebih dari 0"))
             }
 
             // Jika jumlah > threshold, perlu approval
@@ -105,7 +107,7 @@ class PengeluaranRepository @Inject constructor(
         return try {
             // Validasi data
             if (pengeluaran.amount <= 0) {
-                return Result.failure(ChibyChibyException.ValidationError("Jumlah pengeluaran harus lebih dari 0"))
+                return Result.failure(ChibyChibyException.ValidationError("amount", "Jumlah pengeluaran harus lebih dari 0"))
             }
 
             pengeluaranDao.updatePengeluaran(pengeluaran)

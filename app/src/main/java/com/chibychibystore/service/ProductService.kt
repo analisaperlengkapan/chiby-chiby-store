@@ -399,14 +399,14 @@ class ProductServiceImpl @Inject constructor(
      * @throws IllegalArgumentException jika ada data yang tidak valid
      */
     private fun validateProduct(product: Produk) {
-        require(product.nama.isNotBlank()) { "Nama produk tidak boleh kosong" }
-        require(product.hargaBeli >= 0) { "Harga beli tidak boleh negatif" }
-        require(product.hargaJual >= 0) { "Harga jual tidak boleh negatif" }
-        require(product.stok >= 0) { "Stok tidak boleh negatif" }
-        require(product.minStok >= 0) { "Minimum stok tidak boleh negatif" }
+        require(product.name.isNotBlank()) { "Nama produk tidak boleh kosong" }
+        require(product.costPrice >= 0) { "Harga beli tidak boleh negatif" }
+        require(product.sellingPrice >= 0) { "Harga jual tidak boleh negatif" }
+        require(product.stockQuantity >= 0) { "Stok tidak boleh negatif" }
+        require(product.minStock >= 0) { "Minimum stok tidak boleh negatif" }
 
         // Business rule: harga jual harus >= harga beli untuk profit
-        if (product.hargaJual < product.hargaBeli) {
+        if (product.sellingPrice < product.costPrice) {
             throw IllegalArgumentException("Harga jual tidak boleh lebih rendah dari harga beli")
         }
     }

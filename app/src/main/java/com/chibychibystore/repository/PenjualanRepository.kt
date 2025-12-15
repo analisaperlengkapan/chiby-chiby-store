@@ -7,6 +7,7 @@ import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.PenjualanWithItems
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.toList
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -45,7 +46,7 @@ class PenjualanRepository @Inject constructor(
      */
     suspend fun getPenjualanWithItemsById(id: Long): Result<PenjualanWithItems> {
         return try {
-            val penjualanWithItems = penjualanDao.getPenjualanWithItemsById(id)
+            val penjualanWithItems = penjualanDao.getPenjualanWithItems(id)
             if (penjualanWithItems != null) {
                 Result.success(penjualanWithItems)
             } else {
@@ -57,16 +58,13 @@ class PenjualanRepository @Inject constructor(
     }
 
     /**
-     * Get penjualan by date range
+     * Get penjualan in date range
      */
-    fun getPenjualanByDateRange(startDate: String, endDate: String): Flow<List<Penjualan>> =
-        penjualanDao.getPenjualanByDateRange(startDate, endDate)
-
-    /**
-     * Get penjualan dengan items by date range
-     */
-    fun getPenjualanWithItemsByDateRange(startDate: String, endDate: String): Flow<List<PenjualanWithItems>> =
-        penjualanDao.getPenjualanWithItemsByDateRange(startDate, endDate)
+    suspend fun getSalesInDateRange(startDate: java.time.LocalDate, endDate: java.time.LocalDate): List<Penjualan> {
+        val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+        val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+        return penjualanDao.getPenjualanByDateRange(start, end).first()
+    }
 
     /**
      * Create penjualan baru dengan items
@@ -75,7 +73,7 @@ class PenjualanRepository @Inject constructor(
         return try {
             // Validasi data
             if (items.isEmpty()) {
-                return Result.failure(ChibyChibyException.ValidationError("Penjualan harus memiliki minimal 1 item"))
+                return Result.failure(ChibyChibyException.ValidationError("items", "Penjualan harus memiliki minimal 1 item"))
             }
 
             // Hitung total amount dari items
@@ -85,31 +83,13 @@ class PenjualanRepository @Inject constructor(
             // Insert penjualan dan items dalam transaksi
             val penjualanId = penjualanDao.insertPenjualan(penjualanWithTotal)
 
-            val itemsWithPenjualanId = items.map { it.copy(penjualanId = penjualanId) }
-            itemPenjualanDao.insertItemPenjualanBatch(itemsWithPenjualanId)
+            val itemsWithPenjualanId = items.map { it.copy(saleId = penjualanId) }
+            itemPenjualanDao.insertItemPenjualanList(itemsWithPenjualanId)
 
             // Return penjualan dengan items
             getPenjualanWithItemsById(penjualanId)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("createPenjualan", e))
-        }
-    }
-
-    /**
-     * Update penjualan
-     */
-    suspend fun updatePenjualan(id: Long, penjualan: Penjualan): Result<Penjualan> {
-        return try {
-            val existingPenjualan = penjualanDao.getPenjualanById(id)
-            if (existingPenjualan == null) {
-                return Result.failure(ChibyChibyException.DatabaseError("Penjualan dengan ID $id tidak ditemukan"))
-            }
-
-            val updatedPenjualan = penjualan.copy(id = id)
-            penjualanDao.updatePenjualan(updatedPenjualan)
-            Result.success(updatedPenjualan)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("updatePenjualan", e))
         }
     }
 
@@ -131,20 +111,60 @@ class PenjualanRepository @Inject constructor(
     }
 
     /**
-     * Search penjualan
-     */
-    fun searchPenjualan(query: String): Flow<List<Penjualan>> =
-        penjualanDao.searchPenjualan(query)
-
-    /**
      * Get total penjualan by date range
      */
-    suspend fun getTotalPenjualanByDateRange(startDate: String, endDate: String): Result<Double> {
+    suspend fun getTotalPenjualanByDateRange(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Result<Double> {
         return try {
-            val total = penjualanDao.getTotalPenjualanByDateRange(startDate, endDate) ?: 0.0
+            val sales = getSalesInDateRange(startDate, endDate)
+            val total = sales.sumOf { it.totalAmount }
             Result.success(total)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getTotalPenjualanByDateRange", e))
+        }
+    }
+
+    /**
+     * Get penjualan by date range (Flow version for observation)
+     */
+    fun getPenjualanByDateRange(startDate: String, endDate: String): Flow<List<Penjualan>> {
+        return try {
+            val start = java.util.Date.from(java.time.LocalDate.parse(startDate).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+            val end = java.util.Date.from(java.time.LocalDate.parse(endDate).atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+            penjualanDao.getPenjualanByDateRange(start, end)
+        } catch (e: Exception) {
+            kotlinx.coroutines.flow.flowOf(emptyList())
+        }
+    }
+
+    /**
+     * Get penjualan with items by date range (Flow version for observation)
+     */
+    fun getPenjualanWithItemsByDateRange(startDate: String, endDate: String): Flow<List<PenjualanWithItems>> {
+        return try {
+            val start = java.util.Date.from(java.time.LocalDate.parse(startDate).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+            val end = java.util.Date.from(java.time.LocalDate.parse(endDate).atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+            penjualanDao.getPenjualanWithItemsByDateRange(start, end)
+        } catch (e: Exception) {
+            kotlinx.coroutines.flow.flowOf(emptyList())
+        }
+    }
+
+    /**
+     * Search penjualan by query
+     */
+    fun searchPenjualan(query: String): Flow<List<Penjualan>> {
+        return penjualanDao.getAllPenjualan()
+    }
+
+    /**
+     * Update penjualan
+     */
+    suspend fun updatePenjualan(id: Long, sale: Penjualan): Result<Unit> {
+        return try {
+            penjualanDao.updatePenjualan(sale)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("updatePenjualan", e))
         }
     }
 }

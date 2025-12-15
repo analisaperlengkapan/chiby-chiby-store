@@ -41,35 +41,27 @@ class DataSeedingService @Inject constructor(
         val defaultUsers = listOf(
             Pengguna(
                 id = 0,
-                nama = "Owner Default",
                 username = "owner",
-                passwordHash = "hashed_password_owner", // In real implementation, hash properly
-                role = "OWNER",
-                aktif = true
+                passwordHash = "hashed_password_owner",
+                role = Role.OWNER
             ),
             Pengguna(
                 id = 0,
-                nama = "Manager Default",
                 username = "manager",
                 passwordHash = "hashed_password_manager",
-                role = "MANAGER",
-                aktif = true
+                role = Role.MANAGER
             ),
             Pengguna(
                 id = 0,
-                nama = "Cashier Default",
                 username = "cashier",
                 passwordHash = "hashed_password_cashier",
-                role = "CASHIER",
-                aktif = true
+                role = Role.CASHIER
             ),
             Pengguna(
                 id = 0,
-                nama = "Warehouse Staff Default",
                 username = "warehouse",
                 passwordHash = "hashed_password_warehouse",
-                role = "WAREHOUSE_STAFF",
-                aktif = true
+                role = Role.WAREHOUSE
             )
         )
 

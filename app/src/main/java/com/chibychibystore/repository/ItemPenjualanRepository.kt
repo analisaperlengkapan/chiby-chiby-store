@@ -16,31 +16,17 @@ class ItemPenjualanRepository @Inject constructor(
 ) {
 
     /**
-     * Get semua item penjualan
+     * Get items by sale ID
      */
-    fun getAllItemPenjualan(): Flow<List<ItemPenjualan>> = itemPenjualanDao.getAllItemPenjualan()
+    fun getItemsBySaleId(saleId: Long): Flow<List<ItemPenjualan>> =
+        itemPenjualanDao.getItemsBySaleId(saleId)
 
     /**
-     * Get item penjualan by ID
+     * Get items by product ID
      */
-    suspend fun getItemPenjualanById(id: Long): Result<ItemPenjualan> {
-        return try {
-            val item = itemPenjualanDao.getItemPenjualanById(id)
-            if (item != null) {
-                Result.success(item)
-            } else {
-                Result.failure(ChibyChibyException.DatabaseError("Item penjualan dengan ID $id tidak ditemukan"))
-            }
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getItemPenjualanById", e))
-        }
-    }
+    fun getItemsByProductId(productId: Long): Flow<List<ItemPenjualan>> =
+        itemPenjualanDao.getItemsByProductId(productId)
 
-    /**
-     * Get items by penjualan ID
-     */
-    fun getItemsByPenjualanId(penjualanId: Long): Flow<List<ItemPenjualan>> =
-        itemPenjualanDao.getItemsByPenjualanId(penjualanId)
 
     /**
      * Create item penjualan baru
@@ -49,13 +35,13 @@ class ItemPenjualanRepository @Inject constructor(
         return try {
             // Validasi data
             if (item.quantity <= 0) {
-                return Result.failure(ChibyChibyException.ValidationError("Quantity harus lebih dari 0"))
+                return Result.failure(ChibyChibyException.ValidationError("quantity", "Quantity harus lebih dari 0"))
             }
             if (item.unitPrice < 0) {
-                return Result.failure(ChibyChibyException.ValidationError("Harga unit tidak boleh negatif"))
+                return Result.failure(ChibyChibyException.ValidationError("unitPrice", "Harga unit tidak boleh negatif"))
             }
             if (item.totalPrice < 0) {
-                return Result.failure(ChibyChibyException.ValidationError("Total harga tidak boleh negatif"))
+                return Result.failure(ChibyChibyException.ValidationError("totalPrice", "Total harga tidak boleh negatif"))
             }
 
             val itemId = itemPenjualanDao.insertItemPenjualan(item)
@@ -66,50 +52,17 @@ class ItemPenjualanRepository @Inject constructor(
         }
     }
 
-    /**
-     * Update item penjualan
-     */
-    suspend fun updateItemPenjualan(id: Long, item: ItemPenjualan): Result<ItemPenjualan> {
-        return try {
-            val existingItem = itemPenjualanDao.getItemPenjualanById(id)
-            if (existingItem == null) {
-                return Result.failure(ChibyChibyException.DatabaseError("Item penjualan dengan ID $id tidak ditemukan"))
-            }
 
-            val updatedItem = item.copy(id = id)
-            itemPenjualanDao.updateItemPenjualan(updatedItem)
-            Result.success(updatedItem)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("updateItemPenjualan", e))
-        }
-    }
 
     /**
-     * Delete item penjualan
+     * Delete items by sale ID
      */
-    suspend fun deleteItemPenjualan(id: Long): Result<Unit> {
+    suspend fun deleteItemsBySaleId(saleId: Long): Result<Unit> {
         return try {
-            val existingItem = itemPenjualanDao.getItemPenjualanById(id)
-            if (existingItem == null) {
-                return Result.failure(ChibyChibyException.DatabaseError("Item penjualan dengan ID $id tidak ditemukan"))
-            }
-
-            itemPenjualanDao.deleteItemPenjualanById(id)
+            itemPenjualanDao.deleteItemsBySaleId(saleId)
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("deleteItemPenjualan", e))
-        }
-    }
-
-    /**
-     * Delete items by penjualan ID
-     */
-    suspend fun deleteItemsByPenjualanId(penjualanId: Long): Result<Unit> {
-        return try {
-            itemPenjualanDao.deleteItemsByPenjualanId(penjualanId)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("deleteItemsByPenjualanId", e))
+            Result.failure(ChibyChibyException.DatabaseError("deleteItemsBySaleId", e))
         }
     }
 
@@ -118,7 +71,7 @@ class ItemPenjualanRepository @Inject constructor(
      */
     suspend fun insertItemPenjualanBatch(items: List<ItemPenjualan>): Result<Unit> {
         return try {
-            itemPenjualanDao.insertItemPenjualanBatch(items)
+            itemPenjualanDao.insertItemPenjualanList(items)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("insertItemPenjualanBatch", e))
