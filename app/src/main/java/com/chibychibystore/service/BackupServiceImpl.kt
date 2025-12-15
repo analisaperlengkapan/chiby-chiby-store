@@ -186,7 +186,7 @@ class BackupServiceImpl @Inject constructor(
                 backupFile.delete()
                 Result.success(Unit)
             } else {
-                Result.failure(Exception("Backup file tidak ditemukan")))
+                Result.failure(Exception("Backup file tidak ditemukan"))
             }
         } catch (e: Exception) {
             Result.failure(e)

@@ -94,7 +94,7 @@ class WarehouseServiceImpl @Inject constructor(
                     if (created != null) {
                         Result.success(created)
                     } else {
-                        Result.failure(Exception("Gagal mengambil data gudang setelah dibuat")))
+                        Result.failure(Exception("Gagal mengambil data gudang setelah dibuat"))
                     }
                 },
                 onFailure = { e -> Result.failure(e) }
@@ -125,7 +125,7 @@ class WarehouseServiceImpl @Inject constructor(
             // Note: getProductsByWarehouse returns Flow, we take first emission
             val productsInWarehouse = productRepository.getProdukByWarehouse(id).first()
             if (productsInWarehouse.isNotEmpty()) {
-                return Result.failure(Exception("Tidak dapat menghapus gudang yang masih memiliki produk")))
+                return Result.failure(Exception("Tidak dapat menghapus gudang yang masih memiliki produk"))
             }
 
             warehouseRepository.deleteGudang(id)
@@ -161,13 +161,13 @@ class WarehouseServiceImpl @Inject constructor(
             // Validasi bahwa gudang exists
             val warehouseResult = warehouseRepository.getGudangById(warehouseId)
             if (warehouseResult.isFailure) {
-                return Result.failure(Exception("Gudang tidak ditemukan")))
+                return Result.failure(Exception("Gudang tidak ditemukan"))
             }
 
             // Validasi bahwa produk exists
             val productResult = productRepository.getProdukById(productId)
             if (productResult.isFailure) {
-                return Result.failure(Exception("Produk tidak ditemukan")))
+                return Result.failure(Exception("Produk tidak ditemukan"))
             }
             val product = productResult.getOrThrow()
 
@@ -187,28 +187,28 @@ class WarehouseServiceImpl @Inject constructor(
     ): Result<Unit> {
         return try {
             if (quantity <= 0) {
-                return Result.failure(Exception("Jumlah transfer harus lebih dari 0")))
+                return Result.failure(Exception("Jumlah transfer harus lebih dari 0"))
             }
 
             if (fromWarehouseId == toWarehouseId) {
-                return Result.failure(Exception("Gudang asal dan tujuan tidak boleh sama")))
+                return Result.failure(Exception("Gudang asal dan tujuan tidak boleh sama"))
             }
 
             // Get product
             val productResult = productRepository.getProdukById(productId)
             if (productResult.isFailure) {
-                return Result.failure(Exception("Produk tidak ditemukan")))
+                return Result.failure(Exception("Produk tidak ditemukan"))
             }
             val product = productResult.getOrThrow()
 
             // Validate source warehouse
             if (product.warehouseId != fromWarehouseId) {
-                return Result.failure(Exception("Produk tidak berada di gudang asal")))
+                return Result.failure(Exception("Produk tidak berada di gudang asal"))
             }
 
             // Validate stock
             if (product.stockQuantity < quantity) {
-                return Result.failure(Exception("Stok gudang asal tidak mencukupi")))
+                return Result.failure(Exception("Stok gudang asal tidak mencukupi"))
             }
 
             // Since we have unique barcode constraint, we can only move the entire product
@@ -228,7 +228,7 @@ class WarehouseServiceImpl @Inject constructor(
                 // Partial transfer
                 // Check if target warehouse already has this product (impossible due to unique barcode, unless barcode is null)
                 // If barcode is unique, we cannot have the same product in two warehouses.
-                return Result.failure(Exception("Transfer sebagian stok tidak didukung karena batasan Barcode Unik. Silakan transfer seluruh stok.")))
+                return Result.failure(Exception("Transfer sebagian stok tidak didukung karena batasan Barcode Unik. Silakan transfer seluruh stok."))
             }
             
             Result.success(Unit)

@@ -164,7 +164,7 @@ class ReportingService @Inject constructor(
                 period = period
             ))
         } catch (e: Exception) {
-            Result.failure(Exception("Gagal menghitung margin keuntungan: ${e.message}")))
+            Result.failure(Exception("Gagal menghitung margin keuntungan: ${e.message}"))
         }
     }
 
@@ -188,10 +188,10 @@ class ReportingService @Inject constructor(
                     period = profitMargin.period
                 ))
             } else {
-                Result.failure(Exception("Gagal menghitung keuntungan bersih")))
+                Result.failure(Exception("Gagal menghitung keuntungan bersih"))
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Gagal menghitung keuntungan bersih: ${e.message}")))
+            Result.failure(Exception("Gagal menghitung keuntungan bersih: ${e.message}"))
         }
     }
 
@@ -201,7 +201,7 @@ class ReportingService @Inject constructor(
             // For now, return empty list - will be implemented with proper DAO queries
             Result.success(emptyList())
         } catch (e: Exception) {
-            Result.failure(Exception("Gagal mendapatkan penjualan per produk: ${e.message}")))
+            Result.failure(Exception("Gagal mendapatkan penjualan per produk: ${e.message}"))
         }
     }
 
@@ -211,7 +211,7 @@ class ReportingService @Inject constructor(
             // For now, return empty list - will be implemented with proper DAO queries
             Result.success(emptyList())
         } catch (e: Exception) {
-            Result.failure(Exception("Gagal mendapatkan penjualan per kategori: ${e.message}")))
+            Result.failure(Exception("Gagal mendapatkan penjualan per kategori: ${e.message}"))
         }
     }
 
@@ -231,7 +231,7 @@ class ReportingService @Inject constructor(
 
             Result.success(trendData)
         } catch (e: Exception) {
-            Result.failure(Exception("Gagal mendapatkan trend penjualan: ${e.message}")))
+            Result.failure(Exception("Gagal mendapatkan trend penjualan: ${e.message}"))
         }
     }
 
@@ -253,10 +253,10 @@ class ReportingService @Inject constructor(
                     period = netProfit.period
                 ))
             } else {
-                Result.failure(Exception("Gagal membuat laporan laba rugi")))
+                Result.failure(Exception("Gagal membuat laporan laba rugi"))
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Gagal membuat laporan laba rugi: ${e.message}")))
+            Result.failure(Exception("Gagal membuat laporan laba rugi: ${e.message}"))
         }
     }
 
@@ -281,10 +281,10 @@ class ReportingService @Inject constructor(
                     period = cashFlowSummary.period
                 ))
             } else {
-                Result.failure(Exception("Gagal mendapatkan cash flow summary")))
+                Result.failure(Exception("Gagal mendapatkan cash flow summary"))
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Gagal membuat laporan arus kas: ${e.message}")))
+            Result.failure(Exception("Gagal membuat laporan arus kas: ${e.message}"))
         }
     }
 
@@ -302,7 +302,7 @@ class ReportingService @Inject constructor(
                 period = period
             ))
         } catch (e: Exception) {
-            Result.failure(Exception("Gagal membuat laporan pengeluaran: ${e.message}")))
+            Result.failure(Exception("Gagal membuat laporan pengeluaran: ${e.message}"))
         }
     }
 
@@ -326,10 +326,10 @@ class ReportingService @Inject constructor(
                     period = netProfit.period
                 ))
             } else {
-                Result.failure(Exception("Gagal membuat laporan pajak")))
+                Result.failure(Exception("Gagal membuat laporan pajak"))
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Gagal membuat laporan pajak: ${e.message}")))
+            Result.failure(Exception("Gagal membuat laporan pajak: ${e.message}"))
         }
     }
 }

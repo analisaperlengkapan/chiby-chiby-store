@@ -43,7 +43,7 @@ class RestoreServiceImpl @Inject constructor(
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memvalidasi file backup", progress = 0.1f, currentStepIndex = 1, totalSteps = 12)
             val validation = validateBackupFile(backupPath)
             if (!validation.isValid) {
-                return com.chibychibystore.data.model.Result.failure(Exception("File backup tidak valid: ${validation.errors.joinToString()}")))
+                return com.chibychibystore.data.model.Result.failure(Exception("File backup tidak valid: ${validation.errors.joinToString()}"))
             }
 
             // Step 2: Decrypt and parse backup data
@@ -117,7 +117,7 @@ class RestoreServiceImpl @Inject constructor(
         return try {
             val validation = validateBackupFile(backupPath)
             if (!validation.isValid) {
-                return Result.failure(Exception("File backup tidak valid")))
+                return Result.failure(Exception("File backup tidak valid"))
             }
 
             val backupData = loadBackupData(backupPath)
