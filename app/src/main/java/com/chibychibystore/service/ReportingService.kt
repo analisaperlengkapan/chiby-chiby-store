@@ -4,8 +4,17 @@ import com.chibychibystore.data.model.Result
 import com.chibychibystore.data.local.entity.ExpenseCategory
 import com.chibychibystore.error.ChibyChibyException
 import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Extension function to convert Date to LocalDate
+ */
+fun Date.toLocalDate(): LocalDate {
+    return this.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+}
 
 /**
  * Data classes for report results
@@ -147,7 +156,7 @@ class ReportingService @Inject constructor(
 
             val period = "${startDate.toString()} - ${endDate.toString()}"
 
-            Result.Success(ProfitMarginReport(
+            Result.success(ProfitMarginReport(
                 totalRevenue = totalRevenue,
                 totalCost = totalCost,
                 grossProfit = grossProfit,
@@ -155,7 +164,7 @@ class ReportingService @Inject constructor(
                 period = period
             ))
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung margin keuntungan: ${e.message}")
+            Result.failure(Exception("Gagal menghitung margin keuntungan: ${e.message}"))
         }
     }
 
@@ -171,7 +180,7 @@ class ReportingService @Inject constructor(
                 val netProfit = profitMargin.grossProfit - totalExpenses
                 val profitMarginPercent = if (profitMargin.totalRevenue > 0) (netProfit / profitMargin.totalRevenue) * 100 else 0.0
 
-                Result.Success(NetProfitReport(
+                Result.success(NetProfitReport(
                     grossProfit = profitMargin.grossProfit,
                     totalExpenses = totalExpenses,
                     netProfit = netProfit,
@@ -179,10 +188,10 @@ class ReportingService @Inject constructor(
                     period = profitMargin.period
                 ))
             } else {
-                Result.Error("Gagal menghitung keuntungan bersih")
+                Result.failure(Exception("Gagal menghitung keuntungan bersih"))
             }
         } catch (e: Exception) {
-            Result.Error("Gagal menghitung keuntungan bersih: ${e.message}")
+            Result.failure(Exception("Gagal menghitung keuntungan bersih: ${e.message}"))
         }
     }
 
@@ -190,9 +199,9 @@ class ReportingService @Inject constructor(
         return try {
             // This would require joining sale items with products
             // For now, return empty list - will be implemented with proper DAO queries
-            Result.Success(emptyList())
+            Result.success(emptyList())
         } catch (e: Exception) {
-            Result.Error("Gagal mendapatkan penjualan per produk: ${e.message}")
+            Result.failure(Exception("Gagal mendapatkan penjualan per produk: ${e.message}"))
         }
     }
 
@@ -200,9 +209,9 @@ class ReportingService @Inject constructor(
         return try {
             // This would require joining through products to categories
             // For now, return empty list - will be implemented with proper DAO queries
-            Result.Success(emptyList())
+            Result.success(emptyList())
         } catch (e: Exception) {
-            Result.Error("Gagal mendapatkan penjualan per kategori: ${e.message}")
+            Result.failure(Exception("Gagal mendapatkan penjualan per kategori: ${e.message}"))
         }
     }
 
@@ -220,9 +229,9 @@ class ReportingService @Inject constructor(
                 )
             }.sortedBy { it.date }
 
-            Result.Success(trendData)
+            Result.success(trendData)
         } catch (e: Exception) {
-            Result.Error("Gagal mendapatkan trend penjualan: ${e.message}")
+            Result.failure(Exception("Gagal mendapatkan trend penjualan: ${e.message}"))
         }
     }
 
@@ -235,7 +244,7 @@ class ReportingService @Inject constructor(
                 val expenses = expenseRepository.getExpensesInDateRange(startDate, endDate)
                 val operatingExpenses = expenses.sumOf { it.amount }
 
-                Result.Success(IncomeStatement(
+                Result.success(IncomeStatement(
                     revenue = netProfit.grossProfit + netProfit.totalExpenses, // Reverse calculation
                     costOfGoodsSold = netProfit.grossProfit - netProfit.netProfit, // This is approximate
                     grossProfit = netProfit.grossProfit,
@@ -244,10 +253,10 @@ class ReportingService @Inject constructor(
                     period = netProfit.period
                 ))
             } else {
-                Result.Error("Gagal membuat laporan laba rugi")
+                Result.failure(Exception("Gagal membuat laporan laba rugi"))
             }
         } catch (e: Exception) {
-            Result.Error("Gagal membuat laporan laba rugi: ${e.message}")
+            Result.failure(Exception("Gagal membuat laporan laba rugi: ${e.message}"))
         }
     }
 
@@ -262,7 +271,7 @@ class ReportingService @Inject constructor(
                 val beginningCash = 0.0
                 val endingCash = beginningCash + cashFlowSummary.netCashFlow
 
-                Result.Success(CashFlow(
+                Result.success(CashFlow(
                     operatingCashFlow = cashFlowSummary.operatingCashFlow,
                     investingCashFlow = cashFlowSummary.investingCashFlow,
                     financingCashFlow = cashFlowSummary.financingCashFlow,
@@ -272,10 +281,10 @@ class ReportingService @Inject constructor(
                     period = cashFlowSummary.period
                 ))
             } else {
-                Result.Error("Gagal mendapatkan cash flow summary")
+                Result.failure(Exception("Gagal mendapatkan cash flow summary"))
             }
         } catch (e: Exception) {
-            Result.Error("Gagal membuat laporan arus kas: ${e.message}")
+            Result.failure(Exception("Gagal membuat laporan arus kas: ${e.message}"))
         }
     }
 
@@ -287,13 +296,13 @@ class ReportingService @Inject constructor(
 
             val period = "${startDate.toString()} - ${endDate.toString()}"
 
-            Result.Success(ExpenseReport(
+            Result.success(ExpenseReport(
                 totalExpenses = totalExpenses,
                 expensesByCategory = expensesByCategory,
                 period = period
             ))
         } catch (e: Exception) {
-            Result.Error("Gagal membuat laporan pengeluaran: ${e.message}")
+            Result.failure(Exception("Gagal membuat laporan pengeluaran: ${e.message}"))
         }
     }
 
@@ -310,17 +319,17 @@ class ReportingService @Inject constructor(
                 val taxRate = 0.11 // 11% corporate tax rate in Indonesia
                 val taxAmount = netProfit.netProfit * taxRate
 
-                Result.Success(TaxReport(
+                Result.success(TaxReport(
                     taxableIncome = netProfit.netProfit,
                     taxRate = taxRate,
                     taxAmount = taxAmount,
                     period = netProfit.period
                 ))
             } else {
-                Result.Error("Gagal membuat laporan pajak")
+                Result.failure(Exception("Gagal membuat laporan pajak"))
             }
         } catch (e: Exception) {
-            Result.Error("Gagal membuat laporan pajak: ${e.message}")
+            Result.failure(Exception("Gagal membuat laporan pajak: ${e.message}"))
         }
     }
 }
