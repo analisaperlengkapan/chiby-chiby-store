@@ -22,8 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.model.Produk
-import com.chibychibystore.ui.components.CardItem
+import com.chibychibystore.ui.components.shared.CardItem
 import com.chibychibystore.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,7 +109,7 @@ fun InventoryScreen(
                     ProductList(
                         products = uiState.products,
                         onProductClick = { product ->
-                            navController.navigate(Screen.ProductDetail.createRoute(product.id))
+                            navController.navigate(Screen.ProductDetail.createRoute(product.id.toString()))
                         }
                     )
                 }
@@ -175,9 +174,10 @@ private fun ProductListItem(
     product: Produk,
     onClick: () -> Unit
 ) {
-    CardItem(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         Column(
             modifier = Modifier

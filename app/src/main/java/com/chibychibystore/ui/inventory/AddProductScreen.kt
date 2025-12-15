@@ -1,5 +1,4 @@
 package com.chibychibystore.ui.inventory
-import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.shared.ErrorMessage
 import com.chibychibystore.ui.components.shared.LoadingIndicator
 
@@ -17,9 +16,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.model.Produk
+import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.shared.AppTopBar
-import com.chibychibystore.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,25 +28,25 @@ fun AddProductScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    var editedProduct by remember {
+        mutableStateOf(
+            Produk(
+                id = 0,
+                name = "",
+                barcode = null,
+                categoryId = 0,
+                costPrice = 0.0,
+                sellingPrice = 0.0,
+                stockQuantity = 0,
+                warehouseId = 0,
+                minStock = 0
+            )
+        )
+    }
+
     // Initialize with empty product for adding
     LaunchedEffect(Unit) {
-        val emptyProduct = Produk(
-            id = 0,
-            name = "",
-            barcode = null,
-            kategoriId = 0,
-            costPrice = 0.0,
-            sellingPrice = 0.0,
-            stockQuantity = 0,
-            gudangId = 0,
-            minStock = 0,
-            createdAt = "",
-            updatedAt = ""
-        )
-        viewModel.uiState.value.copy(
-            product = emptyProduct,
-            isEditing = true
-        )
+        // ProductDetailViewModel will default to create-mode when productId is null.
     }
 
     Scaffold(
@@ -60,10 +58,9 @@ fun AddProductScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            val product = uiState.product ?: return@IconButton
-                            viewModel.saveProduct(product)
+                            viewModel.saveProduct(editedProduct)
                         },
-                        enabled = uiState.product?.name?.isNotBlank() == true
+                        enabled = editedProduct.name.isNotBlank()
                     ) {
                         Icon(Icons.Default.Save, contentDescription = "Simpan")
                     }
@@ -88,25 +85,10 @@ fun AddProductScreen(
                     )
                 }
                 else -> {
-                    val product = uiState.product ?: Produk(
-                        id = 0,
-                        name = "",
-                        barcode = null,
-                        kategoriId = 0,
-                        costPrice = 0.0,
-                        sellingPrice = 0.0,
-                        stockQuantity = 0,
-                        gudangId = 0,
-                        minStock = 0,
-                        createdAt = "",
-                        updatedAt = ""
-                    )
-
                     AddProductContent(
-                        product = product,
+                        product = editedProduct,
                         onProductChange = { updatedProduct ->
-                            // Update the product in state
-                            viewModel.uiState.value.copy(product = updatedProduct)
+                            editedProduct = updatedProduct
                         }
                     )
                 }
@@ -124,9 +106,7 @@ fun AddProductScreen(
             viewModel.clearSuccessMessage()
             // Small delay before navigation to let user see the message
             kotlinx.coroutines.delay(1000)
-            if (uiState.isSaved) {
-                navController.navigateUp()
-            }
+            navController.navigateUp()
         }
     }
 }

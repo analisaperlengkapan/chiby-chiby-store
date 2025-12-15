@@ -3,6 +3,7 @@ package com.chibychibystore.service
 import com.chibychibystore.data.local.entity.ItemPenjualan
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.PenjualanWithItems
+import com.chibychibystore.data.local.entity.PaymentMethod
 import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
@@ -1044,7 +1045,7 @@ class SaleServiceImpl @Inject constructor(
     private fun validateSale(sale: Penjualan, items: List<ItemPenjualan>) {
         require(items.isNotEmpty()) { "Penjualan harus memiliki minimal 1 item" }
         require(sale.totalAmount >= 0) { "Total amount tidak boleh negatif" }
-        require(sale.paymentMethod in listOf("CASH", "CARD")) { "Metode pembayaran tidak valid" }
+        require(sale.paymentMethod in listOf(PaymentMethod.CASH, PaymentMethod.CARD)) { "Metode pembayaran tidak valid" }
 
         items.forEach { item ->
             require(item.quantity > 0) { "Quantity item harus lebih dari 0" }

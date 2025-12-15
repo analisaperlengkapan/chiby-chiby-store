@@ -36,11 +36,8 @@ fun ExpenseAddScreen(
         topBar = {
             AppTopBar(
                 title = "Tambah Pengeluaran",
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
-                    }
-                }
+                navigationIcon = Icons.Default.ArrowBack,
+                onNavigationClick = { navController.navigateUp() }
             )
         }
     ) { paddingValues ->

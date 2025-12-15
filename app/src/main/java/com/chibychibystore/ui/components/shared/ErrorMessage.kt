@@ -1,18 +1,21 @@
 package com.chibychibystore.ui.components.shared
-import com.chibychibystore.ui.components.shared.ErrorMessage
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.chibychibystore.R
 
 @Composable
 fun ErrorMessage(
@@ -46,7 +49,7 @@ fun ErrorMessage(
                 // Commenting out Icon for now to avoid resource issues if R.drawable.ic_error doesn't exist
                 // Or use vector icon
                  Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Error,
+                    imageVector = Icons.Filled.Error,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error
                 )
@@ -60,14 +63,14 @@ fun ErrorMessage(
             if (onRetry != null || onDismiss != null) {
                  androidx.compose.foundation.layout.Row {
                     if (onRetry != null) {
-                        androidx.compose.material3.TextButton(onClick = onRetry) {
+                        TextButton(onClick = onRetry) {
                             Text("Coba Lagi")
                         }
                     }
                     if (onDismiss != null) {
-                        androidx.compose.material3.IconButton(onClick = onDismiss) {
+                        IconButton(onClick = onDismiss) {
                              Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.Close,
+                                imageVector = Icons.Filled.Close,
                                 contentDescription = "Tutup",
                                 tint = MaterialTheme.colorScheme.error
                             )

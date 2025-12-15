@@ -1,5 +1,4 @@
 package com.chibychibystore.ui.components.shared
-import com.chibychibystore.ui.components.shared.AppTopBar
 
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -8,6 +7,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -18,7 +18,7 @@ fun AppTopBar(
     title: String,
     navigationIcon: ImageVector? = null,
     onNavigationClick: (() -> Unit)? = null,
-    actions: @Composable () -> Unit = {}
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     CenterAlignedTopAppBar(
         title = {

@@ -25,7 +25,7 @@ object ReceiptFormatter {
     ): ReceiptData {
         val items = saleWithItems.items.map { item ->
             ReceiptItem(
-                name = item.productName ?: "Produk #${item.productId}",
+                name = "Produk #${item.productId}",
                 quantity = item.quantity,
                 unitPrice = item.unitPrice,
                 totalPrice = item.totalPrice

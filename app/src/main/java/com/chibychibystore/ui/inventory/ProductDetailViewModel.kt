@@ -133,11 +133,11 @@ class ProductDetailViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isSaving = true, error = null, successMessage = null)
 
             try {
-                val result = productService.updateStock(currentProduct.id, quantity)
+                val result = productService.updateStock(currentProduct.id.toString(), quantity)
                 result.fold(
                     onSuccess = {
                         // Reload product untuk mendapatkan data terbaru
-                        loadProduct(currentProduct.id)
+                        loadProduct(currentProduct.id.toString())
                         _uiState.value = _uiState.value.copy(
                             isSaving = false,
                             successMessage = "Stok berhasil diperbarui"
@@ -169,7 +169,7 @@ class ProductDetailViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isSaving = true, error = null, successMessage = null)
 
             try {
-                val result = productService.deleteProduct(currentProduct.id)
+                val result = productService.deleteProduct(currentProduct.id.toString())
                 result.fold(
                     onSuccess = {
                         _uiState.value = _uiState.value.copy(
@@ -238,7 +238,7 @@ class ProductDetailViewModel @Inject constructor(
         if (product.name.isBlank()) {
             return "Nama produk tidak boleh kosong"
         }
-        if (product.barcode.isBlank()) {
+        if (product.barcode.isNullOrBlank()) {
             return "Barcode produk tidak boleh kosong"
         }
         if (product.costPrice <= 0) {

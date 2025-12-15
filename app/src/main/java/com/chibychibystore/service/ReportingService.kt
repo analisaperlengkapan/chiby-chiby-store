@@ -307,7 +307,22 @@ class ReportingService @Inject constructor(
     }
 
     suspend fun getBalanceSheet(asOfDate: LocalDate): Result<BalanceSheet> {
-        return balanceSheetService.generateBalanceSheet(asOfDate)
+        return when (val result = balanceSheetService.generateBalanceSheet(asOfDate)) {
+            is Result.Success -> {
+                val data = result.data
+                Result.success(
+                    BalanceSheet(
+                        assets = data.assets,
+                        liabilities = data.liabilities,
+                        equity = data.equity,
+                        inventoryValue = data.inventoryValue,
+                        cashBalance = data.cashBalance,
+                        asOfDate = data.asOfDate
+                    )
+                )
+            }
+            is Result.Failure -> Result.failure(result.exception)
+        }
     }
 
     suspend fun getTaxReport(startDate: LocalDate, endDate: LocalDate): Result<TaxReport> {

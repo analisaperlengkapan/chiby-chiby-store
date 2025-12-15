@@ -113,17 +113,17 @@ class RestoreServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun previewBackup(backupPath: String): Result<BackupPreview> {
+    override suspend fun previewBackup(backupPath: String): com.chibychibystore.data.model.Result<BackupPreview> {
         return try {
             val validation = validateBackupFile(backupPath)
             if (!validation.isValid) {
-                return Result.failure(Exception("File backup tidak valid"))
+                return com.chibychibystore.data.model.Result.failure(Exception("File backup tidak valid"))
             }
 
             val backupData = loadBackupData(backupPath)
             val file = File(backupPath)
 
-            Result.success(BackupPreview(
+            com.chibychibystore.data.model.Result.success(BackupPreview(
                 version = backupData.version,
                 createdAt = backupData.createdAt,
                 recordCounts = mapOf(
@@ -141,7 +141,7 @@ class RestoreServiceImpl @Inject constructor(
                 sizeBytes = file.length()
             ))
         } catch (e: Exception) {
-            Result.failure(e)
+            com.chibychibystore.data.model.Result.failure(e)
         }
     }
 

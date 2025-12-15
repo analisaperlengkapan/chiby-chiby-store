@@ -9,6 +9,7 @@ import com.chibychibystore.repository.UserSessionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -123,7 +124,15 @@ class UserManagementServiceImpl @Inject constructor(
                 updatedAt = java.util.Date()
             )
 
-            penggunaRepository.updatePengguna(updatedUser) as com.chibychibystore.data.model.Result<Unit>
+            val updateResult = penggunaRepository.updatePengguna(updatedUser)
+            if (updateResult.isSuccess) {
+                Result.success(Unit)
+            } else {
+                val cause = updateResult.exceptionOrNull()
+                Result.failure(
+                    (cause as? Exception) ?: Exception(cause ?: Exception("Gagal update user"))
+                )
+            }
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal update user", e))
         }
@@ -132,8 +141,10 @@ class UserManagementServiceImpl @Inject constructor(
     override suspend fun deleteUser(userId: Long, deletedBy: Long): Result<Unit> {
         return try {
             // Check if user exists
-            val user = penggunaRepository.getPenggunaById(userId)
-                ?: return Result.failure(Exception("User tidak ditemukan"))
+            val userResult = penggunaRepository.getPenggunaById(userId)
+            if (userResult.isFailure) {
+                return Result.failure(Exception("User tidak ditemukan"))
+            }
 
             // Prevent deleting self
             val currentUser = authService.getCurrentUser()
@@ -146,7 +157,15 @@ class UserManagementServiceImpl @Inject constructor(
                 return Result.failure(Exception("Hanya Owner yang dapat menghapus user"))
             }
 
-            penggunaRepository.deletePengguna(userId) as com.chibychibystore.data.model.Result<Unit>
+            val deleteResult = penggunaRepository.deletePengguna(userId)
+            if (deleteResult.isSuccess) {
+                Result.success(Unit)
+            } else {
+                val cause = deleteResult.exceptionOrNull()
+                Result.failure(
+                    (cause as? Exception) ?: Exception(cause ?: Exception("Gagal menghapus user"))
+                )
+            }
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghapus user", e))
         }
@@ -162,8 +181,27 @@ class UserManagementServiceImpl @Inject constructor(
                 return Result.failure(Exception("Password minimal 6 karakter"))
             }
 
-            val passwordHash = authService.hashPassword(newPassword)
-            penggunaRepository.updatePassword(userId, passwordHash)
+            val userResult = penggunaRepository.getPenggunaById(userId)
+            val user = userResult.getOrNull() ?: return Result.failure(Exception("User tidak ditemukan"))
+
+            val passwordHash = MessageDigest.getInstance("SHA-256")
+                .digest(newPassword.toByteArray())
+                .joinToString("") { "%02x".format(it) }
+
+            val updatedUser = user.copy(
+                passwordHash = passwordHash,
+                updatedAt = java.util.Date()
+            )
+
+            val updateResult = penggunaRepository.updatePengguna(updatedUser)
+            if (updateResult.isSuccess) {
+                Result.success(Unit)
+            } else {
+                val cause = updateResult.exceptionOrNull()
+                Result.failure(
+                    (cause as? Exception) ?: Exception(cause ?: Exception("Gagal reset password"))
+                )
+            }
         } catch (e: Exception) {
             Result.failure(Exception("Gagal reset password: ${e.message}"))
         }

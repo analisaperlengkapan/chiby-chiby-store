@@ -1,5 +1,6 @@
 package com.chibychibystore.ui.barcode
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -42,7 +43,8 @@ fun BarcodePrintScreen(
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.barcode_print_title),
-                onBackClick = onNavigateBack
+                navigationIcon = Icons.Default.ArrowBack,
+                onNavigationClick = onNavigateBack
             )
         }
     ) { padding ->

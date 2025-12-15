@@ -287,7 +287,7 @@ class InventoryViewModel @Inject constructor(
         } else {
             _uiState.value.products.filter { product ->
                 product.name.contains(query, ignoreCase = true) ||
-                product.barcode.contains(query, ignoreCase = true)
+                (product.barcode?.contains(query, ignoreCase = true) ?: false)
             }
         }
 

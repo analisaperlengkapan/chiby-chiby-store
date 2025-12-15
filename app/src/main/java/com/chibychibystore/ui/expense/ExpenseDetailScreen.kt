@@ -43,11 +43,8 @@ fun ExpenseDetailScreen(
         topBar = {
             AppTopBar(
                 title = if (uiState.isEditing) "Edit Pengeluaran" else "Detail Pengeluaran",
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
+                navigationIcon = Icons.Default.ArrowBack,
+                onNavigationClick = { navController.navigateUp() },
                 actions = {
                     if (!uiState.isEditing && uiState.expense != null) {
                         IconButton(onClick = { viewModel.toggleEditMode() }) {

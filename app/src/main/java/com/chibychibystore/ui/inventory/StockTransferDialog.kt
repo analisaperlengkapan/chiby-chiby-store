@@ -20,7 +20,7 @@ fun StockTransferDialog(
     product: Produk,
     fromWarehouse: Gudang,
     availableWarehouses: List<Gudang>,
-    onTransfer: (toWarehouseId: String, quantity: Int) -> Unit,
+    onTransfer: (toWarehouseId: Long, quantity: Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     var selectedWarehouse by remember { mutableStateOf<Gudang?>(null) }

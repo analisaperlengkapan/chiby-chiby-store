@@ -2,6 +2,13 @@ package com.chibychibystore.ui.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.chibychibystore.usecase.AuthUseCases
+import com.chibychibystore.usecase.ChangePasswordUseCase
+import com.chibychibystore.usecase.CheckPermissionUseCase
+import com.chibychibystore.usecase.GetCurrentUserUseCase
+import com.chibychibystore.usecase.LoginUseCase
+import com.chibychibystore.usecase.LogoutUseCase
+import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.Role
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -28,12 +35,21 @@ class LoginViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var authUseCases: AuthUseCases
+    private lateinit var loginUseCase: LoginUseCase
     private lateinit var viewModel: LoginViewModel
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        authUseCases = mock()
+
+        loginUseCase = mock()
+        authUseCases = AuthUseCases(
+            login = loginUseCase,
+            logout = mock(),
+            changePassword = mock(),
+            getCurrentUser = mock(),
+            checkPermission = mock()
+        )
         viewModel = LoginViewModel(authUseCases)
     }
 
@@ -77,7 +93,7 @@ class LoginViewModelTest {
         viewModel.login()
 
         val state = viewModel.uiState.value
-        assertEquals("Username tidak boleh kosong", state.errorMessage)
+        assertEquals("Username dan password tidak boleh kosong", state.errorMessage)
         assertFalse(state.isLoading)
     }
 
@@ -87,7 +103,7 @@ class LoginViewModelTest {
         viewModel.login()
 
         val state = viewModel.uiState.value
-        assertEquals("Password tidak boleh kosong", state.errorMessage)
+        assertEquals("Username dan password tidak boleh kosong", state.errorMessage)
         assertFalse(state.isLoading)
     }
 
@@ -96,7 +112,15 @@ class LoginViewModelTest {
         val username = "testuser"
         val password = "testpass"
 
-        whenever(authUseCases.login(username, password)).thenReturn(Result.success(Unit))
+        val user = Pengguna(
+            id = 1,
+            username = username,
+            passwordHash = "hash",
+            role = Role.CASHIER,
+            permissions = "[]"
+        )
+
+        whenever(loginUseCase.invoke(username, password)).thenReturn(com.chibychibystore.data.model.Result.success(user))
 
         viewModel.onUsernameChange(username)
         viewModel.onPasswordChange(password)
@@ -117,7 +141,9 @@ class LoginViewModelTest {
         val password = "wrongpass"
         val errorMessage = "Invalid credentials"
 
-        whenever(authUseCases.login(username, password)).thenReturn(Result.failure(Exception(errorMessage)))
+        whenever(loginUseCase.invoke(username, password)).thenReturn(
+            com.chibychibystore.data.model.Result.failure(Exception(errorMessage))
+        )
 
         viewModel.onUsernameChange(username)
         viewModel.onPasswordChange(password)

@@ -17,18 +17,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.model.Kategori
-import com.chibychibystore.data.model.Gudang
-import com.chibychibystore.data.model.Produk
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.dialogs.ConfirmDialog
-import com.chibychibystore.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
     navController: NavController,
-    productId: Long,
+    productId: String,
     viewModel: ProductDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -108,9 +104,7 @@ fun ProductDetailScreen(
             viewModel.clearSuccessMessage()
             // Small delay before navigation to let user see the message
             kotlinx.coroutines.delay(1000)
-            if (uiState.isSaved || uiState.isDeleted) {
-                navController.navigateUp()
-            }
+            navController.navigateUp()
         }
     }
 }

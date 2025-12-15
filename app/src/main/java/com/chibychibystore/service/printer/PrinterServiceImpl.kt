@@ -5,7 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.util.Log
-import com.chibychibystore.utils.Result
+import java.io.ByteArrayOutputStream
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -381,7 +381,6 @@ class PrinterServiceImpl @Inject constructor(
             com.chibychibystore.ui.barcode.LabelSize.MEDIUM -> Pair(30, 20) // 3x2 cm
             com.chibychibystore.ui.barcode.LabelSize.LARGE -> Pair(30, 20) // 3x2 cm
             com.chibychibystore.ui.barcode.LabelSize.EXTRA_LARGE -> Pair(50, 30) // 5x3 cm
-            com.chibychibystore.ui.barcode.LabelSize.EXTRA_EXTRA_LARGE -> Pair(70, 40) // 7x4 cm
         }
 
         // Center alignment

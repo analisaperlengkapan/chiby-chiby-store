@@ -3,8 +3,8 @@ package com.chibychibystore.ui.barcode
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.Produk
-import com.chibychibystore.service.PrinterService
 import com.chibychibystore.service.ProductService
+import com.chibychibystore.service.printer.PrinterService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
