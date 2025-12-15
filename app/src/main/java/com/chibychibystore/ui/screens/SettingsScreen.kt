@@ -256,7 +256,7 @@ fun SettingsScreen(
             text = { Text("Password berhasil diubah") },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearPasswordChangeSuccess() }) {
-                    Text("OK")
+                    Text("Oke")
                 }
             }
         )

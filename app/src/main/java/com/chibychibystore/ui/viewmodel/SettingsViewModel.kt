@@ -558,7 +558,7 @@ class SettingsViewModel @Inject constructor(
      *         text = { Text("Password telah diubah") },
      *         confirmButton = {
      *             TextButton(onClick = { viewModel.clearPasswordChangeSuccess() }) {
-     *                 Text("OK")
+     *                 Text("Oke")
      *             }
      *         }
      *     )

@@ -31,7 +31,7 @@ fun DatePickerDialog(
                 }
                 onDismiss()
             }) {
-                Text("OK")
+                Text("Oke")
             }
         },
         dismissButton = {

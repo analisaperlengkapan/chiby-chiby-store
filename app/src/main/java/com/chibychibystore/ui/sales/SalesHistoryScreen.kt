@@ -348,7 +348,7 @@ private fun AppDatePickerDialog(
                     }
                 }
             ) {
-                Text("OK")
+                Text("Oke")
             }
         },
         dismissButton = {
