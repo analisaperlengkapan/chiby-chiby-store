@@ -2,6 +2,7 @@ package com.chibychibystore.repository
 
 import com.chibychibystore.data.local.dao.PembelianDao
 import com.chibychibystore.data.local.entity.Pembelian
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -79,6 +80,5 @@ class PembelianRepository @Inject constructor(
     private fun validatePembelian(pembelian: Pembelian) {
         require(pembelian.supplierId > 0) { "ID pemasok harus valid" }
         require(pembelian.totalAmount >= 0) { "Total amount tidak boleh negatif" }
-        require(pembelian.purchaseDate != null) { "Tanggal pembelian harus diisi" }
     }
 }

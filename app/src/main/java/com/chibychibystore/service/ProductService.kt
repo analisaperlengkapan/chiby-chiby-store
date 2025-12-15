@@ -1,6 +1,7 @@
 package com.chibychibystore.service
 
 import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.ProdukRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -275,8 +276,10 @@ class ProductServiceImpl @Inject constructor(
                 }
             }
 
-            val createdProductId = productRepository.createProduk(product).getOrThrow()
-            val createdProduct = productRepository.getProdukById(createdProductId).getOrThrow()
+            val createResult = productRepository.createProduk(product)
+            val createdProductId = createResult.getOrNull() ?: return Result.failure(createResult.exceptionOrNull() ?: Exception("Gagal membuat produk"))
+            val createdProductResult = productRepository.getProdukById(createdProductId)
+            val createdProduct = createdProductResult.getOrNull() ?: return Result.failure(createdProductResult.exceptionOrNull() ?: Exception("Gagal mengambil produk yang dibuat"))
             Result.success(createdProduct)
         } catch (e: Exception) {
             Result.failure(e)
@@ -299,8 +302,10 @@ class ProductServiceImpl @Inject constructor(
                 }
             }
 
-            productRepository.updateProduk(product).getOrThrow()
-            val updatedProduct = productRepository.getProdukById(product.id).getOrThrow()
+            val updateResult = productRepository.updateProduk(product)
+            if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengupdate produk"))
+            val updatedProductResult = productRepository.getProdukById(product.id)
+            val updatedProduct = updatedProductResult.getOrNull() ?: return Result.failure(updatedProductResult.exceptionOrNull() ?: Exception("Gagal mengambil produk yang diupdate"))
             Result.success(updatedProduct)
         } catch (e: Exception) {
             Result.failure(e)
@@ -309,7 +314,8 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun deleteProduct(id: String): Result<Unit> {
         return try {
-            productRepository.deleteProduk(id.toLong()).getOrThrow()
+            val deleteResult = productRepository.deleteProduk(id.toLong())
+            if (deleteResult.isFailure) return Result.failure(deleteResult.exceptionOrNull() ?: Exception("Gagal menghapus produk"))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -359,7 +365,8 @@ class ProductServiceImpl @Inject constructor(
                 return Result.failure(Exception("Stok tidak boleh negatif"))
             }
 
-            productRepository.updateStock(productId.toLong(), newStock).getOrThrow()
+            val stockUpdateResult = productRepository.updateStock(productId.toLong(), newStock)
+            if (stockUpdateResult.isFailure) return Result.failure(stockUpdateResult.exceptionOrNull() ?: Exception("Gagal memperbarui stok"))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

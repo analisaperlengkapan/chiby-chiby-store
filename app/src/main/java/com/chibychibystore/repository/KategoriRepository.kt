@@ -2,6 +2,7 @@ package com.chibychibystore.repository
 
 import com.chibychibystore.data.local.dao.KategoriDao
 import com.chibychibystore.data.local.entity.Kategori
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject

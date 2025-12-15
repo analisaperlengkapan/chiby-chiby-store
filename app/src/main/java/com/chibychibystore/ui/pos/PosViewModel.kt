@@ -367,7 +367,7 @@ class PosViewModel @Inject constructor(
                 val result = productService.searchProducts(query)
                 if (result.isSuccess) {
                     _uiState.value = _uiState.value.copy(
-                        searchResults = result.getOrDefault(emptyList()),
+                        searchResults = result.getOrNull() ?: emptyList(),
                         isSearching = false
                     )
                 } else {
@@ -1064,7 +1064,7 @@ class PosViewModel @Inject constructor(
                 // Search product by barcode
                 val result = productService.searchProducts(barcode)
                 if (result.isSuccess) {
-                    val products = result.getOrDefault(emptyList())
+                    val products = result.getOrNull() ?: emptyList()
                     val product = products.find { it.barcode == barcode }
 
                     if (product != null) {

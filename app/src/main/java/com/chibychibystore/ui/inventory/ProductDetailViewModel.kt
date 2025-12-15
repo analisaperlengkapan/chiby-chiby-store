@@ -58,21 +58,18 @@ class ProductDetailViewModel @Inject constructor(
 
             try {
                 val result = productService.getProduct(productId)
-                result.fold(
-                    onSuccess = { product ->
-                        _uiState.value = _uiState.value.copy(
-                            product = product,
-                            isLoading = false,
-                            isEditing = false
-                        )
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = exception.message ?: "Gagal memuat produk"
-                        )
-                    }
-                )
+                result.onSuccess { product ->
+                    _uiState.value = _uiState.value.copy(
+                        product = product,
+                        isLoading = false,
+                        isEditing = false
+                    )
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Gagal memuat produk"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -98,22 +95,19 @@ class ProductDetailViewModel @Inject constructor(
                     productService.createProduct(product)
                 }
 
-                result.fold(
-                    onSuccess = { savedProduct ->
-                        _uiState.value = _uiState.value.copy(
-                            product = savedProduct,
-                            isSaving = false,
-                            isEditing = false,
-                            successMessage = if (productId != null) "Produk berhasil diperbarui" else "Produk berhasil dibuat"
-                        )
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isSaving = false,
-                            error = exception.message ?: "Gagal menyimpan produk"
-                        )
-                    }
-                )
+                result.onSuccess { savedProduct ->
+                    _uiState.value = _uiState.value.copy(
+                        product = savedProduct,
+                        isSaving = false,
+                        isEditing = false,
+                        successMessage = if (productId != null) "Produk berhasil diperbarui" else "Produk berhasil dibuat"
+                    )
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isSaving = false,
+                        error = exception.message ?: "Gagal menyimpan produk"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
@@ -134,22 +128,19 @@ class ProductDetailViewModel @Inject constructor(
 
             try {
                 val result = productService.updateStock(currentProduct.id.toString(), quantity)
-                result.fold(
-                    onSuccess = {
-                        // Reload product untuk mendapatkan data terbaru
-                        loadProduct(currentProduct.id.toString())
-                        _uiState.value = _uiState.value.copy(
-                            isSaving = false,
-                            successMessage = "Stok berhasil diperbarui"
-                        )
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isSaving = false,
-                            error = exception.message ?: "Gagal memperbarui stok"
-                        )
-                    }
-                )
+                result.onSuccess {
+                    // Reload product untuk mendapatkan data terbaru
+                    loadProduct(currentProduct.id.toString())
+                    _uiState.value = _uiState.value.copy(
+                        isSaving = false,
+                        successMessage = "Stok berhasil diperbarui"
+                    )
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isSaving = false,
+                        error = exception.message ?: "Gagal memperbarui stok"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
@@ -170,20 +161,17 @@ class ProductDetailViewModel @Inject constructor(
 
             try {
                 val result = productService.deleteProduct(currentProduct.id.toString())
-                result.fold(
-                    onSuccess = {
-                        _uiState.value = _uiState.value.copy(
-                            isSaving = false,
-                            successMessage = "Produk berhasil dihapus"
-                        )
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isSaving = false,
-                            error = exception.message ?: "Gagal menghapus produk"
-                        )
-                    }
-                )
+                result.onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        isSaving = false,
+                        successMessage = "Produk berhasil dihapus"
+                    )
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isSaving = false,
+                        error = exception.message ?: "Gagal menghapus produk"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,

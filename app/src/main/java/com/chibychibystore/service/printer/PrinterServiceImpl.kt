@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.io.OutputStream
 import java.util.*
+import com.chibychibystore.data.model.Result
 import javax.inject.Inject
 import javax.inject.Singleton
 

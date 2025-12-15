@@ -39,12 +39,9 @@ class BarcodeServiceImpl @Inject constructor(
         try {
             // Get product data
             val productResult = produkRepository.getProdukById(productId)
-            if (productResult.isFailure) {
-                return@withContext Result.failure(
-                    ChibyChibyException.DatabaseError("Product dengan ID $productId tidak ditemukan")
-                )
-            }
-            val product = productResult.getOrThrow()
+            val product = productResult.getOrNull() ?: return@withContext Result.failure(
+                ChibyChibyException.DatabaseError("Product dengan ID $productId tidak ditemukan")
+            )
 
             // Validate barcode format for product
             if (product.barcode.isNullOrBlank()) {

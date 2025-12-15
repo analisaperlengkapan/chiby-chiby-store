@@ -4,6 +4,7 @@ import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.repository.GudangRepository
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.data.model.Result
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -87,18 +88,15 @@ class WarehouseServiceImpl @Inject constructor(
         return try {
             // Validasi input handled by repository
             val idResult = warehouseRepository.createGudang(warehouse)
-            
-            idResult.fold(
-                onSuccess = { id ->
-                    val created = warehouseRepository.getGudangById(id).getOrNull()
-                    if (created != null) {
-                        Result.success(created)
-                    } else {
-                        Result.failure(Exception("Gagal mengambil data gudang setelah dibuat"))
-                    }
-                },
-                onFailure = { e -> Result.failure(e) }
-            )
+            if (idResult.isFailure) return Result.failure(idResult.exceptionOrNull() ?: Exception("Gagal membuat gudang"))
+            val id = idResult.getOrNull() ?: return Result.failure(Exception("Gagal membuat gudang"))
+            val createdResult = warehouseRepository.getGudangById(id)
+            val created = createdResult.getOrNull()
+            if (created != null) {
+                Result.success(created)
+            } else {
+                Result.failure(Exception("Gagal mengambil data gudang setelah dibuat"))
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -107,13 +105,8 @@ class WarehouseServiceImpl @Inject constructor(
     override suspend fun updateWarehouse(warehouse: Gudang): Result<Gudang> {
         return try {
             val updateResult = warehouseRepository.updateGudang(warehouse)
-            
-            updateResult.fold(
-                onSuccess = {
-                    Result.success(warehouse)
-                },
-                onFailure = { e -> Result.failure(e) }
-            )
+            if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengupdate gudang"))
+            Result.success(warehouse)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -128,7 +121,7 @@ class WarehouseServiceImpl @Inject constructor(
                 return Result.failure(Exception("Tidak dapat menghapus gudang yang masih memiliki produk"))
             }
 
-            warehouseRepository.deleteGudang(id)
+            return warehouseRepository.deleteGudang(id)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -166,14 +159,13 @@ class WarehouseServiceImpl @Inject constructor(
 
             // Validasi bahwa produk exists
             val productResult = productRepository.getProdukById(productId)
-            if (productResult.isFailure) {
-                return Result.failure(Exception("Produk tidak ditemukan"))
-            }
-            val product = productResult.getOrThrow()
+            val product = productResult.getOrNull() ?: return Result.failure(Exception("Produk tidak ditemukan"))
 
             // Update warehouseId produk
             val updatedProduct = product.copy(warehouseId = warehouseId)
-            productRepository.updateProduk(updatedProduct)
+            val updateResult = productRepository.updateProduk(updatedProduct)
+            if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengupdate produk"))
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -196,10 +188,7 @@ class WarehouseServiceImpl @Inject constructor(
 
             // Get product
             val productResult = productRepository.getProdukById(productId)
-            if (productResult.isFailure) {
-                return Result.failure(Exception("Produk tidak ditemukan"))
-            }
-            val product = productResult.getOrThrow()
+            val product = productResult.getOrNull() ?: return Result.failure(Exception("Produk tidak ditemukan"))
 
             // Validate source warehouse
             if (product.warehouseId != fromWarehouseId) {

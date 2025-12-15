@@ -175,22 +175,19 @@ class InventoryViewModel @Inject constructor(
 
             try {
                 val result = productService.getProducts()
-                result.fold(
-                    onSuccess = { products ->
-                        _uiState.value = _uiState.value.copy(
-                            products = products,
-                            isLoading = false
-                        )
-                        // Setup reactive updates untuk real-time UI
-                        observeProducts()
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = exception.message ?: "Gagal memuat produk"
-                        )
-                    }
-                )
+                result.onSuccess { products ->
+                    _uiState.value = _uiState.value.copy(
+                        products = products,
+                        isLoading = false
+                    )
+                    // Setup reactive updates untuk real-time UI
+                    observeProducts()
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Gagal memuat produk"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -271,14 +268,11 @@ class InventoryViewModel @Inject constructor(
         val filteredProducts = if (query.isBlank()) {
             // Jika query kosong, load ulang semua produk
             viewModelScope.launch {
-                try {
+                    try {
                     val result = productService.getProducts()
-                    result.fold(
-                        onSuccess = { products ->
-                            _uiState.value = _uiState.value.copy(products = products)
-                        },
-                        onFailure = { /* Ignore error saat filtering */ }
-                    )
+                    result.onSuccess { products ->
+                        _uiState.value = _uiState.value.copy(products = products)
+                    }.onFailure { /* Ignore error saat filtering */ }
                 } catch (e: Exception) {
                     // Ignore error saat filtering
                 }
@@ -374,21 +368,18 @@ class InventoryViewModel @Inject constructor(
 
             try {
                 val result = productService.searchProducts(query)
-                result.fold(
-                    onSuccess = { products ->
-                        _uiState.value = _uiState.value.copy(
-                            products = products,
-                            searchQuery = query,
-                            isLoading = false
-                        )
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = exception.message ?: "Gagal mencari produk"
-                        )
-                    }
-                )
+                result.onSuccess { products ->
+                    _uiState.value = _uiState.value.copy(
+                        products = products,
+                        searchQuery = query,
+                        isLoading = false
+                    )
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Gagal mencari produk"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -462,12 +453,9 @@ class InventoryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val result = productService.getLowStockProducts()
-                result.fold(
-                    onSuccess = { lowStockProducts ->
-                        _uiState.value = _uiState.value.copy(lowStockProducts = lowStockProducts)
-                    },
-                    onFailure = { /* Ignore error untuk low stock */ }
-                )
+                result.onSuccess { lowStockProducts ->
+                    _uiState.value = _uiState.value.copy(lowStockProducts = lowStockProducts)
+                }.onFailure { /* Ignore error untuk low stock */ }
             } catch (e: Exception) {
                 // Ignore error untuk low stock
             }

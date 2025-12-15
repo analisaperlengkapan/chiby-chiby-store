@@ -9,6 +9,7 @@ import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.service.printer.PrinterService
 import com.chibychibystore.service.printer.ReceiptFormatter
+import com.chibychibystore.data.model.Result
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -174,22 +175,19 @@ class SaleServiceImpl @Inject constructor(
             // Validasi dan update inventory stock
             for (item in items) {
                 val productResult = produkRepository.getProdukById(item.productId)
-                if (productResult.isFailure) {
-                    return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
-                }
-
-                val product = productResult.getOrThrow()
+                val product = productResult.getOrNull() ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
                 if (product.stockQuantity < item.quantity) {
                     return Result.failure(Exception("Stok produk ${product.name} tidak mencukupi. Tersedia: ${product.stockQuantity}, diminta: ${item.quantity}"))
                 }
 
                 // Update stock
                 val newStock = product.stockQuantity - item.quantity
-                produkRepository.updateStock(item.productId, newStock)
+                val stockUpdate = produkRepository.updateStock(item.productId, newStock)
+                if (stockUpdate.isFailure) return Result.failure(stockUpdate.exceptionOrNull() ?: Exception("Gagal memperbarui stok untuk produk ${product.name}"))
             }
 
             // Create sale
-            penjualanRepository.createPenjualan(sale, items)
+            return penjualanRepository.createPenjualan(sale, items)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -424,10 +422,12 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun updateSale(id: Long, sale: Penjualan): Result<Penjualan> {
         return try {
-            penjualanRepository.updatePenjualan(id, sale).fold(
-                onSuccess = { Result.success(sale) },
-                onFailure = { Result.failure(it) }
-            )
+            val updateResult = penjualanRepository.updatePenjualan(id, sale)
+            if (updateResult.isSuccess) {
+                Result.success(sale)
+            } else {
+                Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengupdate penjualan"))
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -489,27 +489,21 @@ class SaleServiceImpl @Inject constructor(
         return try {
             // Get sale with items first
             val saleResult = penjualanRepository.getPenjualanWithItemsById(id)
-            if (saleResult.isFailure) {
-                return Result.failure(saleResult.exceptionOrNull() ?: Exception("Unknown error"))
-            }
-
-            val saleWithItems = saleResult.getOrThrow()
-            if (saleWithItems == null) {
-                return Result.failure(Exception("Penjualan tidak ditemukan"))
-            }
+            val saleWithItems = saleResult.getOrNull() ?: return Result.failure(saleResult.exceptionOrNull() ?: Exception("Penjualan tidak ditemukan"))
 
             // Restore inventory stock
             for (item in saleWithItems.items) {
                 val productResult = produkRepository.getProdukById(item.productId)
-                if (productResult.isSuccess) {
-                    val product = productResult.getOrThrow()
+                val product = productResult.getOrNull()
+                if (product != null) {
                     val newStock = product.stockQuantity + item.quantity
-                    produkRepository.updateStock(item.productId, newStock)
+                    val updateResult = produkRepository.updateStock(item.productId, newStock)
+                    if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengembalikan stok produk ${product.name}"))
                 }
             }
 
             // Delete sale
-            penjualanRepository.deletePenjualan(id)
+            return penjualanRepository.deletePenjualan(id)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -568,28 +562,22 @@ class SaleServiceImpl @Inject constructor(
         return try {
             // For refund, we restore stock and mark sale as refunded
             val saleResult = penjualanRepository.getPenjualanWithItemsById(id)
-            if (saleResult.isFailure) {
-                return Result.failure(saleResult.exceptionOrNull() ?: Exception("Unknown error"))
-            }
-
-            val saleWithItems = saleResult.getOrThrow()
-            if (saleWithItems == null) {
-                return Result.failure(Exception("Penjualan tidak ditemukan"))
-            }
+            val saleWithItems = saleResult.getOrNull() ?: return Result.failure(saleResult.exceptionOrNull() ?: Exception("Penjualan tidak ditemukan"))
 
             // Restore inventory stock
             for (item in saleWithItems.items) {
                 val productResult = produkRepository.getProdukById(item.productId)
-                if (productResult.isSuccess) {
-                    val product = productResult.getOrThrow()
+                val product = productResult.getOrNull()
+                if (product != null) {
                     val newStock = product.stockQuantity + item.quantity
-                    produkRepository.updateStock(item.productId, newStock)
+                    val updateResult = produkRepository.updateStock(item.productId, newStock)
+                    if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal memperbarui stok untuk produk ${product.name}"))
                 }
             }
 
             // Mark sale as refunded (you might want to add a refunded status)
             // For now, just delete the sale
-            penjualanRepository.deletePenjualan(id)
+            return penjualanRepository.deletePenjualan(id)
         } catch (e: Exception) {
             Result.failure(e)
         }

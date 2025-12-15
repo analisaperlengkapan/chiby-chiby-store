@@ -2,6 +2,7 @@ package com.chibychibystore.repository
 
 import com.chibychibystore.data.local.dao.ItemPembelianDao
 import com.chibychibystore.data.local.entity.ItemPembelian
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject

@@ -90,8 +90,7 @@ class UserManagementServiceImpl @Inject constructor(
                 updatedAt = java.util.Date()
             )
 
-            val result = penggunaRepository.createPengguna(user)
-            result as com.chibychibystore.data.model.Result<Long>
+            return penggunaRepository.createPengguna(user)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal membuat user", e))
         }

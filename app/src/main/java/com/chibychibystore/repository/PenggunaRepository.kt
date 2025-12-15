@@ -2,6 +2,7 @@ package com.chibychibystore.repository
 
 import com.chibychibystore.data.local.dao.PenggunaDao
 import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.first
