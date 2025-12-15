@@ -1,6 +1,10 @@
 package com.chibychibystore.service.printer
 
 import android.bluetooth.BluetoothAdapter
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.annotation.RequiresPermission
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.content.Context
@@ -78,10 +82,14 @@ class PrinterServiceImpl @Inject constructor(
 
     override fun getPrinterStatus(): PrinterStatus = currentStatus
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override suspend fun getAvailableDevices(): Result<List<BluetoothDevice>> = withContext(Dispatchers.IO) {
         try {
             if (bluetoothAdapter == null) {
                 return@withContext Result.failure(Exception("Bluetooth tidak tersedia di device ini"))
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                return@withContext Result.failure(Exception("Tidak memiliki izin Bluetooth (BLUETOOTH_CONNECT)"))
             }
 
             if (!bluetoothAdapter.isEnabled) {
@@ -103,6 +111,7 @@ class PrinterServiceImpl @Inject constructor(
         }
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override suspend fun connectPrinter(device: BluetoothDevice): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             currentStatus = PrinterStatus.CONNECTING
@@ -112,6 +121,10 @@ class PrinterServiceImpl @Inject constructor(
             disconnectPrinter()
 
             // Create socket connection
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                return@withContext Result.failure(Exception("Tidak memiliki izin Bluetooth (BLUETOOTH_CONNECT)"))
+            }
+
             bluetoothSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
             bluetoothSocket?.connect()
 

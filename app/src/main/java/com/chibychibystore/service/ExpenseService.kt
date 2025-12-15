@@ -45,6 +45,12 @@ class ExpenseService @Inject constructor(
         pengeluaranRepository.getExpensesInDateRange(startDate, endDate)
 
     /**
+     * Overload: Get pengeluaran dalam rentang tanggal menggunakan java.util.Date
+     */
+    suspend fun getExpensesInDateRange(startDate: java.util.Date, endDate: java.util.Date): List<Pengeluaran> =
+        pengeluaranRepository.getExpensesInDateRange(startDate, endDate)
+
+    /**
      * Get pengeluaran yang belum disetujui
      */
     fun getUnapprovedPengeluaran(): Flow<List<Pengeluaran>> =

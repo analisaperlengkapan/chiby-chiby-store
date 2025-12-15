@@ -231,9 +231,9 @@ class BackupServiceImpl @Inject constructor(
     }
 
     private fun generateBackupFileName(timestamp: Long): String {
-        val dateTime = LocalDateTime.now()
-        val formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
-        return "backup_${dateTime.format(formatter)}.enc"
+        val date = java.util.Date(timestamp)
+        val formatter = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault())
+        return "backup_${formatter.format(date)}.enc"
     }
 
     private fun createBackupFile(fileName: String): String {
@@ -272,10 +272,14 @@ class BackupServiceImpl @Inject constructor(
         val pattern = "backup_(\\d{8})_(\\d{6})\\.enc".toRegex()
         val match = pattern.find(fileName)
         return if (match != null) {
-            val (date, time) = match.destructured
-            val dateTimeString = "${date}T${time}"
-            val formatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss")
-            LocalDateTime.parse(dateTimeString, formatter).toInstant(java.time.ZoneOffset.UTC).toEpochMilli()
+            try {
+                val (date, time) = match.destructured
+                val dateTimeString = "${date}${time}" // yyyyMMddHHmmss
+                val formatter = java.text.SimpleDateFormat("yyyyMMddHHmmss", java.util.Locale.getDefault())
+                formatter.parse(dateTimeString)?.time ?: System.currentTimeMillis()
+            } catch (e: Exception) {
+                System.currentTimeMillis()
+            }
         } else {
             System.currentTimeMillis()
         }

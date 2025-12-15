@@ -71,6 +71,13 @@ class PengeluaranRepository @Inject constructor(
     }
 
     /**
+     * Overload: Get pengeluaran dalam rentang tanggal menggunakan java.util.Date
+     */
+    suspend fun getExpensesInDateRange(startDate: Date, endDate: Date): List<Pengeluaran> {
+        return pengeluaranDao.getPengeluaranByDateRange(startDate, endDate).first()
+    }
+
+    /**
      * Get pengeluaran yang belum disetujui
      */
     fun getUnapprovedPengeluaran(): Flow<List<Pengeluaran>> =
