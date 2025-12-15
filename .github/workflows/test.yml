@@ -9,6 +9,9 @@ on:
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     
     steps:
       - name: Checkout code
@@ -38,6 +41,7 @@ jobs:
       - name: Publish test results
         if: always()
         uses: EnricoMi/publish-unit-test-result-action@v2
+        continue-on-error: true
         with:
           files: app/build/test-results/**/*.xml
           check_name: Unit Test Results
