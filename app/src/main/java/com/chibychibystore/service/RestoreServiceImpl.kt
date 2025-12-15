@@ -174,6 +174,9 @@ class RestoreServiceImpl @Inject constructor(
         } catch (e: Exception) {
             BackupValidationResult(
                 isValid = false,
+                version = null,
+                createdAt = null,
+                recordCounts = null,
                 errors = listOf(e.message ?: "Error validating backup")
             )
         }
@@ -253,7 +256,8 @@ class RestoreServiceImpl @Inject constructor(
         var count = 0
         for (sale in penjualan) {
             try {
-                penjualanRepository.createPenjualan(sale)
+                val saleItems = items.filter { it.saleId == sale.id }
+                penjualanRepository.createPenjualan(sale, saleItems)
                 count++
             } catch (e: Exception) {
                 // Log error but continue
@@ -297,7 +301,7 @@ class RestoreServiceImpl @Inject constructor(
         var count = 0
         for (expense in pengeluaran) {
             try {
-                pengeluaranRepository.createPengeluaran(expense)
+                pengeluaranRepository.insertPengeluaran(expense)
                 count++
             } catch (e: Exception) {
                 // Log error but continue

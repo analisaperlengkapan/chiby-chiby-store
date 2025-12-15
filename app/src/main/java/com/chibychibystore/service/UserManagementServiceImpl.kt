@@ -7,6 +7,8 @@ import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.PenggunaRepository
 import com.chibychibystore.repository.UserSessionRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +31,7 @@ class UserManagementServiceImpl @Inject constructor(
             val managers = allUsers.count { it.role == Role.MANAGER }
             val cashiers = allUsers.count { it.role == Role.CASHIER }
             val warehouseStaff = allUsers.count { it.role == Role.WAREHOUSE }
-            
+
             Result.success(UserStats(
                 totalUsers = totalUsers,
                 activeUsers = activeUsers,
@@ -103,14 +105,15 @@ class UserManagementServiceImpl @Inject constructor(
     ): Result<Unit> {
         return try {
             // Get existing user
-            val existingUser = penggunaRepository.getPenggunaById(userId)
-                ?: return Result.failure(Exception("User tidak ditemukan"))
+            val existingUserResult = penggunaRepository.getPenggunaById(userId)
+            val existingUser = existingUserResult.getOrNull()
+                ?: return Result.failure(ChibyChibyException.DatabaseError("User tidak ditemukan"))
 
             // Validate username uniqueness if changed
             if (username != null && username != existingUser.username) {
-                val userWithSameUsername = penggunaRepository.getPenggunaByUsername(username)
-                if (userWithSameUsername != null) {
-                    return Result.failure(Exception("Username sudah digunakan"))
+                val userWithSameUsernameResult = penggunaRepository.getPenggunaByUsername(username)
+                if (userWithSameUsernameResult.isSuccess) {
+                    return Result.failure(ChibyChibyException.ValidationError("username", "Username sudah digunakan"))
                 }
             }
 

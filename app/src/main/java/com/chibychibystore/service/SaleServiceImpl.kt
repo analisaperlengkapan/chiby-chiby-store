@@ -292,10 +292,13 @@ class SaleServiceImpl @Inject constructor(
             }
 
             // Apply filters if provided
-            var filteredSales = sales
+            var filteredSales: List<Penjualan> = sales
             if (startDate != null && endDate != null) {
+                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd")
+                val startDateObj = sdf.parse(startDate)
+                val endDateObj = sdf.parse(endDate)
                 filteredSales = filteredSales.filter {
-                    it.saleDate >= startDate && it.saleDate <= endDate
+                    it.saleDate >= startDateObj && it.saleDate <= endDateObj
                 }
             }
             if (cashierId != null) {
@@ -420,7 +423,10 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun updateSale(id: Long, sale: Penjualan): Result<Penjualan> {
         return try {
-            penjualanRepository.updatePenjualan(id, sale)
+            penjualanRepository.updatePenjualan(id, sale).fold(
+                onSuccess = { Result.success(sale) },
+                onFailure = { Result.failure(it) }
+            )
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -697,7 +703,9 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun getTotalSalesByDateRange(startDate: String, endDate: String): Result<Double> {
         return try {
-            penjualanRepository.getTotalPenjualanByDateRange(startDate, endDate)
+            val startLocalDate = java.time.LocalDate.parse(startDate)
+            val endLocalDate = java.time.LocalDate.parse(endDate)
+            penjualanRepository.getTotalPenjualanByDateRange(startLocalDate, endLocalDate)
         } catch (e: Exception) {
             Result.failure(e)
         }
