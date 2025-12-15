@@ -1,7 +1,7 @@
 package com.chibychibystore.service
 
 import com.chibychibystore.data.local.entity.Produk
-import com.chibychibystore.data.repository.ProdukRepository
+import com.chibychibystore.repository.ProdukRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

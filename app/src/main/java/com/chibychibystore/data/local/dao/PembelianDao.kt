@@ -24,6 +24,9 @@ interface PembelianDao {
     @Query("SELECT * FROM pembelian WHERE purchaseDate BETWEEN :startDate AND :endDate ORDER BY purchaseDate DESC")
     fun getPembelianByDateRange(startDate: Date, endDate: Date): Flow<List<Pembelian>>
 
+    @Query("SELECT * FROM pembelian WHERE purchaseDate BETWEEN :startDate AND :endDate ORDER BY purchaseDate DESC")
+    suspend fun getPurchasesInDateRange(startDate: Date, endDate: Date): List<Pembelian>
+
     @Transaction
     @Query("SELECT * FROM pembelian WHERE id = :id")
     suspend fun getPembelianWithItems(id: Long): PembelianWithItems?

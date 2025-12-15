@@ -21,6 +21,15 @@ class PembelianRepository @Inject constructor(
     fun getAllPembelian(): Flow<List<Pembelian>> = pembelianDao.getAllPembelian()
 
     /**
+     * Get purchases in date range
+     */
+    suspend fun getPurchasesInDateRange(startDate: java.time.LocalDate, endDate: java.time.LocalDate): List<Pembelian> {
+        val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+        val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+        return pembelianDao.getPurchasesInDateRange(start, end)
+    }
+
+    /**
      * Get pembelian by ID
      */
     suspend fun getPembelianById(id: Long): Result<Pembelian> {

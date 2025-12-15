@@ -3,6 +3,7 @@ package com.chibychibystore.service
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.ProdukRepository
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -55,7 +56,7 @@ class BalanceSheetService @Inject constructor(
     suspend fun calculateInventoryValue(): Result<Double> {
         return try {
             // Get all products and calculate total inventory value
-            val products = productRepository.getAllProduk()
+            val products = productRepository.getAllProduk().first()
             val inventoryValue = products.sumOf { product -> product.costPrice * product.stockQuantity }
 
             Result.success(inventoryValue)

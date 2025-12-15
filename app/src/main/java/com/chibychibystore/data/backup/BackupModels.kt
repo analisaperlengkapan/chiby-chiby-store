@@ -30,14 +30,14 @@ data class BackupMetadata(
  */
 @Serializable
 data class BackupEntities(
-    @Contextual val pengguna: List<Pengguna>,
-    @Contextual val kategori: List<Kategori>,
-    @Contextual val gudang: List<Gudang>,
-    @Contextual val produk: List<Produk>,
-    @Contextual val pemasok: List<Pemasok>,
-    @Contextual val penjualan: List<Penjualan>,
-    @Contextual val itemPenjualan: List<ItemPenjualan>,
-    @Contextual val pembelian: List<Pembelian>,
-    @Contextual val itemPembelian: List<ItemPembelian>,
-    @Contextual val pengeluaran: List<Pengeluaran>
+    val pengguna: List<Pengguna>,
+    val kategori: List<Kategori>,
+    val gudang: List<Gudang>,
+    val produk: List<Produk>,
+    val pemasok: List<Pemasok>,
+    val penjualan: List<Penjualan>,
+    val itemPenjualan: List<ItemPenjualan>,
+    val pembelian: List<Pembelian>,
+    val itemPembelian: List<ItemPembelian>,
+    val pengeluaran: List<Pengeluaran>
 )
