@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.viewmodel
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -66,8 +67,8 @@ import kotlin.random.Random
  *
  * // Low Stock: Products where stock <= min_stock
  * lowStockItems = productsRepository.getAll()
- *     .filter { it.stok <= it.minStok }
- *     .sortedBy { it.stok } // Most critical first
+ *     .filter { it.stockQuantity <= it.minStok }
+ *     .sortedBy { it.stockQuantity } // Most critical first
  *
  * // Recent Transactions: Last 10 sales ordered by date desc
  * recentTransactions = salesRepository.getRecentSales(10)
@@ -225,7 +226,7 @@ data class DashboardUiState(
  *
  * // Operational Alerts
  * val lowStockItems = productService.getLowStockProducts()
- *     .sortedBy { it.stok } // Most critical first
+ *     .sortedBy { it.stockQuantity } // Most critical first
  *
  * // Activity Overview
  * val recentTransactions = saleService.getRecentSales(limit = 10)
@@ -523,8 +524,8 @@ class DashboardViewModel @Inject constructor() : ViewModel() {
      * // Real implementation
      * suspend fun getLowStockProducts(): List<Produk> {
      *     return productService.getProducts()
-     *         .filter { it.stok <= it.minStok }
-     *         .sortedBy { it.stok } // Most critical first
+     *         .filter { it.stockQuantity <= it.minStok }
+     *         .sortedBy { it.stockQuantity } // Most critical first
      *         .take(10) // Limit for dashboard display
      * }
      * ```

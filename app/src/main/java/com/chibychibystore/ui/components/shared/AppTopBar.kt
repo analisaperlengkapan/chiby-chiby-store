@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.components.shared
+import com.chibychibystore.ui.components.shared.AppTopBar
 
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api

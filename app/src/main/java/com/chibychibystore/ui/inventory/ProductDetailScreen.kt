@@ -1,4 +1,7 @@
 package com.chibychibystore.ui.inventory
+import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.ui.components.shared.ErrorMessage
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -85,7 +88,7 @@ fun ProductDetailScreen(
     if (showDeleteDialog) {
         ConfirmDialog(
             title = "Hapus Produk?",
-            message = "Produk ${uiState.product?.nama} akan dihapus. Tindakan ini tidak dapat dibatalkan.",
+            message = "Produk ${uiState.product?.name} akan dihapus. Tindakan ini tidak dapat dibatalkan.",
             confirmText = "Hapus",
             dismissText = "Batal",
             onConfirm = {
@@ -186,7 +189,7 @@ private fun ProductDetailContent(
 
                 ProductTextField(
                     label = "Nama Produk",
-                    value = editedProduct.nama,
+                    value = editedProduct.name,
                     onValueChange = { editedProduct = editedProduct.copy(nama = it) },
                     enabled = isEditing,
                     isRequired = true
@@ -220,7 +223,7 @@ private fun ProductDetailContent(
 
                 ProductTextField(
                     label = "Harga Beli",
-                    value = editedProduct.hargaBeli.toString(),
+                    value = editedProduct.costPrice.toString(),
                     onValueChange = { value ->
                         value.toDoubleOrNull()?.let { price ->
                             editedProduct = editedProduct.copy(hargaBeli = price)
@@ -233,7 +236,7 @@ private fun ProductDetailContent(
 
                 ProductTextField(
                     label = "Harga Jual",
-                    value = editedProduct.hargaJual.toString(),
+                    value = editedProduct.sellingPrice.toString(),
                     onValueChange = { value ->
                         value.toDoubleOrNull()?.let { price ->
                             editedProduct = editedProduct.copy(hargaJual = price)
@@ -264,7 +267,7 @@ private fun ProductDetailContent(
 
                 ProductTextField(
                     label = "Stok",
-                    value = editedProduct.stok.toString(),
+                    value = editedProduct.stockQuantity.toString(),
                     onValueChange = { value ->
                         value.toIntOrNull()?.let { stock ->
                             editedProduct = editedProduct.copy(stok = stock)

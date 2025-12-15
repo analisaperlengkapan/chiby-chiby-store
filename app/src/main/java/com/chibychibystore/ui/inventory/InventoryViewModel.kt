@@ -245,7 +245,7 @@ class InventoryViewModel @Inject constructor(
                         products
                     } else {
                         products.filter { product ->
-                            product.nama.contains(_uiState.value.searchQuery, ignoreCase = true) ||
+                            product.name.contains(_uiState.value.searchQuery, ignoreCase = true) ||
                             product.barcode?.contains(_uiState.value.searchQuery, ignoreCase = true) ?: false
                         }
                     }
@@ -294,7 +294,7 @@ class InventoryViewModel @Inject constructor(
             emptyList()
         } else {
             _uiState.value.products.filter { product ->
-                product.nama.contains(query, ignoreCase = true) ||
+                product.name.contains(query, ignoreCase = true) ||
                 product.barcode.contains(query, ignoreCase = true)
             }
         }

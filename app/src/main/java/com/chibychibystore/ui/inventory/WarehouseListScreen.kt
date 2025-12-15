@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.inventory
+import com.chibychibystore.data.local.entity.Produk
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

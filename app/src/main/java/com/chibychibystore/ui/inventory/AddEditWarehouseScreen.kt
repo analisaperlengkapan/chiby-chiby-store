@@ -127,7 +127,7 @@ fun EditWarehouseScreen(
     LaunchedEffect(warehouseId) {
         val warehouse = viewModel.getWarehouseById(warehouseId)
         warehouse?.let {
-            warehouseName = it.nama
+            warehouseName = it.name
             warehouseLocation = it.lokasi
             warehouseCapacity = it.kapasitas.toString()
         }

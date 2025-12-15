@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.pos
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

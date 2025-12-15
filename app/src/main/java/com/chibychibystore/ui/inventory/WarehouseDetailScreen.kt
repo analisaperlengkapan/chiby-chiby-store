@@ -1,4 +1,7 @@
 package com.chibychibystore.ui.inventory
+import com.chibychibystore.ui.components.shared.AppTopBar
+import com.chibychibystore.ui.components.shared.ErrorMessage
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -48,7 +51,7 @@ fun WarehouseDetailScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = selectedWarehouse?.nama ?: "Detail Gudang",
+                title = selectedWarehouse?.name ?: "Detail Gudang",
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")

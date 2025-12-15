@@ -1,4 +1,8 @@
 package com.chibychibystore.ui.inventory
+import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.ui.components.shared.AppTopBar
+import com.chibychibystore.ui.components.shared.ErrorMessage
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -190,7 +194,7 @@ private fun ProductListItem(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = product.nama,
+                        text = product.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
@@ -206,7 +210,7 @@ private fun ProductListItem(
                 }
 
                 // Stock indicator
-                StockIndicator(stock = product.stok, minStock = product.minStok)
+                StockIndicator(stock = product.stockQuantity, minStock = product.minStok)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -217,14 +221,14 @@ private fun ProductListItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Rp ${product.hargaJual}",
+                    text = "Rp ${product.sellingPrice}",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
 
                 Text(
-                    text = "Stok: ${product.stok}",
+                    text = "Stok: ${product.stockQuantity}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

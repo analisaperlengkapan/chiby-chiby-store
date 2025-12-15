@@ -235,22 +235,22 @@ class ProductDetailViewModel @Inject constructor(
      * Validate product data sebelum save
      */
     fun validateProduct(product: Produk): String? {
-        if (product.nama.isBlank()) {
+        if (product.name.isBlank()) {
             return "Nama produk tidak boleh kosong"
         }
         if (product.barcode.isBlank()) {
             return "Barcode produk tidak boleh kosong"
         }
-        if (product.hargaBeli <= 0) {
+        if (product.costPrice <= 0) {
             return "Harga beli harus lebih dari 0"
         }
-        if (product.hargaJual <= 0) {
+        if (product.sellingPrice <= 0) {
             return "Harga jual harus lebih dari 0"
         }
-        if (product.hargaJual <= product.hargaBeli) {
+        if (product.sellingPrice <= product.costPrice) {
             return "Harga jual harus lebih besar dari harga beli"
         }
-        if (product.stok < 0) {
+        if (product.stockQuantity < 0) {
             return "Stok tidak boleh negatif"
         }
         return null // Valid

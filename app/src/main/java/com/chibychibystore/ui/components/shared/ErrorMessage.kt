@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.components.shared
+import com.chibychibystore.ui.components.shared.ErrorMessage
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding

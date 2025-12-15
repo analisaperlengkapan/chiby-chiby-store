@@ -80,7 +80,7 @@ fun StockTransferDialog(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = product.nama,
+                            text = product.name,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
                         )
@@ -88,7 +88,7 @@ fun StockTransferDialog(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = "Dari: ${fromWarehouse.nama}",
+                            text = "Dari: ${fromWarehouse.name}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -96,7 +96,7 @@ fun StockTransferDialog(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = "Stok tersedia: ${product.stok}",
+                            text = "Stok tersedia: ${product.stockQuantity}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -144,7 +144,7 @@ fun StockTransferDialog(
                     value = quantity,
                     onValueChange = {
                         quantity = it
-                        quantityError = validateQuantity(it, product.stok)
+                        quantityError = validateQuantity(it, product.stockQuantity)
                     },
                     label = { Text("Jumlah Transfer") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -177,13 +177,13 @@ fun StockTransferDialog(
                     Button(
                         onClick = {
                             val qty = quantity.toIntOrNull()
-                            if (selectedWarehouse != null && qty != null && qty > 0 && qty <= product.stok) {
+                            if (selectedWarehouse != null && qty != null && qty > 0 && qty <= product.stockQuantity) {
                                 onTransfer(selectedWarehouse!!.id, qty)
                                 onDismiss()
                             }
                         },
                         enabled = selectedWarehouse != null &&
-                                quantity.toIntOrNull()?.let { it > 0 && it <= product.stok } == true
+                                quantity.toIntOrNull()?.let { it > 0 && it <= product.stockQuantity } == true
                     ) {
                         Text("Transfer")
                     }
@@ -230,7 +230,7 @@ private fun WarehouseSelectionCard(
 
             Column {
                 Text(
-                    text = warehouse.nama,
+                    text = warehouse.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
                 )

@@ -1,4 +1,7 @@
 package com.chibychibystore.ui.inventory
+import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.ui.components.shared.ErrorMessage
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -62,7 +65,7 @@ fun AddProductScreen(
                             val product = uiState.product ?: return@IconButton
                             viewModel.saveProduct(product)
                         },
-                        enabled = uiState.product?.nama?.isNotBlank() == true
+                        enabled = uiState.product?.name?.isNotBlank() == true
                     ) {
                         Icon(Icons.Default.Save, contentDescription = "Simpan")
                     }
@@ -167,7 +170,7 @@ private fun AddProductContent(
 
                 ProductTextField(
                     label = "Nama Produk",
-                    value = editedProduct.nama,
+                    value = editedProduct.name,
                     onValueChange = { editedProduct = editedProduct.copy(nama = it) },
                     isRequired = true
                 )
@@ -199,7 +202,7 @@ private fun AddProductContent(
 
                 ProductTextField(
                     label = "Harga Beli",
-                    value = editedProduct.hargaBeli.toString(),
+                    value = editedProduct.costPrice.toString(),
                     onValueChange = { value ->
                         value.toDoubleOrNull()?.let { price ->
                             editedProduct = editedProduct.copy(hargaBeli = price)
@@ -211,7 +214,7 @@ private fun AddProductContent(
 
                 ProductTextField(
                     label = "Harga Jual",
-                    value = editedProduct.hargaJual.toString(),
+                    value = editedProduct.sellingPrice.toString(),
                     onValueChange = { value ->
                         value.toDoubleOrNull()?.let { price ->
                             editedProduct = editedProduct.copy(hargaJual = price)
@@ -241,7 +244,7 @@ private fun AddProductContent(
 
                 ProductTextField(
                     label = "Stok Awal",
-                    value = editedProduct.stok.toString(),
+                    value = editedProduct.stockQuantity.toString(),
                     onValueChange = { value ->
                         value.toIntOrNull()?.let { stock ->
                             editedProduct = editedProduct.copy(stok = stock)

@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.components.shared
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
