@@ -49,7 +49,7 @@ class PdfExportService @Inject constructor(
                     val filePath = createPdfFile(fileName)
 
                     createGrossSalesPdf(filePath, reportData.data, startDate, endDate)
-                    Result.Success(filePath)
+                    Result.success(filePath)
                 }
                 is Result.Failure -> Result.Failure(Exception("Gagal mendapatkan data laporan: ${reportData.exception.message}"))
             }
@@ -73,7 +73,7 @@ class PdfExportService @Inject constructor(
                     val filePath = createPdfFile(fileName)
 
                     createProfitMarginPdf(filePath, reportData.data, startDate, endDate)
-                    Result.Success(filePath)
+                    Result.success(filePath)
                 }
                 is Result.Failure -> Result.Failure(Exception("Gagal mendapatkan data laporan: ${reportData.exception.message}"))
             }
@@ -97,7 +97,7 @@ class PdfExportService @Inject constructor(
                     val filePath = createPdfFile(fileName)
 
                     createNetProfitPdf(filePath, reportData.data, startDate, endDate)
-                    Result.Success(filePath)
+                    Result.success(filePath)
                 }
                 is Result.Failure -> Result.Failure(Exception("Gagal mendapatkan data laporan: ${reportData.exception.message}"))
             }
@@ -121,7 +121,7 @@ class PdfExportService @Inject constructor(
                     val filePath = createPdfFile(fileName)
 
                     createSalesByProductPdf(filePath, reportData.data, startDate, endDate)
-                    Result.Success(filePath)
+                    Result.success(filePath)
                 }
                 is Result.Failure -> Result.Failure(Exception("Gagal mendapatkan data laporan: ${reportData.exception.message}"))
             }
@@ -145,7 +145,7 @@ class PdfExportService @Inject constructor(
                     val filePath = createPdfFile(fileName)
 
                     createSalesByCategoryPdf(filePath, reportData.data, startDate, endDate)
-                    Result.Success(filePath)
+                    Result.success(filePath)
                 }
                 is Result.Failure -> Result.Failure(Exception("Gagal mendapatkan data laporan: ${reportData.exception.message}"))
             }
@@ -169,7 +169,7 @@ class PdfExportService @Inject constructor(
                     val filePath = createPdfFile(fileName)
 
                     createSalesTrendPdf(filePath, reportData.data, startDate, endDate)
-                    Result.Success(filePath)
+                    Result.success(filePath)
                 }
                 is Result.Failure -> Result.Failure(Exception("Gagal mendapatkan data laporan: ${reportData.exception.message}"))
             }
@@ -193,7 +193,7 @@ class PdfExportService @Inject constructor(
                     val filePath = createPdfFile(fileName)
 
                     createIncomeStatementPdf(filePath, reportData.data, startDate, endDate)
-                    Result.Success(filePath)
+                    Result.success(filePath)
                 }
                 is Result.Failure -> Result.Failure(Exception("Gagal mendapatkan data laporan: ${reportData.exception.message}"))
             }
@@ -217,7 +217,7 @@ class PdfExportService @Inject constructor(
                     val filePath = createPdfFile(fileName)
 
                     createCashFlowPdf(filePath, reportData.data, startDate, endDate)
-                    Result.Success(filePath)
+                    Result.success(filePath)
                 }
                 is Result.Failure -> Result.Failure(Exception("Gagal mendapatkan data laporan: ${reportData.exception.message}"))
             }
@@ -241,7 +241,7 @@ class PdfExportService @Inject constructor(
                     val filePath = createPdfFile(fileName)
 
                     createExpenseReportPdf(filePath, reportData.data, startDate, endDate)
-                    Result.Success(filePath)
+                    Result.success(filePath)
                 }
                 is Result.Failure -> Result.Failure(Exception("Gagal mendapatkan data laporan: ${reportData.exception.message}"))
             }
@@ -262,7 +262,7 @@ class PdfExportService @Inject constructor(
                     val filePath = createPdfFile(fileName)
 
                     createBalanceSheetPdf(filePath, reportData.data, asOfDate)
-                    Result.Success(filePath)
+                    Result.success(filePath)
                 }
                 is Result.Failure -> Result.Failure(Exception("Gagal mendapatkan data laporan: ${reportData.exception.message}"))
             }

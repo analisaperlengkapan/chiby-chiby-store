@@ -271,7 +271,7 @@ class ProductServiceImpl @Inject constructor(
             if (!product.barcode.isNullOrBlank()) {
                 val existingResult = productRepository.getProdukByBarcode(product.barcode!!)
                 if (existingResult.isSuccess && existingResult.getOrNull() != null) {
-                    return Result.failure(Exception("Barcode sudah digunakan oleh produk lain"))
+                    return Result.failure(Exception("Barcode sudah digunakan oleh produk lain")))
                 }
             }
 
@@ -294,7 +294,7 @@ class ProductServiceImpl @Inject constructor(
                 if (existingResult.isSuccess) {
                     val existing = existingResult.getOrNull()
                     if (existing != null && existing.id != product.id) {
-                        return Result.failure(Exception("Barcode sudah digunakan oleh produk lain"))
+                        return Result.failure(Exception("Barcode sudah digunakan oleh produk lain")))
                     }
                 }
             }
@@ -356,7 +356,7 @@ class ProductServiceImpl @Inject constructor(
     override suspend fun updateStock(productId: String, newStock: Int): Result<Unit> {
         return try {
             if (newStock < 0) {
-                return Result.failure(Exception("Stok tidak boleh negatif"))
+                return Result.failure(Exception("Stok tidak boleh negatif")))
             }
 
             productRepository.updateStock(productId.toLong(), newStock).getOrThrow()

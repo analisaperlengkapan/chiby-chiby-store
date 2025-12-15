@@ -104,13 +104,13 @@ class UserManagementServiceImpl @Inject constructor(
         return try {
             // Get existing user
             val existingUser = penggunaRepository.getPenggunaById(userId)
-                ?: return Result.Error("User tidak ditemukan")
+                ?: return Result.failure(Exception("User tidak ditemukan"))
 
             // Validate username uniqueness if changed
             if (username != null && username != existingUser.username) {
                 val userWithSameUsername = penggunaRepository.getPenggunaByUsername(username)
                 if (userWithSameUsername != null) {
-                    return Result.Error("Username sudah digunakan")
+                    return Result.failure(Exception("Username sudah digunakan"))
                 }
             }
 
@@ -130,17 +130,17 @@ class UserManagementServiceImpl @Inject constructor(
         return try {
             // Check if user exists
             val user = penggunaRepository.getPenggunaById(userId)
-                ?: return Result.Error("User tidak ditemukan")
+                ?: return Result.failure(Exception("User tidak ditemukan"))
 
             // Prevent deleting self
             val currentUser = authService.getCurrentUser()
             if (currentUser?.id == userId) {
-                return Result.Error("Tidak dapat menghapus user sendiri")
+                return Result.failure(Exception("Tidak dapat menghapus user sendiri"))
             }
 
             // Check permissions (only OWNER can delete users)
             if (currentUser?.role != "OWNER") {
-                return Result.Error("Hanya Owner yang dapat menghapus user")
+                return Result.failure(Exception("Hanya Owner yang dapat menghapus user"))
             }
 
             penggunaRepository.deletePengguna(userId) as com.chibychibystore.data.model.Result<Unit>
@@ -156,13 +156,13 @@ class UserManagementServiceImpl @Inject constructor(
     ): Result<Unit> {
         return try {
             if (newPassword.length < 6) {
-                return Result.Error("Password minimal 6 karakter")
+                return Result.failure(Exception("Password minimal 6 karakter"))
             }
 
             val passwordHash = authService.hashPassword(newPassword)
             penggunaRepository.updatePassword(userId, passwordHash)
         } catch (e: Exception) {
-            Result.Error("Gagal reset password: ${e.message}")
+            Result.failure(Exception("Gagal reset password: ${e.message}"))
         }
     }
 
@@ -171,19 +171,19 @@ class UserManagementServiceImpl @Inject constructor(
             // Check permissions
             val currentUser = authService.getCurrentUser()
             if (currentUser?.role != "OWNER") {
-                return Result.Error("Hanya Owner yang dapat menonaktifkan user")
+                return Result.failure(Exception("Hanya Owner yang dapat menonaktifkan user"))
             }
 
             // Prevent deactivating self
             if (currentUser.id == userId) {
-                return Result.Error("Tidak dapat menonaktifkan user sendiri")
+                return Result.failure(Exception("Tidak dapat menonaktifkan user sendiri"))
             }
 
             // For now, just mark as inactive (future: add isActive field)
             // Since we don't have isActive field yet, this is a placeholder
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
-            Result.Error("Gagal menonaktifkan user: ${e.message}")
+            Result.failure(Exception("Gagal menonaktifkan user: ${e.message}"))
         }
     }
 
@@ -192,13 +192,13 @@ class UserManagementServiceImpl @Inject constructor(
             // Check permissions
             val currentUser = authService.getCurrentUser()
             if (currentUser?.role != "OWNER") {
-                return Result.Error("Hanya Owner yang dapat mengaktifkan user")
+                return Result.failure(Exception("Hanya Owner yang dapat mengaktifkan user"))
             }
 
             // For now, just mark as active (future: add isActive field)
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
-            Result.Error("Gagal mengaktifkan user: ${e.message}")
+            Result.failure(Exception("Gagal mengaktifkan user: ${e.message}"))
         }
     }
 }

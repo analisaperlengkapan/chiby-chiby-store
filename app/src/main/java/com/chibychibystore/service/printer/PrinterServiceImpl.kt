@@ -80,11 +80,11 @@ class PrinterServiceImpl @Inject constructor(
     override suspend fun getAvailableDevices(): Result<List<BluetoothDevice>> = withContext(Dispatchers.IO) {
         try {
             if (bluetoothAdapter == null) {
-                return@withContext Result.Error("Bluetooth tidak tersedia di device ini")
+                return@withContext Result.failure(Exception("Bluetooth tidak tersedia di device ini"))
             }
 
             if (!bluetoothAdapter.isEnabled) {
-                return@withContext Result.Error("Bluetooth tidak aktif")
+                return@withContext Result.failure(Exception("Bluetooth tidak aktif"))
             }
 
             val pairedDevices = bluetoothAdapter.bondedDevices
@@ -95,10 +95,10 @@ class PrinterServiceImpl @Inject constructor(
                 device.name?.contains("receipt", ignoreCase = true) == true
             }
 
-            Result.Success(printerDevices.toList())
+            Result.success(printerDevices.toList())
         } catch (e: Exception) {
             Log.e(TAG, "Error getting available devices", e)
-            Result.Error("Gagal mendapatkan daftar device: ${e.message}")
+            Result.failure(Exception("Gagal mendapatkan daftar device: ${e.message}"))
         }
     }
 
@@ -120,15 +120,15 @@ class PrinterServiceImpl @Inject constructor(
             currentStatus = PrinterStatus.CONNECTED
             Log.d(TAG, "Successfully connected to printer")
 
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: IOException) {
             currentStatus = PrinterStatus.ERROR
             Log.e(TAG, "Failed to connect to printer", e)
-            Result.Error("Gagal terhubung ke printer: ${e.message}")
+            Result.failure(Exception("Gagal terhubung ke printer: ${e.message}"))
         } catch (e: Exception) {
             currentStatus = PrinterStatus.ERROR
             Log.e(TAG, "Unexpected error connecting to printer", e)
-            Result.Error("Error tidak terduga: ${e.message}")
+            Result.failure(Exception("Error tidak terduga: ${e.message}"))
         }
     }
 
@@ -140,10 +140,10 @@ class PrinterServiceImpl @Inject constructor(
             bluetoothSocket = null
             currentStatus = PrinterStatus.DISCONNECTED
             Log.d(TAG, "Printer disconnected")
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error disconnecting printer", e)
-            Result.Error("Gagal memutus koneksi printer: ${e.message}")
+            Result.failure(Exception("Gagal memutus koneksi printer: ${e.message}"))
         }
     }
 
@@ -162,7 +162,7 @@ class PrinterServiceImpl @Inject constructor(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!isConnected()) {
-                return@withContext Result.Error("Printer tidak terhubung")
+                return@withContext Result.failure(Exception("Printer tidak terhubung"))
             }
 
             currentStatus = PrinterStatus.PRINTING
@@ -179,18 +179,18 @@ class PrinterServiceImpl @Inject constructor(
             Thread.sleep(500)
 
             currentStatus = PrinterStatus.CONNECTED
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
             currentStatus = PrinterStatus.ERROR
             Log.e(TAG, "Error printing receipt", e)
-            Result.Error("Gagal mencetak receipt: ${e.message}")
+            Result.failure(Exception("Gagal mencetak receipt: ${e.message}"))
         }
     }
 
     override suspend fun printTestReceipt(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!isConnected()) {
-                return@withContext Result.Error("Printer tidak terhubung")
+                return@withContext Result.failure(Exception("Printer tidak terhubung"))
             }
 
             currentStatus = PrinterStatus.PRINTING
@@ -202,11 +202,11 @@ class PrinterServiceImpl @Inject constructor(
             Thread.sleep(500)
 
             currentStatus = PrinterStatus.CONNECTED
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
             currentStatus = PrinterStatus.ERROR
             Log.e(TAG, "Error printing test receipt", e)
-            Result.Error("Gagal mencetak test receipt: ${e.message}")
+            Result.failure(Exception("Gagal mencetak test receipt: ${e.message}"))
         }
     }
 
@@ -217,7 +217,7 @@ class PrinterServiceImpl @Inject constructor(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!isConnected()) {
-                return@withContext Result.Error("Printer tidak terhubung")
+                return@withContext Result.failure(Exception("Printer tidak terhubung"))
             }
 
             currentStatus = PrinterStatus.PRINTING
@@ -231,11 +231,11 @@ class PrinterServiceImpl @Inject constructor(
             }
 
             currentStatus = PrinterStatus.CONNECTED
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
             currentStatus = PrinterStatus.ERROR
             Log.e(TAG, "Error printing barcode labels", e)
-            Result.Error("Gagal mencetak label barcode: ${e.message}")
+            Result.failure(Exception("Gagal mencetak label barcode: ${e.message}"))
         }
     }
 

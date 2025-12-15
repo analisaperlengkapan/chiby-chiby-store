@@ -174,12 +174,12 @@ class SaleServiceImpl @Inject constructor(
             for (item in items) {
                 val productResult = produkRepository.getProdukById(item.productId)
                 if (productResult.isFailure) {
-                    return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
+                    return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan")))
                 }
 
                 val product = productResult.getOrThrow()
                 if (product.stockQuantity < item.quantity) {
-                    return Result.failure(Exception("Stok produk ${product.name} tidak mencukupi. Tersedia: ${product.stockQuantity}, diminta: ${item.quantity}"))
+                    return Result.failure(Exception("Stok produk ${product.name} tidak mencukupi. Tersedia: ${product.stockQuantity}, diminta: ${item.quantity}")))
                 }
 
                 // Update stock
@@ -488,7 +488,7 @@ class SaleServiceImpl @Inject constructor(
 
             val saleWithItems = saleResult.getOrThrow()
             if (saleWithItems == null) {
-                return Result.failure(Exception("Penjualan tidak ditemukan"))
+                return Result.failure(Exception("Penjualan tidak ditemukan")))
             }
 
             // Restore inventory stock
@@ -567,7 +567,7 @@ class SaleServiceImpl @Inject constructor(
 
             val saleWithItems = saleResult.getOrThrow()
             if (saleWithItems == null) {
-                return Result.failure(Exception("Penjualan tidak ditemukan"))
+                return Result.failure(Exception("Penjualan tidak ditemukan")))
             }
 
             // Restore inventory stock
@@ -954,12 +954,12 @@ class SaleServiceImpl @Inject constructor(
             // Get sale data
             val saleResult = getSale(saleId)
             if (saleResult.isFailure) {
-                return Result.failure(Exception("Penjualan dengan ID $saleId tidak ditemukan"))
+                return Result.failure(Exception("Penjualan dengan ID $saleId tidak ditemukan")))
             }
 
             val saleWithItems = saleResult.getOrNull()
             if (saleWithItems == null) {
-                return Result.failure(Exception("Data penjualan tidak ditemukan"))
+                return Result.failure(Exception("Data penjualan tidak ditemukan")))
             }
 
             // Format receipt data
