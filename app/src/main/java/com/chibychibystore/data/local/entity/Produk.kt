@@ -4,8 +4,11 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.chibychibystore.data.serialization.DateSerializer
+import kotlinx.serialization.Serializable
 import java.util.Date
 
+@Serializable
 @Entity(
     tableName = "produk",
     indices = [
@@ -39,6 +42,8 @@ data class Produk(
     val stockQuantity: Int = 0,
     val warehouseId: Long,
     val minStock: Int = 0,
+    @Serializable(with = DateSerializer::class)
     val createdAt: Date = Date(),
+    @Serializable(with = DateSerializer::class)
     val updatedAt: Date = Date()
 )

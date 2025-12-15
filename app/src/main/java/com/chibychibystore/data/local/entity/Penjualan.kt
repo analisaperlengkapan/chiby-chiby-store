@@ -4,8 +4,11 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.chibychibystore.data.serialization.DateSerializer
+import kotlinx.serialization.Serializable
 import java.util.Date
 
+@Serializable
 @Entity(
     tableName = "penjualan",
     indices = [
@@ -24,13 +27,16 @@ import java.util.Date
 data class Penjualan(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    @Serializable(with = DateSerializer::class)
     val saleDate: Date,
     val totalAmount: Double,
     val paymentMethod: PaymentMethod,
     val cashierId: Long,
+    @Serializable(with = DateSerializer::class)
     val createdAt: Date = Date()
 )
 
+@Serializable
 enum class PaymentMethod {
     CASH,
     CARD

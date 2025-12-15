@@ -113,17 +113,17 @@ class RestoreServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun previewBackup(backupPath: String): Result<BackupPreview> {
+    override suspend fun previewBackup(backupPath: String): com.chibychibystore.data.model.Result<BackupPreview> {
         return try {
             val validation = validateBackupFile(backupPath)
             if (!validation.isValid) {
-                return Result.failure(Exception("File backup tidak valid"))
+                return com.chibychibystore.data.model.Result.failure(Exception("File backup tidak valid"))
             }
 
             val backupData = loadBackupData(backupPath)
             val file = File(backupPath)
 
-            Result.success(BackupPreview(
+            com.chibychibystore.data.model.Result.success(BackupPreview(
                 version = backupData.version,
                 createdAt = backupData.createdAt,
                 recordCounts = mapOf(
@@ -141,7 +141,7 @@ class RestoreServiceImpl @Inject constructor(
                 sizeBytes = file.length()
             ))
         } catch (e: Exception) {
-            Result.failure(e)
+            com.chibychibystore.data.model.Result.failure(e)
         }
     }
 
@@ -174,6 +174,9 @@ class RestoreServiceImpl @Inject constructor(
         } catch (e: Exception) {
             BackupValidationResult(
                 isValid = false,
+                version = null,
+                createdAt = null,
+                recordCounts = null,
                 errors = listOf(e.message ?: "Error validating backup")
             )
         }
@@ -253,7 +256,8 @@ class RestoreServiceImpl @Inject constructor(
         var count = 0
         for (sale in penjualan) {
             try {
-                penjualanRepository.createPenjualan(sale)
+                val saleItems = items.filter { it.saleId == sale.id }
+                penjualanRepository.createPenjualan(sale, saleItems)
                 count++
             } catch (e: Exception) {
                 // Log error but continue
@@ -297,7 +301,7 @@ class RestoreServiceImpl @Inject constructor(
         var count = 0
         for (expense in pengeluaran) {
             try {
-                pengeluaranRepository.createPengeluaran(expense)
+                pengeluaranRepository.insertPengeluaran(expense)
                 count++
             } catch (e: Exception) {
                 // Log error but continue

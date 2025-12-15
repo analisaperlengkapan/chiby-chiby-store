@@ -3,6 +3,7 @@ package com.chibychibystore.service
 import com.chibychibystore.data.local.entity.ItemPenjualan
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.PenjualanWithItems
+import com.chibychibystore.data.model.Result
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Singleton
 

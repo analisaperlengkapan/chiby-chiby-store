@@ -6,7 +6,7 @@ sealed class Screen(val route: String) {
     object Inventory : Screen("inventory")
     object ProductAdd : Screen("inventory/add")
     object ProductDetail : Screen("inventory/product/{productId}") {
-        fun createRoute(productId: Long) = "inventory/product/$productId"
+        fun createRoute(productId: String) = "inventory/product/$productId"
     }
     object Warehouse : Screen("inventory/warehouse")
     object WarehouseList : Screen("inventory/warehouses")

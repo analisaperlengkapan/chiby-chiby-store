@@ -4,11 +4,14 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.chibychibystore.data.serialization.DateSerializer
+import kotlinx.serialization.Serializable
 import java.util.Date
 
 /**
  * Enum untuk kategori pengeluaran retail
  */
+@Serializable
 enum class ExpenseCategory(val displayName: String) {
     // Cost of Goods Sold
     INVENTORY_PURCHASES("Pembelian Inventory"),
@@ -35,6 +38,7 @@ enum class ExpenseCategory(val displayName: String) {
     }
 }
 
+@Serializable
 @Entity(
     tableName = "pengeluaran",
     indices = [
@@ -61,11 +65,13 @@ enum class ExpenseCategory(val displayName: String) {
 data class Pengeluaran(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    @Serializable(with = DateSerializer::class)
     val expenseDate: Date,
     val category: ExpenseCategory,
     val amount: Double,
     val description: String? = null,
     val approvedBy: Long? = null,
     val createdBy: Long,
+    @Serializable(with = DateSerializer::class)
     val createdAt: Date = Date()
 )

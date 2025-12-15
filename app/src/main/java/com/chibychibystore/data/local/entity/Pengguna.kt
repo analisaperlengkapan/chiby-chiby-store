@@ -3,8 +3,11 @@ package com.chibychibystore.data.local.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.chibychibystore.data.serialization.DateSerializer
+import kotlinx.serialization.Serializable
 import java.util.Date
 
+@Serializable
 @Entity(
     tableName = "pengguna",
     indices = [
@@ -18,10 +21,13 @@ data class Pengguna(
     val passwordHash: String,
     val role: Role,
     val permissions: String? = null, // JSON string
+    @Serializable(with = DateSerializer::class)
     val createdAt: Date = Date(),
+    @Serializable(with = DateSerializer::class)
     val updatedAt: Date = Date()
 )
 
+@Serializable
 enum class Role(val displayName: String) {
     OWNER("Owner"),
     MANAGER("Manager"),

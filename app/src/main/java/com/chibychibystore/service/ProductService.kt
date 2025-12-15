@@ -1,8 +1,10 @@
 package com.chibychibystore.service
 
 import com.chibychibystore.data.local.entity.Produk
-import com.chibychibystore.data.repository.ProdukRepository
+import com.chibychibystore.data.model.Result
+import com.chibychibystore.repository.ProdukRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -268,13 +270,16 @@ class ProductServiceImpl @Inject constructor(
 
             // Pastikan barcode unik jika ada (GS1 compliance)
             if (!product.barcode.isNullOrBlank()) {
-                val existing = productRepository.getProductByBarcode(product.barcode!!)
-                if (existing != null) {
+                val existingResult = productRepository.getProdukByBarcode(product.barcode!!)
+                if (existingResult.isSuccess && existingResult.getOrNull() != null) {
                     return Result.failure(Exception("Barcode sudah digunakan oleh produk lain"))
                 }
             }
 
-            val createdProduct = productRepository.createProduct(product)
+            val createResult = productRepository.createProduk(product)
+            val createdProductId = createResult.getOrNull() ?: return Result.failure(createResult.exceptionOrNull() ?: Exception("Gagal membuat produk"))
+            val createdProductResult = productRepository.getProdukById(createdProductId)
+            val createdProduct = createdProductResult.getOrNull() ?: return Result.failure(createdProductResult.exceptionOrNull() ?: Exception("Gagal mengambil produk yang dibuat"))
             Result.success(createdProduct)
         } catch (e: Exception) {
             Result.failure(e)
@@ -288,13 +293,19 @@ class ProductServiceImpl @Inject constructor(
 
             // Pastikan barcode unik jika diubah
             if (!product.barcode.isNullOrBlank()) {
-                val existing = productRepository.getProductByBarcode(product.barcode!!)
-                if (existing != null && existing.id != product.id) {
-                    return Result.failure(Exception("Barcode sudah digunakan oleh produk lain"))
+                val existingResult = productRepository.getProdukByBarcode(product.barcode!!)
+                if (existingResult.isSuccess) {
+                    val existing = existingResult.getOrNull()
+                    if (existing != null && existing.id != product.id) {
+                        return Result.failure(Exception("Barcode sudah digunakan oleh produk lain"))
+                    }
                 }
             }
 
-            val updatedProduct = productRepository.updateProduct(product)
+            val updateResult = productRepository.updateProduk(product)
+            if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengupdate produk"))
+            val updatedProductResult = productRepository.getProdukById(product.id)
+            val updatedProduct = updatedProductResult.getOrNull() ?: return Result.failure(updatedProductResult.exceptionOrNull() ?: Exception("Gagal mengambil produk yang diupdate"))
             Result.success(updatedProduct)
         } catch (e: Exception) {
             Result.failure(e)
@@ -303,7 +314,8 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun deleteProduct(id: String): Result<Unit> {
         return try {
-            productRepository.deleteProduct(id)
+            val deleteResult = productRepository.deleteProduk(id.toLong())
+            if (deleteResult.isFailure) return Result.failure(deleteResult.exceptionOrNull() ?: Exception("Gagal menghapus produk"))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -312,7 +324,7 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun getProduct(id: String): Result<Produk?> {
         return try {
-            val product = productRepository.getProduct(id)
+            val product = productRepository.getProdukById(id.toLong()).getOrNull()
             Result.success(product)
         } catch (e: Exception) {
             Result.failure(e)
@@ -325,7 +337,13 @@ class ProductServiceImpl @Inject constructor(
         searchQuery: String?
     ): Result<List<Produk>> {
         return try {
-            val products = productRepository.getProducts(categoryId, warehouseId, searchQuery)
+            val flow = when {
+                !searchQuery.isNullOrBlank() -> productRepository.searchProduk(searchQuery)
+                categoryId != null -> productRepository.getProdukByCategory(categoryId.toLong())
+                warehouseId != null -> productRepository.getProdukByWarehouse(warehouseId.toLong())
+                else -> productRepository.getAllProduk()
+            }
+            val products = flow.first()
             Result.success(products)
         } catch (e: Exception) {
             Result.failure(e)
@@ -334,7 +352,7 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun searchProducts(query: String): Result<List<Produk>> {
         return try {
-            val products = productRepository.searchProducts(query)
+            val products = productRepository.searchProduk(query).first()
             Result.success(products)
         } catch (e: Exception) {
             Result.failure(e)
@@ -347,7 +365,8 @@ class ProductServiceImpl @Inject constructor(
                 return Result.failure(Exception("Stok tidak boleh negatif"))
             }
 
-            productRepository.updateStock(productId, newStock)
+            val stockUpdateResult = productRepository.updateStock(productId.toLong(), newStock)
+            if (stockUpdateResult.isFailure) return Result.failure(stockUpdateResult.exceptionOrNull() ?: Exception("Gagal memperbarui stok"))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -356,7 +375,7 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun getLowStockProducts(): Result<List<Produk>> {
         return try {
-            val products = productRepository.getLowStockProducts()
+            val products = productRepository.getLowStockProduk().first()
             Result.success(products)
         } catch (e: Exception) {
             Result.failure(e)
@@ -364,15 +383,15 @@ class ProductServiceImpl @Inject constructor(
     }
 
     override fun observeProducts(): Flow<List<Produk>> {
-        return productRepository.observeProducts()
+        return productRepository.getAllProduk()
     }
 
     override fun observeProductsByCategory(categoryId: String): Flow<List<Produk>> {
-        return productRepository.observeProductsByCategory(categoryId)
+        return productRepository.getProdukByCategory(categoryId.toLong())
     }
 
     override fun observeProductsByWarehouse(warehouseId: String): Flow<List<Produk>> {
-        return productRepository.observeProductsByWarehouse(warehouseId)
+        return productRepository.getProdukByWarehouse(warehouseId.toLong())
     }
 
     /**

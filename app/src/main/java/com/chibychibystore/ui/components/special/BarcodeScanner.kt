@@ -33,6 +33,7 @@ fun BarcodeScanner(
     isScanning: Boolean = true
 ) {
     var isProcessing by remember { mutableStateOf(false) }
+    val primaryColor = MaterialTheme.colorScheme.primary
 
     Card(
         modifier = modifier.fillMaxSize(),
@@ -70,7 +71,7 @@ fun BarcodeScanner(
 
                 // Draw scanning rectangle border
                 drawRect(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = primaryColor,
                     topLeft = androidx.compose.ui.geometry.Offset(rectLeft, rectTop),
                     size = Size(rectSize, rectSize),
                     style = Stroke(width = 3f)
@@ -82,13 +83,13 @@ fun BarcodeScanner(
 
                 // Top-left corner
                 drawLine(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = primaryColor,
                     start = androidx.compose.ui.geometry.Offset(rectLeft, rectTop + cornerLength),
                     end = androidx.compose.ui.geometry.Offset(rectLeft, rectTop),
                     strokeWidth = cornerWidth
                 )
                 drawLine(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = primaryColor,
                     start = androidx.compose.ui.geometry.Offset(rectLeft, rectTop),
                     end = androidx.compose.ui.geometry.Offset(rectLeft + cornerLength, rectTop),
                     strokeWidth = cornerWidth
@@ -96,13 +97,13 @@ fun BarcodeScanner(
 
                 // Top-right corner
                 drawLine(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = primaryColor,
                     start = androidx.compose.ui.geometry.Offset(rectLeft + rectSize - cornerLength, rectTop),
                     end = androidx.compose.ui.geometry.Offset(rectLeft + rectSize, rectTop),
                     strokeWidth = cornerWidth
                 )
                 drawLine(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = primaryColor,
                     start = androidx.compose.ui.geometry.Offset(rectLeft + rectSize, rectTop),
                     end = androidx.compose.ui.geometry.Offset(rectLeft + rectSize, rectTop + cornerLength),
                     strokeWidth = cornerWidth
@@ -110,13 +111,13 @@ fun BarcodeScanner(
 
                 // Bottom-left corner
                 drawLine(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = primaryColor,
                     start = androidx.compose.ui.geometry.Offset(rectLeft, rectTop + rectSize - cornerLength),
                     end = androidx.compose.ui.geometry.Offset(rectLeft, rectTop + rectSize),
                     strokeWidth = cornerWidth
                 )
                 drawLine(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = primaryColor,
                     start = androidx.compose.ui.geometry.Offset(rectLeft, rectTop + rectSize),
                     end = androidx.compose.ui.geometry.Offset(rectLeft + cornerLength, rectTop + rectSize),
                     strokeWidth = cornerWidth
@@ -124,13 +125,13 @@ fun BarcodeScanner(
 
                 // Bottom-right corner
                 drawLine(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = primaryColor,
                     start = androidx.compose.ui.geometry.Offset(rectLeft + rectSize - cornerLength, rectTop + rectSize),
                     end = androidx.compose.ui.geometry.Offset(rectLeft + rectSize, rectTop + rectSize),
                     strokeWidth = cornerWidth
                 )
                 drawLine(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = primaryColor,
                     start = androidx.compose.ui.geometry.Offset(rectLeft + rectSize, rectTop + rectSize - cornerLength),
                     end = androidx.compose.ui.geometry.Offset(rectLeft + rectSize, rectTop + rectSize),
                     strokeWidth = cornerWidth

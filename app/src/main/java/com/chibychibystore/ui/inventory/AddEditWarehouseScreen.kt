@@ -42,11 +42,8 @@ fun AddWarehouseScreen(
         topBar = {
             AppTopBar(
                 title = "Tambah Gudang",
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
+                navigationIcon = Icons.Default.ArrowBack,
+                onNavigationClick = { navController.navigateUp() },
                 actions = {
                     IconButton(
                         onClick = {
@@ -125,11 +122,12 @@ fun EditWarehouseScreen(
 
     // Load warehouse data
     LaunchedEffect(warehouseId) {
-        val warehouse = viewModel.getWarehouseById(warehouseId)
+        val warehouseIdLong = warehouseId.toLongOrNull() ?: return@LaunchedEffect
+        val warehouse = viewModel.getWarehouseById(warehouseIdLong)
         warehouse?.let {
-            warehouseName = it.nama
-            warehouseLocation = it.lokasi
-            warehouseCapacity = it.kapasitas.toString()
+            warehouseName = it.name
+            warehouseLocation = it.location ?: ""
+            warehouseCapacity = it.capacity.toString()
         }
     }
 
@@ -142,18 +140,16 @@ fun EditWarehouseScreen(
         topBar = {
             AppTopBar(
                 title = "Edit Gudang",
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
+                navigationIcon = Icons.Default.ArrowBack,
+                onNavigationClick = { navController.navigateUp() },
                 actions = {
                     IconButton(
                         onClick = {
                             val validationResult = validateInputs(warehouseName, warehouseLocation, warehouseCapacity)
                             if (validationResult.isValid) {
                                 val capacity = warehouseCapacity.toIntOrNull() ?: 0
-                                viewModel.updateWarehouse(warehouseId.toLong(), warehouseName, warehouseLocation, capacity)
+                                val warehouseIdLong = warehouseId.toLongOrNull() ?: return@IconButton
+                                viewModel.updateWarehouse(warehouseIdLong, warehouseName, warehouseLocation, capacity)
                             } else {
                                 nameError = validationResult.nameError
                                 locationError = validationResult.locationError

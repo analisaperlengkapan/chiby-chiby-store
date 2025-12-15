@@ -40,3 +40,39 @@ bin/
 
 # Kotlin
 .kotlin/
+
+# Android Build artifacts
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+
+# Gradle
+.gradle/
+build/
+*/build/
+
+# Android Studio
+*.iml
+.idea/
+*.ipr
+*.iws
+.navigation/
+captures/
+output.json
+
+# NDK
+obj/
+

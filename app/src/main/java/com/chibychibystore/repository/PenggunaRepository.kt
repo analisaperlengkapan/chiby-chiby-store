@@ -2,8 +2,10 @@ package com.chibychibystore.repository
 
 import com.chibychibystore.data.local.dao.PenggunaDao
 import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.error.ChibyChibyException
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -75,6 +77,8 @@ class PenggunaRepository @Inject constructor(
             val id = penggunaDao.insertPengguna(pengguna)
             Result.success(id)
 
+        } catch (e: ChibyChibyException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("createPengguna", e))
         }
@@ -89,7 +93,7 @@ class PenggunaRepository @Inject constructor(
             validatePenggunaData(pengguna)
 
             // Check if user exists
-            val existingUser = penggunaDao.getPenggunaById(pengguna.id)
+            penggunaDao.getPenggunaById(pengguna.id)
                 ?: return Result.failure(ChibyChibyException.DatabaseError("User tidak ditemukan"))
 
             // Check username uniqueness (exclude current user)
@@ -101,6 +105,8 @@ class PenggunaRepository @Inject constructor(
             penggunaDao.updatePengguna(pengguna)
             Result.success(Unit)
 
+        } catch (e: ChibyChibyException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("updatePengguna", e))
         }
@@ -115,9 +121,20 @@ class PenggunaRepository @Inject constructor(
             val user = penggunaDao.getPenggunaById(id)
                 ?: return Result.failure(ChibyChibyException.DatabaseError("User tidak ditemukan"))
 
+            // Business rule: tidak boleh menghapus owner terakhir
+            if (user.role == Role.OWNER) {
+                val users = penggunaDao.getAllPengguna().first()
+                val ownerCount = users.count { it.role == Role.OWNER }
+                if (ownerCount <= 1) {
+                    return Result.failure(ChibyChibyException.BusinessLogicError("Tidak dapat menghapus owner terakhir"))
+                }
+            }
+
             penggunaDao.deletePenggunaById(id)
             Result.success(Unit)
 
+        } catch (e: ChibyChibyException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("deletePengguna", e))
         }

@@ -29,7 +29,7 @@ class ExpenseService @Inject constructor(
      * Get pengeluaran by ID
      */
     suspend fun getPengeluaranById(id: Long): Result<Pengeluaran> {
-        return pengeluaranRepository.getPengeluaranById(id) as com.chibychibystore.data.model.Result<Pengeluaran>
+        return pengeluaranRepository.getPengeluaranById(id)
     }
 
     /**
@@ -42,6 +42,12 @@ class ExpenseService @Inject constructor(
      * Get pengeluaran dalam rentang tanggal
      */
     suspend fun getExpensesInDateRange(startDate: LocalDate, endDate: LocalDate): List<Pengeluaran> =
+        pengeluaranRepository.getExpensesInDateRange(startDate, endDate)
+
+    /**
+     * Overload: Get pengeluaran dalam rentang tanggal menggunakan java.util.Date
+     */
+    suspend fun getExpensesInDateRange(startDate: java.util.Date, endDate: java.util.Date): List<Pengeluaran> =
         pengeluaranRepository.getExpensesInDateRange(startDate, endDate)
 
     /**
@@ -82,8 +88,7 @@ class ExpenseService @Inject constructor(
                 createdBy = currentUser.id
             )
 
-            val result = pengeluaranRepository.insertPengeluaran(pengeluaran)
-            result as com.chibychibystore.data.model.Result<Long>
+            return pengeluaranRepository.insertPengeluaran(pengeluaran)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal membuat pengeluaran", e))
         }
@@ -130,7 +135,7 @@ class ExpenseService @Inject constructor(
                 approvedBy = approvedBy
             )
 
-            pengeluaranRepository.updatePengeluaran(updatedPengeluaran) as com.chibychibystore.data.model.Result<Unit>
+            return pengeluaranRepository.updatePengeluaran(updatedPengeluaran)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal mengupdate pengeluaran", e))
         }
@@ -150,7 +155,7 @@ class ExpenseService @Inject constructor(
                 return Result.failure(ChibyChibyException.ValidationError("permission", "Tidak memiliki izin untuk menyetujui pengeluaran"))
             }
 
-            pengeluaranRepository.approvePengeluaran(id, currentUser.id) as com.chibychibystore.data.model.Result<Unit>
+            return pengeluaranRepository.approvePengeluaran(id, currentUser.id)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menyetujui pengeluaran", e))
         }
@@ -170,7 +175,7 @@ class ExpenseService @Inject constructor(
                 return Result.failure(ChibyChibyException.ValidationError("permission", "Tidak memiliki izin untuk menghapus pengeluaran"))
             }
 
-            pengeluaranRepository.deletePengeluaran(id) as com.chibychibystore.data.model.Result<Unit>
+            return pengeluaranRepository.deletePengeluaran(id)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghapus pengeluaran", e))
         }
@@ -180,7 +185,7 @@ class ExpenseService @Inject constructor(
      * Get total pengeluaran dalam rentang tanggal
      */
     suspend fun getTotalExpenses(startDate: LocalDate, endDate: LocalDate): Result<Double> =
-        pengeluaranRepository.getTotalExpenseAmount(startDate, endDate) as com.chibychibystore.data.model.Result<Double>
+        pengeluaranRepository.getTotalExpenseAmount(startDate, endDate)
 
     /**
      * Get kategori pengeluaran yang tersedia

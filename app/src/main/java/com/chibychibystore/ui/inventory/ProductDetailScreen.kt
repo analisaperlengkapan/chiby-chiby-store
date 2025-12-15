@@ -1,4 +1,7 @@
 package com.chibychibystore.ui.inventory
+import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.ui.components.shared.ErrorMessage
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,20 +17,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.model.Kategori
-import com.chibychibystore.data.model.Gudang
-import com.chibychibystore.data.model.Produk
 import com.chibychibystore.ui.components.shared.AppTopBar
-import com.chibychibystore.ui.components.ErrorMessage
-import com.chibychibystore.ui.components.LoadingIndicator
 import com.chibychibystore.ui.components.dialogs.ConfirmDialog
-import com.chibychibystore.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
     navController: NavController,
-    productId: Long,
+    productId: String,
     viewModel: ProductDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -85,7 +82,7 @@ fun ProductDetailScreen(
     if (showDeleteDialog) {
         ConfirmDialog(
             title = "Hapus Produk?",
-            message = "Produk ${uiState.product?.nama} akan dihapus. Tindakan ini tidak dapat dibatalkan.",
+            message = "Produk ${uiState.product?.name} akan dihapus. Tindakan ini tidak dapat dibatalkan.",
             confirmText = "Hapus",
             dismissText = "Batal",
             onConfirm = {
@@ -107,9 +104,7 @@ fun ProductDetailScreen(
             viewModel.clearSuccessMessage()
             // Small delay before navigation to let user see the message
             kotlinx.coroutines.delay(1000)
-            if (uiState.isSaved || uiState.isDeleted) {
-                navController.navigateUp()
-            }
+            navController.navigateUp()
         }
     }
 }
@@ -186,8 +181,8 @@ private fun ProductDetailContent(
 
                 ProductTextField(
                     label = "Nama Produk",
-                    value = editedProduct.nama,
-                    onValueChange = { editedProduct = editedProduct.copy(nama = it) },
+                    value = editedProduct.name,
+                    onValueChange = { editedProduct = editedProduct.copy(name = it) },
                     enabled = isEditing,
                     isRequired = true
                 )
@@ -220,10 +215,10 @@ private fun ProductDetailContent(
 
                 ProductTextField(
                     label = "Harga Beli",
-                    value = editedProduct.hargaBeli.toString(),
+                    value = editedProduct.costPrice.toString(),
                     onValueChange = { value ->
                         value.toDoubleOrNull()?.let { price ->
-                            editedProduct = editedProduct.copy(hargaBeli = price)
+                            editedProduct = editedProduct.copy(costPrice = price)
                         }
                     },
                     enabled = isEditing,
@@ -233,10 +228,10 @@ private fun ProductDetailContent(
 
                 ProductTextField(
                     label = "Harga Jual",
-                    value = editedProduct.hargaJual.toString(),
+                    value = editedProduct.sellingPrice.toString(),
                     onValueChange = { value ->
                         value.toDoubleOrNull()?.let { price ->
-                            editedProduct = editedProduct.copy(hargaJual = price)
+                            editedProduct = editedProduct.copy(sellingPrice = price)
                         }
                     },
                     enabled = isEditing,
@@ -264,10 +259,10 @@ private fun ProductDetailContent(
 
                 ProductTextField(
                     label = "Stok",
-                    value = editedProduct.stok.toString(),
+                    value = editedProduct.stockQuantity.toString(),
                     onValueChange = { value ->
                         value.toIntOrNull()?.let { stock ->
-                            editedProduct = editedProduct.copy(stok = stock)
+                            editedProduct = editedProduct.copy(stockQuantity = stock)
                         }
                     },
                     enabled = isEditing,
@@ -277,10 +272,10 @@ private fun ProductDetailContent(
 
                 ProductTextField(
                     label = "Stok Minimum",
-                    value = editedProduct.minStok.toString(),
+                    value = editedProduct.minStock.toString(),
                     onValueChange = { value ->
                         value.toIntOrNull()?.let { minStock ->
-                            editedProduct = editedProduct.copy(minStok = minStock)
+                            editedProduct = editedProduct.copy(minStock = minStock)
                         }
                     },
                     enabled = isEditing,

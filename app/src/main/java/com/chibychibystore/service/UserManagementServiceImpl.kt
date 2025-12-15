@@ -7,6 +7,9 @@ import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.PenggunaRepository
 import com.chibychibystore.repository.UserSessionRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,12 +27,12 @@ class UserManagementServiceImpl @Inject constructor(
         return try {
             val allUsers = penggunaRepository.getAllPengguna().first()
             val totalUsers = allUsers.size
-            val activeUsers = allUsers.count { it.isActive }
-            val owners = allUsers.count { it.role == "OWNER" }
-            val managers = allUsers.count { it.role == "MANAGER" }
-            val cashiers = allUsers.count { it.role == "CASHIER" }
-            val warehouseStaff = allUsers.count { it.role == "WAREHOUSE_STAFF" }
-            
+            val activeUsers = totalUsers // All users are considered active since no isActive field
+            val owners = allUsers.count { it.role == Role.OWNER }
+            val managers = allUsers.count { it.role == Role.MANAGER }
+            val cashiers = allUsers.count { it.role == Role.CASHIER }
+            val warehouseStaff = allUsers.count { it.role == Role.WAREHOUSE }
+
             Result.success(UserStats(
                 totalUsers = totalUsers,
                 activeUsers = activeUsers,
@@ -48,7 +51,7 @@ class UserManagementServiceImpl @Inject constructor(
 
     override fun canDeleteLastOwner(): Flow<Boolean> {
         return penggunaRepository.getAllPengguna().map { users ->
-            users.count { it.role == "OWNER" } > 1
+            users.count { it.role == Role.OWNER } > 1
         }
     }
 
@@ -87,8 +90,7 @@ class UserManagementServiceImpl @Inject constructor(
                 updatedAt = java.util.Date()
             )
 
-            val result = penggunaRepository.createPengguna(user)
-            result as com.chibychibystore.data.model.Result<Long>
+            return penggunaRepository.createPengguna(user)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal membuat user", e))
         }
@@ -103,24 +105,33 @@ class UserManagementServiceImpl @Inject constructor(
     ): Result<Unit> {
         return try {
             // Get existing user
-            val existingUser = penggunaRepository.getPenggunaById(userId)
-                ?: return Result.Error("User tidak ditemukan")
+            val existingUserResult = penggunaRepository.getPenggunaById(userId)
+            val existingUser = existingUserResult.getOrNull()
+                ?: return Result.failure(ChibyChibyException.DatabaseError("User tidak ditemukan"))
 
             // Validate username uniqueness if changed
             if (username != null && username != existingUser.username) {
-                val userWithSameUsername = penggunaRepository.getPenggunaByUsername(username)
-                if (userWithSameUsername != null) {
-                    return Result.Error("Username sudah digunakan")
+                val userWithSameUsernameResult = penggunaRepository.getPenggunaByUsername(username)
+                if (userWithSameUsernameResult.isSuccess) {
+                    return Result.failure(ChibyChibyException.ValidationError("username", "Username sudah digunakan"))
                 }
             }
 
             val updatedUser = existingUser.copy(
                 username = username ?: existingUser.username,
-                role = role?.name ?: existingUser.role,
+                role = role ?: existingUser.role,
                 updatedAt = java.util.Date()
             )
 
-            penggunaRepository.updatePengguna(updatedUser) as com.chibychibystore.data.model.Result<Unit>
+            val updateResult = penggunaRepository.updatePengguna(updatedUser)
+            if (updateResult.isSuccess) {
+                Result.success(Unit)
+            } else {
+                val cause = updateResult.exceptionOrNull()
+                Result.failure(
+                    (cause as? Exception) ?: Exception(cause ?: Exception("Gagal update user"))
+                )
+            }
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal update user", e))
         }
@@ -129,21 +140,31 @@ class UserManagementServiceImpl @Inject constructor(
     override suspend fun deleteUser(userId: Long, deletedBy: Long): Result<Unit> {
         return try {
             // Check if user exists
-            val user = penggunaRepository.getPenggunaById(userId)
-                ?: return Result.Error("User tidak ditemukan")
+            val userResult = penggunaRepository.getPenggunaById(userId)
+            if (userResult.isFailure) {
+                return Result.failure(Exception("User tidak ditemukan"))
+            }
 
             // Prevent deleting self
             val currentUser = authService.getCurrentUser()
             if (currentUser?.id == userId) {
-                return Result.Error("Tidak dapat menghapus user sendiri")
+                return Result.failure(Exception("Tidak dapat menghapus user sendiri"))
             }
 
             // Check permissions (only OWNER can delete users)
-            if (currentUser?.role != "OWNER") {
-                return Result.Error("Hanya Owner yang dapat menghapus user")
+            if (currentUser?.role != Role.OWNER) {
+                return Result.failure(Exception("Hanya Owner yang dapat menghapus user"))
             }
 
-            penggunaRepository.deletePengguna(userId) as com.chibychibystore.data.model.Result<Unit>
+            val deleteResult = penggunaRepository.deletePengguna(userId)
+            if (deleteResult.isSuccess) {
+                Result.success(Unit)
+            } else {
+                val cause = deleteResult.exceptionOrNull()
+                Result.failure(
+                    (cause as? Exception) ?: Exception(cause ?: Exception("Gagal menghapus user"))
+                )
+            }
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghapus user", e))
         }
@@ -156,13 +177,32 @@ class UserManagementServiceImpl @Inject constructor(
     ): Result<Unit> {
         return try {
             if (newPassword.length < 6) {
-                return Result.Error("Password minimal 6 karakter")
+                return Result.failure(Exception("Password minimal 6 karakter"))
             }
 
-            val passwordHash = authService.hashPassword(newPassword)
-            penggunaRepository.updatePassword(userId, passwordHash)
+            val userResult = penggunaRepository.getPenggunaById(userId)
+            val user = userResult.getOrNull() ?: return Result.failure(Exception("User tidak ditemukan"))
+
+            val passwordHash = MessageDigest.getInstance("SHA-256")
+                .digest(newPassword.toByteArray())
+                .joinToString("") { "%02x".format(it) }
+
+            val updatedUser = user.copy(
+                passwordHash = passwordHash,
+                updatedAt = java.util.Date()
+            )
+
+            val updateResult = penggunaRepository.updatePengguna(updatedUser)
+            if (updateResult.isSuccess) {
+                Result.success(Unit)
+            } else {
+                val cause = updateResult.exceptionOrNull()
+                Result.failure(
+                    (cause as? Exception) ?: Exception(cause ?: Exception("Gagal reset password"))
+                )
+            }
         } catch (e: Exception) {
-            Result.Error("Gagal reset password: ${e.message}")
+            Result.failure(Exception("Gagal reset password: ${e.message}"))
         }
     }
 
@@ -170,20 +210,20 @@ class UserManagementServiceImpl @Inject constructor(
         return try {
             // Check permissions
             val currentUser = authService.getCurrentUser()
-            if (currentUser?.role != "OWNER") {
-                return Result.Error("Hanya Owner yang dapat menonaktifkan user")
+            if (currentUser?.role != Role.OWNER) {
+                return Result.failure(Exception("Hanya Owner yang dapat menonaktifkan user"))
             }
 
             // Prevent deactivating self
             if (currentUser.id == userId) {
-                return Result.Error("Tidak dapat menonaktifkan user sendiri")
+                return Result.failure(Exception("Tidak dapat menonaktifkan user sendiri"))
             }
 
             // For now, just mark as inactive (future: add isActive field)
             // Since we don't have isActive field yet, this is a placeholder
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
-            Result.Error("Gagal menonaktifkan user: ${e.message}")
+            Result.failure(Exception("Gagal menonaktifkan user: ${e.message}"))
         }
     }
 
@@ -191,14 +231,14 @@ class UserManagementServiceImpl @Inject constructor(
         return try {
             // Check permissions
             val currentUser = authService.getCurrentUser()
-            if (currentUser?.role != "OWNER") {
-                return Result.Error("Hanya Owner yang dapat mengaktifkan user")
+            if (currentUser?.role != Role.OWNER) {
+                return Result.failure(Exception("Hanya Owner yang dapat mengaktifkan user"))
             }
 
             // For now, just mark as active (future: add isActive field)
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
-            Result.Error("Gagal mengaktifkan user: ${e.message}")
+            Result.failure(Exception("Gagal mengaktifkan user: ${e.message}"))
         }
     }
 }

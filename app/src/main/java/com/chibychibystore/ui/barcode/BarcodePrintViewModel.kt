@@ -3,8 +3,8 @@ package com.chibychibystore.ui.barcode
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.Produk
-import com.chibychibystore.service.PrinterService
 import com.chibychibystore.service.ProductService
+import com.chibychibystore.service.printer.PrinterService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,20 +51,17 @@ class BarcodePrintViewModel @Inject constructor(
 
             try {
                 val result = productService.getProducts()
-                result.fold(
-                    onSuccess = { products ->
-                        _uiState.value = _uiState.value.copy(
-                            products = products,
-                            isLoadingProducts = false
-                        )
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoadingProducts = false,
-                            error = exception.message ?: "Gagal memuat produk"
-                        )
-                    }
-                )
+                result.onSuccess { products ->
+                    _uiState.value = _uiState.value.copy(
+                        products = products,
+                        isLoadingProducts = false
+                    )
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingProducts = false,
+                        error = exception.message ?: "Gagal memuat produk"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoadingProducts = false,
@@ -136,18 +133,15 @@ class BarcodePrintViewModel @Inject constructor(
                     quantity = quantity
                 )
 
-                result.fold(
-                    onSuccess = {
-                        _uiState.value = _uiState.value.copy(isPrinting = false)
-                        // Could show success message here
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isPrinting = false,
-                            error = exception.message ?: "Gagal mencetak label"
-                        )
-                    }
-                )
+                result.onSuccess {
+                    _uiState.value = _uiState.value.copy(isPrinting = false)
+                    // Could show success message here
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isPrinting = false,
+                        error = exception.message ?: "Gagal mencetak label"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isPrinting = false,

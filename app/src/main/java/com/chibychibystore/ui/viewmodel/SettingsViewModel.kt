@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.viewmodel
+import com.chibychibystore.ui.components.shared.ErrorMessage
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -557,7 +558,7 @@ class SettingsViewModel @Inject constructor(
      *         text = { Text("Password telah diubah") },
      *         confirmButton = {
      *             TextButton(onClick = { viewModel.clearPasswordChangeSuccess() }) {
-     *                 Text("OK")
+     *                 Text("Oke")
      *             }
      *         }
      *     )

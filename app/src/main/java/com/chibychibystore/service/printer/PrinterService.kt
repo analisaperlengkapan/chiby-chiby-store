@@ -1,6 +1,7 @@
 package com.chibychibystore.service.printer
 
 import android.bluetooth.BluetoothDevice
+import com.chibychibystore.data.model.Result
 import javax.inject.Singleton
 
 /**

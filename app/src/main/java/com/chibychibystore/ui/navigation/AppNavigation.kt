@@ -91,7 +91,7 @@ fun AppNavigation(
         }
 
         composable(Screen.ProductDetail.route) { backStackEntry ->
-            val productId = backStackEntry.arguments?.getString("productId")?.toLongOrNull()
+            val productId = backStackEntry.arguments?.getString("productId")
             if (productId != null) {
                 AuthGuard(
                     authService = authService,

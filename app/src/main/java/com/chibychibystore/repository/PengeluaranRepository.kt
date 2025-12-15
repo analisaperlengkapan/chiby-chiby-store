@@ -3,6 +3,7 @@ package com.chibychibystore.repository
 import com.chibychibystore.data.local.dao.PengeluaranDao
 import com.chibychibystore.data.local.entity.ExpenseCategory
 import com.chibychibystore.data.local.entity.Pengeluaran
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -67,6 +68,13 @@ class PengeluaranRepository @Inject constructor(
         val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
         val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
         return pengeluaranDao.getPengeluaranByDateRange(start, end).first()
+    }
+
+    /**
+     * Overload: Get pengeluaran dalam rentang tanggal menggunakan java.util.Date
+     */
+    suspend fun getExpensesInDateRange(startDate: Date, endDate: Date): List<Pengeluaran> {
+        return pengeluaranDao.getPengeluaranByDateRange(startDate, endDate).first()
     }
 
     /**

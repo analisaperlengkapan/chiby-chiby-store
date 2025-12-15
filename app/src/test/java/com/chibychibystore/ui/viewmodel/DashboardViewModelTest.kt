@@ -37,11 +37,8 @@ class DashboardViewModelTest {
 
     @Test
     fun `initial state should have loading true initially`() {
-        // Note: Since init block loads data, we need to check after initialization
-        // This test might need adjustment based on actual implementation
         val initialState = viewModel.uiState.value
-        // The state should eventually be loaded, but initially might be loading
-        assertFalse(initialState.isLoading) // Should be false after init completes
+        assertTrue(initialState.isLoading)
     }
 
     @Test
@@ -72,9 +69,9 @@ class DashboardViewModelTest {
         // Should have some low stock items
         assertTrue(state.lowStockItems.isNotEmpty())
         state.lowStockItems.forEach { item ->
-            assertTrue(item.stok <= 10) // Low stock threshold
-            assertTrue(item.nama.isNotEmpty())
-            assertTrue(item.barcode.isNotEmpty())
+            assertTrue(item.stockQuantity <= 10) // Low stock threshold
+            assertTrue(item.name.isNotEmpty())
+            assertTrue(!item.barcode.isNullOrBlank())
         }
     }
 
@@ -88,9 +85,9 @@ class DashboardViewModelTest {
         // Should have some recent transactions
         assertTrue(state.recentTransactions.isNotEmpty())
         state.recentTransactions.forEach { transaction ->
-            assertTrue(transaction.total > 0.0)
-            assertTrue(transaction.tanggal > 0)
-            assertTrue(transaction.penggunaId > 0)
+            assertTrue(transaction.totalAmount > 0.0)
+            assertTrue(transaction.saleDate.time > 0)
+            assertTrue(transaction.cashierId > 0)
         }
     }
 

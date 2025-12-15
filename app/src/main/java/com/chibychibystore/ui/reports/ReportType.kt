@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.reports
+import com.chibychibystore.data.local.entity.Produk
 
 /**
  * Enum untuk tipe laporan yang tersedia

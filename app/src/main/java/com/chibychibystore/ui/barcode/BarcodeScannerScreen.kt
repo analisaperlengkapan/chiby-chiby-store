@@ -6,6 +6,10 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -62,7 +66,8 @@ fun BarcodeScannerScreen(
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.barcode_scanner_title),
-                onBackClick = onDismiss
+                navigationIcon = Icons.Filled.ArrowBack,
+                onNavigationClick = onDismiss
             )
         }
     ) { padding ->
@@ -114,7 +119,7 @@ fun BarcodeScannerScreen(
                     .padding(16.dp)
             ) {
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Edit,
+                    imageVector = Icons.Filled.Edit,
                     contentDescription = stringResource(R.string.barcode_manual_input)
                 )
             }
@@ -143,7 +148,7 @@ private fun PermissionRequiredContent(onRequestPermission: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = androidx.compose.material.icons.Icons.Default.CameraAlt,
+            imageVector = Icons.Filled.PhotoCamera,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.primary

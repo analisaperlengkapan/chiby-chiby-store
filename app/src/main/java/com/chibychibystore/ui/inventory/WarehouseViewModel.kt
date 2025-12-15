@@ -52,25 +52,22 @@ class WarehouseViewModel @Inject constructor(
 
             try {
                 val result = warehouseService.getWarehouses()
-                result.fold(
-                    onSuccess = { warehouses ->
-                        _uiState.value = _uiState.value.copy(
-                            warehouses = warehouses,
-                            isLoading = false
-                        )
-                        // Setup reactive updates
-                        observeWarehouses()
+                result.onSuccess { warehouses ->
+                    _uiState.value = _uiState.value.copy(
+                        warehouses = warehouses,
+                        isLoading = false
+                    )
+                    // Setup reactive updates
+                    observeWarehouses()
 
-                        // Load stock untuk semua gudang
-                        loadAllWarehouseStock()
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = exception.message ?: "Gagal memuat gudang"
-                        )
-                    }
-                )
+                    // Load stock untuk semua gudang
+                    loadAllWarehouseStock()
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Gagal memuat gudang"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -116,18 +113,15 @@ class WarehouseViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val result = warehouseService.getWarehouseStock(warehouseId)
-                result.fold(
-                    onSuccess = { products ->
-                        _uiState.value = _uiState.value.copy(products = products)
-                        // Setup reactive updates untuk gudang ini
-                        observeWarehouseStock(warehouseId)
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            error = exception.message ?: "Gagal memuat stok gudang"
-                        )
-                    }
-                )
+                result.onSuccess { products ->
+                    _uiState.value = _uiState.value.copy(products = products)
+                    // Setup reactive updates untuk gudang ini
+                    observeWarehouseStock(warehouseId)
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        error = exception.message ?: "Gagal memuat stok gudang"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     error = "Terjadi kesalahan: ${e.message}"
@@ -144,7 +138,7 @@ class WarehouseViewModel @Inject constructor(
             warehouseService.observeWarehouseStock(warehouseId)
                 .catch { e ->
                     _uiState.value = _uiState.value.copy(
-                        error = "Gagal mengamati perubahan stok: ${e.message}"
+                        error = "Gagal mengamati perubahan stockQuantity: ${e.message}"
                     )
                 }
                 .collectLatest { products ->
@@ -160,12 +154,9 @@ class WarehouseViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val result = warehouseService.getAllWarehouseStock()
-                result.fold(
-                    onSuccess = { warehouseStock ->
-                        _uiState.value = _uiState.value.copy(allWarehouseStock = warehouseStock)
-                    },
-                    onFailure = { /* Ignore error untuk all warehouse stock */ }
-                )
+                result.onSuccess { warehouseStock ->
+                    _uiState.value = _uiState.value.copy(allWarehouseStock = warehouseStock)
+                }.onFailure { /* Ignore error untuk all warehouse stock */ }
             } catch (e: Exception) {
                 // Ignore error untuk all warehouse stock
             }
@@ -186,25 +177,22 @@ class WarehouseViewModel @Inject constructor(
 
             try {
                 val result = warehouseService.transferStock(productId, fromWarehouseId, toWarehouseId, quantity)
-                result.fold(
-                    onSuccess = {
-                        _uiState.value = _uiState.value.copy(
-                            isTransferring = false,
-                            successMessage = "Transfer stok berhasil"
-                        )
-                        // Refresh data
-                        loadAllWarehouseStock()
-                        _uiState.value.selectedWarehouse?.let { selected ->
-                            loadWarehouseStock(selected.id)
-                        }
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isTransferring = false,
-                            error = exception.message ?: "Gagal transfer stok"
-                        )
+                result.onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        isTransferring = false,
+                        successMessage = "Transfer stok berhasil"
+                    )
+                    // Refresh data
+                    loadAllWarehouseStock()
+                    _uiState.value.selectedWarehouse?.let { selected ->
+                        loadWarehouseStock(selected.id)
                     }
-                )
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isTransferring = false,
+                        error = exception.message ?: "Gagal transfer stok"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isTransferring = false,
@@ -223,25 +211,22 @@ class WarehouseViewModel @Inject constructor(
 
             try {
                 val result = warehouseService.assignProductToWarehouse(productId, warehouseId)
-                result.fold(
-                    onSuccess = {
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            successMessage = "Produk berhasil dipindahkan ke gudang"
-                        )
-                        // Refresh data
-                        loadAllWarehouseStock()
-                        _uiState.value.selectedWarehouse?.let { selected ->
-                            loadWarehouseStock(selected.id)
-                        }
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = exception.message ?: "Gagal memindahkan produk"
-                        )
+                result.onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        successMessage = "Produk berhasil dipindahkan ke gudang"
+                    )
+                    // Refresh data
+                    loadAllWarehouseStock()
+                    _uiState.value.selectedWarehouse?.let { selected ->
+                        loadWarehouseStock(selected.id)
                     }
-                )
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Gagal memindahkan produk"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -281,20 +266,17 @@ class WarehouseViewModel @Inject constructor(
                 )
 
                 val result = warehouseService.createWarehouse(warehouse)
-                result.fold(
-                    onSuccess = { createdWarehouse ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            successMessage = "Gudang '${createdWarehouse.name}' berhasil dibuat"
-                        )
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = exception.message ?: "Gagal membuat gudang"
-                        )
-                    }
-                )
+                result.onSuccess { createdWarehouse ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        successMessage = "Gudang '${createdWarehouse.name}' berhasil dibuat"
+                    )
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Gagal membuat gudang"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -320,22 +302,19 @@ class WarehouseViewModel @Inject constructor(
                 )
 
                 val result = warehouseService.updateWarehouse(warehouse)
-                result.fold(
-                    onSuccess = { updatedWarehouse ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            successMessage = "Gudang '${updatedWarehouse.name}' berhasil diperbarui"
-                        )
-                        // Refresh warehouse list
-                        loadWarehouses()
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = exception.message ?: "Gagal memperbarui gudang"
-                        )
-                    }
-                )
+                result.onSuccess { updatedWarehouse ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        successMessage = "Gudang '${updatedWarehouse.name}' berhasil diperbarui"
+                    )
+                    // Refresh warehouse list
+                    loadWarehouses()
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Gagal memperbarui gudang"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,

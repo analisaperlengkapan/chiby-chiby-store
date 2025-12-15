@@ -3,11 +3,13 @@ package com.chibychibystore.service
 import com.chibychibystore.data.local.entity.ItemPenjualan
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.PenjualanWithItems
+import com.chibychibystore.data.local.entity.PaymentMethod
 import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.service.printer.PrinterService
 import com.chibychibystore.service.printer.ReceiptFormatter
+import com.chibychibystore.data.model.Result
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -173,22 +175,19 @@ class SaleServiceImpl @Inject constructor(
             // Validasi dan update inventory stock
             for (item in items) {
                 val productResult = produkRepository.getProdukById(item.productId)
-                if (productResult.isFailure) {
-                    return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
-                }
-
-                val product = productResult.getOrThrow()
+                val product = productResult.getOrNull() ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
                 if (product.stockQuantity < item.quantity) {
                     return Result.failure(Exception("Stok produk ${product.name} tidak mencukupi. Tersedia: ${product.stockQuantity}, diminta: ${item.quantity}"))
                 }
 
                 // Update stock
                 val newStock = product.stockQuantity - item.quantity
-                produkRepository.updateStock(item.productId, newStock)
+                val stockUpdate = produkRepository.updateStock(item.productId, newStock)
+                if (stockUpdate.isFailure) return Result.failure(stockUpdate.exceptionOrNull() ?: Exception("Gagal memperbarui stok untuk produk ${product.name}"))
             }
 
             // Create sale
-            penjualanRepository.createPenjualan(sale, items)
+            return penjualanRepository.createPenjualan(sale, items)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -292,10 +291,13 @@ class SaleServiceImpl @Inject constructor(
             }
 
             // Apply filters if provided
-            var filteredSales = sales
+            var filteredSales: List<Penjualan> = sales
             if (startDate != null && endDate != null) {
+                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd")
+                val startDateObj = sdf.parse(startDate)
+                val endDateObj = sdf.parse(endDate)
                 filteredSales = filteredSales.filter {
-                    it.saleDate >= startDate && it.saleDate <= endDate
+                    it.saleDate >= startDateObj && it.saleDate <= endDateObj
                 }
             }
             if (cashierId != null) {
@@ -420,7 +422,12 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun updateSale(id: Long, sale: Penjualan): Result<Penjualan> {
         return try {
-            penjualanRepository.updatePenjualan(id, sale)
+            val updateResult = penjualanRepository.updatePenjualan(id, sale)
+            if (updateResult.isSuccess) {
+                Result.success(sale)
+            } else {
+                Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengupdate penjualan"))
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -482,27 +489,21 @@ class SaleServiceImpl @Inject constructor(
         return try {
             // Get sale with items first
             val saleResult = penjualanRepository.getPenjualanWithItemsById(id)
-            if (saleResult.isFailure) {
-                return Result.failure(saleResult.exceptionOrNull() ?: Exception("Unknown error"))
-            }
-
-            val saleWithItems = saleResult.getOrThrow()
-            if (saleWithItems == null) {
-                return Result.failure(Exception("Penjualan tidak ditemukan"))
-            }
+            val saleWithItems = saleResult.getOrNull() ?: return Result.failure(saleResult.exceptionOrNull() ?: Exception("Penjualan tidak ditemukan"))
 
             // Restore inventory stock
             for (item in saleWithItems.items) {
                 val productResult = produkRepository.getProdukById(item.productId)
-                if (productResult.isSuccess) {
-                    val product = productResult.getOrThrow()
+                val product = productResult.getOrNull()
+                if (product != null) {
                     val newStock = product.stockQuantity + item.quantity
-                    produkRepository.updateStock(item.productId, newStock)
+                    val updateResult = produkRepository.updateStock(item.productId, newStock)
+                    if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengembalikan stok produk ${product.name}"))
                 }
             }
 
             // Delete sale
-            penjualanRepository.deletePenjualan(id)
+            return penjualanRepository.deletePenjualan(id)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -561,28 +562,22 @@ class SaleServiceImpl @Inject constructor(
         return try {
             // For refund, we restore stock and mark sale as refunded
             val saleResult = penjualanRepository.getPenjualanWithItemsById(id)
-            if (saleResult.isFailure) {
-                return Result.failure(saleResult.exceptionOrNull() ?: Exception("Unknown error"))
-            }
-
-            val saleWithItems = saleResult.getOrThrow()
-            if (saleWithItems == null) {
-                return Result.failure(Exception("Penjualan tidak ditemukan"))
-            }
+            val saleWithItems = saleResult.getOrNull() ?: return Result.failure(saleResult.exceptionOrNull() ?: Exception("Penjualan tidak ditemukan"))
 
             // Restore inventory stock
             for (item in saleWithItems.items) {
                 val productResult = produkRepository.getProdukById(item.productId)
-                if (productResult.isSuccess) {
-                    val product = productResult.getOrThrow()
+                val product = productResult.getOrNull()
+                if (product != null) {
                     val newStock = product.stockQuantity + item.quantity
-                    produkRepository.updateStock(item.productId, newStock)
+                    val updateResult = produkRepository.updateStock(item.productId, newStock)
+                    if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal memperbarui stok untuk produk ${product.name}"))
                 }
             }
 
             // Mark sale as refunded (you might want to add a refunded status)
             // For now, just delete the sale
-            penjualanRepository.deletePenjualan(id)
+            return penjualanRepository.deletePenjualan(id)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -697,7 +692,9 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun getTotalSalesByDateRange(startDate: String, endDate: String): Result<Double> {
         return try {
-            penjualanRepository.getTotalPenjualanByDateRange(startDate, endDate)
+            val startLocalDate = java.time.LocalDate.parse(startDate)
+            val endLocalDate = java.time.LocalDate.parse(endDate)
+            penjualanRepository.getTotalPenjualanByDateRange(startLocalDate, endLocalDate)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -1036,7 +1033,7 @@ class SaleServiceImpl @Inject constructor(
     private fun validateSale(sale: Penjualan, items: List<ItemPenjualan>) {
         require(items.isNotEmpty()) { "Penjualan harus memiliki minimal 1 item" }
         require(sale.totalAmount >= 0) { "Total amount tidak boleh negatif" }
-        require(sale.paymentMethod in listOf("CASH", "CARD")) { "Metode pembayaran tidak valid" }
+        require(sale.paymentMethod in listOf(PaymentMethod.CASH, PaymentMethod.CARD)) { "Metode pembayaran tidak valid" }
 
         items.forEach { item ->
             require(item.quantity > 0) { "Quantity item harus lebih dari 0" }

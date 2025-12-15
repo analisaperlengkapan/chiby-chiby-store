@@ -1,7 +1,11 @@
 package com.chibychibystore.ui.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.chibychibystore.R
 import java.time.Instant
@@ -21,7 +25,7 @@ fun DatePickerDialog(
         initialSelectedDateMillis = initialDate?.time ?: System.currentTimeMillis()
     )
 
-    DatePickerDialog(
+    androidx.compose.material3.DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
@@ -31,7 +35,7 @@ fun DatePickerDialog(
                 }
                 onDismiss()
             }) {
-                Text("OK")
+                Text("Oke")
             }
         },
         dismissButton = {
@@ -60,7 +64,7 @@ fun DateRangePickerDialog(
         initialSelectedDateMillis = if (isSelectingStart) startDate?.time else endDate?.time ?: System.currentTimeMillis()
     )
 
-    DatePickerDialog(
+    androidx.compose.material3.DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
@@ -96,7 +100,7 @@ fun DateRangePickerDialog(
             Text(
                 text = if (isSelectingStart) "Pilih Tanggal Mulai" else "Pilih Tanggal Akhir",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = androidx.compose.ui.Modifier.padding(16.dp)
+                modifier = Modifier.padding(16.dp)
             )
             DatePicker(state = datePickerState)
         }

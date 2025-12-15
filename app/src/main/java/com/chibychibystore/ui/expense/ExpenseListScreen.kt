@@ -1,4 +1,7 @@
 package com.chibychibystore.ui.expense
+import com.chibychibystore.ui.components.shared.AppTopBar
+import com.chibychibystore.ui.components.shared.ErrorMessage
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -188,17 +191,6 @@ fun ExpenseListScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { navController.navigate(Screen.ExpenseAdd.route) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Tambah Pengeluaran")
-                        }
                     }
                 }
                 else -> {
@@ -220,6 +212,20 @@ fun ExpenseListScreen(
             }
         }
     }
+
+    // Date Range Picker Dialog
+    if (showDateRangePicker) {
+        com.chibychibystore.ui.components.DateRangePickerDialog(
+            initialStartDate = uiState.startDate,
+            initialEndDate = uiState.endDate,
+            onDateRangeSelected = { startDate, endDate ->
+                viewModel.setStartDate(startDate)
+                viewModel.setEndDate(endDate)
+                showDateRangePicker = false
+            },
+            onDismiss = { showDateRangePicker = false }
+        )
+    }
 }
 
 @Composable
@@ -227,9 +233,10 @@ private fun ExpenseItem(
     expense: Pengeluaran,
     onClick: () -> Unit
 ) {
-    CardItem(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -271,20 +278,6 @@ private fun ExpenseItem(
                 }
             }
         }
-    }
-
-    // Date Range Picker Dialog
-    if (showDateRangePicker) {
-        DateRangePickerDialog(
-            initialStartDate = uiState.startDate,
-            initialEndDate = uiState.endDate,
-            onDateRangeSelected = { startDate, endDate ->
-                viewModel.setStartDate(startDate)
-                viewModel.setEndDate(endDate)
-                showDateRangePicker = false
-            },
-            onDismiss = { showDateRangePicker = false }
-        )
     }
 }
 

@@ -327,23 +327,20 @@ class SalesHistoryViewModel @Inject constructor(
                     endDate = _uiState.value.endDate?.let { dateFormat.format(it) }
                 )
 
-                result.fold(
-                    onSuccess = { sales ->
-                        val filteredSales = applySearchFilter(sales)
-                        _uiState.value = _uiState.value.copy(
-                            sales = filteredSales,
-                            isLoading = false
-                        )
-                        // Setup reactive updates
-                        observeSales()
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoading = false,
-                            error = exception.message ?: "Gagal memuat data penjualan"
-                        )
-                    }
-                )
+                result.onSuccess { sales ->
+                    val filteredSales = applySearchFilter(sales)
+                    _uiState.value = _uiState.value.copy(
+                        sales = filteredSales,
+                        isLoading = false
+                    )
+                    // Setup reactive updates
+                    observeSales()
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Gagal memuat data penjualan"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -737,21 +734,18 @@ class SalesHistoryViewModel @Inject constructor(
 
             try {
                 val result = saleService.getSale(saleId)
-                result.fold(
-                    onSuccess = { saleWithItems ->
-                        _uiState.value = _uiState.value.copy(
-                            selectedSale = saleWithItems,
-                            showReceiptDialog = true,
-                            isLoadingReceipt = false
-                        )
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isLoadingReceipt = false,
-                            error = exception.message ?: "Gagal memuat struk"
-                        )
-                    }
-                )
+                result.onSuccess { saleWithItems ->
+                    _uiState.value = _uiState.value.copy(
+                        selectedSale = saleWithItems,
+                        showReceiptDialog = true,
+                        isLoadingReceipt = false
+                    )
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingReceipt = false,
+                        error = exception.message ?: "Gagal memuat struk"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoadingReceipt = false,
@@ -877,18 +871,15 @@ class SalesHistoryViewModel @Inject constructor(
 
             try {
                 val result = saleService.printReceipt(saleId)
-                result.fold(
-                    onSuccess = {
-                        _uiState.value = _uiState.value.copy(isPrintingReceipt = false)
-                        // Could show success message here
-                    },
-                    onFailure = { exception ->
-                        _uiState.value = _uiState.value.copy(
-                            isPrintingReceipt = false,
-                            error = exception.message ?: "Gagal mencetak struk"
-                        )
-                    }
-                )
+                result.onSuccess {
+                    _uiState.value = _uiState.value.copy(isPrintingReceipt = false)
+                    // Could show success message here
+                }.onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isPrintingReceipt = false,
+                        error = exception.message ?: "Gagal mencetak struk"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isPrintingReceipt = false,

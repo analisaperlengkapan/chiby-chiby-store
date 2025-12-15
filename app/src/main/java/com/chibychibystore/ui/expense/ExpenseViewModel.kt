@@ -55,10 +55,7 @@ class ExpenseViewModel @Inject constructor(
                 val startDate = _uiState.value.startDate ?: Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000) // 30 hari lalu
                 val endDate = _uiState.value.endDate ?: Date()
 
-                val result = expenseService.getExpensesInDateRange(
-                    LocalDate.ofEpochDay(startDate.time / (24 * 60 * 60 * 1000)),
-                    LocalDate.ofEpochDay(endDate.time / (24 * 60 * 60 * 1000))
-                )
+                val result = expenseService.getExpensesInDateRange(startDate, endDate)
 
                 val filteredExpensesList = result // Result is List<Pengeluaran> directly
 

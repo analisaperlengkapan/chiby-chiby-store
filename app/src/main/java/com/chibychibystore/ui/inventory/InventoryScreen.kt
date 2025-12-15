@@ -1,4 +1,8 @@
 package com.chibychibystore.ui.inventory
+import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.ui.components.shared.AppTopBar
+import com.chibychibystore.ui.components.shared.ErrorMessage
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,11 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.model.Produk
-import com.chibychibystore.ui.components.AppTopBar
-import com.chibychibystore.ui.components.CardItem
-import com.chibychibystore.ui.components.ErrorMessage
-import com.chibychibystore.ui.components.LoadingIndicator
+import com.chibychibystore.ui.components.shared.CardItem
 import com.chibychibystore.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -109,7 +109,7 @@ fun InventoryScreen(
                     ProductList(
                         products = uiState.products,
                         onProductClick = { product ->
-                            navController.navigate(Screen.ProductDetail.createRoute(product.id))
+                            navController.navigate(Screen.ProductDetail.createRoute(product.id.toString()))
                         }
                     )
                 }
@@ -174,9 +174,10 @@ private fun ProductListItem(
     product: Produk,
     onClick: () -> Unit
 ) {
-    CardItem(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
         Column(
             modifier = Modifier
@@ -190,7 +191,7 @@ private fun ProductListItem(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = product.nama,
+                        text = product.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
@@ -206,7 +207,7 @@ private fun ProductListItem(
                 }
 
                 // Stock indicator
-                StockIndicator(stock = product.stok, minStock = product.minStok)
+                StockIndicator(stock = product.stockQuantity, minStock = product.minStock)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -217,14 +218,14 @@ private fun ProductListItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Rp ${product.hargaJual}",
+                    text = "Rp ${product.sellingPrice}",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
 
                 Text(
-                    text = "Stok: ${product.stok}",
+                    text = "Stok: ${product.stockQuantity}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

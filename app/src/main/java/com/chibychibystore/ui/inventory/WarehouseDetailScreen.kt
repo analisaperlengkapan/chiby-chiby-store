@@ -1,4 +1,7 @@
 package com.chibychibystore.ui.inventory
+import com.chibychibystore.ui.components.shared.AppTopBar
+import com.chibychibystore.ui.components.shared.ErrorMessage
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,10 +20,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.data.local.entity.Produk
-import com.chibychibystore.ui.components.AppTopBar
 import com.chibychibystore.ui.components.shared.CardItem
-import com.chibychibystore.ui.components.ErrorMessage
-import com.chibychibystore.ui.components.LoadingIndicator
+import com.chibychibystore.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +38,8 @@ fun WarehouseDetailScreen(
 
     // Load warehouse data when screen opens
     LaunchedEffect(warehouseId) {
-        val warehouse = viewModel.getWarehouseById(warehouseId)
+        val warehouseIdLong = warehouseId.toLongOrNull() ?: return@LaunchedEffect
+        val warehouse = viewModel.getWarehouseById(warehouseIdLong)
         if (warehouse != null) {
             viewModel.selectWarehouse(warehouse)
         }
@@ -48,12 +50,9 @@ fun WarehouseDetailScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = selectedWarehouse?.nama ?: "Detail Gudang",
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
+                title = selectedWarehouse?.name ?: "Detail Gudang",
+                navigationIcon = Icons.Default.ArrowBack,
+                onNavigationClick = { navController.navigateUp() },
                 actions = {
                     // Transfer stock button
                     IconButton(
@@ -67,7 +66,8 @@ fun WarehouseDetailScreen(
 
                     // Edit warehouse button
                     IconButton(onClick = {
-                        navController.navigate(Screen.WarehouseEdit.createRoute(selectedWarehouse.id))
+                        val warehouse = selectedWarehouse ?: return@IconButton
+                        navController.navigate(Screen.WarehouseEdit.createRoute(warehouse.id.toString()))
                     }) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit Gudang")
                     }
@@ -137,8 +137,8 @@ fun WarehouseDetailScreen(
                 viewModel.transferStock(
                     productId = selectedProductForTransfer!!.id,
                     fromWarehouseId = selectedWarehouse!!.id,
-                    toWarehouseId = toWarehouseId.toLong(),
-                    quantity = quantity.toInt()
+                    toWarehouseId = toWarehouseId,
+                    quantity = quantity
                 )
             },
             onDismiss = {
@@ -235,7 +235,7 @@ private fun WarehouseInfoHeader(
                 )
 
                 Text(
-                    text = "Total stok: $totalStock",
+                    text = "Total stockQuantity: $totalStock",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )

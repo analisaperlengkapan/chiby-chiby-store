@@ -32,8 +32,15 @@ interface PenjualanDao {
     @Query("SELECT * FROM penjualan WHERE id = :id")
     suspend fun getPenjualanWithItems(id: Long): PenjualanWithItems?
 
+    @Transaction
+    @Query("SELECT * FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate ORDER BY saleDate DESC")
+    fun getPenjualanWithItemsByDateRange(startDate: Date, endDate: Date): Flow<List<PenjualanWithItems>>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPenjualan(penjualan: Penjualan): Long
+
+    @androidx.room.Update
+    suspend fun updatePenjualan(penjualan: Penjualan)
 
     @Query("DELETE FROM penjualan WHERE id = :id")
     suspend fun deletePenjualanById(id: Long)

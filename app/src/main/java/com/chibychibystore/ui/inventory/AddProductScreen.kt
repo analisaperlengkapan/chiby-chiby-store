@@ -1,4 +1,6 @@
 package com.chibychibystore.ui.inventory
+import com.chibychibystore.ui.components.shared.ErrorMessage
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,11 +16,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.model.Produk
+import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.shared.AppTopBar
-import com.chibychibystore.ui.components.ErrorMessage
-import com.chibychibystore.ui.components.LoadingIndicator
-import com.chibychibystore.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,25 +28,25 @@ fun AddProductScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    var editedProduct by remember {
+        mutableStateOf(
+            Produk(
+                id = 0,
+                name = "",
+                barcode = null,
+                categoryId = 0,
+                costPrice = 0.0,
+                sellingPrice = 0.0,
+                stockQuantity = 0,
+                warehouseId = 0,
+                minStock = 0
+            )
+        )
+    }
+
     // Initialize with empty product for adding
     LaunchedEffect(Unit) {
-        val emptyProduct = Produk(
-            id = 0,
-            nama = "",
-            barcode = null,
-            kategoriId = 0,
-            hargaBeli = 0.0,
-            hargaJual = 0.0,
-            stok = 0,
-            gudangId = 0,
-            minStok = 0,
-            createdAt = "",
-            updatedAt = ""
-        )
-        viewModel.uiState.value.copy(
-            product = emptyProduct,
-            isEditing = true
-        )
+        // ProductDetailViewModel will default to create-mode when productId is null.
     }
 
     Scaffold(
@@ -59,10 +58,9 @@ fun AddProductScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            val product = uiState.product ?: return@IconButton
-                            viewModel.saveProduct(product)
+                            viewModel.saveProduct(editedProduct)
                         },
-                        enabled = uiState.product?.nama?.isNotBlank() == true
+                        enabled = editedProduct.name.isNotBlank()
                     ) {
                         Icon(Icons.Default.Save, contentDescription = "Simpan")
                     }
@@ -87,25 +85,10 @@ fun AddProductScreen(
                     )
                 }
                 else -> {
-                    val product = uiState.product ?: Produk(
-                        id = 0,
-                        nama = "",
-                        barcode = null,
-                        kategoriId = 0,
-                        hargaBeli = 0.0,
-                        hargaJual = 0.0,
-                        stok = 0,
-                        gudangId = 0,
-                        minStok = 0,
-                        createdAt = "",
-                        updatedAt = ""
-                    )
-
                     AddProductContent(
-                        product = product,
+                        product = editedProduct,
                         onProductChange = { updatedProduct ->
-                            // Update the product in state
-                            viewModel.uiState.value.copy(product = updatedProduct)
+                            editedProduct = updatedProduct
                         }
                     )
                 }
@@ -123,9 +106,7 @@ fun AddProductScreen(
             viewModel.clearSuccessMessage()
             // Small delay before navigation to let user see the message
             kotlinx.coroutines.delay(1000)
-            if (uiState.isSaved) {
-                navController.navigateUp()
-            }
+            navController.navigateUp()
         }
     }
 }
@@ -167,8 +148,8 @@ private fun AddProductContent(
 
                 ProductTextField(
                     label = "Nama Produk",
-                    value = editedProduct.nama,
-                    onValueChange = { editedProduct = editedProduct.copy(nama = it) },
+                    value = editedProduct.name,
+                    onValueChange = { editedProduct = editedProduct.copy(name = it) },
                     isRequired = true
                 )
 
@@ -199,10 +180,10 @@ private fun AddProductContent(
 
                 ProductTextField(
                     label = "Harga Beli",
-                    value = editedProduct.hargaBeli.toString(),
+                    value = editedProduct.costPrice.toString(),
                     onValueChange = { value ->
                         value.toDoubleOrNull()?.let { price ->
-                            editedProduct = editedProduct.copy(hargaBeli = price)
+                            editedProduct = editedProduct.copy(costPrice = price)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -211,10 +192,10 @@ private fun AddProductContent(
 
                 ProductTextField(
                     label = "Harga Jual",
-                    value = editedProduct.hargaJual.toString(),
+                    value = editedProduct.sellingPrice.toString(),
                     onValueChange = { value ->
                         value.toDoubleOrNull()?.let { price ->
-                            editedProduct = editedProduct.copy(hargaJual = price)
+                            editedProduct = editedProduct.copy(sellingPrice = price)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -241,10 +222,10 @@ private fun AddProductContent(
 
                 ProductTextField(
                     label = "Stok Awal",
-                    value = editedProduct.stok.toString(),
+                    value = editedProduct.stockQuantity.toString(),
                     onValueChange = { value ->
                         value.toIntOrNull()?.let { stock ->
-                            editedProduct = editedProduct.copy(stok = stock)
+                            editedProduct = editedProduct.copy(stockQuantity = stock)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -253,10 +234,10 @@ private fun AddProductContent(
 
                 ProductTextField(
                     label = "Stok Minimum",
-                    value = editedProduct.minStok.toString(),
+                    value = editedProduct.minStock.toString(),
                     onValueChange = { value ->
                         value.toIntOrNull()?.let { minStock ->
-                            editedProduct = editedProduct.copy(minStok = minStock)
+                            editedProduct = editedProduct.copy(minStock = minStock)
                         }
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)

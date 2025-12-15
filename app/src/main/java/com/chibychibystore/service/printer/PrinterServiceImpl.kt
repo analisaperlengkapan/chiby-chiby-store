@@ -1,17 +1,22 @@
 package com.chibychibystore.service.printer
 
 import android.bluetooth.BluetoothAdapter
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.annotation.RequiresPermission
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.util.Log
-import com.chibychibystore.utils.Result
+import java.io.ByteArrayOutputStream
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.io.OutputStream
 import java.util.*
+import com.chibychibystore.data.model.Result
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -77,14 +82,18 @@ class PrinterServiceImpl @Inject constructor(
 
     override fun getPrinterStatus(): PrinterStatus = currentStatus
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override suspend fun getAvailableDevices(): Result<List<BluetoothDevice>> = withContext(Dispatchers.IO) {
         try {
             if (bluetoothAdapter == null) {
-                return@withContext Result.Error("Bluetooth tidak tersedia di device ini")
+                return@withContext Result.failure(Exception("Bluetooth tidak tersedia di device ini"))
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                return@withContext Result.failure(Exception("Tidak memiliki izin Bluetooth (BLUETOOTH_CONNECT)"))
             }
 
             if (!bluetoothAdapter.isEnabled) {
-                return@withContext Result.Error("Bluetooth tidak aktif")
+                return@withContext Result.failure(Exception("Bluetooth tidak aktif"))
             }
 
             val pairedDevices = bluetoothAdapter.bondedDevices
@@ -95,13 +104,14 @@ class PrinterServiceImpl @Inject constructor(
                 device.name?.contains("receipt", ignoreCase = true) == true
             }
 
-            Result.Success(printerDevices.toList())
+            Result.success(printerDevices.toList())
         } catch (e: Exception) {
             Log.e(TAG, "Error getting available devices", e)
-            Result.Error("Gagal mendapatkan daftar device: ${e.message}")
+            Result.failure(Exception("Gagal mendapatkan daftar device: ${e.message}"))
         }
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override suspend fun connectPrinter(device: BluetoothDevice): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             currentStatus = PrinterStatus.CONNECTING
@@ -111,6 +121,10 @@ class PrinterServiceImpl @Inject constructor(
             disconnectPrinter()
 
             // Create socket connection
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                return@withContext Result.failure(Exception("Tidak memiliki izin Bluetooth (BLUETOOTH_CONNECT)"))
+            }
+
             bluetoothSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
             bluetoothSocket?.connect()
 
@@ -120,15 +134,15 @@ class PrinterServiceImpl @Inject constructor(
             currentStatus = PrinterStatus.CONNECTED
             Log.d(TAG, "Successfully connected to printer")
 
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: IOException) {
             currentStatus = PrinterStatus.ERROR
             Log.e(TAG, "Failed to connect to printer", e)
-            Result.Error("Gagal terhubung ke printer: ${e.message}")
+            Result.failure(Exception("Gagal terhubung ke printer: ${e.message}"))
         } catch (e: Exception) {
             currentStatus = PrinterStatus.ERROR
             Log.e(TAG, "Unexpected error connecting to printer", e)
-            Result.Error("Error tidak terduga: ${e.message}")
+            Result.failure(Exception("Error tidak terduga: ${e.message}"))
         }
     }
 
@@ -140,10 +154,10 @@ class PrinterServiceImpl @Inject constructor(
             bluetoothSocket = null
             currentStatus = PrinterStatus.DISCONNECTED
             Log.d(TAG, "Printer disconnected")
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error disconnecting printer", e)
-            Result.Error("Gagal memutus koneksi printer: ${e.message}")
+            Result.failure(Exception("Gagal memutus koneksi printer: ${e.message}"))
         }
     }
 
@@ -162,7 +176,7 @@ class PrinterServiceImpl @Inject constructor(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!isConnected()) {
-                return@withContext Result.Error("Printer tidak terhubung")
+                return@withContext Result.failure(Exception("Printer tidak terhubung"))
             }
 
             currentStatus = PrinterStatus.PRINTING
@@ -179,18 +193,18 @@ class PrinterServiceImpl @Inject constructor(
             Thread.sleep(500)
 
             currentStatus = PrinterStatus.CONNECTED
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
             currentStatus = PrinterStatus.ERROR
             Log.e(TAG, "Error printing receipt", e)
-            Result.Error("Gagal mencetak receipt: ${e.message}")
+            Result.failure(Exception("Gagal mencetak receipt: ${e.message}"))
         }
     }
 
     override suspend fun printTestReceipt(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!isConnected()) {
-                return@withContext Result.Error("Printer tidak terhubung")
+                return@withContext Result.failure(Exception("Printer tidak terhubung"))
             }
 
             currentStatus = PrinterStatus.PRINTING
@@ -202,11 +216,11 @@ class PrinterServiceImpl @Inject constructor(
             Thread.sleep(500)
 
             currentStatus = PrinterStatus.CONNECTED
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
             currentStatus = PrinterStatus.ERROR
             Log.e(TAG, "Error printing test receipt", e)
-            Result.Error("Gagal mencetak test receipt: ${e.message}")
+            Result.failure(Exception("Gagal mencetak test receipt: ${e.message}"))
         }
     }
 
@@ -217,7 +231,7 @@ class PrinterServiceImpl @Inject constructor(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             if (!isConnected()) {
-                return@withContext Result.Error("Printer tidak terhubung")
+                return@withContext Result.failure(Exception("Printer tidak terhubung"))
             }
 
             currentStatus = PrinterStatus.PRINTING
@@ -231,11 +245,11 @@ class PrinterServiceImpl @Inject constructor(
             }
 
             currentStatus = PrinterStatus.CONNECTED
-            Result.Success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
             currentStatus = PrinterStatus.ERROR
             Log.e(TAG, "Error printing barcode labels", e)
-            Result.Error("Gagal mencetak label barcode: ${e.message}")
+            Result.failure(Exception("Gagal mencetak label barcode: ${e.message}"))
         }
     }
 
@@ -381,7 +395,6 @@ class PrinterServiceImpl @Inject constructor(
             com.chibychibystore.ui.barcode.LabelSize.MEDIUM -> Pair(30, 20) // 3x2 cm
             com.chibychibystore.ui.barcode.LabelSize.LARGE -> Pair(30, 20) // 3x2 cm
             com.chibychibystore.ui.barcode.LabelSize.EXTRA_LARGE -> Pair(50, 30) // 5x3 cm
-            com.chibychibystore.ui.barcode.LabelSize.EXTRA_EXTRA_LARGE -> Pair(70, 40) // 7x4 cm
         }
 
         // Center alignment
