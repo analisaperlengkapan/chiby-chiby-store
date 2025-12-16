@@ -33,7 +33,9 @@ data class Penjualan(
     val paymentMethod: PaymentMethod,
     val cashierId: Long,
     @Serializable(with = DateSerializer::class)
-    val createdAt: Date = Date()
+    val createdAt: Date = Date(),
+    // Whether this sale has been refunded. Default false for existing records.
+    val isRefunded: Boolean = false
 )
 
 @Serializable

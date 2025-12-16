@@ -338,6 +338,11 @@ class SaleServiceImpl @Inject constructor(
             val penjualanRes = penjualanRepository.getPenjualanById(id)
             val penjualan = penjualanRes.getOrNull() ?: return Result.failure(Exception("Penjualan dengan ID $id tidak ditemukan"))
 
+            // Idempotency: if already refunded, reject further refunds
+            if (penjualan.isRefunded) {
+                return Result.failure(Exception("Penjualan dengan ID $id sudah direfund"))
+            }
+
             // Get items for sale
             val itemsFlow = itemPenjualanRepository.getItemsBySaleId(id)
             val items = itemsFlow.first()
@@ -351,7 +356,8 @@ class SaleServiceImpl @Inject constructor(
             }
 
             // Mark sale as refunded - update penjualan record
-            penjualanRepository.updatePenjualan(penjualan)
+            val updatedPenjualan = penjualan.copy(isRefunded = true)
+            penjualanRepository.updatePenjualan(updatedPenjualan)
 
             Result.success(Unit)
         } catch (e: Exception) {

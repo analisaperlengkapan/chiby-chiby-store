@@ -94,5 +94,34 @@ class ReportingServiceIntegrationTest {
         assertEquals(30000.0, profit.totalRevenue, 0.001)
         // totalCost comes from purchases sum
         assertEquals(5000.0, profit.totalCost, 0.001)
+
+    }
+
+    @Test
+    fun getSalesTrend_groupsByDateCorrectly() = runBlocking {
+        val cal = java.util.Calendar.getInstance()
+        cal.set(2025, 0, 1, 0, 0, 0)
+        val d1 = cal.time
+        cal.set(2025, 0, 1, 12, 0, 0)
+        val d2 = cal.time
+        cal.set(2025, 0, 2, 0, 0, 0)
+        val d3 = cal.time
+
+        val cashierId = db.penggunaDao().insertPengguna(com.chibychibystore.data.local.entity.Pengguna(username = "t1", passwordHash = "x", role = com.chibychibystore.data.local.entity.Role.CASHIER))
+        db.penjualanDao().insertPenjualan(Penjualan(saleDate = d1, totalAmount = 10000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId))
+        db.penjualanDao().insertPenjualan(Penjualan(saleDate = d2, totalAmount = 5000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId))
+        db.penjualanDao().insertPenjualan(Penjualan(saleDate = d3, totalAmount = 7000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId))
+
+        val start = java.time.LocalDate.of(2025, 1, 1)
+        val end = java.time.LocalDate.of(2025, 1, 3)
+
+        val trendRes = reportingService.getSalesTrend(start, end)
+        assertTrue(trendRes.isSuccess)
+        val trends = trendRes.getOrNull()!!
+        // Expect grouping: 2025-01-01 -> 15000 (2 transactions), 2025-01-02 -> 7000 (1 transaction)
+        assertEquals(2, trends.size)
+        val day1 = trends.first { it.date == java.time.LocalDate.of(2025, 1, 1) }
+        assertEquals(15000.0, day1.sales, 0.001)
+        assertEquals(2, day1.transactions)
     }
 }

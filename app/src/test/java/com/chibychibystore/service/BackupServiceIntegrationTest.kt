@@ -94,5 +94,14 @@ class BackupServiceIntegrationTest {
         println("[DEBUG] validation: isValid=${validation.isValid}, version=${validation.version}, counts=${validation.recordCounts}, errors=${validation.errors}")
         assertTrue("Validation failed for backup: ${validation.errors}", validation.isValid)
         assertEquals(1, validation.recordCounts?.get("pengguna"))
+
+        // Now corrupt the file and ensure validation fails
+        createdFile.writeText("corrupted-data")
+        val valRes2 = backupService.validateBackup(info.filePath)
+        // validateBackup returns a result with isValid=false for corrupted data (no exception)
+        assertTrue(valRes2.isSuccess)
+        val v2 = valRes2.getOrNull()!!
+        assertFalse("Corrupted backup should be invalid", v2.isValid)
+
     }
 }

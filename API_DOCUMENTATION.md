@@ -279,6 +279,7 @@ interface SaleService {
 - `id`: Long - Sale ID
 **Returns:** `Result<Unit>` - Success jika berhasil
 **Throws:** `BusinessLogicError`, `DatabaseError`
+**Notes:** Refund operation is idempotent — subsequent refund attempts for the same sale will fail with a business error and will not modify inventory.
 
 #### cancelSale(id: Long): Result<Unit>
 **Description:** Cancel penjualan dan restore inventory
