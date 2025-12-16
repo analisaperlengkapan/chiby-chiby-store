@@ -13,6 +13,9 @@ import com.chibychibystore.data.model.Result
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -333,35 +336,41 @@ class SaleServiceImpl @Inject constructor(
         }
     }
 
+    // Per-sale mutexes to prevent concurrent refunds
+    private val refundLocks = ConcurrentHashMap<Long, Mutex>()
+
     override suspend fun refundSale(id: Long): Result<Unit> {
-        return try {
-            val penjualanRes = penjualanRepository.getPenjualanById(id)
-            val penjualan = penjualanRes.getOrNull() ?: return Result.failure(Exception("Penjualan dengan ID $id tidak ditemukan"))
+        val lock = refundLocks.computeIfAbsent(id) { Mutex() }
+        return lock.withLock {
+            try {
+                val penjualanRes = penjualanRepository.getPenjualanById(id)
+                val penjualan = penjualanRes.getOrNull() ?: return Result.failure(Exception("Penjualan dengan ID $id tidak ditemukan"))
 
-            // Idempotency: if already refunded, reject further refunds
-            if (penjualan.isRefunded) {
-                return Result.failure(Exception("Penjualan dengan ID $id sudah direfund"))
+                // Idempotency: if already refunded, reject further refunds
+                if (penjualan.isRefunded) {
+                    return Result.failure(Exception("Penjualan dengan ID $id sudah direfund"))
+                }
+
+                // Get items for sale
+                val itemsFlow = itemPenjualanRepository.getItemsBySaleId(id)
+                val items = itemsFlow.first()
+
+                // Restore stock
+                for (item in items) {
+                    val product = produkRepository.getProduk(item.productId)
+                        ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
+                    val updated = product.copy(stockQuantity = product.stockQuantity + item.quantity)
+                    produkRepository.updateProduk(updated)
+                }
+
+                // Mark sale as refunded - update penjualan record
+                val updatedPenjualan = penjualan.copy(isRefunded = true)
+                penjualanRepository.updatePenjualan(updatedPenjualan)
+
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure(e)
             }
-
-            // Get items for sale
-            val itemsFlow = itemPenjualanRepository.getItemsBySaleId(id)
-            val items = itemsFlow.first()
-
-            // Restore stock
-            for (item in items) {
-                val product = produkRepository.getProduk(item.productId)
-                    ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
-                val updated = product.copy(stockQuantity = product.stockQuantity + item.quantity)
-                produkRepository.updateProduk(updated)
-            }
-
-            // Mark sale as refunded - update penjualan record
-            val updatedPenjualan = penjualan.copy(isRefunded = true)
-            penjualanRepository.updatePenjualan(updatedPenjualan)
-
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
         }
     }
 

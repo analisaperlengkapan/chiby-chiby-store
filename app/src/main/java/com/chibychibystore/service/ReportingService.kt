@@ -125,6 +125,7 @@ class ReportingService @Inject constructor(
         return try {
             // Get all sales in date range
             val sales = saleRepository.getSalesInDateRange(startDate, endDate)
+                .filter { !it.isRefunded }
 
             val totalSales = sales.sumOf { it.totalAmount }
             val totalTransactions = sales.size

@@ -13,6 +13,8 @@ import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.service.printer.PrinterService
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CoroutineStart
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -94,13 +96,13 @@ class SaleServiceRefundCancelIntegrationTest {
     }
 
     @Test
-    fun doubleRefund_willIncreaseStockTwice_currentBehavior() = runBlocking {
+    fun concurrentRefunds_onlyOneSucceeds_andStockUpdatedOnce() = runBlocking {
         // Seed minimal data
-        val kategoriId = db.kategoriDao().insertKategori(com.chibychibystore.data.local.entity.Kategori(name = "CatX"))
-        val gudangId = db.gudangDao().insertGudang(com.chibychibystore.data.local.entity.Gudang(name = "Gx"))
-        val cashierId = db.penggunaDao().insertPengguna(com.chibychibystore.data.local.entity.Pengguna(username = "cx", passwordHash = "x", role = com.chibychibystore.data.local.entity.Role.CASHIER))
+        val kategoriId = db.kategoriDao().insertKategori(com.chibychibystore.data.local.entity.Kategori(name = "Conc"))
+        val gudangId = db.gudangDao().insertGudang(com.chibychibystore.data.local.entity.Gudang(name = "Gconc"))
+        val cashierId = db.penggunaDao().insertPengguna(com.chibychibystore.data.local.entity.Pengguna(username = "cc", passwordHash = "x", role = com.chibychibystore.data.local.entity.Role.CASHIER))
 
-        val prod = Produk(name = "DblRefund", barcode = "DR1", categoryId = kategoriId, costPrice = 1000.0, sellingPrice = 2000.0, stockQuantity = 5, warehouseId = gudangId)
+        val prod = Produk(name = "Concurrent", barcode = "C-1", categoryId = kategoriId, costPrice = 1000.0, sellingPrice = 2000.0, stockQuantity = 5, warehouseId = gudangId)
         val prodId = db.produkDao().insertProduk(prod)
 
         val sale = Penjualan(saleDate = Date(), totalAmount = 4000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
@@ -109,20 +111,36 @@ class SaleServiceRefundCancelIntegrationTest {
         assertTrue(res.isSuccess)
         val saleId = res.getOrNull()!!.penjualan.id
 
-        // Refund once
-        val r1 = (saleService as SaleServiceImpl).refundSale(saleId)
-        assertTrue(r1.isSuccess)
-        val after1 = db.produkDao().getProdukById(prodId)!!
-        assertEquals(5, after1.stockQuantity)
-        val saleAfterFirst = db.penjualanDao().getPenjualanById(saleId)!!
-        assertTrue("Sale should be marked as refunded after first refund", saleAfterFirst.isRefunded)
+        // Prepare two concurrent refund calls using executor to simulate race
+        val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+        try {
+            val f1 = executor.submit(java.util.concurrent.Callable<com.chibychibystore.data.model.Result<Unit>> {
+                // refundSale may perform suspend operations internally; runBlocking ensures it runs on this thread
+                runBlocking { (saleService as SaleServiceImpl).refundSale(saleId) }
+            })
+            val f2 = executor.submit(java.util.concurrent.Callable<com.chibychibystore.data.model.Result<Unit>> {
+                runBlocking { (saleService as SaleServiceImpl).refundSale(saleId) }
+            })
 
-        // Second refund should now be rejected (idempotent behavior)
-        val r2 = (saleService as SaleServiceImpl).refundSale(saleId)
-        assertTrue("Second refund should fail to enforce idempotency", r2.isFailure)
-        val after2 = db.produkDao().getProdukById(prodId)!!
-        // Stock should remain unchanged after rejected second refund
-        assertEquals(5, after2.stockQuantity)
+            val r1 = f1.get()
+            val r2 = f2.get()
+
+            val successes = listOf(r1, r2).count { it.isSuccess }
+            val failures = listOf(r1, r2).count { it.isFailure }
+
+            assertEquals("Only one refund should succeed", 1, successes)
+            assertEquals("One refund should fail", 1, failures)
+        } finally {
+            executor.shutdown()
+        }
+
+        // Stock should have been restored only once (5 initial -> sale reduced to 3 -> refund back to 5)
+        val finalProd = db.produkDao().getProdukById(prodId)!!
+        assertEquals(5, finalProd.stockQuantity)
+
+        // Sale should be marked refunded
+        val saleAfter = db.penjualanDao().getPenjualanById(saleId)!!
+        assertTrue(saleAfter.isRefunded)
     }
 
     @Test

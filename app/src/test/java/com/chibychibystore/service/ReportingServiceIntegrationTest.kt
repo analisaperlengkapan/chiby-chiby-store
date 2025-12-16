@@ -88,6 +88,17 @@ class ReportingServiceIntegrationTest {
         assertEquals(30000.0, gross.totalSales, 0.001)
         assertEquals(2, gross.totalTransactions)
 
+        // Refund one sale and verify gross sales excludes refunded sale
+        val saleToRefund = db.penjualanDao().getPenjualanById(saleId1)!!
+        // mark refunded via repository
+        saleRepo.updatePenjualan(saleToRefund.copy(isRefunded = true))
+
+        val grossAfterRefund = reportingService.getGrossSales(start, end)
+        assertTrue(grossAfterRefund.isSuccess)
+        val gross2 = grossAfterRefund.getOrNull()!!
+        assertEquals("Refunded sale should be excluded from gross sales", 20000.0, gross2.totalSales, 0.001)
+        assertEquals(1, gross2.totalTransactions)
+
         val profitRes = reportingService.getProfitMargin(start, end)
         assertTrue(profitRes.isSuccess)
         val profit = profitRes.getOrNull()!!
