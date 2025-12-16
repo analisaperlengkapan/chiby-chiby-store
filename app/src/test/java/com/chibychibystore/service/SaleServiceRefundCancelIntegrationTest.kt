@@ -114,6 +114,8 @@ class SaleServiceRefundCancelIntegrationTest {
         assertTrue(r1.isSuccess)
         val after1 = db.produkDao().getProdukById(prodId)!!
         assertEquals(5, after1.stockQuantity)
+        val saleAfterFirst = db.penjualanDao().getPenjualanById(saleId)!!
+        assertTrue("Sale should be marked as refunded after first refund", saleAfterFirst.isRefunded)
 
         // Second refund should now be rejected (idempotent behavior)
         val r2 = (saleService as SaleServiceImpl).refundSale(saleId)
@@ -170,6 +172,8 @@ class SaleServiceRefundCancelIntegrationTest {
         assertTrue(firstRefund.isSuccess)
         val afterFirst = db.produkDao().getProdukById(prodId)!!
         assertEquals(6, afterFirst.stockQuantity)
+        val saleAfterRefund = db.penjualanDao().getPenjualanById(saleId)!!
+        assertTrue("Sale should be marked as refunded after first refund", saleAfterRefund.isRefunded)
 
         // Second refund should be rejected (idempotency). Expect failure and stock unchanged
         val secondRefund = (saleService as SaleServiceImpl).refundSale(saleId)

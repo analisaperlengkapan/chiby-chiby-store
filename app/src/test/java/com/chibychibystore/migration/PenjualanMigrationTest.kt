@@ -72,6 +72,7 @@ class PenjualanMigrationTest {
                     """.trimIndent())
 
                     db.execSQL("INSERT INTO penjualan (id, saleDate, totalAmount, paymentMethod, cashierId, createdAt) VALUES (1, 0, 100.0, 'CASH', 1, 0)")
+                    db.execSQL("INSERT INTO penjualan (id, saleDate, totalAmount, paymentMethod, cashierId, createdAt) VALUES (2, 1, 200.0, 'CASH', 1, 1)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS index_penjualan_cashierId ON penjualan(cashierId)")
                     db.execSQL("CREATE INDEX IF NOT EXISTS index_penjualan_saleDate ON penjualan(saleDate)")
 
@@ -233,13 +234,17 @@ class PenjualanMigrationTest {
             .allowMainThreadQueries()
             .build()
 
-        // Verify column exists with default 0
+        // Verify column exists with default 0 for multiple rows
         val sqLite = db.openHelper.readableDatabase
-        val cursor = sqLite.query("SELECT isRefunded FROM penjualan WHERE id = 1")
+        val cursor = sqLite.query("SELECT isRefunded FROM penjualan WHERE id IN (1,2) ORDER BY id")
         cursor.use {
             it.moveToFirst()
-            val valInt = it.getInt(0)
-            assertEquals(0, valInt)
+            val first = it.getInt(0)
+            assertEquals(0, first)
+
+            it.moveToNext()
+            val second = it.getInt(0)
+            assertEquals(0, second)
         }
 
         db.close()

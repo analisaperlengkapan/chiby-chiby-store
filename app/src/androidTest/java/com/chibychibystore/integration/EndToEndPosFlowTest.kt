@@ -79,4 +79,59 @@ class EndToEndPosFlowTest : BaseIntegrationTest() {
         assertNotNull(report)
         assertTrue("Report total should include sale amount", report!!.totalSales >= totalPrice)
     }
+
+    @Test
+    fun `pos flow refund setsIsRefunded and prevents double refund`() = runTest {
+        // Given - create a fresh product with known stock
+        val initialProduct = TestDataBuilder.createTestProduct().copy(stockQuantity = 5)
+        val created = productService.createProduct(initialProduct).getOrNull()
+        assertNotNull("Product creation should succeed", created)
+
+        val productId = created!!.id
+        val unitPrice = created.sellingPrice
+        val quantity = 2
+        val totalPrice = unitPrice * quantity
+
+        val sale = com.chibychibystore.data.local.entity.Penjualan(
+            saleDate = Date(),
+            totalAmount = 0.0,
+            paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.CASH,
+            cashierId = 1L
+        )
+
+        val saleItem = com.chibychibystore.data.local.entity.ItemPenjualan(
+            id = 0L,
+            saleId = 0L,
+            productId = productId,
+            quantity = quantity,
+            unitPrice = unitPrice,
+            totalPrice = totalPrice
+        )
+
+        // When - create sale
+        val createResult = saleService.createSale(sale, listOf(saleItem))
+        assertTrue("Sale creation should succeed", createResult.isSuccess)
+        val saleWithItems = createResult.getOrNull()
+        assertNotNull(saleWithItems)
+        val saleId = saleWithItems!!.penjualan.id
+
+        // When - refund
+        val refundRes = saleService.refundSale(saleId)
+        assertTrue("Refund should succeed", refundRes.isSuccess)
+
+        // Then - sale flagged as refunded and stock restored
+        val fetched = saleService.getSale(saleId)
+        assertTrue("getSale should succeed", fetched.isSuccess)
+        val fetchedSale = fetched.getOrNull()!!
+        assertTrue("Sale should be marked as refunded", fetchedSale.penjualan.isRefunded)
+
+        val updatedProduct = productService.getProduct(productId.toString()).getOrNull()
+        assertNotNull(updatedProduct)
+        assertEquals("Stock should be restored after refund", 5, updatedProduct?.stockQuantity)
+
+        // Second refund should fail
+        val secondRefund = saleService.refundSale(saleId)
+        assertTrue("Second refund should fail", secondRefund.isFailure)
+    }
 }
+

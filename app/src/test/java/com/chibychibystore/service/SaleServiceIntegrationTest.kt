@@ -141,9 +141,50 @@ class SaleServiceIntegrationTest {
         val afterRefund = db.produkDao().getProdukById(prodId)!!
         assertEquals(5, afterRefund.stockQuantity)
 
-        // Sale still exists
+        // Sale still exists and flagged as refunded
         val existingSale = db.penjualanDao().getPenjualanById(saleId)
         assertNotNull(existingSale)
+        assertTrue("Sale should be marked as refunded", existingSale!!.isRefunded)
+    }
+
+    @Test
+    fun refund_setsIsRefunded_and_secondRefundFails() = runBlocking {
+        // Seed product and cashier
+        val kategoriId = db.kategoriDao().insertKategori(com.chibychibystore.data.local.entity.Kategori(name = "RefundFlagCat"))
+        val gudangId = db.gudangDao().insertGudang(com.chibychibystore.data.local.entity.Gudang(name = "RefundFlagWh"))
+        val cashierId = db.penggunaDao().insertPengguna(com.chibychibystore.data.local.entity.Pengguna(username = "refundflag", passwordHash = "x", role = com.chibychibystore.data.local.entity.Role.CASHIER))
+
+        val prod = Produk(
+            name = "FlagProduct",
+            barcode = "F-123",
+            categoryId = kategoriId,
+            costPrice = 1000.0,
+            sellingPrice = 2000.0,
+            stockQuantity = 4,
+            warehouseId = gudangId
+        )
+        val prodId = db.produkDao().insertProduk(prod)
+
+        val sale = Penjualan(saleDate = Date(), totalAmount = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
+        val item = ItemPenjualan(saleId = 0, productId = prodId, quantity = 2, unitPrice = 2000.0, totalPrice = 4000.0)
+
+        val createRes = (saleService as SaleServiceImpl).createSale(sale, listOf(item))
+        assertTrue(createRes.isSuccess)
+        val saleId = createRes.getOrNull()!!.penjualan.id
+
+        // Refund once
+        val firstRefund = (saleService as SaleServiceImpl).refundSale(saleId)
+        assertTrue(firstRefund.isSuccess)
+
+        // Check DB flag
+        val saleAfterRefund = db.penjualanDao().getPenjualanById(saleId)!!
+        assertTrue("isRefunded should be true after refund", saleAfterRefund.isRefunded)
+
+        // Second refund should fail and stock unchanged
+        val secondRefund = (saleService as SaleServiceImpl).refundSale(saleId)
+        assertTrue("Second refund should fail to enforce idempotency", secondRefund.isFailure)
+        val afterSecond = db.produkDao().getProdukById(prodId)!!
+        assertEquals("Stock should not increase after repeated refund", 4, afterSecond.stockQuantity)
     }
 
     @Test
