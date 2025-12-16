@@ -206,6 +206,13 @@ class ProductDetailViewModel @Inject constructor(
     }
 
     /**
+     * Update product in local UI state (not persisted) — used by UI form edits
+     */
+    fun updateLocalProduct(updatedProduct: Produk) {
+        _uiState.value = _uiState.value.copy(product = updatedProduct)
+    }
+
+    /**
      * Clear error message
      */
     fun clearError() {

@@ -4,6 +4,7 @@ import com.chibychibystore.data.local.entity.ExpenseCategory
 import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.ItemPenjualan
+import com.chibychibystore.data.local.entity.PaymentMethod
 import java.util.*
 
 /**
@@ -94,7 +95,7 @@ object TestDataBuilder {
                     id = 0,
                     saleDate = baseDate,
                     totalAmount = 20000.0,
-                    paymentMethod = "CASH",
+                    paymentMethod = PaymentMethod.CASH,
                     cashierId = cashierId
                 ),
                 listOf(
@@ -115,7 +116,7 @@ object TestDataBuilder {
                     id = 0,
                     saleDate = baseDate,
                     totalAmount = 60000.0,
-                    paymentMethod = "CASH",
+                    paymentMethod = PaymentMethod.CASH,
                     cashierId = cashierId
                 ),
                 listOf(

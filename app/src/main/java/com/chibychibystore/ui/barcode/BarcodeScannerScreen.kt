@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.barcode
 
 import android.Manifest
@@ -8,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
@@ -64,7 +66,7 @@ fun BarcodeScannerScreen(
 
     Scaffold(
         topBar = {
-            AppTopBar(
+                AppTopBar(
                 title = stringResource(R.string.barcode_scanner_title),
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = onDismiss

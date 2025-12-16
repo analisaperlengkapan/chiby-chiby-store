@@ -60,6 +60,7 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showChangePasswordDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
 
     val bottomNavItems = listOf(
         BottomNavItem("Dashboard", Icons.Default.Dashboard, Screen.Dashboard.route),
@@ -173,7 +174,7 @@ fun SettingsScreen(
                         title = "Tentang Aplikasi",
                         subtitle = "Versi 1.0.0",
                         icon = Icons.Default.Info,
-                        onClick = { /* TODO: Show about dialog */ }
+                        onClick = { showAboutDialog = true }
                     )
                 }
 
@@ -204,6 +205,19 @@ fun SettingsScreen(
                     }
                 }
             }
+        }
+
+        if (showAboutDialog) {
+            AlertDialog(
+                onDismissRequest = { showAboutDialog = false },
+                title = { Text("Tentang Chiby Chiby Store") },
+                text = { Text("Versi 1.0.0\nAplikasi POS offline-first untuk toko retail.\nHak Cipta © 2025") },
+                confirmButton = {
+                    TextButton(onClick = { showAboutDialog = false }) {
+                        Text("Tutup")
+                    }
+                }
+            )
         }
     }
 

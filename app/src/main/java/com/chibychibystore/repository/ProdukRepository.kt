@@ -38,6 +38,18 @@ class ProdukRepository @Inject constructor(
     }
 
     /**
+     * Compatibility wrapper for legacy code / tests that expect a nullable Produk return
+     */
+    suspend fun getProduk(id: Long): Produk? {
+        return try {
+            val res = getProdukById(id)
+            res.getOrNull()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
      * Get produk by barcode
      */
     suspend fun getProdukByBarcode(barcode: String): Result<Produk> {

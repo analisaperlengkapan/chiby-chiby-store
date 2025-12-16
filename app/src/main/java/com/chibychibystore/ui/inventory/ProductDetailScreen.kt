@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.inventory
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.shared.ErrorMessage
@@ -28,6 +29,7 @@ fun ProductDetailScreen(
     viewModel: ProductDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val product = uiState.product
     var showDeleteDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -60,17 +62,17 @@ fun ProductDetailScreen(
                 }
                 uiState.error != null -> {
                     ErrorMessage(
-                        message = uiState.error!!,
+                        message = uiState.error ?: "", 
                         onRetry = { viewModel.loadProduct(productId) }
                     )
                 }
-                uiState.product != null -> {
+                product != null -> {
                     ProductDetailContent(
-                        product = uiState.product!!,
+                        product = product,
                         isEditing = uiState.isEditing,
                         onProductChange = { updatedProduct ->
-                            // Update the product in state
-                            viewModel.uiState.value.copy(product = updatedProduct)
+                            // Update the product in UI state via ViewModel helper
+                            viewModel.updateLocalProduct(updatedProduct)
                         }
                     )
                 }
@@ -121,7 +123,7 @@ private fun ProductDetailTopBar(
 ) {
     AppTopBar(
         title = if (uiState.isEditing) "Edit Produk" else "Detail Produk",
-        navigationIcon = Icons.Default.ArrowBack,
+        navigationIcon = Icons.Filled.ArrowBack,
         onNavigationClick = onBackClick,
         actions = {
             if (uiState.isEditing) {

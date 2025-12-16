@@ -8,6 +8,7 @@ import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.Produk
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 
 /**
  * Database seeding utilities for integration tests
@@ -31,7 +32,7 @@ class DatabaseSeeder(private val database: AppDatabase) {
      */
     suspend fun seedCategories(categories: List<Kategori> = TestDataBuilder.testCategories) {
         categories.forEach { category ->
-            database.kategoriDao().insert(category)
+            database.kategoriDao().insertKategori(category)
         }
     }
 
@@ -40,7 +41,7 @@ class DatabaseSeeder(private val database: AppDatabase) {
      */
     suspend fun seedWarehouses(warehouses: List<Gudang> = TestDataBuilder.testWarehouses) {
         warehouses.forEach { warehouse ->
-            database.gudangDao().insert(warehouse)
+            database.gudangDao().insertGudang(warehouse)
         }
     }
 
@@ -49,7 +50,7 @@ class DatabaseSeeder(private val database: AppDatabase) {
      */
     suspend fun seedProducts(products: List<Produk> = TestDataBuilder.testProducts) {
         products.forEach { product ->
-            database.produkDao().insert(product)
+            database.produkDao().insertProduk(product)
         }
     }
 
@@ -58,7 +59,7 @@ class DatabaseSeeder(private val database: AppDatabase) {
      */
     suspend fun seedSales(sales: List<Penjualan> = TestDataBuilder.testSales) {
         sales.forEach { sale ->
-            database.penjualanDao().insert(sale)
+            database.penjualanDao().insertPenjualan(sale)
         }
     }
 
@@ -67,7 +68,7 @@ class DatabaseSeeder(private val database: AppDatabase) {
      */
     suspend fun seedSaleItems(saleItems: List<ItemPenjualan> = TestDataBuilder.testSaleItems) {
         saleItems.forEach { item ->
-            database.itemPenjualanDao().insert(item)
+            database.itemPenjualanDao().insertItemPenjualan(item)
         }
     }
 
@@ -76,7 +77,7 @@ class DatabaseSeeder(private val database: AppDatabase) {
      */
     suspend fun seedExpenses(expenses: List<Pengeluaran> = TestDataBuilder.testExpenses) {
         expenses.forEach { expense ->
-            database.pengeluaranDao().insert(expense)
+            database.pengeluaranDao().insertPengeluaran(expense)
         }
     }
 
@@ -95,7 +96,7 @@ class DatabaseSeeder(private val database: AppDatabase) {
         seedWarehouses(listOf(TestDataBuilder.testWarehouses.first()))
         seedProducts(listOf(TestDataBuilder.testProducts.first()))
         seedSales(listOf(TestDataBuilder.testSales.first()))
-        seedSaleItems(TestDataBuilder.testSaleItems.filter { it.penjualanId == TestDataBuilder.testSales.first().id })
+        seedSaleItems(TestDataBuilder.testSaleItems.filter { it.saleId == TestDataBuilder.testSales.first().id })
         seedExpenses(listOf(TestDataBuilder.testExpenses.first()))
     }
 
@@ -103,41 +104,46 @@ class DatabaseSeeder(private val database: AppDatabase) {
      * Get current product count
      */
     suspend fun getProductCount(): Int {
-        return database.produkDao().getAll().size
+        return database.produkDao().getAllProduk().first().size
     }
 
     /**
      * Get current warehouse count
      */
     suspend fun getWarehouseCount(): Int {
-        return database.gudangDao().getAll().size
+        return database.gudangDao().getAllGudang().first().size
     }
 
     /**
      * Get current category count
      */
     suspend fun getCategoryCount(): Int {
-        return database.kategoriDao().getAll().size
+        return database.kategoriDao().getAllKategori().first().size
     }
 
     /**
      * Get current sales count
      */
     suspend fun getSalesCount(): Int {
-        return database.penjualanDao().getAll().size
+        return database.penjualanDao().getAllPenjualan().first().size
     }
 
     /**
      * Get current sale items count
      */
     suspend fun getSaleItemsCount(): Int {
-        return database.itemPenjualanDao().getAll().size
+        val sales = database.penjualanDao().getAllPenjualan().first()
+        var total = 0
+        for (sale in sales) {
+            total += database.itemPenjualanDao().getItemCountBySaleId(sale.id)
+        }
+        return total
     }
 
     /**
      * Get current expenses count
      */
     suspend fun getExpensesCount(): Int {
-        return database.pengeluaranDao().getAll().size
+        return database.pengeluaranDao().getAllPengeluaran().first().size
     }
 }

@@ -1,8 +1,10 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.user
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,9 +36,9 @@ fun UserAddScreen(
 
     Scaffold(
         topBar = {
-            AppTopBar(
+                AppTopBar(
                 title = "Tambah Pengguna",
-                navigationIcon = Icons.Default.ArrowBack,
+                navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() }
             )
         },

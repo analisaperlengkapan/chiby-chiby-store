@@ -170,7 +170,7 @@ fun ExpenseListScreen(
                     LoadingIndicator()
                 }
                 uiState.error != null -> {
-                    ErrorMessage(message = uiState.error!!)
+                    ErrorMessage(message = uiState.error ?: "")
                 }
                 uiState.expenses.isEmpty() -> {
                     Column(

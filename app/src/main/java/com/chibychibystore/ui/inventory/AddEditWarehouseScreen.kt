@@ -1,10 +1,12 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.inventory
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+// ArrowBack icon usage: use Icons.Filled.ArrowBack
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,7 +44,7 @@ fun AddWarehouseScreen(
         topBar = {
             AppTopBar(
                 title = "Tambah Gudang",
-                navigationIcon = Icons.Default.ArrowBack,
+                navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
                     IconButton(
@@ -76,7 +78,7 @@ fun AddWarehouseScreen(
                 }
                 uiState.error != null -> {
                     ErrorMessage(
-                        message = uiState.error!!,
+                        message = uiState.error.orEmpty(),
                         onRetry = { /* Clear error */ }
                     )
                 }
@@ -140,7 +142,7 @@ fun EditWarehouseScreen(
         topBar = {
             AppTopBar(
                 title = "Edit Gudang",
-                navigationIcon = Icons.Default.ArrowBack,
+                navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
                     IconButton(
@@ -175,7 +177,7 @@ fun EditWarehouseScreen(
                 }
                 uiState.error != null -> {
                     ErrorMessage(
-                        message = uiState.error!!,
+                        message = uiState.error.orEmpty(),
                         onRetry = { /* Clear error */ }
                     )
                 }

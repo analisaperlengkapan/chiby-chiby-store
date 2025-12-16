@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.launch
+import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.ui.components.shared.*
@@ -30,13 +32,14 @@ fun UserManagementScreen(
     val createUserFormState by viewModel.createUserFormState.collectAsState()
     val editUserFormState by viewModel.editUserFormState.collectAsState()
     val resetPasswordFormState by viewModel.resetPasswordFormState.collectAsState()
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
             AppTopBar(
                 title = "Manajemen Pengguna",
                 navigationIcon = Icons.Default.Menu,
-                onNavigationClick = { /* TODO: Open drawer */ },
+                onNavigationClick = { scope.launch { drawerState.open() } },
                 actions = {
                     IconButton(onClick = { viewModel.showCreateUserDialog() }) {
                         Icon(Icons.Default.Add, contentDescription = "Tambah Pengguna")
@@ -163,7 +166,8 @@ fun UserManagementScreen(
                             user = user,
                             onEdit = { viewModel.showEditUserDialog(user) },
                             onDelete = { viewModel.showDeleteUserDialog(user) },
-                            onResetPassword = { viewModel.showResetPasswordDialog(user) }
+                            onResetPassword = { viewModel.showResetPasswordDialog(user) },
+                            onClick = { onNavigateToRoute(Screen.UserDetail.createRoute(user.id)) }
                         )
                     }
                 }
@@ -229,10 +233,11 @@ private fun UserCard(
     user: Pengguna,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onResetPassword: () -> Unit
+    onResetPassword: () -> Unit,
+    onClick: () -> Unit
 ) {
     Card(
-        onClick = { /* TODO: Maybe show user details */ }
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier

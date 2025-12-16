@@ -1,8 +1,10 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.user
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -44,7 +46,7 @@ fun UserDetailScreen(
         topBar = {
             AppTopBar(
                 title = "Detail Pengguna",
-                navigationIcon = Icons.Default.ArrowBack,
+                navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
                     IconButton(
@@ -98,19 +100,21 @@ fun UserDetailScreen(
                 }
             }
             uiState.user != null -> {
-                UserDetailContent(
-                    user = uiState.user!!,
-                    isEditMode = uiState.isEditMode,
-                    onUsernameChange = viewModel::updateUsername,
-                    onRoleChange = viewModel::updateRole,
-                    onSave = {
-                        scope.launch {
-                            viewModel.saveUser()
-                        }
-                    },
-                    onCancel = viewModel::cancelEdit,
-                    modifier = Modifier.padding(paddingValues)
-                )
+                uiState.user?.let { user ->
+                    UserDetailContent(
+                        user = user,
+                        isEditMode = uiState.isEditMode,
+                        onUsernameChange = viewModel::updateUsername,
+                        onRoleChange = viewModel::updateRole,
+                        onSave = {
+                            scope.launch {
+                                viewModel.saveUser()
+                            }
+                        },
+                        onCancel = viewModel::cancelEdit,
+                        modifier = Modifier.padding(paddingValues)
+                    )
+                }
             }
         }
     }

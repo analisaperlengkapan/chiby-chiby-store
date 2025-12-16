@@ -118,7 +118,7 @@ class InventoryViewModelTest {
         viewModel.uiState.test {
             val filteredState = awaitItem()
             assertEquals(1, filteredState.products.size)
-            assertEquals("Apple", filteredState.products.first().nama)
+            assertEquals("Apple", filteredState.products.first().name)
             assertEquals("Apple", filteredState.searchQuery)
         }
     }

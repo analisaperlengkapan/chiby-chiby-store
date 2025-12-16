@@ -178,7 +178,7 @@ fun StockTransferDialog(
                         onClick = {
                             val qty = quantity.toIntOrNull()
                             if (selectedWarehouse != null && qty != null && qty > 0 && qty <= product.stockQuantity) {
-                                onTransfer(selectedWarehouse!!.id, qty)
+                                selectedWarehouse?.let { onTransfer(it.id, qty) }
                                 onDismiss()
                             }
                         },

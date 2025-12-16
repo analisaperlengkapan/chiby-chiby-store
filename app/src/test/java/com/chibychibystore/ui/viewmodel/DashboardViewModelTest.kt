@@ -1,117 +1,94 @@
 package com.chibychibystore.ui.viewmodel
 
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import com.chibychibystore.data.local.entity.Penjualan
+import com.chibychibystore.data.local.entity.PaymentMethod
+import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.service.SaleService
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
+import org.mockito.Mock
+import org.mockito.Mockito
+import org.mockito.MockitoAnnotations
+import java.util.Date
 
-@ExperimentalCoroutinesApi
+@OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModelTest {
 
-    @get:Rule
-    val instantTaskExecutorRule = InstantTaskExecutorRule()
-
     private val testDispatcher = StandardTestDispatcher()
+
+    @org.junit.Before
+    fun setUpDispatcher() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @org.junit.After
+    fun tearDownDispatcher() {
+        Dispatchers.resetMain()
+    }
+
+    @Mock
+    private lateinit var saleService: SaleService
+
+    @Mock
+    private lateinit var produkRepository: ProdukRepository
+
     private lateinit var viewModel: DashboardViewModel
 
     @Before
     fun setup() {
-        Dispatchers.setMain(testDispatcher)
-        viewModel = DashboardViewModel()
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
+        MockitoAnnotations.openMocks(this)
     }
 
     @Test
-    fun `initial state should have loading true initially`() {
-        val initialState = viewModel.uiState.value
-        assertTrue(initialState.isLoading)
-    }
+    fun `loadDashboardData success updates all metrics`() = runTest {
+        val now = Date()
+        val sale1 = Penjualan(id = 1, saleDate = now, totalAmount = 100000.0, paymentMethod = PaymentMethod.CASH, cashierId = 1)
+        val sale2 = Penjualan(id = 2, saleDate = now, totalAmount = 50000.0, paymentMethod = PaymentMethod.CASH, cashierId = 1)
 
-    @Test
-    fun `refreshData should trigger data loading`() = runTest {
-        val initialState = viewModel.uiState.value
+        Mockito.`when`(saleService.getSales(Mockito.anyString(), Mockito.anyString(), Mockito.isNull())).thenReturn(com.chibychibystore.data.model.Result.success(listOf(sale1, sale2)))
+        Mockito.`when`(saleService.getSales(Mockito.isNull(), Mockito.isNull(), Mockito.isNull())).thenReturn(com.chibychibystore.data.model.Result.success(listOf(sale1, sale2)))
 
+        val lowStock = listOf(Produk(id = 1, name = "Item A", barcode = "123", sellingPrice = 10000.0, costPrice = 8000.0, stockQuantity = 2, categoryId = 1, warehouseId = 1))
+        Mockito.`when`(produkRepository.getLowStockProduk()).thenReturn(flowOf(lowStock))
+
+        viewModel = DashboardViewModel(saleService, produkRepository)
+
+        // Refresh to ensure data loaded
         viewModel.refreshData()
 
-        // Advance coroutine to complete loading
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val newState = viewModel.uiState.value
-
-        // Should have loaded some data
-        assertFalse(newState.isLoading)
-        assertTrue(newState.todaySales >= 0.0)
-        assertTrue(newState.todayTransactionCount >= 0)
-        assertTrue(newState.lowStockItems.isNotEmpty() || newState.recentTransactions.isNotEmpty())
-    }
-
-    @Test
-    fun `dashboard should generate mock low stock items`() = runTest {
-        viewModel.refreshData()
-        testDispatcher.scheduler.advanceUntilIdle()
+        // Allow coroutines to complete
+        advanceUntilIdle()
 
         val state = viewModel.uiState.value
-
-        // Should have some low stock items
-        assertTrue(state.lowStockItems.isNotEmpty())
-        state.lowStockItems.forEach { item ->
-            assertTrue(item.stockQuantity <= 10) // Low stock threshold
-            assertTrue(item.name.isNotEmpty())
-            assertTrue(!item.barcode.isNullOrBlank())
-        }
+        assertEquals(150000.0, state.todaySales, 0.001)
+        assertEquals(2, state.todayTransactionCount)
+        assertEquals(1, state.lowStockItems.size)
+        assertEquals(2, state.recentTransactions.size)
+        assertFalse(state.isLoading)
+        assertNull(state.errorMessage)
     }
 
     @Test
-    fun `dashboard should generate mock recent transactions`() = runTest {
+    fun `loadDashboardData handles service exception`() = runTest {
+        Mockito.`when`(saleService.getSales(Mockito.anyString(), Mockito.anyString(), Mockito.isNull())).thenThrow(RuntimeException("service failure"))
+        Mockito.`when`(produkRepository.getLowStockProduk()).thenReturn(flowOf(emptyList()))
+
+        viewModel = DashboardViewModel(saleService, produkRepository)
         viewModel.refreshData()
-        testDispatcher.scheduler.advanceUntilIdle()
+        advanceUntilIdle()
 
         val state = viewModel.uiState.value
-
-        // Should have some recent transactions
-        assertTrue(state.recentTransactions.isNotEmpty())
-        state.recentTransactions.forEach { transaction ->
-            assertTrue(transaction.totalAmount > 0.0)
-            assertTrue(transaction.saleDate.time > 0)
-            assertTrue(transaction.cashierId > 0)
-        }
-    }
-
-    @Test
-    fun `today sales should be within reasonable range`() = runTest {
-        viewModel.refreshData()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-
-        // Mock data should be between 1M and 5M
-        assertTrue(state.todaySales >= 1000000.0)
-        assertTrue(state.todaySales <= 5000000.0)
-    }
-
-    @Test
-    fun `transaction count should be within reasonable range`() = runTest {
-        viewModel.refreshData()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-
-        // Mock data should be between 10 and 50
-        assertTrue(state.todayTransactionCount >= 10)
-        assertTrue(state.todayTransactionCount <= 50)
+        assertFalse(state.isLoading)
+        assertNotNull(state.errorMessage)
     }
 }

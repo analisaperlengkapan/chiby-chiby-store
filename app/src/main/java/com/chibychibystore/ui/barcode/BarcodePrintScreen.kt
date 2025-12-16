@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.barcode
 
 import androidx.compose.foundation.clickable
@@ -6,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,7 +45,7 @@ fun BarcodePrintScreen(
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.barcode_print_title),
-                navigationIcon = Icons.Default.ArrowBack,
+                navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = onNavigateBack
             )
         }
@@ -78,9 +80,9 @@ fun BarcodePrintScreen(
             }
 
             // Label Preview
-            if (uiState.selectedProduct != null) {
+            uiState.selectedProduct?.let { selectedProduct ->
                 LabelPreviewSection(
-                    product = uiState.selectedProduct!!,
+                    product = selectedProduct,
                     labelSize = uiState.selectedSize,
                     quantity = uiState.quantity
                 )

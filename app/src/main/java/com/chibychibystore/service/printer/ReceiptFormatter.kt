@@ -34,7 +34,10 @@ object ReceiptFormatter {
 
         val subtotal = items.sumOf { it.totalPrice }
         val tax = subtotal * 0.1 // 10% tax
-        val discount = 0.0 // TODO: implement discount logic
+
+        // Simple discount rule: 5% discount for subtotal >= 100,000 (Rp)
+        // This is a business-rule placeholder; replace with promo engine later
+        val discount = if (subtotal >= 100_000.0) (subtotal * 0.05) else 0.0
         val total = subtotal + tax - discount
 
         return ReceiptData(

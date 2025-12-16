@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.inventory
 import com.chibychibystore.ui.components.shared.ErrorMessage
 import com.chibychibystore.ui.components.shared.LoadingIndicator
@@ -8,6 +9,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+// Using Icons.Filled.ArrowBack for navigation icon
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,7 +55,7 @@ fun AddProductScreen(
         topBar = {
             AppTopBar(
                 title = "Tambah Produk",
-                navigationIcon = Icons.Default.ArrowBack,
+                navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
                     IconButton(
@@ -80,7 +82,7 @@ fun AddProductScreen(
                 }
                 uiState.error != null -> {
                     ErrorMessage(
-                        message = uiState.error!!,
+                        message = uiState.error ?: "",
                         onRetry = { /* No retry for add screen */ }
                     )
                 }

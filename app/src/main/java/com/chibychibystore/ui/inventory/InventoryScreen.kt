@@ -96,7 +96,7 @@ fun InventoryScreen(
                 }
                 uiState.error != null -> {
                     ErrorMessage(
-                        message = uiState.error!!,
+                        message = uiState.error ?: "", 
                         onRetry = { viewModel.loadProducts() }
                     )
                 }
@@ -199,7 +199,7 @@ private fun ProductListItem(
                     )
                     if (product.barcode != null) {
                         Text(
-                            text = product.barcode!!,
+                            text = product.barcode,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

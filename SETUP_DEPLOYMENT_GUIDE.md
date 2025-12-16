@@ -32,7 +32,7 @@
 - **CPU**: Intel/AMD x64 atau Apple Silicon (dengan Rosetta 2)
 
 ### 1.2 Software Requirements
-- **Java JDK**: Version 11 atau 17 (Oracle JDK atau OpenJDK)
+- **Java JDK**: **Version 17 required** (Oracle JDK or OpenJDK). Note: Android Gradle Plugin compatibility and CI require Java 17 — ensure your local `JAVA_HOME` points to a Java 17 installation.
 - **Android Studio**: Arctic Fox (2020.3.1) atau lebih baru
 - **Android SDK**: API Level 21+ (Android 5.0)
 - **Git**: Version 2.25+ untuk version control
@@ -82,6 +82,21 @@ sudo apt install openjdk-11-jdk
 # Verify installation
 java -version
 javac -version
+
+#### Ensure JAVA_HOME points to Java 17
+For compatibility with Android Gradle Plugin and this project's CI, set JAVA_HOME to a Java 17 installation (examples):
+
+```bash
+# Linux (example path)
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export PATH=$JAVA_HOME/bin:$PATH
+
+# macOS (Homebrew Temurin example)
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+
+# Windows (PowerShell example)
+setx JAVA_HOME "C:\Program Files\Eclipse Adoptium\jdk-17.0.x"
+```
 ```
 
 ### 2.2 Install Android Studio

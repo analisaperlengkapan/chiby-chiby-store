@@ -51,7 +51,7 @@ class BarcodeServiceImpl @Inject constructor(
             }
 
             // Generate barcode image
-            val barcodeValue = product.barcode!!
+            val barcodeValue = product.barcode
             val imageData = generateBarcodeImage(barcodeValue, format, size)
 
             // Create label with product info

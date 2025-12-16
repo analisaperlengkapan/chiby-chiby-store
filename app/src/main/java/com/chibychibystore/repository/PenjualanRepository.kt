@@ -96,6 +96,25 @@ class PenjualanRepository @Inject constructor(
     }
 
     /**
+     * Compatibility wrapper: insert single penjualan and return its id
+     */
+    suspend fun insertPenjualan(penjualan: Penjualan): Long {
+        return penjualanDao.insertPenjualan(penjualan)
+    }
+
+    /**
+     * Compatibility wrapper: update penjualan by passing full object
+     */
+    suspend fun updatePenjualan(penjualan: Penjualan): Result<Unit> {
+        return try {
+            penjualanDao.updatePenjualan(penjualan)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("updatePenjualan", e))
+        }
+    }
+
+    /**
      * Delete penjualan
      */
     suspend fun deletePenjualan(id: Long): Result<Unit> {

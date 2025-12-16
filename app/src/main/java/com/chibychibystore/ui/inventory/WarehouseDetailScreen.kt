@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.inventory
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.ErrorMessage
@@ -51,7 +52,7 @@ fun WarehouseDetailScreen(
         topBar = {
             AppTopBar(
                 title = selectedWarehouse?.name ?: "Detail Gudang",
-                navigationIcon = Icons.Default.ArrowBack,
+                navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
                     // Transfer stock button
@@ -89,7 +90,7 @@ fun WarehouseDetailScreen(
                 }
                 uiState.error != null -> {
                     ErrorMessage(
-                        message = uiState.error!!,
+                        message = uiState.error ?: "", 
                         onRetry = {
                             selectedWarehouse?.let { viewModel.selectWarehouse(it) }
                         }
@@ -128,24 +129,28 @@ fun WarehouseDetailScreen(
     }
 
     // Transfer dialog
-    if (showTransferDialog && selectedProductForTransfer != null && selectedWarehouse != null) {
-        StockTransferDialog(
-            product = selectedProductForTransfer!!,
-            fromWarehouse = selectedWarehouse!!,
-            availableWarehouses = uiState.warehouses,
-            onTransfer = { toWarehouseId, quantity ->
-                viewModel.transferStock(
-                    productId = selectedProductForTransfer!!.id,
-                    fromWarehouseId = selectedWarehouse!!.id,
-                    toWarehouseId = toWarehouseId,
-                    quantity = quantity
+    selectedProductForTransfer?.let { product ->
+        selectedWarehouse?.let { warehouse ->
+            if (showTransferDialog) {
+                StockTransferDialog(
+                    product = product,
+                    fromWarehouse = warehouse,
+                    availableWarehouses = uiState.warehouses,
+                    onTransfer = { toWarehouseId, quantity ->
+                        viewModel.transferStock(
+                            productId = product.id,
+                            fromWarehouseId = warehouse.id,
+                            toWarehouseId = toWarehouseId,
+                            quantity = quantity
+                        )
+                    },
+                    onDismiss = {
+                        showTransferDialog = false
+                        selectedProductForTransfer = null
+                    }
                 )
-            },
-            onDismiss = {
-                showTransferDialog = false
-                selectedProductForTransfer = null
             }
-        )
+        }
     }
 }
 
@@ -213,10 +218,10 @@ private fun WarehouseInfoHeader(
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
 
-            if (!warehouse.location.isNullOrBlank()) {
+            warehouse.location?.takeIf { it.isNotBlank() }?.let { location ->
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = warehouse.location!!,
+                    text = location,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -381,7 +386,7 @@ private fun WarehouseNotFoundState(
                 containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
-            Icon(Icons.Default.ArrowBack, contentDescription = null)
+            Icon(Icons.Filled.ArrowBack, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text("Kembali")
         }

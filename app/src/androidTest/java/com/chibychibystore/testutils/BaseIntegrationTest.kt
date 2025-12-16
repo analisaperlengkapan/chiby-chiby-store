@@ -26,7 +26,7 @@ abstract class BaseIntegrationTest {
     protected lateinit var seeder: DatabaseSeeder
 
     @Before
-    fun setupDatabase() {
+    open fun setupDatabase() {
         val context = ApplicationProvider.getApplicationContext<Context>()
 
         // Create in-memory database for testing

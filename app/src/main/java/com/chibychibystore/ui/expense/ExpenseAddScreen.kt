@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.expense
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.ErrorMessage
@@ -8,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,9 +36,9 @@ fun ExpenseAddScreen(
 
     Scaffold(
         topBar = {
-            AppTopBar(
+                AppTopBar(
                 title = "Tambah Pengeluaran",
-                navigationIcon = Icons.Default.ArrowBack,
+                navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() }
             )
         }
@@ -54,7 +56,7 @@ fun ExpenseAddScreen(
                     LoadingIndicator()
                 }
                 uiState.error != null -> {
-                    ErrorMessage(message = uiState.error!!)
+                    ErrorMessage(message = uiState.error ?: "")
                 }
                 else -> {
                     // Amount Field

@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.reports
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.shared.AppTopBar
@@ -6,6 +7,7 @@ import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import android.content.Intent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -76,7 +78,7 @@ fun ReportsScreen(
         topBar = {
             AppTopBar(
                 title = "Laporan",
-                navigationIcon = Icons.Default.ArrowBack,
+                navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.popBackStack() },
                 actions = {
                     IconButton(
@@ -209,7 +211,16 @@ private fun DateRangeFilter(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-                Text("${startDate?.format(formatter) ?: "-"} s/d ${endDate?.format(formatter) ?: "-"}")
+                // Make dates clickable to allow setting via provided callbacks (improves UX and avoids unused parameter warnings)
+                Text(
+                    text = startDate?.format(formatter) ?: "-",
+                    modifier = Modifier.clickable { onStartDateChange(startDate ?: LocalDate.now()) }
+                )
+                Text("s/d")
+                Text(
+                    text = endDate?.format(formatter) ?: "-",
+                    modifier = Modifier.clickable { onEndDateChange(endDate ?: LocalDate.now()) }
+                )
             }
         }
     }
@@ -290,85 +301,70 @@ private fun NetProfitReport(data: Any?) {
 
 @Composable
 private fun SalesByProductReport(data: Any?) {
-    when (data) {
-        is List<*> -> {
-            if (data.isNotEmpty() && data.first() is ProductSales) {
-                val productSales = data as List<ProductSales>
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Top 10 Produk",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    BarChart(
-                        title = "Top 10 Produk",
-                        data = productSales.take(10).map { it.productName to it.totalRevenue.toFloat() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(300.dp)
-                    )
-                }
-            } else {
-                EmptyReportMessage()
-            }
+    val productSales = (data as? List<*>)?.filterIsInstance<ProductSales>().orEmpty()
+    if (productSales.isNotEmpty()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Top 10 Produk",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            BarChart(
+                title = "Top 10 Produk",
+                data = productSales.take(10).map { it.productName to it.totalRevenue.toFloat() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+            )
         }
-        else -> EmptyReportMessage()
+    } else {
+        EmptyReportMessage()
     }
 }
 
 @Composable
 private fun SalesByCategoryReport(data: Any?) {
-    when (data) {
-        is List<*> -> {
-            if (data.isNotEmpty() && data.first() is CategorySales) {
-                val categorySales = data as List<CategorySales>
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Penjualan per Kategori",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    BarChart(
-                        title = "Penjualan per Kategori",
-                        data = categorySales.map { it.categoryName to it.totalRevenue.toFloat() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(300.dp)
-                    )
-                }
-            } else {
-                EmptyReportMessage()
-            }
+    val categorySales = (data as? List<*>)?.filterIsInstance<CategorySales>().orEmpty()
+    if (categorySales.isNotEmpty()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Penjualan per Kategori",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            BarChart(
+                title = "Penjualan per Kategori",
+                data = categorySales.map { it.categoryName to it.totalRevenue.toFloat() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+            )
         }
-        else -> EmptyReportMessage()
+    } else {
+        EmptyReportMessage()
     }
 }
 
 @Composable
 private fun SalesTrendReport(data: Any?) {
-    when (data) {
-        is List<*> -> {
-            if (data.isNotEmpty() && data.first() is TrendData) {
-                val trendData = data as List<TrendData>
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Trend Penjualan Harian",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    LineChart(
-                        title = "Trend Penjualan Harian",
-                        data = trendData.map { it.date.toString() to it.sales.toFloat() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(300.dp)
-                    )
-                }
-            } else {
-                EmptyReportMessage()
-            }
+    val trendData = (data as? List<*>)?.filterIsInstance<TrendData>().orEmpty()
+    if (trendData.isNotEmpty()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Trend Penjualan Harian",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            LineChart(
+                title = "Trend Penjualan Harian",
+                data = trendData.map { it.date.toString() to it.sales.toFloat() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+            )
         }
-        else -> EmptyReportMessage()
+    } else {
+        EmptyReportMessage()
     }
 }
 

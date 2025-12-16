@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restore
@@ -58,15 +60,17 @@ fun BackupScreen(
     val restoreProgress by viewModel.restoreProgress.collectAsState()
     
     val currentBackupProgress = backupProgress
+    // Capture restore into a stable local variable to allow smart casts
+    val currentRestoreProgress = restoreProgress
 
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
     var showRestoreDialog by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
-            AppTopBar(
+                AppTopBar(
                 title = "Backup & Restore",
-                navigationIcon = Icons.Default.ArrowBack,
+                navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = onNavigateBack
             )
         }
@@ -173,6 +177,32 @@ fun BackupScreen(
                             onDelete = { showDeleteDialog = backupInfo.id },
                             onRestore = { showRestoreDialog = backupInfo.filePath }
                         )
+                    }
+                }
+
+                // Restore progress indicator (if restoring)
+                if (currentRestoreProgress != null && currentRestoreProgress.isInProgress) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Mengembalikan backup...",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                LinearProgressIndicator(
+                                    progress = currentRestoreProgress.progress,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Text(
+                                    text = currentRestoreProgress.currentStep,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
                     }
                 }
 

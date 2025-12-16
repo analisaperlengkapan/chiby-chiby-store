@@ -19,6 +19,7 @@ import java.util.*
 import com.chibychibystore.data.model.Result
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.annotation.VisibleForTesting
 
 /**
  * ESC/POS Command Constants
@@ -70,8 +71,35 @@ object EscPosCommands {
 @Singleton
 class PrinterServiceImpl @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val bluetoothAdapter: BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+    // Accept optional adapter (for testing); resolve via BluetoothManager at runtime to avoid deprecated API
+    private var bluetoothAdapter: BluetoothAdapter? = null
 ) : PrinterService {
+
+    init {
+        if (bluetoothAdapter == null) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val manager = context.getSystemService(android.bluetooth.BluetoothManager::class.java)
+                    bluetoothAdapter = manager?.adapter
+                } else {
+                    // Older API levels should use the legacy adapter method
+                    bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+                }
+            } catch (e: Exception) {
+                // fallback to legacy API if any unexpected error occurs
+                bluetoothAdapter = legacyBluetoothAdapter()
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun legacyBluetoothAdapter(): BluetoothAdapter? = BluetoothAdapter.getDefaultAdapter()
+
+    @VisibleForTesting
+    internal fun setTestOutput(output: OutputStream) {
+        this.outputStream = output
+        this.currentStatus = PrinterStatus.CONNECTED
+    }
 
     private val TAG = "PrinterService"
     private val SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
@@ -85,18 +113,18 @@ class PrinterServiceImpl @Inject constructor(
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override suspend fun getAvailableDevices(): Result<List<BluetoothDevice>> = withContext(Dispatchers.IO) {
         try {
-            if (bluetoothAdapter == null) {
-                return@withContext Result.failure(Exception("Bluetooth tidak tersedia di device ini"))
-            }
+            val adapter = bluetoothAdapter
+                ?: return@withContext Result.failure(Exception("Bluetooth tidak tersedia di device ini"))
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 return@withContext Result.failure(Exception("Tidak memiliki izin Bluetooth (BLUETOOTH_CONNECT)"))
             }
 
-            if (!bluetoothAdapter.isEnabled) {
+            if (!adapter.isEnabled) {
                 return@withContext Result.failure(Exception("Bluetooth tidak aktif"))
             }
 
-            val pairedDevices = bluetoothAdapter.bondedDevices
+            val pairedDevices = adapter.bondedDevices
             val printerDevices = pairedDevices.filter { device ->
                 // Filter devices that might be printers (you can customize this logic)
                 device.name?.contains("printer", ignoreCase = true) == true ||
@@ -254,7 +282,9 @@ class PrinterServiceImpl @Inject constructor(
     }
 
     override fun isConnected(): Boolean {
-        return bluetoothSocket?.isConnected == true && currentStatus == PrinterStatus.CONNECTED
+        // Consider the socket connection OR a test-injected output stream as connected when status is CONNECTED
+        return (bluetoothSocket?.isConnected == true && currentStatus == PrinterStatus.CONNECTED)
+                || (outputStream != null && currentStatus == PrinterStatus.CONNECTED)
     }
 
     private fun buildReceiptData(

@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.sales
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.ErrorMessage
@@ -38,7 +39,7 @@ fun SalesHistoryScreen(
         topBar = {
             AppTopBar(
                 title = "Riwayat Penjualan",
-                navigationIcon = Icons.Default.ArrowBack,
+                navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.popBackStack() },
                 actions = {
                     IconButton(onClick = { viewModel.clearFilters() }) {
@@ -117,7 +118,7 @@ fun SalesHistoryScreen(
 
                     uiState.error != null -> {
                         ErrorMessage(
-                            message = uiState.error!!,
+                            message = uiState.error ?: "", 
                             onRetry = { viewModel.loadSales() },
                             onDismiss = { viewModel.clearError() }
                         )
@@ -156,15 +157,17 @@ fun SalesHistoryScreen(
     }
 
     // Receipt Dialog
-    if (uiState.showReceiptDialog && uiState.selectedSale != null) {
-        ReceiptDialog(
-            saleWithItems = uiState.selectedSale!!,
-            isPrinting = uiState.isPrintingReceipt,
-            onPrintReceipt = { viewModel.printReceipt() },
-            onDismiss = { viewModel.hideReceiptDialog() },
-            dateFormat = dateFormat,
-            currencyFormat = currencyFormat
-        )
+    uiState.selectedSale?.let { saleWithItems ->
+        if (uiState.showReceiptDialog) {
+            ReceiptDialog(
+                saleWithItems = saleWithItems,
+                isPrinting = uiState.isPrintingReceipt,
+                onPrintReceipt = { viewModel.printReceipt() },
+                onDismiss = { viewModel.hideReceiptDialog() },
+                dateFormat = dateFormat,
+                currencyFormat = currencyFormat
+            )
+        }
     }
 
     // Date Picker Dialog

@@ -8,6 +8,7 @@ import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.Produk
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.Date
 
 /**
  * Test data builders for integration tests
@@ -15,162 +16,162 @@ import java.time.LocalDateTime
 object TestDataBuilder {
 
     fun createTestCategory(
-        id: String = "test_category_1",
+        id: Long = 0L,
         name: String = "Test Category",
         description: String = "Test category description"
     ) = Kategori(
         id = id,
-        nama = name,
-        deskripsi = description
+        name = name,
+        description = description
     )
 
     fun createTestWarehouse(
-        id: String = "test_warehouse_1",
+        id: Long = 0L,
         name: String = "Test Warehouse",
         location: String = "Test Location",
         capacity: Int = 1000
     ) = Gudang(
         id = id,
-        nama = name,
-        lokasi = location,
-        kapasitas = capacity
+        name = name,
+        location = location,
+        capacity = capacity
     )
 
     fun createTestProduct(
-        id: String = "test_product_1",
+        id: Long = 0L,
         name: String = "Test Product",
         barcode: String = "123456789012",
-        categoryId: String = "test_category_1",
+        categoryId: Long = 1L,
         costPrice: Double = 10000.0,
         sellingPrice: Double = 15000.0,
-        stock: Int = 50,
-        warehouseId: String = "test_warehouse_1",
+        stockQuantity: Int = 50,
+        warehouseId: Long = 1L,
         minStock: Int = 10
     ) = Produk(
         id = id,
-        nama = name,
+        name = name,
         barcode = barcode,
-        kategoriId = categoryId,
-        hargaBeli = costPrice,
-        hargaJual = sellingPrice,
-        stok = stock,
-        gudangId = warehouseId,
-        minStok = minStock
+        categoryId = categoryId,
+        costPrice = costPrice,
+        sellingPrice = sellingPrice,
+        stockQuantity = stockQuantity,
+        warehouseId = warehouseId,
+        minStock = minStock
     )
 
     fun createLowStockProduct(
-        id: String = "low_stock_product",
+        id: Long = 0L,
         name: String = "Low Stock Product",
-        stock: Int = 2,
+        stockQuantity: Int = 2,
         minStock: Int = 10
     ) = createTestProduct(
         id = id,
         name = name,
-        stock = stock,
+        stockQuantity = stockQuantity,
         minStock = minStock
     )
 
     fun createOutOfStockProduct(
-        id: String = "out_of_stock_product",
+        id: Long = 0L,
         name: String = "Out of Stock Product",
-        stock: Int = 0
+        stockQuantity: Int = 0
     ) = createTestProduct(
         id = id,
         name = name,
-        stock = stock
+        stockQuantity = stockQuantity
     )
 
     fun createTestSale(
-        id: String = "test_sale_1",
+        id: Long = 0L,
         date: LocalDateTime = LocalDateTime.now().minusDays(1),
         totalAmount: Double = 22500.0,
         paymentMethod: String = "CASH",
-        cashierId: String = "owner"
+        cashierId: Long = 1L
     ) = Penjualan(
         id = id,
-        tanggalPenjualan = date,
-        totalJumlah = totalAmount,
-        metodePembayaran = paymentMethod,
-        kasirId = cashierId
+        saleDate = Date.from(date.atZone(java.time.ZoneId.systemDefault()).toInstant()),
+        totalAmount = totalAmount,
+        paymentMethod = if (paymentMethod == "CASH") com.chibychibystore.data.local.entity.PaymentMethod.CASH else com.chibychibystore.data.local.entity.PaymentMethod.CARD,
+        cashierId = cashierId
     )
 
     fun createTestSaleItem(
-        id: String = "test_sale_item_1",
-        saleId: String = "test_sale_1",
-        productId: String = "prod_1",
+        id: Long = 0L,
+        saleId: Long = 0L,
+        productId: Long = 0L,
         quantity: Int = 3,
         unitPrice: Double = 7500.0,
         totalPrice: Double = 22500.0
     ) = ItemPenjualan(
         id = id,
-        penjualanId = saleId,
-        produkId = productId,
-        jumlah = quantity,
-        hargaSatuan = unitPrice,
-        totalHarga = totalPrice
+        saleId = saleId,
+        productId = productId,
+        quantity = quantity,
+        unitPrice = unitPrice,
+        totalPrice = totalPrice
     )
 
     fun createTestExpense(
-        id: String = "test_expense_1",
+        id: Long = 0L,
         date: LocalDateTime = LocalDateTime.now().minusDays(2),
-        category: String = "Utilities",
+        category: com.chibychibystore.data.local.entity.ExpenseCategory = com.chibychibystore.data.local.entity.ExpenseCategory.UTILITIES,
         amount: Double = 50000.0,
         description: String = "Electricity bill",
-        approvedBy: String = "owner",
-        createdBy: String = "manager"
+        approvedBy: Long? = null,
+        createdBy: Long = 1L
     ) = Pengeluaran(
         id = id,
-        tanggalPengeluaran = date,
-        kategori = category,
-        jumlah = amount,
-        deskripsi = description,
-        disetujuiOleh = approvedBy,
-        dibuatOleh = createdBy
+        expenseDate = java.util.Date.from(date.atZone(java.time.ZoneId.systemDefault()).toInstant()),
+        category = category,
+        amount = amount,
+        description = description,
+        approvedBy = approvedBy,
+        createdBy = createdBy
     )
 
     // Test data collections
     val testCategories = listOf(
-        createTestCategory("cat_1", "Food", "Food products"),
-        createTestCategory("cat_2", "Beverages", "Drink products"),
-        createTestCategory("cat_3", "Electronics", "Electronic products")
+        createTestCategory(1L, "Food", "Food products"),
+        createTestCategory(2L, "Beverages", "Drink products"),
+        createTestCategory(3L, "Electronics", "Electronic products")
     )
 
     val testWarehouses = listOf(
-        createTestWarehouse("wh_1", "Main Warehouse", "Jakarta", 1000),
-        createTestWarehouse("wh_2", "Branch Warehouse", "Bandung", 500)
+        createTestWarehouse(1L, "Main Warehouse", "Jakarta", 1000),
+        createTestWarehouse(2L, "Branch Warehouse", "Bandung", 500)
     )
 
     val testProducts = listOf(
-        createTestProduct("prod_1", "Apple", "111111111111", "cat_1", 5000.0, 7500.0, 100, "wh_1", 20),
-        createTestProduct("prod_2", "Orange", "222222222222", "cat_1", 4000.0, 6000.0, 80, "wh_1", 15),
-        createTestProduct("prod_3", "Coca Cola", "333333333333", "cat_2", 3000.0, 4500.0, 200, "wh_2", 30),
-        createTestProduct("prod_4", "Sprite", "444444444444", "cat_2", 3000.0, 4500.0, 150, "wh_2", 25),
-        createLowStockProduct("prod_5", "Low Stock Item", 5, 20),
-        createOutOfStockProduct("prod_6", "Out of Stock Item")
+        createTestProduct(1L, "Apple", "111111111111", 1L, 5000.0, 7500.0, 100, 1L, 20),
+        createTestProduct(2L, "Orange", "222222222222", 1L, 4000.0, 6000.0, 80, 1L, 15),
+        createTestProduct(3L, "Coca Cola", "333333333333", 2L, 3000.0, 4500.0, 200, 2L, 30),
+        createTestProduct(4L, "Sprite", "444444444444", 2L, 3000.0, 4500.0, 150, 2L, 25),
+        createLowStockProduct(5L, "Low Stock Item", 5, 20),
+        createOutOfStockProduct(6L, "Out of Stock Item")
     )
 
     val testSales = listOf(
-        createTestSale("sale_1", LocalDateTime.now().minusDays(1), 22500.0, "CASH", "owner"),
-        createTestSale("sale_2", LocalDateTime.now().minusDays(2), 13500.0, "CASH", "cashier"),
-        createTestSale("sale_3", LocalDateTime.now().minusDays(3), 30000.0, "CARD", "owner"),
-        createTestSale("sale_4", LocalDateTime.now().minusDays(4), 18000.0, "CASH", "cashier"),
-        createTestSale("sale_5", LocalDateTime.now().minusDays(5), 42000.0, "CARD", "owner")
+        createTestSale(1L, LocalDateTime.now().minusDays(1), 22500.0, "CASH", 1L),
+        createTestSale(2L, LocalDateTime.now().minusDays(2), 13500.0, "CASH", 2L),
+        createTestSale(3L, LocalDateTime.now().minusDays(3), 30000.0, "CARD", 1L),
+        createTestSale(4L, LocalDateTime.now().minusDays(4), 18000.0, "CASH", 2L),
+        createTestSale(5L, LocalDateTime.now().minusDays(5), 42000.0, "CARD", 1L)
     )
 
     val testSaleItems = listOf(
-        createTestSaleItem("item_1", "sale_1", "prod_1", 3, 7500.0, 22500.0),
-        createTestSaleItem("item_2", "sale_2", "prod_2", 2, 6000.0, 12000.0),
-        createTestSaleItem("item_3", "sale_2", "prod_3", 1, 4500.0, 1500.0),
-        createTestSaleItem("item_4", "sale_3", "prod_4", 4, 4500.0, 18000.0),
-        createTestSaleItem("item_5", "sale_3", "prod_1", 2, 7500.0, 15000.0),
-        createTestSaleItem("item_6", "sale_4", "prod_2", 3, 6000.0, 18000.0),
-        createTestSaleItem("item_7", "sale_5", "prod_3", 5, 4500.0, 22500.0),
-        createTestSaleItem("item_8", "sale_5", "prod_4", 4, 4500.0, 18000.0)
+        createTestSaleItem(1L, 1L, 1L, 3, 7500.0, 22500.0),
+        createTestSaleItem(2L, 2L, 2L, 2, 6000.0, 12000.0),
+        createTestSaleItem(3L, 2L, 3L, 1, 4500.0, 1500.0),
+        createTestSaleItem(4L, 3L, 4L, 4, 4500.0, 18000.0),
+        createTestSaleItem(5L, 3L, 1L, 2, 7500.0, 15000.0),
+        createTestSaleItem(6L, 4L, 2L, 3, 6000.0, 18000.0),
+        createTestSaleItem(7L, 5L, 3L, 5, 4500.0, 22500.0),
+        createTestSaleItem(8L, 5L, 4L, 4, 4500.0, 18000.0)
     )
 
     val testExpenses = listOf(
-        createTestExpense("exp_1", LocalDateTime.now().minusDays(2), "Utilities", 50000.0, "Electricity bill", "owner", "manager"),
-        createTestExpense("exp_2", LocalDateTime.now().minusDays(4), "Supplies", 25000.0, "Office supplies", "owner", "cashier"),
-        createTestExpense("exp_3", LocalDateTime.now().minusDays(6), "Rent", 200000.0, "Monthly rent", "owner", "owner")
+        createTestExpense(1L, LocalDateTime.now().minusDays(2), com.chibychibystore.data.local.entity.ExpenseCategory.UTILITIES, 50000.0, "Electricity bill", approvedBy = null, createdBy = 1L),
+        createTestExpense(2L, LocalDateTime.now().minusDays(4), com.chibychibystore.data.local.entity.ExpenseCategory.SUPPLIES_MAINTENANCE, 25000.0, "Office supplies", approvedBy = null, createdBy = 2L),
+        createTestExpense(3L, LocalDateTime.now().minusDays(6), com.chibychibystore.data.local.entity.ExpenseCategory.RENT_LEASE, 200000.0, "Monthly rent", approvedBy = null, createdBy = 1L)
     )
 }

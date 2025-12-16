@@ -96,7 +96,7 @@ import javax.inject.Inject
  * }
  *
  * if (uiState.error != null) {
- *     Text(uiState.error!!)
+ *     Text(uiState.error ?: "")
  * }
  *
  * // List rendering

@@ -270,7 +270,7 @@ class ProductServiceImpl @Inject constructor(
 
             // Pastikan barcode unik jika ada (GS1 compliance)
             if (!product.barcode.isNullOrBlank()) {
-                val existingResult = productRepository.getProdukByBarcode(product.barcode!!)
+                val existingResult = productRepository.getProdukByBarcode(product.barcode)
                 if (existingResult.isSuccess && existingResult.getOrNull() != null) {
                     return Result.failure(Exception("Barcode sudah digunakan oleh produk lain"))
                 }
@@ -293,7 +293,7 @@ class ProductServiceImpl @Inject constructor(
 
             // Pastikan barcode unik jika diubah
             if (!product.barcode.isNullOrBlank()) {
-                val existingResult = productRepository.getProdukByBarcode(product.barcode!!)
+                val existingResult = productRepository.getProdukByBarcode(product.barcode)
                 if (existingResult.isSuccess) {
                     val existing = existingResult.getOrNull()
                     if (existing != null && existing.id != product.id) {

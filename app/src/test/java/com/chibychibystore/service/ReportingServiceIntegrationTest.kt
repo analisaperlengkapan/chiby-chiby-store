@@ -1,0 +1,98 @@
+package com.chibychibystore.service
+
+import android.content.Context
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import com.chibychibystore.data.local.database.ChibyChibyDatabase
+import com.chibychibystore.data.local.entity.Penjualan
+import com.chibychibystore.data.local.entity.PaymentMethod
+import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.repository.PembelianRepository
+import com.chibychibystore.repository.PenjualanRepository
+import com.chibychibystore.repository.ProdukRepository
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+import org.mockito.Mockito
+import java.util.Date
+import java.time.LocalDate
+
+@RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE)
+class ReportingServiceIntegrationTest {
+
+    private lateinit var db: ChibyChibyDatabase
+    private lateinit var saleRepo: PenjualanRepository
+    private lateinit var purchaseRepo: PembelianRepository
+    private lateinit var productRepo: ProdukRepository
+    private lateinit var reportingService: ReportingService
+
+    @Before
+    fun setup() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        db = Room.inMemoryDatabaseBuilder(context, ChibyChibyDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+
+        saleRepo = PenjualanRepository(db.penjualanDao(), db.itemPenjualanDao())
+        purchaseRepo = PembelianRepository(db.pembelianDao())
+        productRepo = ProdukRepository(db.produkDao())
+
+        val balanceSheetService = Mockito.mock(BalanceSheetService::class.java)
+        val cashManagementService = Mockito.mock(CashManagementService::class.java)
+
+        reportingService = ReportingService(saleRepo, purchaseRepo, db.pengeluaranDao().let { com.chibychibystore.repository.PengeluaranRepository(it) }, productRepo, balanceSheetService, cashManagementService)
+    }
+
+    @After
+    fun teardown() {
+        db.close()
+    }
+
+    @Test
+    fun getGrossSales_and_getProfitMargin_calculations() = runBlocking {
+        // Seed required foreign keys
+        val kategoriId = db.kategoriDao().insertKategori(com.chibychibystore.data.local.entity.Kategori(name = "R1"))
+        val gudangId = db.gudangDao().insertGudang(com.chibychibystore.data.local.entity.Gudang(name = "G1"))
+        val cashierId = db.penggunaDao().insertPengguna(com.chibychibystore.data.local.entity.Pengguna(username = "rpt", passwordHash = "x", role = com.chibychibystore.data.local.entity.Role.CASHIER))
+
+        // Product
+        val prod = Produk(name = "P1", barcode = "b1", categoryId = kategoriId, costPrice = 5000.0, sellingPrice = 10000.0, stockQuantity = 50, warehouseId = gudangId)
+        val prodId = db.produkDao().insertProduk(prod)
+
+        // Two sales
+        val sale1 = Penjualan(saleDate = Date(), totalAmount = 10000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
+        val saleId1 = db.penjualanDao().insertPenjualan(sale1)
+        db.itemPenjualanDao().insertItemPenjualan(com.chibychibystore.data.local.entity.ItemPenjualan(saleId = saleId1, productId = prodId, quantity = 1, unitPrice = 10000.0, totalPrice = 10000.0))
+
+        val sale2 = Penjualan(saleDate = Date(), totalAmount = 20000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
+        val saleId2 = db.penjualanDao().insertPenjualan(sale2)
+        db.itemPenjualanDao().insertItemPenjualan(com.chibychibystore.data.local.entity.ItemPenjualan(saleId = saleId2, productId = prodId, quantity = 2, unitPrice = 10000.0, totalPrice = 20000.0))
+
+        // Purchase (cost)
+        val pemasokId = db.pemasokDao().insertPemasok(com.chibychibystore.data.local.entity.Pemasok(name = "S1"))
+        val pembelian = com.chibychibystore.data.local.entity.Pembelian(purchaseDate = Date(), supplierId = pemasokId, totalAmount = 5000.0, createdBy = cashierId)
+        val pembelianId = db.pembelianDao().insertPembelian(pembelian)
+
+        val start = LocalDate.now().minusDays(1)
+        val end = LocalDate.now().plusDays(1)
+
+        val grossRes = reportingService.getGrossSales(start, end)
+        assertTrue(grossRes.isSuccess)
+        val gross = grossRes.getOrNull()!!
+        assertEquals(30000.0, gross.totalSales, 0.001)
+        assertEquals(2, gross.totalTransactions)
+
+        val profitRes = reportingService.getProfitMargin(start, end)
+        assertTrue(profitRes.isSuccess)
+        val profit = profitRes.getOrNull()!!
+        assertEquals(30000.0, profit.totalRevenue, 0.001)
+        // totalCost comes from purchases sum
+        assertEquals(5000.0, profit.totalCost, 0.001)
+    }
+}

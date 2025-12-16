@@ -1,3 +1,4 @@
+@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.expense
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.ErrorMessage
@@ -8,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -41,9 +43,9 @@ fun ExpenseDetailScreen(
 
     Scaffold(
         topBar = {
-            AppTopBar(
+                AppTopBar(
                 title = if (uiState.isEditing) "Edit Pengeluaran" else "Detail Pengeluaran",
-                navigationIcon = Icons.Default.ArrowBack,
+                navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
                     if (!uiState.isEditing && uiState.expense != null) {
@@ -71,7 +73,7 @@ fun ExpenseDetailScreen(
                     LoadingIndicator()
                 }
                 uiState.error != null -> {
-                    ErrorMessage(message = uiState.error!!)
+                    ErrorMessage(message = uiState.error ?: "")
                 }
                 uiState.expense == null -> {
                     Column(
@@ -87,105 +89,106 @@ fun ExpenseDetailScreen(
                     }
                 }
                 else -> {
-                    val expense = uiState.expense!!
+                    uiState.expense?.let { expense ->
 
-                    if (uiState.isEditing) {
-                        // Edit Mode
-                        OutlinedTextField(
-                            value = uiState.editAmount,
-                            onValueChange = { viewModel.updateEditAmount(it) },
-                            label = { Text("Jumlah (Rp)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                            )
-                        )
-
-                        var categoryExpanded by remember { mutableStateOf(false) }
-                        ExposedDropdownMenuBox(
-                            expanded = categoryExpanded,
-                            onExpandedChange = { categoryExpanded = it }
-                        ) {
+                        if (uiState.isEditing) {
+                            // Edit Mode
                             OutlinedTextField(
-                                value = uiState.editCategory?.displayName ?: "",
-                                onValueChange = { },
-                                label = { Text("Kategori") },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(),
-                                readOnly = true,
-                                trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
-                                }
+                                value = uiState.editAmount,
+                                onValueChange = { viewModel.updateEditAmount(it) },
+                                label = { Text("Jumlah (Rp)") },
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                )
                             )
 
-                            ExposedDropdownMenu(
+                            var categoryExpanded by remember { mutableStateOf(false) }
+                            ExposedDropdownMenuBox(
                                 expanded = categoryExpanded,
-                                onDismissRequest = { categoryExpanded = false }
+                                onExpandedChange = { categoryExpanded = it }
                             ) {
-                                ExpenseCategory.values().forEach { category ->
-                                    DropdownMenuItem(
-                                        text = { Text(category.displayName) },
-                                        onClick = {
-                                            viewModel.updateEditCategory(category)
-                                            categoryExpanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        OutlinedTextField(
-                            value = uiState.editDescription,
-                            onValueChange = { viewModel.updateEditDescription(it) },
-                            label = { Text("Deskripsi") },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 3,
-                            maxLines = 5
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = { viewModel.toggleEditMode() },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Batal")
-                            }
-                            Button(
-                                onClick = {
-                                    viewModel.saveExpense {
-                                        viewModel.toggleEditMode()
+                                OutlinedTextField(
+                                    value = uiState.editCategory?.displayName ?: "",
+                                    onValueChange = { },
+                                    label = { Text("Kategori") },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor(),
+                                    readOnly = true,
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
                                     }
-                                },
-                                modifier = Modifier.weight(1f),
-                                enabled = uiState.isEditFormValid
-                            ) {
-                                Text("Simpan")
-                            }
-                        }
-                    } else {
-                        // View Mode
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = "Detail Pengeluaran",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(bottom = 16.dp)
                                 )
 
-                                DetailRow("Jumlah", formatCurrency(expense.amount))
-                                DetailRow("Kategori", expense.category.displayName)
-                                DetailRow("Tanggal", SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(expense.expenseDate))
-                                DetailRow("Deskripsi", expense.description ?: "Tidak ada deskripsi")
+                                ExposedDropdownMenu(
+                                    expanded = categoryExpanded,
+                                    onDismissRequest = { categoryExpanded = false }
+                                ) {
+                                    ExpenseCategory.values().forEach { category ->
+                                        DropdownMenuItem(
+                                            text = { Text(category.displayName) },
+                                            onClick = {
+                                                viewModel.updateEditCategory(category)
+                                                categoryExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            OutlinedTextField(
+                                value = uiState.editDescription,
+                                onValueChange = { viewModel.updateEditDescription(it) },
+                                label = { Text("Deskripsi") },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 3,
+                                maxLines = 5
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { viewModel.toggleEditMode() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Batal")
+                                }
+                                Button(
+                                    onClick = {
+                                        viewModel.saveExpense {
+                                            viewModel.toggleEditMode()
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    enabled = uiState.isEditFormValid
+                                ) {
+                                    Text("Simpan")
+                                }
+                            }
+                        } else {
+                            // View Mode
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Detail Pengeluaran",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(bottom = 16.dp)
+                                    )
+
+                                    DetailRow("Jumlah", formatCurrency(expense.amount))
+                                    DetailRow("Kategori", expense.category.displayName)
+                                    DetailRow("Tanggal", SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(expense.expenseDate))
+                                    DetailRow("Deskripsi", expense.description ?: "Tidak ada deskripsi")
+                                }
                             }
                         }
                     }

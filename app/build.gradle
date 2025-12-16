@@ -4,6 +4,11 @@ plugins {
     id 'kotlin-kapt'
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'com.google.dagger.hilt.android'
+    id 'jacoco'
+}
+
+jacoco {
+    toolVersion = "0.8.10"
 }
 
 android {
@@ -201,10 +206,36 @@ dependencies {
     testImplementation 'org.mockito.kotlin:mockito-kotlin:5.1.0'
     testImplementation 'androidx.arch.core:core-testing:2.2.0'
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
+    testImplementation 'org.robolectric:robolectric:4.11.1'
+    testImplementation 'androidx.room:room-testing:2.6.1'
+    testImplementation 'androidx.test:core:1.5.0'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     androidTestImplementation platform('androidx.compose:compose-bom:2023.03.00')
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    // Additional androidTest dependencies to support integration and Hilt tests
+    androidTestImplementation 'app.cash.turbine:turbine:0.12.3'
+    androidTestImplementation 'com.google.dagger:hilt-android-testing:2.50'
+    kaptAndroidTest 'com.google.dagger:hilt-compiler:2.50'
+    androidTestImplementation 'org.mockito:mockito-android:5.7.0'
+    androidTestImplementation 'androidx.arch.core:core-testing:2.2.0'
+    androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
+    androidTestImplementation 'androidx.test:core:1.5.0'
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
+}
+
+// JaCoCo test report task
+tasks.register("jacocoTestReport", org.gradle.testing.jacoco.tasks.JacocoReport) {
+    dependsOn("testDebugUnitTest")
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+    def fileFilter = ["**/R.class", "**/R\$*.class", "**/*\$ViewInjector*.*", "**/*\$ViewBinder*.*"]
+    def debugTree = fileTree(dir: "$buildDir/intermediates/javac/debug/classes", excludes: fileFilter)
+    def kotlinDebugTree = fileTree(dir: "$buildDir/tmp/kotlin-classes/debug", excludes: fileFilter)
+    classDirectories.setFrom(files([debugTree, kotlinDebugTree]))
+    sourceDirectories.setFrom(files(["src/main/java", "src/main/kotlin"]))
+    executionData.setFrom(files("$buildDir/jacoco/testDebugUnitTest.exec"))
 }

@@ -97,10 +97,18 @@ class ExpenseAddViewModel @Inject constructor(
             try {
                 val state = _uiState.value
                 val amount = state.amount.toDoubleOrNull() ?: 0.0
+                val expenseDate = state.expenseDate ?: run {
+                    _uiState.value = _uiState.value.copy(error = "Tanggal pengeluaran tidak valid", isLoading = false)
+                    return@launch
+                }
+                val category = state.selectedCategory ?: run {
+                    _uiState.value = _uiState.value.copy(error = "Kategori harus dipilih", isLoading = false)
+                    return@launch
+                }
 
                 val result = expenseService.createExpense(
-                    expenseDate = state.expenseDate!!,
-                    category = state.selectedCategory!!,
+                    expenseDate = expenseDate,
+                    category = category,
                     amount = amount,
                     description = state.description.takeIf { it.isNotBlank() }
                 )

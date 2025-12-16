@@ -277,7 +277,7 @@ class WarehouseViewModelTest {
 
         // Then
         assertNotNull(result)
-        assertEquals("Branch Warehouse", result?.nama)
+        assertEquals("Branch Warehouse", result?.name)
     }
 
     @Test
@@ -309,7 +309,7 @@ class WarehouseViewModelTest {
 
         // Then
         assertNotNull(result)
-        assertEquals("Product 2", result?.nama)
+        assertEquals("Product 2", result?.name)
     }
 
     @Test

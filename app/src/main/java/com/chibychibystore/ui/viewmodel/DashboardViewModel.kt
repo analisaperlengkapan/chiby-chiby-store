@@ -6,6 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.Produk
 import dagger.hilt.android.lifecycle.HiltViewModel
+import com.chibychibystore.service.SaleService
+import com.chibychibystore.repository.ProdukRepository
+import kotlinx.coroutines.flow.first
+import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -320,7 +324,10 @@ data class DashboardUiState(
  * @property uiState Reactive state flow untuk dashboard UI updates
  */
 @HiltViewModel
-class DashboardViewModel @Inject constructor() : ViewModel() {
+class DashboardViewModel @Inject constructor(
+    private val saleService: SaleService,
+    private val produkRepository: ProdukRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState
@@ -460,18 +467,27 @@ class DashboardViewModel @Inject constructor() : ViewModel() {
 
         viewModelScope.launch {
             try {
-                // TODO: Replace with actual data from repositories
-                // For now, generate mock data
-                val mockTodaySales = Random.nextDouble(1000000.0, 5000000.0)
-                val mockTransactionCount = Random.nextInt(10, 50)
-                val mockLowStockItems = generateMockLowStockItems()
-                val mockRecentTransactions = generateMockRecentTransactions()
+                // Real implementation using services/repositories
+                val today = LocalDate.now().toString() // yyyy-MM-dd
+
+                // Get today's sales list
+                val salesRes = saleService.getSales(today, today, null)
+                val sales = salesRes.getOrNull() ?: emptyList()
+                val todaySalesTotal = sales.sumOf { it.totalAmount }
+                val todayTransactionCount = sales.size
+
+                // Low stock products (take first page/current value)
+                val lowStock = produkRepository.getLowStockProduk().first()
+
+                // Recent transactions (latest 10)
+                val allSalesRes = saleService.getSales(null, null, null)
+                val recent = (allSalesRes.getOrNull() ?: emptyList()).sortedByDescending { it.saleDate }.take(10)
 
                 _uiState.value = _uiState.value.copy(
-                    todaySales = mockTodaySales,
-                    todayTransactionCount = mockTransactionCount,
-                    lowStockItems = mockLowStockItems,
-                    recentTransactions = mockRecentTransactions,
+                    todaySales = todaySalesTotal,
+                    todayTransactionCount = todayTransactionCount,
+                    lowStockItems = lowStock,
+                    recentTransactions = recent,
                     isLoading = false,
                     errorMessage = null
                 )

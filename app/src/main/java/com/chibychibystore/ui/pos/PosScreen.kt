@@ -36,7 +36,6 @@ fun PosScreen(
     viewModel: PosViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("id", "ID")) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
@@ -134,9 +133,10 @@ fun PosScreen(
     }
 
     // Receipt Dialog after successful payment
-    if (uiState.showReceiptDialog && uiState.completedSaleId != null) {
+    val completedSaleId = uiState.completedSaleId
+    if (uiState.showReceiptDialog && completedSaleId != null) {
         ReceiptDialog(
-            saleId = uiState.completedSaleId!!,
+            saleId = completedSaleId,
             isPrinting = uiState.isPrintingReceipt,
             onPrintReceipt = { viewModel.printReceipt() },
             onStartNewTransaction = { viewModel.startNewTransaction() },
@@ -161,9 +161,8 @@ private fun SearchBar(
         },
         modifier = modifier,
         singleLine = true,
-        colors = TextFieldDefaults.textFieldColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        // Use default text field colors; can be customized if needed
+        colors = TextFieldDefaults.colors()
     )
 }
 
@@ -487,7 +486,7 @@ private fun PaymentSummary(
                 }
             }
 
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),

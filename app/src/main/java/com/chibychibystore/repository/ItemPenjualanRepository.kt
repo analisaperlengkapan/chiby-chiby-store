@@ -78,4 +78,23 @@ class ItemPenjualanRepository @Inject constructor(
             Result.failure(ChibyChibyException.DatabaseError("insertItemPenjualanBatch", e))
         }
     }
+
+    /**
+     * Compatibility wrapper for legacy code/tests that expect single insert returning id
+     */
+    suspend fun insertItemPenjualan(item: ItemPenjualan): Long {
+        return itemPenjualanDao.insertItemPenjualan(item)
+    }
+
+    /**
+     * Compatibility wrapper for DAO delete by penjualanId
+     */
+    suspend fun deleteItemPenjualanByPenjualanId(penjualanId: Long): Result<Unit> {
+        return try {
+            itemPenjualanDao.deleteItemsBySaleId(penjualanId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("deleteItemPenjualanByPenjualanId", e))
+        }
+    }
 }

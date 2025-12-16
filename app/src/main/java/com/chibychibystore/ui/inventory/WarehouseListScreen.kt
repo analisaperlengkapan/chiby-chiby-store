@@ -3,6 +3,8 @@ import com.chibychibystore.data.local.entity.Produk
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -54,7 +56,7 @@ fun WarehouseListScreen(
                 }
                 uiState.error != null -> {
                     ErrorMessage(
-                        message = uiState.error!!,
+                        message = uiState.error ?: "", 
                         onRetry = { viewModel.refresh() }
                     )
                 }
@@ -209,9 +211,9 @@ private fun WarehouseListItem(
                     modifier = Modifier.weight(1f)
                 ) {
 
-                    if (!warehouse.location.isNullOrBlank()) {
+                    warehouse.location?.takeIf { it.isNotBlank() }?.let { location ->
                         Text(
-                            text = warehouse.location!!,
+                            text = location,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -315,10 +317,10 @@ private fun WarehouseEmptyState(
 
 @Composable
 private fun VerticalDivider() {
-    Divider(
+    Box(
         modifier = Modifier
             .width(1.dp)
-            .height(40.dp),
-        color = MaterialTheme.colorScheme.outlineVariant
+            .height(40.dp)
+            .background(MaterialTheme.colorScheme.outlineVariant)
     )
 }

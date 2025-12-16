@@ -15,10 +15,9 @@ import javax.inject.Inject
 /**
  * Base class for integration tests with in-memory database
  */
-@HiltAndroidTest
 abstract class BaseIntegrationTest {
 
-    protected lateinit var database: ChibyChibyDatabase
+    lateinit var database: ChibyChibyDatabase
 
     @Inject
     lateinit var penggunaRepository: PenggunaRepository
@@ -57,12 +56,9 @@ abstract class BaseIntegrationTest {
     protected suspend fun seedTestData() {
         // Seed users
         val owner = Pengguna(
-            id = 0,
-            nama = "Test Owner",
             username = "owner",
             passwordHash = "hash",
-            role = "OWNER",
-            aktif = true
+            role = Role.OWNER
         )
         penggunaRepository.createPengguna(owner)
 

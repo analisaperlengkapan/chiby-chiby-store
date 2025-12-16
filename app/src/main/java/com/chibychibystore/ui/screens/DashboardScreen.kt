@@ -153,7 +153,7 @@ fun DashboardScreen(
                                 title = "Peringatan Stok Rendah",
                                 subtitle = "${uiState.lowStockItems.size} produk stok rendah",
                                 icon = Icons.Default.Warning,
-                                onClick = { /* TODO: Navigate to inventory */ }
+                                onClick = { onNavigateToRoute(Screen.Inventory.route) }
                             )
                         }
                     }
@@ -173,7 +173,7 @@ fun DashboardScreen(
                             CardItem(
                                 title = formatCurrency(transaction.totalAmount),
                                 subtitle = "Tanggal: ${formatDate(transaction.saleDate.time)}",
-                                onClick = { /* TODO: Navigate to transaction detail */ }
+                                onClick = { onNavigateToRoute(Screen.SalesHistory.route) }
                             )
                         }
                     }

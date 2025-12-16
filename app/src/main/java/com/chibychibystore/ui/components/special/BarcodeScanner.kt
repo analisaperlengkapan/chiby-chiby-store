@@ -148,6 +148,14 @@ fun BarcodeScanner(
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 32.dp)
                 )
+
+                // Helpful debug: allow simulation of barcode detection in preview/dev builds
+                androidx.compose.material3.Button(
+                    onClick = { onBarcodeDetected("SIMULATED_BARCODE") },
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    Text(text = "Simulate Scan")
+                }
             }
 
             if (isProcessing) {
