@@ -182,6 +182,52 @@ class PdfExportServiceTest {
     }
 
     @Test
+    fun `exportSalesByCategoryReport should create category report PDF`() = runTest {
+        // Given
+        val startDate = LocalDate.of(2025, 1, 1)
+        val endDate = LocalDate.of(2025, 1, 31)
+        val mockReportData = listOf(
+            mapOf("categoryName" to "Food", "quantity" to 100, "revenue" to 1000000.0)
+        )
+
+        `when`(reportingService.getSalesByCategory(startDate, endDate)).thenReturn(Result.Success(mockReportData))
+
+        // When
+        val result = pdfExportService.exportSalesByCategoryReport(startDate, endDate)
+
+        // Then
+        assertTrue(result is Result.Success)
+        val filePath = (result as Result.Success).data
+        assertTrue(filePath.contains("Laporan_Penjualan_Kategori"))
+    }
+
+    @Test
+    fun `exportCashFlowReport should create cash flow PDF when data available`() = runTest {
+        // Given
+        val startDate = LocalDate.of(2025, 1, 1)
+        val endDate = LocalDate.of(2025, 1, 31)
+        val cashFlow = com.chibychibystore.service.CashFlow(
+            operatingCashFlow = 1000.0,
+            investingCashFlow = -200.0,
+            financingCashFlow = 0.0,
+            netCashFlow = 800.0,
+            beginningCash = 0.0,
+            endingCash = 800.0,
+            period = "2025-01-01 - 2025-01-31"
+        )
+
+        `when`(reportingService.getCashFlow(startDate, endDate)).thenReturn(Result.Success(cashFlow))
+
+        // When
+        val result = pdfExportService.exportCashFlowReport(startDate, endDate)
+
+        // Then
+        assertTrue(result is Result.Success)
+        val filePath = (result as Result.Success).data
+        assertTrue(filePath.contains("Laporan_Arus_Kas"))
+    }
+
+    @Test
     fun `exportBalanceSheet should calculate equity correctly`() = runTest {
         // Given
         val date = LocalDate.of(2025, 1, 31)

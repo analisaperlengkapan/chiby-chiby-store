@@ -275,4 +275,115 @@ class ProductServiceTest {
         assertEquals(products, result)
         verify(produkRepository).observeProducts()
     }
+
+    @Test
+    fun `createProduct should succeed when barcode not found and repository creates product`() = runTest {
+        // Given
+        val product = Produk(
+            id = "10",
+            nama = "Created Product",
+            barcode = "888999000",
+            kategoriId = "1",
+            hargaBeli = 5000.0,
+            hargaJual = 7000.0,
+            stok = 20,
+            gudangId = "1",
+            minStok = 2
+        )
+
+        // Repository returns failure for barcode lookup (not found)
+        `when`(produkRepository.getProdukByBarcode("888999000")).thenReturn(kotlin.Result.failure(Exception("not found")))
+        // createProduk returns generated id
+        `when`(produkRepository.createProduk(product)).thenReturn(kotlin.Result.success(10L))
+        `when`(produkRepository.getProdukById(10L)).thenReturn(kotlin.Result.success(product))
+
+        // When
+        val result = productService.createProduct(product)
+
+        // Then
+        assertTrue(result.isSuccess)
+        assertEquals(product, result.getOrNull())
+        verify(produkRepository).createProduk(product)
+    }
+
+    @Test
+    fun `createProduct should fail when barcode already exists (different product)`() = runTest {
+        val existing = Produk(
+            id = "5",
+            nama = "Existing",
+            barcode = "777888999",
+            kategoriId = "1",
+            hargaBeli = 1000.0,
+            hargaJual = 1500.0,
+            stok = 5,
+            gudangId = "1"
+        )
+        val newProduct = existing.copy(id = "6")
+
+        `when`(produkRepository.getProdukByBarcode("777888999")).thenReturn(kotlin.Result.success(existing))
+
+        val result = productService.createProduct(newProduct)
+
+        assertTrue(result.isFailure)
+        assertEquals("Barcode sudah digunakan oleh produk lain", result.exceptionOrNull()?.message)
+        verify(produkRepository, never()).createProduk(any())
+    }
+
+    @Test
+    fun `updateProduct should fail when barcode belongs to another product`() = runTest {
+        val existing = Produk(
+            id = "20",
+            nama = "Existing A",
+            barcode = "555666777",
+            kategoriId = "1",
+            hargaBeli = 1000.0,
+            hargaJual = 1500.0,
+            stok = 5,
+            gudangId = "1"
+        )
+        val updating = existing.copy(id = "21") // different id but same barcode
+
+        `when`(produkRepository.getProdukByBarcode("555666777")).thenReturn(kotlin.Result.success(existing))
+
+        val result = productService.updateProduct(updating)
+
+        assertTrue(result.isFailure)
+        assertEquals("Barcode sudah digunakan oleh produk lain", result.exceptionOrNull()?.message)
+        verify(produkRepository, never()).updateProduk(any())
+    }
+
+    @Test
+    fun `deleteProduct should return success when repository deletes product`() = runTest {
+        val id = "30"
+        `when`(produkRepository.deleteProduk(id.toLong())).thenReturn(kotlin.Result.success(Unit))
+
+        val result = productService.deleteProduct(id)
+
+        assertTrue(result.isSuccess)
+        verify(produkRepository).deleteProduk(id.toLong())
+    }
+
+    @Test
+    fun `getProducts with category filter should return products from repository flow`() = runTest {
+        val categoryId = "2"
+        val products = listOf(Produk("101", "CatProd", "111222", "2", 1000.0, 1500.0, 3, "1"))
+        `when`(produkRepository.getProdukByCategory(categoryId.toLong())).thenReturn(kotlinx.coroutines.flow.flowOf(products))
+
+        val result = productService.getProducts(categoryId = categoryId)
+
+        assertTrue(result.isSuccess)
+        assertEquals(products, result.getOrNull())
+        verify(produkRepository).getProdukByCategory(categoryId.toLong())
+    }
+
+    @Test
+    fun `observeProductsByCategory should return flow from repository`() = runTest {
+        val categoryId = "2"
+        val products = listOf(Produk("101", "CatProd", "111222", "2", 1000.0, 1500.0, 3, "1"))
+        `when`(produkRepository.getProdukByCategory(categoryId.toLong())).thenReturn(kotlinx.coroutines.flow.flowOf(products))
+
+        val flowResult = productService.observeProductsByCategory(categoryId).first()
+        assertEquals(products, flowResult)
+        verify(produkRepository).getProdukByCategory(categoryId.toLong())
+    }
 }

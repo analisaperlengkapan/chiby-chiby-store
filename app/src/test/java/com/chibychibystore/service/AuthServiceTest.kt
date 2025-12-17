@@ -13,12 +13,15 @@ import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import org.mockito.kotlin.any
+import org.mockito.kotlin.verify
 import java.security.MessageDigest
 
 class AuthServiceTest {
 
     private lateinit var authService: AuthServiceImpl
     private lateinit var mockPenggunaDao: PenggunaDao
+    private lateinit var mockUserSessionRepository: com.chibychibystore.repository.UserSessionRepository
 
     private val testUser = Pengguna(
         id = 1,
@@ -30,7 +33,8 @@ class AuthServiceTest {
     @Before
     fun setup() {
         mockPenggunaDao = mock()
-        authService = AuthServiceImpl(mockPenggunaDao)
+        mockUserSessionRepository = mock()
+        authService = AuthServiceImpl(mockPenggunaDao, mockUserSessionRepository)
     }
 
     @Test
@@ -245,6 +249,72 @@ class AuthServiceTest {
         assertTrue(result.isFailure)
         val exception = result.exceptionOrNull()
         assertTrue(exception is ChibyChibyException.AuthenticationError)
+    }
+
+    @Test
+    fun `initializeSession should restore active session when valid`() = runTest {
+        // Given
+        val session = com.chibychibystore.data.local.entity.UserSession(
+            id = 1,
+            userId = testUser.id,
+            loginTime = java.util.Date(System.currentTimeMillis() - 1000),
+            lastActivityTime = java.util.Date(),
+            isActive = true
+        )
+
+        whenever(mockUserSessionRepository.getActiveSession()).thenReturn(Result.success(session))
+        whenever(mockPenggunaDao.getPenggunaById(testUser.id)).thenReturn(testUser)
+
+        // When
+        val result = authService.initializeSession()
+
+        // Then
+        assertTrue(result.isSuccess)
+        assertEquals(testUser, authService.getCurrentUser())
+        verify(mockUserSessionRepository).updateLastActivityTime(session.id)
+    }
+
+    @Test
+    fun `extendSession should update last activity time when session exists`() = runTest {
+        // Given - logged in user
+        whenever(mockPenggunaDao.getPenggunaByUsername("testuser")).thenReturn(testUser)
+        whenever(mockUserSessionRepository.createSession(any())).thenReturn(Result.success(1L))
+        authService.login("testuser", "password123")
+
+        val session = com.chibychibystore.data.local.entity.UserSession(
+            id = 2,
+            userId = testUser.id,
+            loginTime = java.util.Date(System.currentTimeMillis() - 1000),
+            lastActivityTime = java.util.Date(),
+            isActive = true
+        )
+
+        whenever(mockUserSessionRepository.getActiveSessionForUser(testUser.id)).thenReturn(Result.success(session))
+
+        // When
+        val result = authService.extendSession()
+
+        // Then
+        assertTrue(result.isSuccess)
+        verify(mockUserSessionRepository).updateLastActivityTime(session.id)
+    }
+
+    @Test
+    fun `forceLogoutAll should deactivate sessions and clear current user`() = runTest {
+        // Given - user is logged in
+        whenever(mockPenggunaDao.getPenggunaByUsername("testuser")).thenReturn(testUser)
+        whenever(mockUserSessionRepository.createSession(any())).thenReturn(Result.success(1L))
+        authService.login("testuser", "password123")
+
+        whenever(mockUserSessionRepository.deactivateAllSessions()).thenReturn(Result.success(Unit))
+
+        // When
+        val result = authService.forceLogoutAll()
+
+        // Then
+        assertTrue(result.isSuccess)
+        assertNull(authService.getCurrentUser())
+        verify(mockUserSessionRepository).deactivateAllSessions()
     }
 
     private fun hashPassword(password: String): String {
