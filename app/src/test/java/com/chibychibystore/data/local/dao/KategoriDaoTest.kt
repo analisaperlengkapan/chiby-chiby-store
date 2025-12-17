@@ -42,38 +42,20 @@ class KategoriDaoTest {
 
     @Test
     fun `insert and get kategori should work`() = runTest {
-        val kategori = Kategori(
-            id = 1,
-            nama = "Elektronik",
-            deskripsi = "Produk elektronik",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
+        val kategori = Kategori(id = 1L, name = "Elektronik", description = "Produk elektronik", createdAt = Date())
 
         kategoriDao.insertKategori(kategori)
-        val retrieved = kategoriDao.getKategoriById(1)
+        val retrieved = kategoriDao.getKategoriById(1L)
 
         assertNotNull(retrieved)
-        assertEquals("Elektronik", retrieved?.nama)
-        assertEquals("Produk elektronik", retrieved?.deskripsi)
+        assertEquals("Elektronik", retrieved?.name)
+        assertEquals("Produk elektronik", retrieved?.description)
     }
 
     @Test
     fun `get all kategori should return list`() = runTest {
-        val kategori1 = Kategori(
-            id = 1,
-            nama = "Elektronik",
-            deskripsi = "Produk elektronik",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        val kategori2 = Kategori(
-            id = 2,
-            nama = "Makanan",
-            deskripsi = "Produk makanan",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
+        val kategori1 = Kategori(id = 1L, name = "Elektronik", description = "Produk elektronik", createdAt = Date())
+        val kategori2 = Kategori(id = 2L, name = "Makanan", description = "Produk makanan", createdAt = Date())
 
         kategoriDao.insertKategori(kategori1)
         kategoriDao.insertKategori(kategori2)
@@ -84,41 +66,29 @@ class KategoriDaoTest {
 
     @Test
     fun `update kategori should work`() = runTest {
-        val kategori = Kategori(
-            id = 1,
-            nama = "Elektronik",
-            deskripsi = "Produk elektronik",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
+        val kategori = Kategori(id = 1L, name = "Elektronik", description = "Produk elektronik", createdAt = Date())
 
         kategoriDao.insertKategori(kategori)
         
         val updated = kategori.copy(
-            nama = "Elektronik Updated",
-            deskripsi = "Deskripsi baru"
+            name = "Elektronik Updated",
+            description = "Deskripsi baru"
         )
         kategoriDao.updateKategori(updated)
 
-        val retrieved = kategoriDao.getKategoriById(1)
-        assertEquals("Elektronik Updated", retrieved?.nama)
-        assertEquals("Deskripsi baru", retrieved?.deskripsi)
+        val retrieved = kategoriDao.getKategoriById(1L)
+        assertEquals("Elektronik Updated", retrieved?.name)
+        assertEquals("Deskripsi baru", retrieved?.description)
     }
 
     @Test
     fun `delete kategori should work`() = runTest {
-        val kategori = Kategori(
-            id = 1,
-            nama = "Elektronik",
-            deskripsi = "Produk elektronik",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
+        val kategori = Kategori(id = 1L, name = "Elektronik", description = "Produk elektronik", createdAt = Date())
 
         kategoriDao.insertKategori(kategori)
-        kategoriDao.deleteKategori(kategori)
+        kategoriDao.deleteKategoriById(1L)
 
-        val retrieved = kategoriDao.getKategoriById(1)
+        val retrieved = kategoriDao.getKategoriById(1L)
         assertNull(retrieved)
     }
 }

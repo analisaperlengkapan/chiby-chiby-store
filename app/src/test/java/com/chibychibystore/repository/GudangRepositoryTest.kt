@@ -32,8 +32,8 @@ class GudangRepositoryTest {
     @Test
     fun `getAllGudang should return flow from dao`() = runTest {
         val gudangList = listOf(
-            Gudang(1, "Gudang Utama", "Jakarta", "Gudang pusat", Date(), Date()),
-            Gudang(2, "Gudang Cabang", "Bandung", "Gudang cabang", Date(), Date())
+            Gudang(id = 1L, name = "Gudang Utama", location = "Jakarta", capacity = 100, createdAt = Date()),
+            Gudang(id = 2L, name = "Gudang Cabang", location = "Bandung", capacity = 50, createdAt = Date())
         )
         whenever(gudangDao.getAllGudang()).thenReturn(flowOf(gudangList))
 
@@ -45,39 +45,48 @@ class GudangRepositoryTest {
 
     @Test
     fun `getGudangById should return gudang from dao`() = runTest {
-        val gudang = Gudang(1, "Gudang Utama", "Jakarta", "Gudang pusat", Date(), Date())
-        whenever(gudangDao.getGudangById(1)).thenReturn(gudang)
+        val gudang = Gudang(id = 1L, name = "Gudang Utama", location = "Jakarta", capacity = 100, createdAt = Date())
+        whenever(gudangDao.getGudangById(1L)).thenReturn(gudang)
 
-        val result = repository.getGudangById(1)
+        val result = repository.getGudangById(1L)
         
-        assertEquals(gudang, result)
-        verify(gudangDao).getGudangById(1)
+        assertTrue(result.isSuccess)
+        assertEquals(gudang, result.getOrNull())
+        verify(gudangDao).getGudangById(1L)
     }
 
     @Test
-    fun `insertGudang should call dao insert`() = runTest {
-        val gudang = Gudang(1, "Gudang Utama", "Jakarta", "Gudang pusat", Date(), Date())
+    fun `createGudang should call dao insert and return id`() = runTest {
+        val gudang = Gudang(id = 0L, name = "Gudang Baru", location = "Jakarta", capacity = 20, createdAt = Date())
+        whenever(gudangDao.insertGudang(gudang)).thenReturn(10L)
 
-        repository.insertGudang(gudang)
-        
+        val result = repository.createGudang(gudang)
+
+        assertTrue(result.isSuccess)
+        assertEquals(10L, result.getOrNull())
         verify(gudangDao).insertGudang(gudang)
     }
 
     @Test
     fun `updateGudang should call dao update`() = runTest {
-        val gudang = Gudang(1, "Gudang Utama", "Jakarta", "Gudang pusat", Date(), Date())
+        val gudang = Gudang(id = 1L, name = "Gudang Utama", location = "Jakarta", capacity = 120, createdAt = Date())
+        whenever(gudangDao.getGudangById(1L)).thenReturn(gudang)
+        whenever(gudangDao.getGudangByName(gudang.name)).thenReturn(gudang)
 
-        repository.updateGudang(gudang)
+        val result = repository.updateGudang(gudang)
         
+        assertTrue(result.isSuccess)
         verify(gudangDao).updateGudang(gudang)
     }
 
     @Test
     fun `deleteGudang should call dao delete`() = runTest {
-        val gudang = Gudang(1, "Gudang Utama", "Jakarta", "Gudang pusat", Date(), Date())
+        val gudang = Gudang(id = 1L, name = "Gudang Utama", location = "Jakarta", capacity = 120, createdAt = Date())
+        whenever(gudangDao.getGudangById(1L)).thenReturn(gudang)
 
-        repository.deleteGudang(gudang)
+        val result = repository.deleteGudang(1L)
         
-        verify(gudangDao).deleteGudang(gudang)
+        assertTrue(result.isSuccess)
+        verify(gudangDao).deleteGudangById(1L)
     }
 }

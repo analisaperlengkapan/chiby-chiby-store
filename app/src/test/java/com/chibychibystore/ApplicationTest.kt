@@ -1,9 +1,7 @@
 package com.chibychibystore
 
 import android.app.Application
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
-import dagger.hilt.android.testing.HiltTestApplication
+import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Rule
@@ -19,28 +17,18 @@ import org.robolectric.annotation.Config
  * dan Hilt dependency injection berfungsi.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(application = HiltTestApplication::class)
-@HiltAndroidTest
 class ApplicationTest {
-
-    @get:Rule
-    var hiltRule = HiltAndroidRule(this)
-
-    @Before
-    fun setup() {
-        hiltRule.inject()
-    }
 
     @Test
     fun `application should initialize successfully`() {
-        val application = HiltTestApplication()
+        val application = ApplicationProvider.getApplicationContext<Application>()
         assertNotNull(application)
         assertTrue(application is Application)
     }
 
     @Test
     fun `application should have correct package name`() {
-        val application = HiltTestApplication()
+        val application = ApplicationProvider.getApplicationContext<Application>()
         assertEquals("com.chibychibystore", application.packageName)
     }
 }

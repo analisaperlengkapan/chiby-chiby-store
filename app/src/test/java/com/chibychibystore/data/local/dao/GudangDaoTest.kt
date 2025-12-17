@@ -42,41 +42,20 @@ class GudangDaoTest {
 
     @Test
     fun `insert and get gudang should work`() = runTest {
-        val gudang = Gudang(
-            id = 1,
-            nama = "Gudang Utama",
-            lokasi = "Jakarta",
-            deskripsi = "Gudang pusat",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
+        val gudang = Gudang(id = 1L, name = "Gudang Utama", location = "Jakarta", capacity = 100, createdAt = Date())
 
         gudangDao.insertGudang(gudang)
-        val retrieved = gudangDao.getGudangById(1)
+        val retrieved = gudangDao.getGudangById(1L)
 
         assertNotNull(retrieved)
-        assertEquals("Gudang Utama", retrieved?.nama)
-        assertEquals("Jakarta", retrieved?.lokasi)
+        assertEquals("Gudang Utama", retrieved?.name)
+        assertEquals("Jakarta", retrieved?.location)
     }
 
     @Test
     fun `get all gudang should return list`() = runTest {
-        val gudang1 = Gudang(
-            id = 1,
-            nama = "Gudang Utama",
-            lokasi = "Jakarta",
-            deskripsi = "Gudang pusat",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        val gudang2 = Gudang(
-            id = 2,
-            nama = "Gudang Cabang",
-            lokasi = "Bandung",
-            deskripsi = "Gudang cabang",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
+        val gudang1 = Gudang(id = 1L, name = "Gudang Utama", location = "Jakarta", capacity = 100, createdAt = Date())
+        val gudang2 = Gudang(id = 2L, name = "Gudang Cabang", location = "Bandung", capacity = 50, createdAt = Date())
 
         gudangDao.insertGudang(gudang1)
         gudangDao.insertGudang(gudang2)
@@ -87,43 +66,29 @@ class GudangDaoTest {
 
     @Test
     fun `update gudang should work`() = runTest {
-        val gudang = Gudang(
-            id = 1,
-            nama = "Gudang Utama",
-            lokasi = "Jakarta",
-            deskripsi = "Gudang pusat",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
+        val gudang = Gudang(id = 1L, name = "Gudang Utama", location = "Jakarta", capacity = 100, createdAt = Date())
 
         gudangDao.insertGudang(gudang)
         
         val updated = gudang.copy(
-            nama = "Gudang Utama Updated",
-            lokasi = "Jakarta Selatan"
+            name = "Gudang Utama Updated",
+            location = "Jakarta Selatan"
         )
         gudangDao.updateGudang(updated)
 
-        val retrieved = gudangDao.getGudangById(1)
-        assertEquals("Gudang Utama Updated", retrieved?.nama)
-        assertEquals("Jakarta Selatan", retrieved?.lokasi)
+        val retrieved = gudangDao.getGudangById(1L)
+        assertEquals("Gudang Utama Updated", retrieved?.name)
+        assertEquals("Jakarta Selatan", retrieved?.location)
     }
 
     @Test
     fun `delete gudang should work`() = runTest {
-        val gudang = Gudang(
-            id = 1,
-            nama = "Gudang Utama",
-            lokasi = "Jakarta",
-            deskripsi = "Gudang pusat",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
+        val gudang = Gudang(id = 1L, name = "Gudang Utama", location = "Jakarta", capacity = 100, createdAt = Date())
 
         gudangDao.insertGudang(gudang)
-        gudangDao.deleteGudang(gudang)
+        gudangDao.deleteGudangById(1L)
 
-        val retrieved = gudangDao.getGudangById(1)
+        val retrieved = gudangDao.getGudangById(1L)
         assertNull(retrieved)
     }
 }

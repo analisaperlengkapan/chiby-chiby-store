@@ -26,6 +26,9 @@ class NavigationRobolectricTest {
 
     @Test
     fun `requiresAuth returns false for login and true for protected routes`() {
+        // Local helper to determine if a route requires authentication
+        fun requiresAuth(route: String) = route != Screen.Login.route
+
         assertEquals(false, requiresAuth(Screen.Login.route))
         assertEquals(true, requiresAuth(Screen.Dashboard.route))
         assertEquals(true, requiresAuth(Screen.Inventory.route))

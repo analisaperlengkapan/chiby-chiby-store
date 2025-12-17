@@ -61,15 +61,16 @@ class CompleteSystemIntegrationTest {
         kategoriRepository = KategoriRepository(database.kategoriDao())
         gudangRepository = GudangRepository(database.gudangDao())
         produkRepository = ProdukRepository(database.produkDao())
-        penjualanRepository = PenjualanRepository(database.penjualanDao())
+        penjualanRepository = PenjualanRepository(database.penjualanDao(), database.itemPenjualanDao())
         itemPenjualanRepository = ItemPenjualanRepository(database.itemPenjualanDao())
         userSessionRepository = UserSessionRepository(database.userSessionDao())
 
         // Initialize services
         authService = AuthServiceImpl(database.penggunaDao(), userSessionRepository)
-        productService = ProductService(produkRepository, kategoriRepository, gudangRepository)
-        warehouseService = WarehouseService(gudangRepository, produkRepository)
-        saleService = SaleServiceImpl(penjualanRepository, itemPenjualanRepository, produkRepository)
+        productService = ProductServiceImpl(produkRepository)
+        warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository)
+        val printerStub = com.chibychibystore.testutils.TestPrinterService()
+        saleService = SaleServiceImpl(penjualanRepository, itemPenjualanRepository, produkRepository, printerStub)
     }
 
     @After
@@ -80,28 +81,14 @@ class CompleteSystemIntegrationTest {
     @Test
     fun `complete business workflow from login to sale should work`() = runTest {
         // ===== STEP 1: Setup Users =====
-        val owner = Pengguna(
-            id = 1,
-            username = "owner",
-            passwordHash = hashPassword("owner123"),
-            namaLengkap = "Owner Toko",
-            role = Role.OWNER,
-            isActive = true,
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        val cashier = Pengguna(
-            id = 2,
-            username = "cashier",
-            passwordHash = hashPassword("cashier123"),
-            namaLengkap = "Kasir Toko",
-            role = Role.CASHIER,
-            isActive = true,
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        penggunaRepository.insertPengguna(owner)
-        penggunaRepository.insertPengguna(cashier)
+        val owner = Pengguna(id = 0L, username = "owner", passwordHash = hashPassword("owner123"), role = Role.OWNER)
+        val cashier = Pengguna(id = 0L, username = "cashier", passwordHash = hashPassword("cashier123"), role = Role.CASHIER)
+        val ownerRes = penggunaRepository.createPengguna(owner)
+        val cashierRes = penggunaRepository.createPengguna(cashier)
+        assertTrue(ownerRes.isSuccess)
+        assertTrue(cashierRes.isSuccess)
+        val ownerId = ownerRes.getOrNull() ?: error("owner id null")
+        val cashierId = cashierRes.getOrNull() ?: error("cashier id null")
 
         // ===== STEP 2: Login as Owner =====
         val loginResult = authService.login("owner", "owner123")
@@ -112,22 +99,12 @@ class CompleteSystemIntegrationTest {
         assertEquals(Role.OWNER, loggedInUser?.role)
 
         // ===== STEP 3: Setup Inventory - Create Kategori =====
-        val kategoriElektronik = Kategori(
-            id = 1,
-            nama = "Elektronik",
-            deskripsi = "Produk elektronik",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        val kategoriAksesoris = Kategori(
-            id = 2,
-            nama = "Aksesoris",
-            deskripsi = "Aksesoris komputer",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        kategoriRepository.insertKategori(kategoriElektronik)
-        kategoriRepository.insertKategori(kategoriAksesoris)
+        val kategoriElektronik = Kategori(id = 0L, name = "Elektronik", description = "Produk elektronik", createdAt = Date())
+        val kategoriAksesoris = Kategori(id = 0L, name = "Aksesoris", description = "Aksesoris komputer", createdAt = Date())
+        val k1 = kategoriRepository.createKategori(kategoriElektronik)
+        val k2 = kategoriRepository.createKategori(kategoriAksesoris)
+        assertTrue(k1.isSuccess)
+        assertTrue(k2.isSuccess)
 
         // Verify kategori created
         val allKategori = kategoriRepository.getAllKategori().first()
@@ -157,41 +134,41 @@ class CompleteSystemIntegrationTest {
 
         // ===== STEP 5: Setup Inventory - Create Produk =====
         val laptop = Produk(
-            id = 1,
-            nama = "Laptop ASUS ROG",
+            id = 0L,
+            name = "Laptop ASUS ROG",
             barcode = "LP-ASUS-001",
-            kategoriId = 1,
-            gudangId = 1,
-            hargaBeli = 10000000.0,
-            hargaJual = 15000000.0,
-            stok = 5,
-            minStok = 2,
+            categoryId = 1L,
+            costPrice = 10000000.0,
+            sellingPrice = 15000000.0,
+            stockQuantity = 5,
+            warehouseId = 1L,
+            minStock = 2,
             createdAt = Date(),
             updatedAt = Date()
         )
         val mouse = Produk(
-            id = 2,
-            nama = "Mouse Logitech",
+            id = 0L,
+            name = "Mouse Logitech",
             barcode = "MS-LOG-001",
-            kategoriId = 2,
-            gudangId = 1,
-            hargaBeli = 150000.0,
-            hargaJual = 250000.0,
-            stok = 20,
-            minStok = 5,
+            categoryId = 2L,
+            costPrice = 150000.0,
+            sellingPrice = 250000.0,
+            stockQuantity = 20,
+            warehouseId = 1L,
+            minStock = 5,
             createdAt = Date(),
             updatedAt = Date()
         )
         val keyboard = Produk(
-            id = 3,
-            nama = "Keyboard Mechanical",
+            id = 0L,
+            name = "Keyboard Mechanical",
             barcode = "KB-MEC-001",
-            kategoriId = 2,
-            gudangId = 1,
-            hargaBeli = 500000.0,
-            hargaJual = 750000.0,
-            stok = 10,
-            minStok = 3,
+            categoryId = 2L,
+            costPrice = 500000.0,
+            sellingPrice = 750000.0,
+            stockQuantity = 10,
+            warehouseId = 1L,
+            minStock = 3,
             createdAt = Date(),
             updatedAt = Date()
         )
@@ -213,62 +190,58 @@ class CompleteSystemIntegrationTest {
         // ===== STEP 7: Process Sale Transaction =====
         val saleItems = listOf(
             ItemPenjualan(
-                id = 0,
-                penjualanId = 0,
-                produkId = 1, // Laptop
+                id = 0L,
+                saleId = 0L,
+                productId = 1L, // Laptop
                 quantity = 1,
-                hargaSatuan = 15000000.0,
-                subtotal = 15000000.0,
-                createdAt = Date()
+                unitPrice = 15000000.0,
+                totalPrice = 15000000.0
             ),
             ItemPenjualan(
-                id = 0,
-                penjualanId = 0,
-                produkId = 2, // Mouse
+                id = 0L,
+                saleId = 0L,
+                productId = 2L, // Mouse
                 quantity = 2,
-                hargaSatuan = 250000.0,
-                subtotal = 500000.0,
-                createdAt = Date()
+                unitPrice = 250000.0,
+                totalPrice = 500000.0
             ),
             ItemPenjualan(
-                id = 0,
-                penjualanId = 0,
-                produkId = 3, // Keyboard
+                id = 0L,
+                saleId = 0L,
+                productId = 3L, // Keyboard
                 quantity = 1,
-                hargaSatuan = 750000.0,
-                subtotal = 750000.0,
-                createdAt = Date()
+                unitPrice = 750000.0,
+                totalPrice = 750000.0
             )
         )
 
         val totalAmount = 16250000.0 // 15M + 500K + 750K
-        val paymentAmount = 20000000.0
-        val changeAmount = 3750000.0
+
+        val saleHeader = Penjualan(saleDate = Date(), totalAmount = totalAmount, paymentMethod = PaymentMethod.CASH, cashierId = cashierUser!!.id)
 
         val saleResult = saleService.createSale(
-            userId = cashierUser!!.id,
-            items = saleItems,
-            totalAmount = totalAmount,
-            paymentAmount = paymentAmount,
-            changeAmount = changeAmount
+            sale = saleHeader,
+            items = saleItems
         )
 
         assertTrue(saleResult.isSuccess)
         val sale = saleResult.getOrNull()
         assertNotNull(sale)
-        assertEquals(totalAmount, sale?.totalAmount)
+        assertEquals(totalAmount, sale?.penjualan?.totalAmount)
+
 
         // ===== STEP 8: Verify Stock Updated =====
-        val updatedLaptop = produkRepository.getProdukById(1)
-        val updatedMouse = produkRepository.getProdukById(2)
-        val updatedKeyboard = produkRepository.getProdukById(3)
+        val updatedLaptop = produkRepository.getProdukById(1L).getOrNull()
+        val updatedMouse = produkRepository.getProdukById(2L).getOrNull()
+        val updatedKeyboard = produkRepository.getProdukById(3L).getOrNull()
 
-        assertEquals(4, updatedLaptop?.stok) // 5 - 1
-        assertEquals(18, updatedMouse?.stok) // 20 - 2
-        assertEquals(9, updatedKeyboard?.stok) // 10 - 1
+        assertEquals(4, updatedLaptop?.stockQuantity) // 5 - 1
+        assertEquals(18, updatedMouse?.stockQuantity) // 20 - 2
+        assertEquals(9, updatedKeyboard?.stockQuantity) // 10 - 1
 
         // ===== STEP 9: Check Sales History =====
-        val salesHistoryResult = saleService.getSalesHistory()
+        // Sales history via getSales
+        val salesHistoryResult = saleService.getSales()
         assertTrue(salesHistoryResult.isSuccess)
         val salesHistory = salesHistoryResult.getOrNull()
         assertEquals(1, salesHistory?.size)
@@ -283,9 +256,9 @@ class CompleteSystemIntegrationTest {
         // ===== STEP 11: Transfer Stock Between Warehouses =====
         // Transfer 2 keyboards from Gudang Utama to Gudang Cabang
         val transferResult = warehouseService.transferStock(
-            productId = 3,
-            fromWarehouseId = 1,
-            toWarehouseId = 2,
+            productId = 3L,
+            fromWarehouseId = 1L,
+            toWarehouseId = 2L,
             quantity = 2
         )
         assertTrue(transferResult.isSuccess)
@@ -317,57 +290,23 @@ class CompleteSystemIntegrationTest {
         println("  - Warehouses: ${finalGudang.size}")
         println("  - Products: ${finalProduk.size}")
         println("  - Sales: ${finalSales.size}")
-        println("  - Total Revenue: Rp ${sale?.totalAmount?.toLong()}")
+        val totalRevenue = finalSales.sumOf { it.totalAmount }
+        println("  - Total Revenue: Rp ${totalRevenue.toLong()}")
     }
 
     @Test
     fun `permission system should enforce role-based access`() = runTest {
         // Create users with different roles
-        val owner = Pengguna(
-            id = 1,
-            username = "owner",
-            passwordHash = hashPassword("owner123"),
-            namaLengkap = "Owner",
-            role = Role.OWNER,
-            isActive = true,
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        val manager = Pengguna(
-            id = 2,
-            username = "manager",
-            passwordHash = hashPassword("manager123"),
-            namaLengkap = "Manager",
-            role = Role.MANAGER,
-            isActive = true,
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        val cashier = Pengguna(
-            id = 3,
-            username = "cashier",
-            passwordHash = hashPassword("cashier123"),
-            namaLengkap = "Cashier",
-            role = Role.CASHIER,
-            isActive = true,
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        val warehouse = Pengguna(
-            id = 4,
-            username = "warehouse",
-            passwordHash = hashPassword("warehouse123"),
-            namaLengkap = "Warehouse Staff",
-            role = Role.WAREHOUSE,
-            isActive = true,
-            createdAt = Date(),
-            updatedAt = Date()
-        )
+        val owner = Pengguna(id = 0L, username = "owner", passwordHash = hashPassword("owner123"), role = Role.OWNER)
+        val manager = Pengguna(id = 0L, username = "manager", passwordHash = hashPassword("manager123"), role = Role.MANAGER)
+        val cashier = Pengguna(id = 0L, username = "cashier", passwordHash = hashPassword("cashier123"), role = Role.CASHIER)
+        val warehouse = Pengguna(id = 0L, username = "warehouse", passwordHash = hashPassword("warehouse123"), role = Role.WAREHOUSE)
 
-        penggunaRepository.insertPengguna(owner)
-        penggunaRepository.insertPengguna(manager)
-        penggunaRepository.insertPengguna(cashier)
-        penggunaRepository.insertPengguna(warehouse)
+        val r1 = penggunaRepository.createPengguna(owner)
+        val r2 = penggunaRepository.createPengguna(manager)
+        val r3 = penggunaRepository.createPengguna(cashier)
+        val r4 = penggunaRepository.createPengguna(warehouse)
+        assertTrue(r1.isSuccess && r2.isSuccess && r3.isSuccess && r4.isSuccess)
 
         // Test Owner permissions (should have all)
         authService.login("owner", "owner123")

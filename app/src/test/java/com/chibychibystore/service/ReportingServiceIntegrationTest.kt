@@ -46,7 +46,15 @@ class ReportingServiceIntegrationTest {
         val balanceSheetService = Mockito.mock(BalanceSheetService::class.java)
         val cashManagementService = Mockito.mock(CashManagementService::class.java)
 
-        reportingService = ReportingService(saleRepo, purchaseRepo, db.pengeluaranDao().let { com.chibychibystore.repository.PengeluaranRepository(it) }, productRepo, balanceSheetService, cashManagementService)
+        reportingService = ReportingServiceImpl(
+            saleRepo,
+            com.chibychibystore.repository.ItemPenjualanRepository(db.itemPenjualanDao()),
+            productRepo,
+            com.chibychibystore.repository.PengeluaranRepository(db.pengeluaranDao()),
+            purchaseRepo,
+            balanceSheetService,
+            cashManagementService
+        )
     }
 
     @After
@@ -85,8 +93,9 @@ class ReportingServiceIntegrationTest {
         val grossRes = reportingService.getGrossSales(start, end)
         assertTrue(grossRes.isSuccess)
         val gross = grossRes.getOrNull()!!
-        assertEquals(30000.0, gross.totalSales, 0.001)
-        assertEquals(2, gross.totalTransactions)
+        // gross is a Map<String, Any> in the current implementation
+        assertEquals(30000.0, gross["totalSales"] as Double, 0.001)
+        assertEquals(2, gross["totalTransactions"] as Int)
 
         // Refund one sale and verify gross sales excludes refunded sale
         val saleToRefund = db.penjualanDao().getPenjualanById(saleId1)!!
@@ -96,15 +105,17 @@ class ReportingServiceIntegrationTest {
         val grossAfterRefund = reportingService.getGrossSales(start, end)
         assertTrue(grossAfterRefund.isSuccess)
         val gross2 = grossAfterRefund.getOrNull()!!
-        assertEquals("Refunded sale should be excluded from gross sales", 20000.0, gross2.totalSales, 0.001)
-        assertEquals(1, gross2.totalTransactions)
+        // gross2 is a Map<String, Any>
+        assertEquals("Refunded sale should be excluded from gross sales", 20000.0, gross2["totalSales"] as Double, 0.001)
+        assertEquals(1, gross2["totalTransactions"] as Int)
 
         val profitRes = reportingService.getProfitMargin(start, end)
         assertTrue(profitRes.isSuccess)
         val profit = profitRes.getOrNull()!!
-        assertEquals(30000.0, profit.totalRevenue, 0.001)
-        // totalCost comes from purchases sum
-        assertEquals(5000.0, profit.totalCost, 0.001)
+        // profit is a Map<String, Any>
+        assertEquals(30000.0, profit["revenue"] as Double, 0.001)
+        // totalCost comes from purchases sum (in implementation: costOfGoodsSold)
+        assertEquals(5000.0, profit["costOfGoodsSold"] as Double, 0.001)
 
     }
 
@@ -129,10 +140,11 @@ class ReportingServiceIntegrationTest {
         val trendRes = reportingService.getSalesTrend(start, end)
         assertTrue(trendRes.isSuccess)
         val trends = trendRes.getOrNull()!!
+        // trends is a List<Map<String, Any>> in the current implementation
         // Expect grouping: 2025-01-01 -> 15000 (2 transactions), 2025-01-02 -> 7000 (1 transaction)
         assertEquals(2, trends.size)
-        val day1 = trends.first { it.date == java.time.LocalDate.of(2025, 1, 1) }
-        assertEquals(15000.0, day1.sales, 0.001)
-        assertEquals(2, day1.transactions)
+        val day1 = trends.first { (it["date"] as java.time.LocalDate) == java.time.LocalDate.of(2025, 1, 1) }
+        assertEquals(15000.0, day1["sales"] as Double, 0.001)
+        assertEquals(2, day1["transactions"] as Int)
     }
 }

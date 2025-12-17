@@ -52,10 +52,11 @@ class FinancialServicesIntegrationTest {
 
         // Services
         authService = AuthServiceImpl(db.penggunaDao(), sessionRepository)
-        expenseService = ExpenseService(pengeluaranRepository, authService)
+        expenseService = ExpenseServiceImpl(pengeluaranRepository)
         cashManagementService = CashManagementService(penjualanRepository, pengeluaranRepository)
         balanceSheetService = BalanceSheetService(produkRepository, cashManagementService)
-        reportingService = ReportingService(penjualanRepository, pembelianRepository, pengeluaranRepository, produkRepository, balanceSheetService, cashManagementService)
+        val itemPenjualanRepository = ItemPenjualanRepository(db.itemPenjualanDao())
+        reportingService = ReportingServiceImpl(penjualanRepository, itemPenjualanRepository, produkRepository, pengeluaranRepository, pembelianRepository, balanceSheetService, cashManagementService)
 
         // Create and login an owner user to allow operations that need authentication
         runBlocking {
@@ -102,38 +103,34 @@ class FinancialServicesIntegrationTest {
     fun testExpenseServiceIntegration() = runBlocking {
         val testExpenses = TestDataBuilder.testExpenses
 
-        val createdExpenseIds = mutableListOf<Long>()
+        val createdExpenses = mutableListOf<com.chibychibystore.data.local.entity.Pengeluaran>()
         testExpenses.forEach { expense ->
-            val result = expenseService.createExpense(
-                expenseDate = expense.expenseDate,
-                category = expense.category,
-                amount = expense.amount,
-                description = expense.description ?: ""
-            )
+            val result = expenseService.createExpense(expense)
             assertTrue("Expense creation should succeed", result.isSuccess)
-            result.getOrNull()?.let { createdExpenseIds.add(it) }
+            result.getOrNull()?.let { createdExpenses.add(it) }
         }
 
-        assertEquals("Should create 3 expenses", TestDataBuilder.testExpenses.size, createdExpenseIds.size) // we created same number as test data
+        assertEquals("Should create 3 expenses", TestDataBuilder.testExpenses.size, createdExpenses.size)
 
-        val firstExpenseId = createdExpenseIds.first()
-        val retrievedExpense = expenseService.getPengeluaranById(firstExpenseId)
+        val firstExpenseId = createdExpenses.first().id
+        val retrievedExpense = expenseService.getExpense(firstExpenseId)
         assertTrue("Should retrieve expense", retrievedExpense.isSuccess)
         assertEquals("Expense amount should match", testExpenses.first().amount, retrievedExpense.getOrNull()?.amount)
 
         // Use a wider range to include seeded and newly created expenses (seeded are ~2 days ago)
         val startDate = LocalDate.now().minusDays(10)
         val endDate = LocalDate.now().plusDays(1)
-        val expensesInRange = expenseService.getExpensesInDateRange(startDate, endDate)
-        assertTrue("Should get expenses in range", expensesInRange.isNotEmpty())
+        val expensesInRangeRes = expenseService.getExpenses(startDate, endDate, null)
+        assertTrue("Should get expenses in range", expensesInRangeRes.isSuccess)
+        val expensesInRange = expensesInRangeRes.getOrNull() ?: emptyList()
+        assertTrue(expensesInRange.isNotEmpty())
 
-        val categories = expenseService.getExpenseCategories()
-        assertTrue("Should have expense categories", categories.isNotEmpty())
-        assertTrue("Should include RENT_LEASE category", categories.contains(com.chibychibystore.data.local.entity.ExpenseCategory.RENT_LEASE))
+        // Verify categories in results include RENT_LEASE
+        val categoriesInResults = expensesInRange.map { it.category }.toSet()
+        assertTrue("Should include RENT_LEASE category", categoriesInResults.contains(com.chibychibystore.data.local.entity.ExpenseCategory.RENT_LEASE))
 
         val totalExpenses = expenseService.getTotalExpenses(startDate, endDate)
         assertTrue("Should calculate total expenses", totalExpenses.isSuccess)
-        val expectedTotal = TestDataBuilder.testExpenses.sumOf { it.amount } + TestDataBuilder.testExpenses.sumOf { it.amount }
         // This expected includes both seeded and newly created expenses; check non-zero
         assertTrue("Total should be positive", totalExpenses.getOrNull()!! > 0.0)
     }
@@ -185,6 +182,7 @@ class FinancialServicesIntegrationTest {
 
         val report = expenseReport.getOrNull()
         assertNotNull("Expense report should not be null", report)
-        assertTrue("Should have expenses by category", report?.expensesByCategory?.isNotEmpty() == true)
+        val byCategory = report?.get("expensesByCategory") as? Map<*, *>
+        assertTrue("Should have expenses by category", byCategory != null && byCategory.isNotEmpty())
     }
 }

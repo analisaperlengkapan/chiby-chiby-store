@@ -32,8 +32,8 @@ class KategoriRepositoryTest {
     @Test
     fun `getAllKategori should return flow from dao`() = runTest {
         val kategoriList = listOf(
-            Kategori(1, "Elektronik", "Produk elektronik", Date(), Date()),
-            Kategori(2, "Makanan", "Produk makanan", Date(), Date())
+            Kategori(id = 1L, name = "Elektronik", description = "Produk elektronik", createdAt = Date()),
+            Kategori(id = 2L, name = "Makanan", description = "Produk makanan", createdAt = Date())
         )
         whenever(kategoriDao.getAllKategori()).thenReturn(flowOf(kategoriList))
 
@@ -45,39 +45,48 @@ class KategoriRepositoryTest {
 
     @Test
     fun `getKategoriById should return kategori from dao`() = runTest {
-        val kategori = Kategori(1, "Elektronik", "Produk elektronik", Date(), Date())
-        whenever(kategoriDao.getKategoriById(1)).thenReturn(kategori)
+        val kategori = Kategori(id = 1L, name = "Elektronik", description = "Produk elektronik", createdAt = Date())
+        whenever(kategoriDao.getKategoriById(1L)).thenReturn(kategori)
 
-        val result = repository.getKategoriById(1)
+        val result = repository.getKategoriById(1L)
         
-        assertEquals(kategori, result)
-        verify(kategoriDao).getKategoriById(1)
+        assertTrue(result.isSuccess)
+        assertEquals(kategori, result.getOrNull())
+        verify(kategoriDao).getKategoriById(1L)
     }
 
     @Test
-    fun `insertKategori should call dao insert`() = runTest {
-        val kategori = Kategori(1, "Elektronik", "Produk elektronik", Date(), Date())
+    fun `createKategori should call dao insert and return id`() = runTest {
+        val kategori = Kategori(id = 0L, name = "New Kategori", description = "Desc", createdAt = Date())
+        whenever(kategoriDao.insertKategori(kategori)).thenReturn(5L)
 
-        repository.insertKategori(kategori)
-        
+        val result = repository.createKategori(kategori)
+
+        assertTrue(result.isSuccess)
+        assertEquals(5L, result.getOrNull())
         verify(kategoriDao).insertKategori(kategori)
     }
 
     @Test
     fun `updateKategori should call dao update`() = runTest {
-        val kategori = Kategori(1, "Elektronik", "Produk elektronik", Date(), Date())
+        val kategori = Kategori(id = 1L, name = "Elektronik", description = "Produk elektronik", createdAt = Date())
+        whenever(kategoriDao.getKategoriById(1L)).thenReturn(kategori)
+        whenever(kategoriDao.getKategoriByName(kategori.name)).thenReturn(kategori)
 
-        repository.updateKategori(kategori)
-        
+        val result = repository.updateKategori(kategori)
+
+        assertTrue(result.isSuccess)
         verify(kategoriDao).updateKategori(kategori)
     }
 
     @Test
     fun `deleteKategori should call dao delete`() = runTest {
-        val kategori = Kategori(1, "Elektronik", "Produk elektronik", Date(), Date())
+        val kategori = Kategori(id = 1L, name = "Elektronik", description = "Produk elektronik", createdAt = Date())
+        whenever(kategoriDao.getKategoriById(1L)).thenReturn(kategori)
 
-        repository.deleteKategori(kategori)
-        
-        verify(kategoriDao).deleteKategori(kategori)
+        val result = repository.deleteKategori(1L)
+
+        assertTrue(result.isSuccess)
+        verify(kategoriDao).deleteKategoriById(1L)
     }
 }

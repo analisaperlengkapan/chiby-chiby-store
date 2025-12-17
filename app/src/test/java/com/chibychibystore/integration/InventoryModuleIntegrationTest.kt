@@ -9,8 +9,8 @@ import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.repository.GudangRepository
 import com.chibychibystore.repository.KategoriRepository
 import com.chibychibystore.repository.ProdukRepository
-import com.chibychibystore.service.ProductService
-import com.chibychibystore.service.WarehouseService
+import com.chibychibystore.service.ProductServiceImpl
+import com.chibychibystore.service.WarehouseServiceImpl
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -37,8 +37,8 @@ class InventoryModuleIntegrationTest {
     private lateinit var gudangRepository: GudangRepository
     private lateinit var kategoriRepository: KategoriRepository
     private lateinit var produkRepository: ProdukRepository
-    private lateinit var warehouseService: WarehouseService
-    private lateinit var productService: ProductService
+    private lateinit var warehouseService: WarehouseServiceImpl
+    private lateinit var productService: ProductServiceImpl
 
     @Before
     fun setup() {
@@ -54,8 +54,8 @@ class InventoryModuleIntegrationTest {
         produkRepository = ProdukRepository(database.produkDao())
 
         // Setup services
-        warehouseService = WarehouseService(gudangRepository, produkRepository)
-        productService = ProductService(produkRepository, kategoriRepository, gudangRepository)
+        warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository)
+        productService = ProductServiceImpl(produkRepository)
     }
 
     @After
@@ -66,14 +66,10 @@ class InventoryModuleIntegrationTest {
     @Test
     fun `complete inventory workflow should work end-to-end`() = runTest {
         // 1. Create kategori
-        val kategori = Kategori(
-            id = 1,
-            nama = "Elektronik",
-            deskripsi = "Produk elektronik",
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        kategoriRepository.insertKategori(kategori)
+        val kategori = Kategori(id = 0L, name = "Elektronik", description = "Produk elektronik", createdAt = Date())
+        val createKategoriRes = kategoriRepository.createKategori(kategori)
+        assertTrue(createKategoriRes.isSuccess)
+        val kategoriId = createKategoriRes.getOrNull() ?: error("kategori id null")
 
         // 2. Create gudang
         val gudang = Gudang(
@@ -88,15 +84,15 @@ class InventoryModuleIntegrationTest {
 
         // 3. Create produk
         val produk = Produk(
-            id = 1,
-            nama = "Laptop",
+            id = 0L,
+            name = "Laptop",
             barcode = "LP001",
-            kategoriId = 1,
-            gudangId = 1,
-            hargaBeli = 5000000.0,
-            hargaJual = 7000000.0,
-            stok = 10,
-            minStok = 2,
+            categoryId = kategoriId,
+            costPrice = 5000000.0,
+            sellingPrice = 7000000.0,
+            stockQuantity = 10,
+            warehouseId = 1L,
+            minStock = 2,
             createdAt = Date(),
             updatedAt = Date()
         )
@@ -110,19 +106,19 @@ class InventoryModuleIntegrationTest {
 
         val allKategori = kategoriRepository.getAllKategori().first()
         assertEquals(1, allKategori.size)
-        assertEquals("Elektronik", allKategori[0].nama)
+        assertEquals("Elektronik", allKategori[0].name)
 
         val allProducts = produkRepository.getAllProduk().first()
         assertEquals(1, allProducts.size)
-        assertEquals("Laptop", allProducts[0].nama)
-        assertEquals(10, allProducts[0].stok)
+        assertEquals("Laptop", allProducts[0].name)
+        assertEquals(10, allProducts[0].stockQuantity)
 
         // 5. Update stok
-        val updatedProduct = produk.copy(stok = 15)
+        val updatedProduct = produk.copy(stockQuantity = 15)
         produkRepository.updateProduk(updatedProduct)
 
-        val retrievedProduct = produkRepository.getProdukById(1)
-        assertEquals(15, retrievedProduct?.stok)
+        val retrievedProduct = produkRepository.getProdukById(1L).getOrNull()
+        assertEquals(15, retrievedProduct?.stockQuantity)
 
         // 6. Check warehouse stock
         val warehouseStockResult = warehouseService.getWarehouseStock(1)
@@ -130,7 +126,7 @@ class InventoryModuleIntegrationTest {
         val warehouseStock = warehouseStockResult.getOrNull()
         assertNotNull(warehouseStock)
         assertEquals(1, warehouseStock?.size)
-        assertEquals("Laptop", warehouseStock?.get(0)?.nama)
+        assertEquals("Laptop", warehouseStock?.get(0)?.name)
     }
 
     @Test
@@ -155,24 +151,23 @@ class InventoryModuleIntegrationTest {
         warehouseService.createWarehouse(gudang2)
 
         val kategori = Kategori(
-            id = 1,
-            nama = "Elektronik",
-            deskripsi = "Produk elektronik",
-            createdAt = Date(),
-            updatedAt = Date()
+            id = 1L,
+            name = "Elektronik",
+            description = "Produk elektronik",
+            createdAt = Date()
         )
-        kategoriRepository.insertKategori(kategori)
+        kategoriRepository.createKategori(kategori)
 
         val produk = Produk(
-            id = 1,
-            nama = "Laptop",
+            id = 1L,
+            name = "Laptop",
             barcode = "LP001",
-            kategoriId = 1,
-            gudangId = 1,
-            hargaBeli = 5000000.0,
-            hargaJual = 7000000.0,
-            stok = 10,
-            minStok = 2,
+            categoryId = 1L,
+            costPrice = 5000000.0,
+            sellingPrice = 7000000.0,
+            stockQuantity = 10,
+            warehouseId = 1L,
+            minStock = 2,
             createdAt = Date(),
             updatedAt = Date()
         )
@@ -189,8 +184,8 @@ class InventoryModuleIntegrationTest {
         assertTrue(transferResult.isSuccess)
 
         // Verify stock in Gudang A decreased
-        val productInGudangA = produkRepository.getProdukById(1)
-        assertEquals(5, productInGudangA?.stok)
+        val productInGudangA = produkRepository.getProdukById(1L).getOrNull()
+        assertEquals(5, productInGudangA?.stockQuantity)
 
         // Note: In real implementation, we would need to track stock per warehouse
         // This is a simplified test
@@ -200,13 +195,12 @@ class InventoryModuleIntegrationTest {
     fun `product with low stock should be identified`() = runTest {
         // Create kategori and gudang
         val kategori = Kategori(
-            id = 1,
-            nama = "Elektronik",
-            deskripsi = "Produk elektronik",
-            createdAt = Date(),
-            updatedAt = Date()
+            id = 1L,
+            name = "Elektronik",
+            description = "Produk elektronik",
+            createdAt = Date()
         )
-        kategoriRepository.insertKategori(kategori)
+        kategoriRepository.createKategori(kategori)
 
         val gudang = Gudang(
             id = 1,
@@ -219,15 +213,15 @@ class InventoryModuleIntegrationTest {
 
         // Create product with low stock
         val produk = Produk(
-            id = 1,
-            nama = "Laptop",
+            id = 1L,
+            name = "Laptop",
             barcode = "LP001",
-            kategoriId = 1,
-            gudangId = 1,
-            hargaBeli = 5000000.0,
-            hargaJual = 7000000.0,
-            stok = 1, // Below minStok
-            minStok = 5,
+            categoryId = 1L,
+            costPrice = 5000000.0,
+            sellingPrice = 7000000.0,
+            stockQuantity = 1, // Below minStock
+            minStock = 5,
+            warehouseId = 1L,
             createdAt = Date(),
             updatedAt = Date()
         )
@@ -240,20 +234,19 @@ class InventoryModuleIntegrationTest {
         val lowStockProducts = lowStockResult.getOrNull()
         assertNotNull(lowStockProducts)
         assertEquals(1, lowStockProducts?.size)
-        assertEquals("Laptop", lowStockProducts?.get(0)?.nama)
+        assertEquals("Laptop", lowStockProducts?.get(0)?.name)
     }
 
     @Test
     fun `product search by barcode should work`() = runTest {
         // Setup
         val kategori = Kategori(
-            id = 1,
-            nama = "Elektronik",
-            deskripsi = "Produk elektronik",
-            createdAt = Date(),
-            updatedAt = Date()
+            id = 1L,
+            name = "Elektronik",
+            description = "Produk elektronik",
+            createdAt = Date()
         )
-        kategoriRepository.insertKategori(kategori)
+        kategoriRepository.createKategori(kategori)
 
         val gudang = Gudang(
             id = 1,
@@ -265,27 +258,27 @@ class InventoryModuleIntegrationTest {
         warehouseService.createWarehouse(gudang)
 
         val produk = Produk(
-            id = 1,
-            nama = "Laptop",
+            id = 1L,
+            name = "Laptop",
             barcode = "LP001",
-            kategoriId = 1,
-            gudangId = 1,
-            hargaBeli = 5000000.0,
-            hargaJual = 7000000.0,
-            stok = 10,
-            minStok = 2,
+            categoryId = 1L,
+            costPrice = 5000000.0,
+            sellingPrice = 7000000.0,
+            stockQuantity = 10,
+            warehouseId = 1L,
+            minStock = 2,
             createdAt = Date(),
             updatedAt = Date()
         )
         productService.createProduct(produk)
 
         // Search by barcode
-        val searchResult = productService.getProductByBarcode("LP001")
+        val searchResult = produkRepository.getProdukByBarcode("LP001")
         assertTrue(searchResult.isSuccess)
         
         val foundProduct = searchResult.getOrNull()
         assertNotNull(foundProduct)
-        assertEquals("Laptop", foundProduct?.nama)
+        assertEquals("Laptop", foundProduct?.name)
         assertEquals("LP001", foundProduct?.barcode)
     }
 }

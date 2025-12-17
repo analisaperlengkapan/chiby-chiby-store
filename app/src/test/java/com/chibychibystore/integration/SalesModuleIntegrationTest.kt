@@ -7,6 +7,7 @@ import com.chibychibystore.data.local.entity.*
 import com.chibychibystore.repository.*
 import com.chibychibystore.service.SaleService
 import com.chibychibystore.service.SaleServiceImpl
+import com.chibychibystore.testutils.TestDataBuilder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -19,11 +20,11 @@ import java.util.Date
 
 /**
  * Integration test untuk Sales Module (POS)
- * 
+ *
  * Test ini memastikan integrasi end-to-end untuk:
  * - Proses penjualan
  * - Update stok otomatis
- * - Perhitungan total dan kembalian
+ * - Perhitungan total
  * - Riwayat penjualan
  */
 @RunWith(RobolectricTestRunner::class)
@@ -45,16 +46,18 @@ class SalesModuleIntegrationTest {
         ).allowMainThreadQueries().build()
 
         // Setup repositories
-        penjualanRepository = PenjualanRepository(database.penjualanDao())
+        penjualanRepository = PenjualanRepository(database.penjualanDao(), database.itemPenjualanDao())
         itemPenjualanRepository = ItemPenjualanRepository(database.itemPenjualanDao())
         produkRepository = ProdukRepository(database.produkDao())
         penggunaRepository = PenggunaRepository(database.penggunaDao())
 
-        // Setup service
+        // Setup service (use a test printer stub)
+        val printerStub = com.chibychibystore.testutils.TestPrinterService()
         saleService = SaleServiceImpl(
             penjualanRepository,
             itemPenjualanRepository,
-            produkRepository
+            produkRepository,
+            printerStub
         )
     }
 
@@ -67,98 +70,63 @@ class SalesModuleIntegrationTest {
     fun `complete sales transaction should work end-to-end`() = runTest {
         // 1. Setup: Create user
         val user = Pengguna(
-            id = 1,
             username = "cashier1",
             passwordHash = "hash",
-            namaLengkap = "Kasir Satu",
-            role = Role.CASHIER,
-            isActive = true,
-            createdAt = Date(),
-            updatedAt = Date()
+            role = Role.CASHIER
         )
-        penggunaRepository.insertPengguna(user)
+        val userId = penggunaRepository.createPengguna(user).getOrNull()!!
 
         // 2. Setup: Create products
-        val produk1 = Produk(
-            id = 1,
-            nama = "Laptop",
-            barcode = "LP001",
-            kategoriId = 1,
-            gudangId = 1,
-            hargaBeli = 5000000.0,
-            hargaJual = 7000000.0,
-            stok = 10,
-            minStok = 2,
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        val produk2 = Produk(
-            id = 2,
-            nama = "Mouse",
-            barcode = "MS001",
-            kategoriId = 1,
-            gudangId = 1,
-            hargaBeli = 50000.0,
-            hargaJual = 100000.0,
-            stok = 50,
-            minStok = 10,
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        produkRepository.insertProduk(produk1)
-        produkRepository.insertProduk(produk2)
+        val p1 = TestDataBuilder.createTestProduct(name = "Laptop", barcode = "LP001", costPrice = 5000000.0, sellingPrice = 7000000.0, stockQuantity = 10)
+        val p2 = TestDataBuilder.createTestProduct(name = "Mouse", barcode = "MS001", costPrice = 50000.0, sellingPrice = 100000.0, stockQuantity = 50)
+
+        val p1Id = produkRepository.createProduk(p1).getOrNull()!!
+        val p2Id = produkRepository.createProduk(p2).getOrNull()!!
 
         // 3. Create sale items
         val saleItems = listOf(
             ItemPenjualan(
                 id = 0,
-                penjualanId = 0, // Will be set by service
-                produkId = 1,
+                saleId = 0,
+                productId = p1Id,
                 quantity = 2,
-                hargaSatuan = 7000000.0,
-                subtotal = 14000000.0,
-                createdAt = Date()
+                unitPrice = 7000000.0,
+                totalPrice = 14000000.0
             ),
             ItemPenjualan(
                 id = 0,
-                penjualanId = 0,
-                produkId = 2,
+                saleId = 0,
+                productId = p2Id,
                 quantity = 3,
-                hargaSatuan = 100000.0,
-                subtotal = 300000.0,
-                createdAt = Date()
+                unitPrice = 100000.0,
+                totalPrice = 300000.0
             )
         )
 
         // 4. Process sale
-        val totalAmount = 14300000.0
-        val paymentAmount = 15000000.0
-        val changeAmount = 700000.0
-
-        val saleResult = saleService.createSale(
-            userId = 1,
-            items = saleItems,
-            totalAmount = totalAmount,
-            paymentAmount = paymentAmount,
-            changeAmount = changeAmount
+        val sale = Penjualan(
+            saleDate = Date(),
+            totalAmount = 0.0, // will be computed by service
+            paymentMethod = PaymentMethod.CASH,
+            cashierId = userId
         )
 
+        val saleResult = saleService.createSale(sale, saleItems)
+
         assertTrue(saleResult.isSuccess)
-        val sale = saleResult.getOrNull()
-        assertNotNull(sale)
+        val saleWithItems = saleResult.getOrNull()
+        assertNotNull(saleWithItems)
 
         // 5. Verify sale data
-        assertEquals(totalAmount, sale?.totalAmount)
-        assertEquals(paymentAmount, sale?.paymentAmount)
-        assertEquals(changeAmount, sale?.changeAmount)
-        assertEquals(1L, sale?.userId)
+        assertEquals(14300000.0, saleWithItems?.penjualan?.totalAmount)
+        assertEquals(userId, saleWithItems?.penjualan?.cashierId)
 
         // 6. Verify stock was updated
-        val updatedProduk1 = produkRepository.getProdukById(1)
-        val updatedProduk2 = produkRepository.getProdukById(2)
-        
-        assertEquals(8, updatedProduk1?.stok) // 10 - 2
-        assertEquals(47, updatedProduk2?.stok) // 50 - 3
+        val updatedProduk1 = produkRepository.getProduk(p1Id)
+        val updatedProduk2 = produkRepository.getProduk(p2Id)
+
+        assertEquals(8, updatedProduk1?.stockQuantity)
+        assertEquals(47, updatedProduk2?.stockQuantity)
 
         // 7. Verify sale items were saved
         val allSales = penjualanRepository.getAllPenjualan().first()
@@ -168,41 +136,24 @@ class SalesModuleIntegrationTest {
     @Test
     fun `sale with insufficient stock should fail`() = runTest {
         // Setup: Create product with low stock
-        val produk = Produk(
-            id = 1,
-            nama = "Laptop",
-            barcode = "LP001",
-            kategoriId = 1,
-            gudangId = 1,
-            hargaBeli = 5000000.0,
-            hargaJual = 7000000.0,
-            stok = 1, // Only 1 in stock
-            minStok = 2,
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        produkRepository.insertProduk(produk)
+        val p = TestDataBuilder.createTestProduct(name = "Laptop", stockQuantity = 1)
+        val pId = produkRepository.createProduk(p).getOrNull()!!
 
         // Try to sell 2 units (more than available)
         val saleItems = listOf(
             ItemPenjualan(
                 id = 0,
-                penjualanId = 0,
-                produkId = 1,
-                quantity = 2, // Requesting 2 but only 1 available
-                hargaSatuan = 7000000.0,
-                subtotal = 14000000.0,
-                createdAt = Date()
+                saleId = 0,
+                productId = pId,
+                quantity = 2,
+                unitPrice = 7000000.0,
+                totalPrice = 14000000.0
             )
         )
 
-        val saleResult = saleService.createSale(
-            userId = 1,
-            items = saleItems,
-            totalAmount = 14000000.0,
-            paymentAmount = 15000000.0,
-            changeAmount = 1000000.0
-        )
+        val sale = Penjualan(saleDate = Date(), totalAmount = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = 1L)
+
+        val saleResult = saleService.createSale(sale, saleItems)
 
         // Should fail due to insufficient stock
         assertTrue(saleResult.isFailure)
@@ -211,61 +162,34 @@ class SalesModuleIntegrationTest {
     @Test
     fun `get sales history should return all sales`() = runTest {
         // Create user
-        val user = Pengguna(
-            id = 1,
-            username = "cashier1",
-            passwordHash = "hash",
-            namaLengkap = "Kasir Satu",
-            role = Role.CASHIER,
-            isActive = true,
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        penggunaRepository.insertPengguna(user)
+        val user = Pengguna(username = "cashier1", passwordHash = "hash", role = Role.CASHIER)
+        val userId = penggunaRepository.createPengguna(user).getOrNull()!!
 
         // Create product
-        val produk = Produk(
-            id = 1,
-            nama = "Laptop",
-            barcode = "LP001",
-            kategoriId = 1,
-            gudangId = 1,
-            hargaBeli = 5000000.0,
-            hargaJual = 7000000.0,
-            stok = 100,
-            minStok = 2,
-            createdAt = Date(),
-            updatedAt = Date()
-        )
-        produkRepository.insertProduk(produk)
+        val p = TestDataBuilder.createTestProduct(name = "Laptop", stockQuantity = 100)
+        val pId = produkRepository.createProduk(p).getOrNull()!!
 
         // Create multiple sales
         for (i in 1..3) {
             val saleItems = listOf(
                 ItemPenjualan(
                     id = 0,
-                    penjualanId = 0,
-                    produkId = 1,
+                    saleId = 0,
+                    productId = pId,
                     quantity = 1,
-                    hargaSatuan = 7000000.0,
-                    subtotal = 7000000.0,
-                    createdAt = Date()
+                    unitPrice = 7000000.0,
+                    totalPrice = 7000000.0
                 )
             )
 
-            saleService.createSale(
-                userId = 1,
-                items = saleItems,
-                totalAmount = 7000000.0,
-                paymentAmount = 7000000.0,
-                changeAmount = 0.0
-            )
+            val sale = Penjualan(saleDate = Date(), totalAmount = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = userId)
+            saleService.createSale(sale, saleItems)
         }
 
         // Get sales history
-        val salesHistory = saleService.getSalesHistory()
+        val salesHistory = saleService.getSales()
         assertTrue(salesHistory.isSuccess)
-        
+
         val sales = salesHistory.getOrNull()
         assertNotNull(sales)
         assertEquals(3, sales?.size)
@@ -276,25 +200,23 @@ class SalesModuleIntegrationTest {
         val items = listOf(
             ItemPenjualan(
                 id = 0,
-                penjualanId = 0,
-                produkId = 1,
+                saleId = 0,
+                productId = 1,
                 quantity = 2,
-                hargaSatuan = 7000000.0,
-                subtotal = 14000000.0,
-                createdAt = Date()
+                unitPrice = 7000000.0,
+                totalPrice = 14000000.0
             ),
             ItemPenjualan(
                 id = 0,
-                penjualanId = 0,
-                produkId = 2,
+                saleId = 0,
+                productId = 2,
                 quantity = 3,
-                hargaSatuan = 100000.0,
-                subtotal = 300000.0,
-                createdAt = Date()
+                unitPrice = 100000.0,
+                totalPrice = 300000.0
             )
         )
 
-        val totalAmount = items.sumOf { it.subtotal }
+        val totalAmount = items.sumOf { it.totalPrice }
         assertEquals(14300000.0, totalAmount, 0.01)
 
         val paymentAmount = 15000000.0
@@ -302,3 +224,4 @@ class SalesModuleIntegrationTest {
         assertEquals(700000.0, changeAmount, 0.01)
     }
 }
+
