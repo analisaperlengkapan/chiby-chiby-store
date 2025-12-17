@@ -63,4 +63,7 @@ object DatabaseModule {
 
     @Provides
     fun providePengeluaranDao(database: ChibyChibyDatabase) = database.pengeluaranDao()
+
+    @Provides
+    fun provideUserSessionDao(database: ChibyChibyDatabase) = database.userSessionDao()
 }

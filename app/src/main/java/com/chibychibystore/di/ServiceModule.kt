@@ -27,77 +27,17 @@ abstract class ServiceModule {
         userManagementServiceImpl: UserManagementServiceImpl
     ): UserManagementService
 
-    @Binds
-    @Singleton
-    abstract fun bindDataSeedingService(
-        dataSeedingService: DataSeedingService
-    ): DataSeedingService
 
-    @Binds
-    @Singleton
-    abstract fun bindPenggunaRepository(
-        penggunaRepository: PenggunaRepository
-    ): PenggunaRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindUserSessionRepository(
-        userSessionRepository: UserSessionRepository
-    ): UserSessionRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindKategoriRepository(
-        kategoriRepository: KategoriRepository
-    ): KategoriRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindGudangRepository(
-        gudangRepository: GudangRepository
-    ): GudangRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindProdukRepository(
-        produkRepository: ProdukRepository
-    ): ProdukRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindPemasokRepository(
-        pemasokRepository: PemasokRepository
-    ): PemasokRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindPenjualanRepository(
-        penjualanRepository: PenjualanRepository
-    ): PenjualanRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindItemPenjualanRepository(
-        itemPenjualanRepository: ItemPenjualanRepository
-    ): ItemPenjualanRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindItemPembelianRepository(
-        itemPembelianRepository: ItemPembelianRepository
-    ): ItemPembelianRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindPembelianRepository(
-        pembelianRepository: PembelianRepository
-    ): PembelianRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindPengeluaranRepository(
-        pengeluaranRepository: PengeluaranRepository
-    ): PengeluaranRepository
 
     @Binds
     @Singleton
@@ -120,20 +60,8 @@ abstract class ServiceModule {
     @Binds
     @Singleton
     abstract fun bindReportingService(
-        reportingService: ReportingService
+        reportingServiceImpl: ReportingServiceImpl
     ): ReportingService
-
-    @Binds
-    @Singleton
-    abstract fun bindExpenseService(
-        expenseService: ExpenseService
-    ): ExpenseService
-
-    @Binds
-    @Singleton
-    abstract fun bindCashManagementService(
-        cashManagementService: CashManagementService
-    ): CashManagementService
 
     @Binds
     @Singleton
@@ -141,6 +69,11 @@ abstract class ServiceModule {
         barcodeServiceImpl: BarcodeServiceImpl
     ): BarcodeService
 
+    @Binds
+    @Singleton
+    abstract fun bindExpenseService(
+        expenseServiceImpl: com.chibychibystore.service.ExpenseServiceImpl
+    ): ExpenseService
     @Binds
     @Singleton
     abstract fun bindBackupService(
@@ -173,6 +106,16 @@ abstract class ServiceModule {
             return com.chibychibystore.usecase.AuthUseCases(
                 login, logout, changePassword, getCurrentUser, checkPermission
             )
+        }
+
+        @Provides
+        @Singleton
+        fun provideBluetoothAdapter(): android.bluetooth.BluetoothAdapter? {
+            return try {
+                android.bluetooth.BluetoothAdapter.getDefaultAdapter()
+            } catch (e: Exception) {
+                null
+            }
         }
     }
 }
