@@ -4,6 +4,7 @@ import android.content.Context
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import com.chibychibystore.testutils.BaseTest
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.chibychibystore.data.local.database.ChibyChibyDatabase
@@ -17,7 +18,7 @@ import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE)
-class BackupServiceIntegrationTest {
+class BackupServiceIntegrationTest : BaseTest() {
 
     private lateinit var db: ChibyChibyDatabase
     private lateinit var backupService: BackupServiceImpl

@@ -18,13 +18,14 @@ import org.robolectric.annotation.Config
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import com.chibychibystore.testutils.BaseTest
 import org.mockito.Mockito
 import java.util.Date
 import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE)
-class ReportingServiceIntegrationTest {
+class ReportingServiceIntegrationTest : BaseTest() {
 
     private lateinit var db: ChibyChibyDatabase
     private lateinit var saleRepo: PenjualanRepository
@@ -90,10 +91,15 @@ class ReportingServiceIntegrationTest {
         val start = LocalDate.now().minusDays(1)
         val end = LocalDate.now().plusDays(1)
 
+        // Double-check repository state before calling service
+        val repoSales = saleRepo.getSalesInDateRange(start, end)
+        println("[DEBUG] repoSales.size=${repoSales.size} repoSales=${repoSales}")
+
         val grossRes = reportingService.getGrossSales(start, end)
         assertTrue(grossRes.isSuccess)
         val gross = grossRes.getOrNull()!!
         // gross is a Map<String, Any> in the current implementation
+        println("[DEBUG] gross=$gross")
         assertEquals(30000.0, gross["totalSales"] as Double, 0.001)
         assertEquals(2, gross["totalTransactions"] as Int)
 
@@ -102,10 +108,14 @@ class ReportingServiceIntegrationTest {
         // mark refunded via repository
         saleRepo.updatePenjualan(saleToRefund.copy(isRefunded = true))
 
+        val repoSalesAfterRefund = saleRepo.getSalesInDateRange(start, end)
+        println("[DEBUG] repoSalesAfterRefund.size=${repoSalesAfterRefund.size} repoSalesAfterRefund=${repoSalesAfterRefund}")
+
         val grossAfterRefund = reportingService.getGrossSales(start, end)
         assertTrue(grossAfterRefund.isSuccess)
         val gross2 = grossAfterRefund.getOrNull()!!
         // gross2 is a Map<String, Any>
+        println("[DEBUG] grossAfterRefund=$gross2")
         assertEquals("Refunded sale should be excluded from gross sales", 20000.0, gross2["totalSales"] as Double, 0.001)
         assertEquals(1, gross2["totalTransactions"] as Int)
 

@@ -20,9 +20,10 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.util.*
+import com.chibychibystore.testutils.BaseTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WarehouseViewModelIntegrationTest {
+class WarehouseViewModelIntegrationTest : BaseTest() {
 
     private lateinit var db: ChibyChibyDatabase
     private lateinit var warehouseService: WarehouseServiceImpl

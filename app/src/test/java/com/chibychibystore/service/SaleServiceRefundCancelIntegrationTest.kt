@@ -23,11 +23,12 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import com.chibychibystore.testutils.BaseTest
 import java.util.Date
 
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE)
-class SaleServiceRefundCancelIntegrationTest {
+class SaleServiceRefundCancelIntegrationTest : BaseTest() {
 
     private lateinit var db: ChibyChibyDatabase
     private lateinit var produkRepo: ProdukRepository

@@ -19,6 +19,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import com.chibychibystore.testutils.BaseTest
 import java.util.Date
 
 /**
@@ -31,7 +32,7 @@ import java.util.Date
  * - Business logic
  */
 @RunWith(RobolectricTestRunner::class)
-class InventoryModuleIntegrationTest {
+class InventoryModuleIntegrationTest : BaseTest() {
 
     private lateinit var database: ChibyChibyDatabase
     private lateinit var gudangRepository: GudangRepository
@@ -113,11 +114,14 @@ class InventoryModuleIntegrationTest {
         assertEquals("Laptop", allProducts[0].name)
         assertEquals(10, allProducts[0].stockQuantity)
 
-        // 5. Update stok
-        val updatedProduct = produk.copy(stockQuantity = 15)
-        produkRepository.updateProduk(updatedProduct)
+        // 5. Update stok - use actual product id
+        val createdProducts = produkRepository.getAllProduk().first()
+        val existingProduct = createdProducts.firstOrNull() ?: error("No product found")
+        val updatedProduct = existingProduct.copy(stockQuantity = 15)
+        val updateRes = produkRepository.updateProduk(updatedProduct)
+        assertTrue(updateRes.isSuccess)
 
-        val retrievedProduct = produkRepository.getProdukById(1L).getOrNull()
+        val retrievedProduct = produkRepository.getProdukById(existingProduct.id).getOrNull()
         assertEquals(15, retrievedProduct?.stockQuantity)
 
         // 6. Check warehouse stock

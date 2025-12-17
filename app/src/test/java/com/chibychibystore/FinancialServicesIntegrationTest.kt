@@ -14,11 +14,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import com.chibychibystore.testutils.BaseTest
 import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE)
-class FinancialServicesIntegrationTest {
+class FinancialServicesIntegrationTest : BaseTest() {
 
     private lateinit var db: ChibyChibyDatabase
     private lateinit var penggunaRepository: PenggunaRepository
@@ -101,12 +102,16 @@ class FinancialServicesIntegrationTest {
 
     @Test
     fun testExpenseServiceIntegration() = runBlocking {
-        val testExpenses = TestDataBuilder.testExpenses
+        // Use fresh instances (id=0) so inserts via service won't conflict with any pre-seeded rows
+        val testExpenses = TestDataBuilder.testExpenses.map { it.copy(id = 0L) }
 
         val createdExpenses = mutableListOf<com.chibychibystore.data.local.entity.Pengeluaran>()
         testExpenses.forEach { expense ->
             val result = expenseService.createExpense(expense)
-            assertTrue("Expense creation should succeed", result.isSuccess)
+            if (result.isFailure) {
+                result.exceptionOrNull()?.printStackTrace()
+            }
+            assertTrue("Expense creation should succeed: ${result.exceptionOrNull()?.message}", result.isSuccess)
             result.getOrNull()?.let { createdExpenses.add(it) }
         }
 

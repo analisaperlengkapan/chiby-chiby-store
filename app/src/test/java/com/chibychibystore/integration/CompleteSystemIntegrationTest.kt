@@ -7,13 +7,14 @@ import com.chibychibystore.data.local.entity.*
 import com.chibychibystore.repository.*
 import com.chibychibystore.service.*
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import com.chibychibystore.testutils.BaseTest
 import java.util.Date
 
 /**
@@ -29,7 +30,7 @@ import java.util.Date
  * Memastikan semua modul bekerja bersama dengan baik.
  */
 @RunWith(RobolectricTestRunner::class)
-class CompleteSystemIntegrationTest {
+class CompleteSystemIntegrationTest : BaseTest() {
 
     private lateinit var database: ChibyChibyDatabase
     
@@ -79,7 +80,9 @@ class CompleteSystemIntegrationTest {
     }
 
     @Test
-    fun `complete business workflow from login to sale should work`() = runTest {
+    fun `complete business workflow from login to sale should work`() {
+        runBlocking {
+        println("[TEST] STEP 1: Setup Users - start")
         // ===== STEP 1: Setup Users =====
         val owner = Pengguna(id = 0L, username = "owner", passwordHash = hashPassword("owner123"), role = Role.OWNER)
         val cashier = Pengguna(id = 0L, username = "cashier", passwordHash = hashPassword("cashier123"), role = Role.CASHIER)
@@ -89,6 +92,7 @@ class CompleteSystemIntegrationTest {
         assertTrue(cashierRes.isSuccess)
         val ownerId = ownerRes.getOrNull() ?: error("owner id null")
         val cashierId = cashierRes.getOrNull() ?: error("cashier id null")
+        println("[TEST] STEP 1: Setup Users - done (ownerId=$ownerId, cashierId=$cashierId)")
 
         // ===== STEP 2: Login as Owner =====
         val loginResult = authService.login("owner", "owner123")
@@ -97,6 +101,7 @@ class CompleteSystemIntegrationTest {
         assertNotNull(loggedInUser)
         assertEquals("owner", loggedInUser?.username)
         assertEquals(Role.OWNER, loggedInUser?.role)
+        println("[TEST] STEP 2: Login as Owner - done")
 
         // ===== STEP 3: Setup Inventory - Create Kategori =====
         val kategoriElektronik = Kategori(id = 0L, name = "Elektronik", description = "Produk elektronik", createdAt = Date())
@@ -105,6 +110,7 @@ class CompleteSystemIntegrationTest {
         val k2 = kategoriRepository.createKategori(kategoriAksesoris)
         assertTrue(k1.isSuccess)
         assertTrue(k2.isSuccess)
+        println("[TEST] STEP 3: Kategori created")
 
         // Verify kategori created
         val allKategori = kategoriRepository.getAllKategori().first()
@@ -131,6 +137,7 @@ class CompleteSystemIntegrationTest {
         // Verify gudang created
         val allGudang = gudangRepository.getAllGudang().first()
         assertEquals(2, allGudang.size)
+        println("[TEST] STEP 4: Warehouses created")
 
         // ===== STEP 5: Setup Inventory - Create Produk =====
         val laptop = Produk(
@@ -179,6 +186,7 @@ class CompleteSystemIntegrationTest {
         // Verify produk created
         val allProduk = produkRepository.getAllProduk().first()
         assertEquals(3, allProduk.size)
+        println("[TEST] STEP 5: Products created (count=${allProduk.size})")
 
         // ===== STEP 6: Logout Owner, Login as Cashier =====
         authService.logout()
@@ -186,6 +194,7 @@ class CompleteSystemIntegrationTest {
         assertTrue(cashierLoginResult.isSuccess)
         val cashierUser = authService.getCurrentUser()
         assertEquals("cashier", cashierUser?.username)
+        println("[TEST] STEP 6: Login as Cashier - done (id=${cashierUser?.id})")
 
         // ===== STEP 7: Process Sale Transaction =====
         val saleItems = listOf(
@@ -228,6 +237,7 @@ class CompleteSystemIntegrationTest {
         val sale = saleResult.getOrNull()
         assertNotNull(sale)
         assertEquals(totalAmount, sale?.penjualan?.totalAmount)
+        println("[TEST] STEP 7: Sale created - done (saleId=${sale?.penjualan?.id})")
 
 
         // ===== STEP 8: Verify Stock Updated =====
@@ -242,14 +252,18 @@ class CompleteSystemIntegrationTest {
         // ===== STEP 9: Check Sales History =====
         // Sales history via getSales
         val salesHistoryResult = saleService.getSales()
+        println("[TEST] salesHistoryResult = $salesHistoryResult")
         assertTrue(salesHistoryResult.isSuccess)
         val salesHistory = salesHistoryResult.getOrNull()
+        println("[TEST] salesHistory.size = ${'$'}{salesHistory?.size}")
         assertEquals(1, salesHistory?.size)
 
         // ===== STEP 10: Check Low Stock Products =====
         val lowStockResult = productService.getLowStockProducts()
+        println("[TEST] lowStockResult = ${'$'}lowStockResult")
         assertTrue(lowStockResult.isSuccess)
         val lowStockProducts = lowStockResult.getOrNull()
+        println("[TEST] lowStockProducts = ${'$'}lowStockProducts")
         // Laptop should be in low stock (4 < minStok 2 is false, but close)
         assertNotNull(lowStockProducts)
 
@@ -261,6 +275,7 @@ class CompleteSystemIntegrationTest {
             toWarehouseId = 2L,
             quantity = 2
         )
+        println("[TEST] transferResult = ${'$'}transferResult")
         assertTrue(transferResult.isSuccess)
 
         // ===== STEP 12: Verify Complete System State =====
@@ -284,6 +299,8 @@ class CompleteSystemIntegrationTest {
         val finalSales = penjualanRepository.getAllPenjualan().first()
         assertEquals(1, finalSales.size)
 
+        println("[TEST] STEP 12: Final verification done")
+
         println("✓ Complete system integration test passed!")
         println("  - Users: ${allUsers.size}")
         println("  - Categories: ${finalKategori.size}")
@@ -292,10 +309,12 @@ class CompleteSystemIntegrationTest {
         println("  - Sales: ${finalSales.size}")
         val totalRevenue = finalSales.sumOf { it.totalAmount }
         println("  - Total Revenue: Rp ${totalRevenue.toLong()}")
+        }
     }
 
     @Test
-    fun `permission system should enforce role-based access`() = runTest {
+    fun `permission system should enforce role-based access`() {
+        runBlocking {
         // Create users with different roles
         val owner = Pengguna(id = 0L, username = "owner", passwordHash = hashPassword("owner123"), role = Role.OWNER)
         val manager = Pengguna(id = 0L, username = "manager", passwordHash = hashPassword("manager123"), role = Role.MANAGER)
@@ -340,6 +359,7 @@ class CompleteSystemIntegrationTest {
         assertFalse(authService.hasPermission("CREATE_SALES"))
         assertFalse(authService.hasPermission("VIEW_FINANCIAL_REPORTS"))
         authService.logout()
+        }
     }
 
     // Helper function to hash password (same as AuthService)

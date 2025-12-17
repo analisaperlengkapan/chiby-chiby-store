@@ -16,6 +16,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import com.chibychibystore.testutils.BaseTest
 import java.util.Date
 
 /**
@@ -28,7 +29,7 @@ import java.util.Date
  * - Riwayat penjualan
  */
 @RunWith(RobolectricTestRunner::class)
-class SalesModuleIntegrationTest {
+class SalesModuleIntegrationTest : BaseTest() {
 
     private lateinit var database: ChibyChibyDatabase
     private lateinit var penjualanRepository: PenjualanRepository
@@ -74,14 +75,35 @@ class SalesModuleIntegrationTest {
             passwordHash = "hash",
             role = Role.CASHIER
         )
-        val userId = penggunaRepository.createPengguna(user).getOrNull()!!
+        val createUserRes = penggunaRepository.createPengguna(user)
+        println("createUserRes: $createUserRes")
+        if (createUserRes.isFailure) {
+            val ex = createUserRes.exceptionOrNull()
+            ex?.printStackTrace()
+            throw ex ?: AssertionError("createPengguna failed without exception")
+        }
+        val userId = createUserRes.getOrNull() ?: error("user id null")
 
         // 2. Setup: Create products
-        val p1 = TestDataBuilder.createTestProduct(name = "Laptop", barcode = "LP001", costPrice = 5000000.0, sellingPrice = 7000000.0, stockQuantity = 10)
-        val p2 = TestDataBuilder.createTestProduct(name = "Mouse", barcode = "MS001", costPrice = 50000.0, sellingPrice = 100000.0, stockQuantity = 50)
+            // Ensure referenced category and warehouse exist (foreign key constraints)
+            val categoryId = database.kategoriDao().insertKategori(com.chibychibystore.data.local.entity.Kategori(name = "Electronics"))
+            val warehouseId = database.gudangDao().insertGudang(com.chibychibystore.data.local.entity.Gudang(name = "Main", location = "Jakarta"))
 
-        val p1Id = produkRepository.createProduk(p1).getOrNull()!!
-        val p2Id = produkRepository.createProduk(p2).getOrNull()!!
+            val p1 = TestDataBuilder.createTestProduct(name = "Laptop", barcode = "LP001", costPrice = 5000000.0, sellingPrice = 7000000.0, stockQuantity = 10, categoryId = categoryId, warehouseId = warehouseId)
+            val p2 = TestDataBuilder.createTestProduct(name = "Mouse", barcode = "MS001", costPrice = 50000.0, sellingPrice = 100000.0, stockQuantity = 50, categoryId = categoryId, warehouseId = warehouseId)
+
+        val p1Res = produkRepository.createProduk(p1)
+        if (p1Res.isFailure) {
+            p1Res.exceptionOrNull()?.printStackTrace()
+            throw p1Res.exceptionOrNull() ?: AssertionError("createProduk p1 failed without exception")
+        }
+        val p1Id = p1Res.getOrNull() ?: error("p1 id null")
+        val p2Res = produkRepository.createProduk(p2)
+        if (p2Res.isFailure) {
+            p2Res.exceptionOrNull()?.printStackTrace()
+            throw p2Res.exceptionOrNull() ?: AssertionError("createProduk p2 failed without exception")
+        }
+        val p2Id = p2Res.getOrNull() ?: error("p2 id null")
 
         // 3. Create sale items
         val saleItems = listOf(
@@ -135,8 +157,12 @@ class SalesModuleIntegrationTest {
 
     @Test
     fun `sale with insufficient stock should fail`() = runTest {
+        // Setup: Create category and warehouse required by product
+        val categoryId = database.kategoriDao().insertKategori(com.chibychibystore.data.local.entity.Kategori(name = "TestCategory"))
+        val warehouseId = database.gudangDao().insertGudang(com.chibychibystore.data.local.entity.Gudang(name = "TestWarehouse", location = "Nowhere"))
+
         // Setup: Create product with low stock
-        val p = TestDataBuilder.createTestProduct(name = "Laptop", stockQuantity = 1)
+        val p = TestDataBuilder.createTestProduct(name = "Laptop", stockQuantity = 1, categoryId = categoryId, warehouseId = warehouseId)
         val pId = produkRepository.createProduk(p).getOrNull()!!
 
         // Try to sell 2 units (more than available)
@@ -163,11 +189,19 @@ class SalesModuleIntegrationTest {
     fun `get sales history should return all sales`() = runTest {
         // Create user
         val user = Pengguna(username = "cashier1", passwordHash = "hash", role = Role.CASHIER)
-        val userId = penggunaRepository.createPengguna(user).getOrNull()!!
+        val createUserRes = penggunaRepository.createPengguna(user)
+        assertTrue(createUserRes.isSuccess)
+        val userId = createUserRes.getOrNull()!!
+
+        // Create category and warehouse required by product
+        val categoryId = database.kategoriDao().insertKategori(com.chibychibystore.data.local.entity.Kategori(name = "TestCategory"))
+        val warehouseId = database.gudangDao().insertGudang(com.chibychibystore.data.local.entity.Gudang(name = "TestWarehouse", location = "Nowhere"))
 
         // Create product
-        val p = TestDataBuilder.createTestProduct(name = "Laptop", stockQuantity = 100)
-        val pId = produkRepository.createProduk(p).getOrNull()!!
+        val p = TestDataBuilder.createTestProduct(name = "Laptop", stockQuantity = 100, categoryId = categoryId, warehouseId = warehouseId)
+        val pRes = produkRepository.createProduk(p)
+        assertTrue(pRes.isSuccess)
+        val pId = pRes.getOrNull()!!
 
         // Create multiple sales
         for (i in 1..3) {

@@ -75,8 +75,10 @@ class ReportingServiceImpl @Inject constructor(
     // --- Helper methods used by UI/PDF/tests ---
     override suspend fun getGrossSales(startDate: LocalDate, endDate: LocalDate): Result<Map<String, Any>> = try {
         val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
-        val totalSales = sales.sumOf { it.totalAmount }
-        val totalTransactions = sales.size
+        // Exclude refunded sales from gross calculations
+        val salesFiltered = sales.filter { !it.isRefunded }
+        val totalSales = salesFiltered.sumOf { it.totalAmount }
+        val totalTransactions = salesFiltered.size
         val avg = if (totalTransactions > 0) totalSales / totalTransactions else 0.0
         Result.success(mapOf("totalSales" to totalSales, "totalTransactions" to totalTransactions, "averageTransaction" to avg))
     } catch (e: Exception) {
@@ -84,16 +86,13 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getProfitMargin(startDate: LocalDate, endDate: LocalDate): Result<Map<String, Any>> = try {
-        val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
-        val revenue = sales.sumOf { it.totalAmount }
-        var costOfGoods = 0.0
-        sales.forEach { sale ->
-            val items = itemPenjualanRepository.getItemsBySaleId(sale.id).first()
-            items.forEach { item ->
-                val product = produkRepository.getProduk(item.productId)
-                costOfGoods += (product?.costPrice ?: 0.0) * item.quantity
-            }
-        }
+        // For profit calculations, revenue is the total sales in the period (including refunded sales)
+        val revenue = penjualanRepository.getTotalPenjualanByDateRange(startDate, endDate).getOrNull() ?: 0.0
+
+        // Cost of goods sold is derived from purchases in the period (pembelian)
+        val purchases = pembelianRepository.getPurchasesInDateRange(startDate, endDate)
+        val costOfGoods = purchases.sumOf { it.totalAmount }
+
         val grossProfit = revenue - costOfGoods
         val margin = if (revenue > 0) (grossProfit / revenue) * 100 else 0.0
         Result.success(mapOf("revenue" to revenue, "costOfGoodsSold" to costOfGoods, "grossProfit" to grossProfit, "marginPercentage" to margin))
@@ -115,7 +114,9 @@ class ReportingServiceImpl @Inject constructor(
     override suspend fun getSalesByProduct(startDate: LocalDate, endDate: LocalDate): Result<List<Map<String, Any>>> = try {
         val itemsByProduct = mutableMapOf<Long, Pair<Int, Double>>()
         val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
-        sales.forEach { sale ->
+        // Exclude refunded sales
+        val salesFiltered = sales.filter { !it.isRefunded }
+        salesFiltered.forEach { sale ->
             val items = itemPenjualanRepository.getItemsBySaleId(sale.id).first()
             items.forEach { item ->
                 val current = itemsByProduct[item.productId] ?: (0 to 0.0)
@@ -134,7 +135,9 @@ class ReportingServiceImpl @Inject constructor(
     override suspend fun getSalesByCategory(startDate: LocalDate, endDate: LocalDate): Result<List<Map<String, Any>>> = try {
         val byCategory = mutableMapOf<Long, Triple<Int, Double, Double>>()
         val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
-        sales.forEach { sale ->
+        // Exclude refunded sales
+        val salesFiltered = sales.filter { !it.isRefunded }
+        salesFiltered.forEach { sale ->
             val items = itemPenjualanRepository.getItemsBySaleId(sale.id).first()
             items.forEach { item ->
                 val prod = produkRepository.getProduk(item.productId)
@@ -155,9 +158,14 @@ class ReportingServiceImpl @Inject constructor(
         for (i in 0..days) {
             val day = startDate.plusDays(i.toLong())
             val sales = penjualanRepository.getSalesInDateRange(day, day)
-            val total = sales.sumOf { it.totalAmount }
-            val tx = sales.size
-            trend.add(mapOf("date" to day, "sales" to total, "transactions" to tx))
+            // Exclude refunded sales
+            val salesFiltered = sales.filter { !it.isRefunded }
+            val total = salesFiltered.sumOf { it.totalAmount }
+            val tx = salesFiltered.size
+            // Only include days that have transactions
+            if (tx > 0) {
+                trend.add(mapOf("date" to day, "sales" to total, "transactions" to tx))
+            }
         }
         Result.success(trend)
     } catch (e: Exception) {
@@ -168,9 +176,11 @@ class ReportingServiceImpl @Inject constructor(
         val start = date.withDayOfMonth(1)
         val end = date
         val sales = penjualanRepository.getSalesInDateRange(start, end)
-        val revenue = sales.sumOf { it.totalAmount }
+        // Exclude refunded sales
+        val salesFiltered = sales.filter { !it.isRefunded }
+        val revenue = salesFiltered.sumOf { it.totalAmount }
         var cogs = 0.0
-        sales.forEach { sale ->
+        salesFiltered.forEach { sale ->
             val items = itemPenjualanRepository.getItemsBySaleId(sale.id).first()
             items.forEach { item ->
                 val prod = produkRepository.getProduk(item.productId)

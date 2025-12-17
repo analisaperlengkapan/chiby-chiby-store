@@ -307,17 +307,11 @@ class SaleServiceImpl @Inject constructor(
         cashierId: Long?
     ): Result<List<Penjualan>> {
         return try {
-            // For now, get all sales. In future, implement filtering
-            val sales = mutableListOf<Penjualan>()
-
-            // Collect from flow
-            penjualanRepository.getAllPenjualan().collect { allSales ->
-                sales.clear()
-                sales.addAll(allSales)
-            }
+            // Get a snapshot of all sales (do not collect indefinitely)
+            val salesSnapshot = penjualanRepository.getAllPenjualan().first()
 
             // Apply filters if provided
-            var filteredSales: List<Penjualan> = sales
+            var filteredSales: List<Penjualan> = salesSnapshot
             if (startDate != null && endDate != null) {
                 val sdf = java.text.SimpleDateFormat("yyyy-MM-dd")
                 val startDateObj = sdf.parse(startDate)
@@ -450,15 +444,9 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun searchSales(query: String): Result<List<Penjualan>> {
         return try {
-            val sales = mutableListOf<Penjualan>()
-
-            // Collect from flow
-            penjualanRepository.searchPenjualan(query).collect { searchResults ->
-                sales.clear()
-                sales.addAll(searchResults)
-            }
-
-            Result.success(sales)
+            // Take a snapshot from the flow instead of collecting indefinitely
+            val sales = penjualanRepository.searchPenjualan(query).first()
+            Result.success(sales.toMutableList())
         } catch (e: Exception) {
             Result.failure(e)
         }
