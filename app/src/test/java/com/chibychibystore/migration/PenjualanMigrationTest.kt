@@ -11,11 +11,13 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import androidx.test.core.app.ApplicationProvider
 import androidx.room.migration.Migration
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE)
 class PenjualanMigrationTest {
 
     private lateinit var context: Context

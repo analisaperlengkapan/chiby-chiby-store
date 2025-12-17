@@ -22,10 +22,12 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
 import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import javax.inject.Inject
 
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE)
 @ExperimentalCoroutinesApi
 class SettingsViewModelTest {
 

@@ -14,6 +14,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -41,6 +44,7 @@ class PosViewModelIntegrationTest {
     private lateinit var viewModel: PosViewModel
 
     private val testDispatcher = StandardTestDispatcher()
+    private val createCalls = AtomicInteger(0)
 
     // Lightweight fake AuthService for tests
     private val fakeAuthService = object : com.chibychibystore.service.AuthService {
@@ -60,7 +64,15 @@ class PosViewModelIntegrationTest {
     fun setup() {
         hiltRule.inject()
         Dispatchers.setMain(testDispatcher)
-        viewModel = PosViewModel(productService, saleService, fakeAuthService)
+        // Wrap injected saleService with a lightweight spy to detect duplicate createSale invocations
+        val spySaleService = object : SaleService by saleService {
+            override suspend fun createSale(sale: com.chibychibystore.data.local.entity.Penjualan, items: List<com.chibychibystore.data.local.entity.ItemPenjualan>): com.chibychibystore.data.model.Result<com.chibychibystore.data.local.entity.PenjualanWithItems> {
+                createCalls.incrementAndGet()
+                return saleService.createSale(sale, items)
+            }
+        }
+
+        viewModel = PosViewModel(productService, spySaleService, fakeAuthService)
     }
 
     @After
@@ -271,6 +283,17 @@ class PosViewModelIntegrationTest {
 
         // When
         viewModel.processPayment()
+
+        // Wait for async createSale invocation (defensive guard). Timeout in 2s to avoid hanging CI.
+        val invoked = withTimeoutOrNull(2_000) {
+            while (createCalls.get() == 0) {
+                delay(10)
+            }
+            true
+        } ?: false
+
+        assertTrue("SaleService.createSale was not invoked within timeout", invoked)
+        assertEquals("createSale should be called exactly once", 1, createCalls.get())
 
         // Then
         val state = viewModel.uiState.first()
