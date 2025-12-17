@@ -29,6 +29,14 @@ fun AuthGuard(
 }
 
 /**
+ * Routes constants untuk navigation
+ */
+object Routes {
+    const val LOGIN = "login"
+    const val DASHBOARD = "dashboard"
+}
+
+/**
  * Check if current route requires authentication
  */
 fun requiresAuth(route: String): Boolean {
