@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.ExpenseCategory
 import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.service.ExpenseService
+import com.chibychibystore.data.model.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,19 +45,19 @@ class ExpenseDetailViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             try {
-                val result = expenseService.getPengeluaranById(expenseId)
-
-                if (result.isSuccess) {
-                    val expense = result.getOrNull()
-                    _uiState.value = _uiState.value.copy(
-                        expense = expense,
-                        isLoading = false
-                    )
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        error = result.exceptionOrNull()?.message ?: "Gagal memuat pengeluaran",
-                        isLoading = false
-                    )
+                when (val result = expenseService.getExpense(expenseId)) {
+                    is com.chibychibystore.data.model.Result.Success -> {
+                        _uiState.value = _uiState.value.copy(
+                            expense = result.data,
+                            isLoading = false
+                        )
+                    }
+                    is com.chibychibystore.data.model.Result.Failure -> {
+                        _uiState.value = _uiState.value.copy(
+                            error = result.exception.message ?: "Gagal memuat pengeluaran",
+                            isLoading = false
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(

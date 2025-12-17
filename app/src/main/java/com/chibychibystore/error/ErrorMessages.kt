@@ -120,11 +120,11 @@ object ErrorMessages {
  */
 fun Throwable.toUserMessage(): String {
     return when (this) {
-        is ChibyChibyException.ValidationError -> this.message
-        is ChibyChibyException.AuthenticationError -> this.message
+        is ChibyChibyException.ValidationError -> this.message ?: ErrorMessages.UNKNOWN_ERROR
+        is ChibyChibyException.AuthenticationError -> this.message ?: ErrorMessages.UNKNOWN_ERROR
         is ChibyChibyException.DatabaseError -> ErrorMessages.DATABASE_ERROR
-        is ChibyChibyException.BusinessLogicError -> this.message
-        is ChibyChibyException.PermissionError -> this.message
+        is ChibyChibyException.BusinessLogicError -> this.message ?: ErrorMessages.UNKNOWN_ERROR
+        is ChibyChibyException.PermissionError -> this.message ?: ErrorMessages.UNKNOWN_ERROR
         else -> this.message ?: ErrorMessages.UNKNOWN_ERROR
     }
 }

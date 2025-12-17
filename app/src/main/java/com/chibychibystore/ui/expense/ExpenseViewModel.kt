@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.ExpenseCategory
 import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.service.ExpenseService
+import com.chibychibystore.data.model.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -55,11 +56,18 @@ class ExpenseViewModel @Inject constructor(
                 val startDate = _uiState.value.startDate ?: Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000) // 30 hari lalu
                 val endDate = _uiState.value.endDate ?: Date()
 
-                val result = expenseService.getExpensesInDateRange(startDate, endDate)
+                // Convert to LocalDate for service
+                val startLocalDate = java.time.Instant.ofEpochMilli(startDate.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                val endLocalDate = java.time.Instant.ofEpochMilli(endDate.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
 
-                val filteredExpensesList = result // Result is List<Pengeluaran> directly
+                val result = expenseService.getExpenses(startLocalDate, endLocalDate)
 
-                var filteredExpenses = filteredExpensesList
+                val expensesList = when (result) {
+                    is com.chibychibystore.data.model.Result.Success -> result.data
+                    is com.chibychibystore.data.model.Result.Failure -> emptyList()
+                }
+
+                var filteredExpenses = expensesList
 
                 // Filter by category if selected
                 _uiState.value.selectedCategory?.let { category ->

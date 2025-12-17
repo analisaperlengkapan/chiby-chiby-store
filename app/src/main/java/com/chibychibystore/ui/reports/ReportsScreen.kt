@@ -143,7 +143,25 @@ fun ReportsScreen(
             }
 
             uiState.error?.let { error ->
-                ErrorMessage(message = error)
+                androidx.compose.material3.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
+                        contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
+                    ),
+                    shape = androidx.compose.material3.MaterialTheme.shapes.medium
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        androidx.compose.material3.Text(text = error)
+                    }
+                }
             }
         }
     }
@@ -229,15 +247,17 @@ private fun DateRangeFilter(
 @Composable
 private fun GrossSalesReport(data: Any?) {
     when (data) {
-        is com.chibychibystore.service.GrossSalesReport -> {
+        is Map<*, *> -> {
+            val totalSales = (data["totalSales"] as? Number)?.toDouble() ?: 0.0
+            val avg = (data["averageTransaction"] as? Number)?.toDouble() ?: 0.0
             Column(modifier = Modifier.padding(16.dp)) {
                 MetricCard(
                     title = "Total Penjualan",
-                    value = "Rp ${"%,.0f".format(data.totalSales)}"
+                    value = "Rp ${"%,.0f".format(totalSales)}"
                 )
                 MetricCard(
                     title = "Rata-rata Transaksi",
-                    value = "Rp ${"%,.0f".format(data.averageTransaction)}"
+                    value = "Rp ${"%,.0f".format(avg)}"
                 )
             }
         }
@@ -248,23 +268,27 @@ private fun GrossSalesReport(data: Any?) {
 @Composable
 private fun ProfitMarginReport(data: Any?) {
     when (data) {
-        is com.chibychibystore.service.ProfitMarginReport -> {
+        is Map<*, *> -> {
+            val revenue = (data["revenue"] as? Number)?.toDouble() ?: 0.0
+            val cost = (data["costOfGoodsSold"] as? Number)?.toDouble() ?: 0.0
+            val gross = (data["grossProfit"] as? Number)?.toDouble() ?: 0.0
+            val margin = (data["marginPercentage"] as? Number)?.toDouble() ?: 0.0
             Column(modifier = Modifier.padding(16.dp)) {
                 MetricCard(
                     title = "Pendapatan",
-                    value = "Rp ${"%,.0f".format(data.totalRevenue)}"
+                    value = "Rp ${"%,.0f".format(revenue)}"
                 )
                 MetricCard(
                     title = "HPP",
-                    value = "Rp ${"%,.0f".format(data.totalCost)}"
+                    value = "Rp ${"%,.0f".format(cost)}"
                 )
                 MetricCard(
                     title = "Laba Kotor",
-                    value = "Rp ${"%,.0f".format(data.grossProfit)}"
+                    value = "Rp ${"%,.0f".format(gross)}"
                 )
                 MetricCard(
                     title = "Margin",
-                    value = "${"%.2f".format(data.profitMargin)}%"
+                    value = "${"%.2f".format(margin)}%"
                 )
             }
         }
@@ -275,23 +299,27 @@ private fun ProfitMarginReport(data: Any?) {
 @Composable
 private fun NetProfitReport(data: Any?) {
     when (data) {
-        is com.chibychibystore.service.NetProfitReport -> {
+        is Map<*, *> -> {
+            val gross = (data["grossProfit"] as? Number)?.toDouble() ?: 0.0
+            val expenses = (data["totalExpenses"] as? Number)?.toDouble() ?: 0.0
+            val net = (data["netProfit"] as? Number)?.toDouble() ?: 0.0
+            val margin = (data["profitMargin"] as? Number)?.toDouble() ?: 0.0
             Column(modifier = Modifier.padding(16.dp)) {
                 MetricCard(
                     title = "Laba Kotor",
-                    value = "Rp ${"%,.0f".format(data.grossProfit)}"
+                    value = "Rp ${"%,.0f".format(gross)}"
                 )
                 MetricCard(
                     title = "Total Biaya",
-                    value = "Rp ${"%,.0f".format(data.totalExpenses)}"
+                    value = "Rp ${"%,.0f".format(expenses)}"
                 )
                 MetricCard(
                     title = "Laba Bersih",
-                    value = "Rp ${"%,.0f".format(data.netProfit)}"
+                    value = "Rp ${"%,.0f".format(net)}"
                 )
                 MetricCard(
                     title = "Margin Bersih",
-                    value = "${"%.2f".format(data.profitMargin)}%"
+                    value = "${"%.2f".format(margin)}%"
                 )
             }
         }
@@ -301,7 +329,7 @@ private fun NetProfitReport(data: Any?) {
 
 @Composable
 private fun SalesByProductReport(data: Any?) {
-    val productSales = (data as? List<*>)?.filterIsInstance<ProductSales>().orEmpty()
+    val productSales = (data as? List<*>)?.filterIsInstance<Map<*, *>>().orEmpty()
     if (productSales.isNotEmpty()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -311,7 +339,7 @@ private fun SalesByProductReport(data: Any?) {
             )
             BarChart(
                 title = "Top 10 Produk",
-                data = productSales.take(10).map { it.productName to it.totalRevenue.toFloat() },
+                data = productSales.take(10).map { ((it["productName"] as? String) ?: "-") to ((it["revenue"] as? Number)?.toFloat() ?: 0f) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
@@ -324,7 +352,7 @@ private fun SalesByProductReport(data: Any?) {
 
 @Composable
 private fun SalesByCategoryReport(data: Any?) {
-    val categorySales = (data as? List<*>)?.filterIsInstance<CategorySales>().orEmpty()
+    val categorySales = (data as? List<*>)?.filterIsInstance<Map<*, *>>().orEmpty()
     if (categorySales.isNotEmpty()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -334,7 +362,7 @@ private fun SalesByCategoryReport(data: Any?) {
             )
             BarChart(
                 title = "Penjualan per Kategori",
-                data = categorySales.map { it.categoryName to it.totalRevenue.toFloat() },
+                data = categorySales.map { ((it["categoryName"] as? String) ?: "-") to ((it["totalRevenue"] as? Number)?.toFloat() ?: 0f) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
@@ -347,7 +375,7 @@ private fun SalesByCategoryReport(data: Any?) {
 
 @Composable
 private fun SalesTrendReport(data: Any?) {
-    val trendData = (data as? List<*>)?.filterIsInstance<TrendData>().orEmpty()
+    val trendData = (data as? List<*>)?.filterIsInstance<Map<*, *>>().orEmpty()
     if (trendData.isNotEmpty()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -357,7 +385,7 @@ private fun SalesTrendReport(data: Any?) {
             )
             LineChart(
                 title = "Trend Penjualan Harian",
-                data = trendData.map { it.date.toString() to it.sales.toFloat() },
+                data = trendData.map { ((it["date"] as? java.time.LocalDate)?.toString() ?: "-") to ((it["sales"] as? Number)?.toFloat() ?: 0f) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
@@ -370,32 +398,38 @@ private fun SalesTrendReport(data: Any?) {
 
 @Composable
 private fun IncomeStatementReport(data: Any?) {
-    when (data) {
-        is IncomeStatement -> {
-            Column(modifier = Modifier.padding(16.dp)) {
-                MetricCard(
-                    title = "Pendapatan",
-                    value = "Rp ${"%,.0f".format(data.revenue)}"
-                )
-                MetricCard(
-                    title = "HPP",
-                    value = "Rp ${"%,.0f".format(data.costOfGoodsSold)}"
-                )
-                MetricCard(
-                    title = "Laba Kotor",
-                    value = "Rp ${"%,.0f".format(data.grossProfit)}"
-                )
-                MetricCard(
-                    title = "Biaya Operasional",
-                    value = "Rp ${"%,.0f".format(data.operatingExpenses)}"
-                )
-                MetricCard(
-                    title = "Laba Bersih",
-                    value = "Rp ${"%,.0f".format(data.netIncome)}"
-                )
-            }
+    val map = (data as? Map<*, *>) ?: emptyMap<Any, Any>()
+    val revenue = (map["revenue"] as? Number)?.toDouble() ?: 0.0
+    val costOfGoods = (map["costOfGoodsSold"] as? Number)?.toDouble() ?: 0.0
+    val grossProfit = (map["grossProfit"] as? Number)?.toDouble() ?: 0.0
+    val operatingExpenses = (map["operatingExpenses"] as? Number)?.toDouble() ?: 0.0
+    val netIncome = (map["netIncome"] as? Number)?.toDouble() ?: 0.0
+
+    if (map.isNotEmpty()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            MetricCard(
+                title = "Pendapatan",
+                value = "Rp ${"%,.0f".format(revenue)}"
+            )
+            MetricCard(
+                title = "HPP",
+                value = "Rp ${"%,.0f".format(costOfGoods)}"
+            )
+            MetricCard(
+                title = "Laba Kotor",
+                value = "Rp ${"%,.0f".format(grossProfit)}"
+            )
+            MetricCard(
+                title = "Biaya Operasional",
+                value = "Rp ${"%,.0f".format(operatingExpenses)}"
+            )
+            MetricCard(
+                title = "Laba Bersih",
+                value = "Rp ${"%,.0f".format(netIncome)}"
+            )
         }
-        else -> EmptyReportMessage()
+    } else {
+        EmptyReportMessage()
     }
 }
 
@@ -428,56 +462,71 @@ private fun CashFlowReport(data: Any?) {
 
 @Composable
 private fun ExpenseReport(data: Any?) {
-    when (data) {
-        is com.chibychibystore.service.ExpenseReport -> {
-            Column(modifier = Modifier.padding(16.dp)) {
-                MetricCard(
-                    title = "Total Pengeluaran",
-                    value = "Rp ${"%,.0f".format(data.totalExpenses)}"
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Pengeluaran per Kategori",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                PieChart(
-                    title = "Distribusi Pengeluaran",
-                    data = data.expensesByCategory.entries.map { it.key.displayName to it.value.toFloat() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                )
-            }
+    val map = (data as? Map<*, *>) ?: emptyMap<Any, Any>()
+    if (map.isNotEmpty()) {
+        val total = (map["totalExpenses"] as? Number)?.toDouble() ?: 0.0
+        val byCategory = map["expensesByCategory"] as? Map<*, *> ?: emptyMap<Any, Any>()
+
+        Column(modifier = Modifier.padding(16.dp)) {
+            MetricCard(
+                title = "Total Pengeluaran",
+                value = "Rp ${"%,.0f".format(total)}"
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Pengeluaran per Kategori",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            PieChart(
+                title = "Distribusi Pengeluaran",
+                data = byCategory.entries.map { entry ->
+                    val key = entry.key
+                    val label = when (key) {
+                        is com.chibychibystore.data.local.entity.ExpenseCategory -> key.displayName
+                        else -> key.toString()
+                    }
+                    label to ((entry.value as? Number)?.toFloat() ?: 0f)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp)
+            )
         }
-        else -> EmptyReportMessage()
+    } else {
+        EmptyReportMessage()
     }
 }
 
 @Composable
 private fun BalanceSheetReport(data: Any?) {
-    when (data) {
-        is BalanceSheet -> {
-            Column(modifier = Modifier.padding(16.dp)) {
-                MetricCard(
-                    title = "Total Aset",
-                    value = "Rp ${"%,.0f".format(data.assets)}"
-                )
-                MetricCard(
-                    title = "Total Liabilitas",
-                    value = "Rp ${"%,.0f".format(data.liabilities)}"
-                )
-                MetricCard(
-                    title = "Ekuitas",
-                    value = "Rp ${"%,.0f".format(data.equity)}"
-                )
-                MetricCard(
-                    title = "Nilai Persediaan",
-                    value = "Rp ${"%,.0f".format(data.inventoryValue)}"
-                )
-            }
+    val map = (data as? Map<*, *>) ?: emptyMap<Any, Any>()
+    if (map.isNotEmpty()) {
+        val assets = (map["assets"] as? Number)?.toDouble() ?: 0.0
+        val liabilities = (map["liabilities"] as? Number)?.toDouble() ?: 0.0
+        val equity = (map["equity"] as? Number)?.toDouble() ?: 0.0
+        val inventoryValue = (map["inventoryValue"] as? Number)?.toDouble() ?: 0.0
+
+        Column(modifier = Modifier.padding(16.dp)) {
+            MetricCard(
+                title = "Total Aset",
+                value = "Rp ${"%,.0f".format(assets)}"
+            )
+            MetricCard(
+                title = "Total Liabilitas",
+                value = "Rp ${"%,.0f".format(liabilities)}"
+            )
+            MetricCard(
+                title = "Ekuitas",
+                value = "Rp ${"%,.0f".format(equity)}"
+            )
+            MetricCard(
+                title = "Nilai Persediaan",
+                value = "Rp ${"%,.0f".format(inventoryValue)}"
+            )
         }
-        else -> EmptyReportMessage()
+    } else {
+        EmptyReportMessage()
     }
 }
 

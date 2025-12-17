@@ -79,7 +79,7 @@ class ReportsViewModel @Inject constructor(
                     ReportType.SALES_BY_PRODUCT -> pdfExportService.exportSalesByProductReport(startDate, endDate)
                     ReportType.SALES_BY_CATEGORY -> pdfExportService.exportSalesByCategoryReport(startDate, endDate)
                     ReportType.SALES_TREND -> pdfExportService.exportSalesTrendReport(startDate, endDate)
-                    ReportType.INCOME_STATEMENT -> pdfExportService.exportIncomeStatement(startDate, endDate)
+                    ReportType.INCOME_STATEMENT -> pdfExportService.exportIncomeStatement(endDate)
                     ReportType.CASH_FLOW -> pdfExportService.exportCashFlowReport(startDate, endDate)
                     ReportType.EXPENSE_REPORT -> pdfExportService.exportExpenseReport(startDate, endDate)
                     ReportType.BALANCE_SHEET -> {
@@ -124,23 +124,68 @@ class ReportsViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val reportData = when (currentState.selectedReportType) {
-                    ReportType.GROSS_SALES -> reportingService.getGrossSales(startDate, endDate)
-                    ReportType.PROFIT_MARGIN -> reportingService.getProfitMargin(startDate, endDate)
-                    ReportType.NET_PROFIT -> reportingService.getNetProfit(startDate, endDate)
-                    ReportType.SALES_BY_PRODUCT -> reportingService.getSalesByProduct(startDate, endDate)
-                    ReportType.SALES_BY_CATEGORY -> reportingService.getSalesByCategory(startDate, endDate)
-                    ReportType.SALES_TREND -> reportingService.getSalesTrend(startDate, endDate)
-                    ReportType.INCOME_STATEMENT -> reportingService.getIncomeStatement(startDate, endDate)
-                    ReportType.CASH_FLOW -> reportingService.getCashFlow(startDate, endDate)
-                    ReportType.EXPENSE_REPORT -> reportingService.getExpenseReport(startDate, endDate)
-                    ReportType.BALANCE_SHEET -> reportingService.getBalanceSheet(endDate)
+                when (currentState.selectedReportType) {
+                    ReportType.GROSS_SALES -> {
+                        when (val res = reportingService.getGrossSales(startDate, endDate)) {
+                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
+                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                        }
+                    }
+                    ReportType.PROFIT_MARGIN -> {
+                        when (val res = reportingService.getProfitMargin(startDate, endDate)) {
+                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
+                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                        }
+                    }
+                    ReportType.NET_PROFIT -> {
+                        when (val res = reportingService.getNetProfit(startDate, endDate)) {
+                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
+                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                        }
+                    }
+                    ReportType.SALES_BY_PRODUCT -> {
+                        when (val res = reportingService.getSalesByProduct(startDate, endDate)) {
+                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
+                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                        }
+                    }
+                    ReportType.SALES_BY_CATEGORY -> {
+                        when (val res = reportingService.getSalesByCategory(startDate, endDate)) {
+                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
+                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                        }
+                    }
+                    ReportType.SALES_TREND -> {
+                        when (val res = reportingService.getSalesTrend(startDate, endDate)) {
+                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
+                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                        }
+                    }
+                    ReportType.INCOME_STATEMENT -> {
+                        when (val res = reportingService.getIncomeStatement(endDate)) {
+                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
+                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                        }
+                    }
+                    ReportType.CASH_FLOW -> {
+                        when (val res = reportingService.getCashFlow(startDate, endDate)) {
+                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
+                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                        }
+                    }
+                    ReportType.EXPENSE_REPORT -> {
+                        when (val res = reportingService.getExpenseReport(startDate, endDate)) {
+                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
+                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                        }
+                    }
+                    ReportType.BALANCE_SHEET -> {
+                        when (val res = reportingService.getBalanceSheet(endDate)) {
+                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
+                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                        }
+                    }
                 }
-
-                _uiState.value = currentState.copy(
-                    reportData = reportData,
-                    isLoading = false
-                )
             } catch (e: Exception) {
                 _uiState.value = currentState.copy(
                     error = "Gagal memuat laporan: ${e.message}",

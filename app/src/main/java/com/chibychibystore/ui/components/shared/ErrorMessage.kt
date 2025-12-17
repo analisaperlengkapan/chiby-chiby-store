@@ -22,7 +22,9 @@ fun ErrorMessage(
     message: String,
     onRetry: (() -> Unit)? = null,
     onDismiss: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    title: String? = null
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -32,48 +34,49 @@ fun ErrorMessage(
         ),
         shape = MaterialTheme.shapes.medium
     ) {
-        androidx.compose.foundation.layout.Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
-        ) {
-            androidx.compose.foundation.layout.Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                // Icon(
-                //    painter = painterResource(id = R.drawable.ic_error),
-                //    contentDescription = null,
-                //    tint = MaterialTheme.colorScheme.error
-                // )
-                // Commenting out Icon for now to avoid resource issues if R.drawable.ic_error doesn't exist
-                // Or use vector icon
-                 Icon(
-                    imageVector = Icons.Filled.Error,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
-                )
-                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+        androidx.compose.foundation.layout.Column(modifier = Modifier.padding(12.dp)) {
+            if (title != null) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
             }
-            
-            if (onRetry != null || onDismiss != null) {
-                 androidx.compose.foundation.layout.Row {
-                    if (onRetry != null) {
-                        TextButton(onClick = onRetry) {
-                            Text("Coba Lagi")
-                        }
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier.padding(top = if (title != null) 8.dp else 0.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+            ) {
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    if (icon != null) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
                     }
-                    if (onDismiss != null) {
-                        IconButton(onClick = onDismiss) {
-                             Icon(
-                                imageVector = Icons.Filled.Close,
-                                contentDescription = "Tutup",
-                                tint = MaterialTheme.colorScheme.error
-                            )
+
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                if (onRetry != null || onDismiss != null) {
+                     androidx.compose.foundation.layout.Row {
+                        if (onRetry != null) {
+                            TextButton(onClick = onRetry) {
+                                Text("Coba Lagi")
+                            }
+                        }
+                        if (onDismiss != null) {
+                            IconButton(onClick = onDismiss) {
+                                 Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Tutup",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
                 }

@@ -106,12 +106,16 @@ class ExpenseAddViewModel @Inject constructor(
                     return@launch
                 }
 
-                val result = expenseService.createExpense(
-                    expenseDate = expenseDate,
+                val pengeluaran = com.chibychibystore.data.local.entity.Pengeluaran(
+                    expenseDate = java.util.Date.from(expenseDate.toInstant()),
                     category = category,
                     amount = amount,
-                    description = state.description.takeIf { it.isNotBlank() }
+                    description = state.description.takeIf { it.isNotBlank() },
+                    approvedBy = null,
+                    createdBy = 0L // createdBy will be set by service/auth layer if needed
                 )
+
+                val result = expenseService.createExpense(pengeluaran)
 
                 if (result.isSuccess) {
                     onSuccess()

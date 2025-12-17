@@ -73,7 +73,25 @@ fun ExpenseDetailScreen(
                     LoadingIndicator()
                 }
                 uiState.error != null -> {
-                    ErrorMessage(message = uiState.error ?: "")
+                    androidx.compose.material3.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
+                        contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
+                    ),
+                    shape = androidx.compose.material3.MaterialTheme.shapes.medium
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        androidx.compose.material3.Text(text = uiState.error ?: "")
+                    }
+                }
                 }
                 uiState.expense == null -> {
                     Column(

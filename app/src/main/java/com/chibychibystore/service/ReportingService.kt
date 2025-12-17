@@ -49,7 +49,30 @@ interface ReportingService {
      * Observable untuk real-time sales metrics
      */
     fun observeSalesMetrics(): Flow<SalesMetrics>
+
+    // Additional helper reporting methods used by UI and PDF export
+    suspend fun getGrossSales(startDate: LocalDate, endDate: LocalDate): Result<Map<String, Any>>
+    suspend fun getProfitMargin(startDate: LocalDate, endDate: LocalDate): Result<Map<String, Any>>
+    suspend fun getNetProfit(startDate: LocalDate, endDate: LocalDate): Result<Map<String, Any>>
+    suspend fun getSalesByProduct(startDate: LocalDate, endDate: LocalDate): Result<List<Map<String, Any>>>
+    suspend fun getSalesByCategory(startDate: LocalDate, endDate: LocalDate): Result<List<Map<String, Any>>>
+    suspend fun getSalesTrend(startDate: LocalDate, endDate: LocalDate): Result<List<Map<String, Any>>>
+    suspend fun getIncomeStatement(date: LocalDate): Result<Map<String, Any>>
+    suspend fun getCashFlow(startDate: LocalDate, endDate: LocalDate): Result<CashFlow>
+    suspend fun getExpenseReport(startDate: LocalDate, endDate: LocalDate): Result<Map<String, Any>>
+    suspend fun getBalanceSheet(asOfDate: LocalDate): Result<Map<String, Any>>
 }
+
+// Simple DTO used by reporting for cash flow export
+data class CashFlow(
+    val operatingCashFlow: Double,
+    val investingCashFlow: Double,
+    val financingCashFlow: Double,
+    val netCashFlow: Double,
+    val beginningCash: Double = 0.0,
+    val endingCash: Double = 0.0,
+    val period: String? = null
+)
 
 /**
  * Data classes untuk reporting

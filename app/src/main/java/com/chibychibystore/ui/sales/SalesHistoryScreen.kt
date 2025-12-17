@@ -117,11 +117,36 @@ fun SalesHistoryScreen(
                     }
 
                     uiState.error != null -> {
-                        ErrorMessage(
-                            message = uiState.error ?: "", 
-                            onRetry = { viewModel.loadSales() },
-                            onDismiss = { viewModel.clearError() }
-                        )
+                        androidx.compose.material3.Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            colors = androidx.compose.material3.CardDefaults.cardColors(
+                                containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
+                                contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
+                            ),
+                            shape = androidx.compose.material3.MaterialTheme.shapes.medium
+                        ) {
+                            androidx.compose.foundation.layout.Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                            ) {
+                                androidx.compose.material3.Text(text = uiState.error ?: "")
+                                androidx.compose.foundation.layout.Row {
+                                    androidx.compose.material3.TextButton(onClick = { viewModel.loadSales() }) {
+                                        androidx.compose.material3.Text("Coba Lagi")
+                                    }
+                                    androidx.compose.material3.IconButton(onClick = { viewModel.clearError() }) {
+                                        androidx.compose.material3.Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Tutup",
+                                            tint = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     uiState.sales.isEmpty() -> {
