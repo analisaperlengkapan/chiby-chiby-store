@@ -38,7 +38,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run lint checks
-        run: ./gradlew lint --no-daemon
+        run: ./gradlew lint --no-daemon -Pkapt.incremental.apt=false -Pkotlin.incremental=false
 
       - name: Upload lint reports
         if: always()
