@@ -195,8 +195,14 @@ dependencies {
     implementation 'com.github.DantSu:ESCPOS-ThermalPrinter-Android:3.3.0'
     
     // Encryption
-    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
-    
+    // Use the stable version of security-crypto
+    implementation 'androidx.security:security-crypto:1.1.0'
+
+    // Force a newer Gson version (override transitive gson 2.8.9 from tink) to address known issues
+    implementation 'com.google.code.gson:gson:2.13.2'
+
+    // Update Mockito to the latest stable 5.x to pick up fixes
+    testImplementation 'org.mockito:mockito-core:5.21.0'    
     // JSON serialization
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
     
