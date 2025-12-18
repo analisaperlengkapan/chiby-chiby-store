@@ -7,6 +7,7 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.10' apply false
     // Add OWASP Dependency-Check plugin to allow local vulnerability scanning
     id 'org.owasp.dependencycheck' version '8.4.1' apply false
+    id 'com.github.ben-manes.versions' version '0.47.0' apply false
 }
 
 // Configure dependency-check for subprojects when applied

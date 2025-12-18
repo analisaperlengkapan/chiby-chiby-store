@@ -5,6 +5,9 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'com.google.dagger.hilt.android'
     id 'jacoco'
+    // OWASP dependency-check plugin enables `dependencyCheckAnalyze` task for this module
+    id 'org.owasp.dependencycheck'
+    id 'com.github.ben-manes.versions'
 }
 
 jacoco {

@@ -33,14 +33,17 @@ jobs:
 
       - name: Check dependencies for vulnerabilities
         continue-on-error: true
-        run: ./gradlew dependencyCheckAnalyze --no-daemon || true
+        env:
+          # NVD now requires an API key for bulk downloads. Configure this secret in repository settings.
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: ./gradlew dependencyCheckAggregate --no-daemon || true
 
       - name: Upload dependency check report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-report
-          path: app/build/reports/dependency-check-report.html
+          path: app/build/reports/dependency-check/**/*.html
           retention-days: 30
 
   codeql:

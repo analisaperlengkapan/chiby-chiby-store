@@ -1156,6 +1156,10 @@ adb logcat | grep chibychibystore
    ```bash
    # Run security audit
    ./gradlew dependencyCheckAnalyze
+
+Notes:
+- The OWASP NVD feed requires an API key for regular access. To run dependency-check locally or in CI with up-to-date CVE data set the environment variable `NVD_API_KEY` (or add `nvd.apiKey` to an untracked `gradle.properties.local`).
+- In CI add `NVD_API_KEY` to repository Secrets (Settings → Secrets → Actions) and the security workflow will pick it up automatically.
    ```
 
 ---
