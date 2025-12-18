@@ -26,6 +26,12 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          api-level: 33
+          components: 'platforms;android-33,build-tools;33.0.2'
+
       - name: Verify Java
         run: |
           echo "Java version: $(java -version 2>&1 | head -n 1)"
