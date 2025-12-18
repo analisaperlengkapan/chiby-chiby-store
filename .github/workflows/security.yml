@@ -36,7 +36,13 @@ jobs:
         env:
           # NVD now requires an API key for bulk downloads. Configure this secret in repository settings.
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: ./gradlew dependencyCheckAggregate --no-daemon || true
+        run: |
+          if [ -n "${NVD_API_KEY}" ]; then
+            ./gradlew dependencyCheckAggregate --no-daemon || true
+          else
+            echo "NVD API key not set — skipping NVD feed update and running dependency-check using local/previous data (report may be incomplete)."
+            ./gradlew dependencyCheckAggregate -DdependencyCheck.skipUpdate=true --no-daemon || true
+          fi
 
       - name: Upload dependency check report
         if: always()
