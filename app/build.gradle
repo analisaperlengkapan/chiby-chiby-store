@@ -183,8 +183,8 @@ dependencies {
     kapt 'androidx.room:room-compiler:2.6.1'
     
     // Hilt dependency injection
-    implementation 'com.google.dagger:hilt-android:2.50'
-    kapt 'com.google.dagger:hilt-compiler:2.50'
+    implementation 'com.google.dagger:hilt-android:2.57.2'
+    kapt 'com.google.dagger:hilt-compiler:2.57.2'
     implementation 'androidx.hilt:hilt-navigation-compose:1.1.0'
     
     // ZXing barcode
@@ -226,8 +226,8 @@ dependencies {
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
     // Additional androidTest dependencies to support integration and Hilt tests
     androidTestImplementation 'app.cash.turbine:turbine:0.12.3'
-    androidTestImplementation 'com.google.dagger:hilt-android-testing:2.50'
-    kaptAndroidTest 'com.google.dagger:hilt-compiler:2.50'
+    androidTestImplementation 'com.google.dagger:hilt-android-testing:2.57.2'
+    kaptAndroidTest 'com.google.dagger:hilt-compiler:2.57.2'
     androidTestImplementation 'org.mockito:mockito-android:5.7.0'
     androidTestImplementation 'androidx.arch.core:core-testing:2.2.0'
     androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3'
