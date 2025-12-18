@@ -5,6 +5,28 @@ plugins {
     id 'com.android.library' version '8.1.4' apply false
     id 'com.google.dagger.hilt.android' version '2.50' apply false
     id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.10' apply false
+    // Add OWASP Dependency-Check plugin to allow local vulnerability scanning
+    id 'org.owasp.dependencycheck' version '8.4.1' apply false
+}
+
+// Configure dependency-check for subprojects when applied
+subprojects {
+    afterEvaluate { project ->
+        if (project.plugins.hasPlugin('org.owasp.dependencycheck')) {
+            project.dependencyCheck {
+                // Generate all report formats; output lives in the module build reports
+                formats = ['HTML', 'XML']
+                outputDirectory = "${project.buildDir}/reports/dependency-check"
+                // Do not fail the build by default; we'll use reports to triage findings
+                failBuildOnCVSS = 0.0
+                // Reduce noisy analyzers in Android projects
+                analyzers {
+                    assemblyEnabled = false
+                    nodeEnabled = false
+                }
+            }
+        }
+    }
 }
 
 task clean(type: Delete) {
