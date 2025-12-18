@@ -28,11 +28,18 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v2
-        with:
-          api-level: 33
-          components: 'platforms;android-33,build-tools;33.0.2'
+      - name: Install Android SDK packages
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+        run: |
+          if [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --version
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-33" "build-tools;33.0.2"
+          else
+            echo "sdkmanager not found at latest, trying 7.0 path"
+            yes | /usr/local/lib/android/sdk/cmdline-tools/7.0/bin/sdkmanager "platforms;android-33" "build-tools;33.0.2"
+          fi
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
