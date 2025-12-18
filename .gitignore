@@ -76,3 +76,6 @@ output.json
 # NDK
 obj/
 
+# Local Gradle overrides (untracked)
+gradle.properties.local
+
