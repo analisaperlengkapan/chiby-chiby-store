@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.ui.navigation.Screen
+import com.chibychibystore.ui.theme.Success
+import com.chibychibystore.ui.theme.Error as CustomError
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.CardItem
@@ -39,6 +41,7 @@ fun PosScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val formatCurrency = rememberCurrencyFormatter()
 
     Scaffold(
         topBar = {
@@ -85,6 +88,7 @@ fun PosScreen(
                     onProductClick = { product ->
                         viewModel.addProductToCart(product)
                     },
+                    formatCurrency = formatCurrency,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -105,6 +109,7 @@ fun PosScreen(
                     onProcessPayment = {
                         viewModel.processPayment()
                     },
+                    formatCurrency = formatCurrency,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -178,6 +183,7 @@ private fun ProductSearchPanel(
     searchResults: List<Produk>,
     isSearching: Boolean,
     onProductClick: (Produk) -> Unit,
+    formatCurrency: (Double) -> String,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -226,6 +232,7 @@ private fun ProductSearchPanel(
                     ) { product ->
                         ProductSearchItem(
                             product = product,
+                            formatCurrency = formatCurrency,
                             onClick = { onProductClick(product) }
                         )
                     }
@@ -236,15 +243,26 @@ private fun ProductSearchPanel(
 }
 
 @Composable
+fun rememberCurrencyFormatter(): (Double) -> String {
+    val locale = remember { Locale("id", "ID") }
+    val formatter = remember { NumberFormat.getCurrencyInstance(locale) }
+    return { amount -> formatter.format(amount) }
+}
+
+@Composable
 private fun ProductSearchItem(
     product: Produk,
     onClick: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val formatCurrency = rememberCurrencyFormatter()
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier
@@ -263,16 +281,16 @@ private fun ProductSearchItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "Stok: ${product.stockQuantity}",
+                    text = if (product.stockQuantity > 0) "Stok: ${product.stockQuantity}" else "Stok Habis",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (product.stockQuantity > 0) Color.Green else Color.Red
+                    color = if (product.stockQuantity > 0) Success else colorScheme.error
                 )
             }
             Text(
                 text = formatCurrency(product.sellingPrice),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = colorScheme.primary
             )
         }
     }
@@ -285,6 +303,7 @@ private fun CartAndPaymentPanel(
     onRemoveItem: (Long) -> Unit,
     onPaymentMethodChange: (String) -> Unit,
     onProcessPayment: () -> Unit,
+    formatCurrency: (Double) -> String,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -325,6 +344,7 @@ private fun CartAndPaymentPanel(
                     items(uiState.cartItems) { cartItem ->
                         CartItemRow(
                             cartItem = cartItem,
+                            formatCurrency = formatCurrency,
                             onUpdateQuantity = { quantity ->
                                 onUpdateQuantity(cartItem.product.id, quantity)
                             },
@@ -342,7 +362,8 @@ private fun CartAndPaymentPanel(
             PaymentSummary(
                 uiState = uiState,
                 onPaymentMethodChange = onPaymentMethodChange,
-                onProcessPayment = onProcessPayment
+                onProcessPayment = onProcessPayment,
+                formatCurrency = formatCurrency
             )
         }
     }
@@ -351,6 +372,7 @@ private fun CartAndPaymentPanel(
 @Composable
 private fun CartItemRow(
     cartItem: CartItem,
+    formatCurrency: (Double) -> String,
     onUpdateQuantity: (Int) -> Unit,
     onRemove: () -> Unit
 ) {
@@ -428,7 +450,8 @@ private fun CartItemRow(
 private fun PaymentSummary(
     uiState: PosUiState,
     onPaymentMethodChange: (String) -> Unit,
-    onProcessPayment: () -> Unit
+    onProcessPayment: () -> Unit,
+    formatCurrency: (Double) -> String
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -441,12 +464,52 @@ private fun PaymentSummary(
         Column(
             modifier = Modifier.padding(20.dp)
         ) {
+            // Payment Method Selection
+            Text(
+                "Metode Pembayaran",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("CASH" to "Tunai", "CARD" to "Kartu").forEach { (value, label) ->
+                    val isSelected = uiState.paymentMethod == value
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onPaymentMethodChange(value) },
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                        shape = MaterialTheme.shapes.medium,
+                        border = BorderStroke(
+                            1.dp,
+                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        )
+                    ) {
+                        Text(
+                            text = label,
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Totals
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Subtotal", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val colorScheme = MaterialTheme.colorScheme
+                Text("Subtotal", style = MaterialTheme.typography.bodyLarge, color = colorScheme.onSurfaceVariant)
                 Text(formatCurrency(uiState.subtotal), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             }
 
@@ -555,9 +618,4 @@ private fun BarcodeScannerDialog(
             }
         }
     )
-}
-
-private fun formatCurrency(amount: Double): String {
-    val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-    return format.format(amount)
 }

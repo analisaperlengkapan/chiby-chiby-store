@@ -69,6 +69,10 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
     
+    // Optimized formatters
+    val formatCurrency = rememberCurrencyFormatter()
+    val formatDate = rememberDateFormatter()
+    
     // Theme references to avoid repeated Composable calls in LazyColumn items
     val colorScheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
@@ -193,7 +197,6 @@ fun DashboardScreen(
                                 modifier = Modifier.padding(vertical = 8.dp)
                             )
                         }
-
                         items(uiState.recentTransactions) { transaction ->
                             CardItem(
                                 title = formatCurrency(transaction.totalAmount),
@@ -224,12 +227,16 @@ fun DashboardScreen(
     }
 }
 
-private fun formatCurrency(amount: Double): String {
-    val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
-    return format.format(amount)
+@Composable
+fun rememberCurrencyFormatter(): (Double) -> String {
+    val locale = remember { Locale("id", "ID") }
+    val formatter = remember { NumberFormat.getCurrencyInstance(locale) }
+    return { amount -> formatter.format(amount) }
 }
 
-private fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
+@Composable
+fun rememberDateFormatter(): (Long) -> String {
+    val locale = remember { Locale.getDefault() }
+    val formatter = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", locale) }
+    return { timestamp -> formatter.format(Date(timestamp)) }
 }
