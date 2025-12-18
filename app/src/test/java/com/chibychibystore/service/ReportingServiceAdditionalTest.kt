@@ -5,6 +5,7 @@ import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.PengeluaranRepository
 import com.chibychibystore.repository.ProdukRepository
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -45,7 +46,12 @@ class ReportingServiceAdditionalTest {
             pengeluaranRepository,
             pembelianRepository,
             balanceSheetService,
-            cashManagementService
+            cashManagementService,
+            Mockito.mock(AuthService::class.java).apply {
+                runBlocking {
+                    Mockito.`when`(hasPermission(Mockito.anyString())).thenReturn(true)
+                }
+            }
         )
     }
 

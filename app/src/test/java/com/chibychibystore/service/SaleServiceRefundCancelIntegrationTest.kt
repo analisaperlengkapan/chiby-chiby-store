@@ -48,7 +48,11 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
         itemPenjualanRepo = ItemPenjualanRepository(db.itemPenjualanDao())
 
         val printerService = Mockito.mock(PrinterService::class.java)
-        saleService = SaleServiceImpl(penjualanRepo, itemPenjualanRepo, produkRepo, printerService)
+        val authService = Mockito.mock(AuthService::class.java)
+        runBlocking {
+            Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
+        }
+        saleService = SaleServiceImpl(penjualanRepo, itemPenjualanRepo, produkRepo, printerService, authService)
     }
 
     @After

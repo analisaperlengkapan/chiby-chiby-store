@@ -57,7 +57,16 @@ class FinancialServicesIntegrationTest : BaseTest() {
         cashManagementService = CashManagementService(penjualanRepository, pengeluaranRepository)
         balanceSheetService = BalanceSheetService(produkRepository, cashManagementService)
         val itemPenjualanRepository = ItemPenjualanRepository(db.itemPenjualanDao())
-        reportingService = ReportingServiceImpl(penjualanRepository, itemPenjualanRepository, produkRepository, pengeluaranRepository, pembelianRepository, balanceSheetService, cashManagementService)
+        reportingService = ReportingServiceImpl(
+            penjualanRepository,
+            itemPenjualanRepository,
+            produkRepository,
+            pengeluaranRepository,
+            pembelianRepository,
+            balanceSheetService,
+            cashManagementService,
+            authService
+        )
 
         // Create and login an owner user to allow operations that need authentication
         runBlocking {

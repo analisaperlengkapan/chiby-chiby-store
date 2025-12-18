@@ -46,6 +46,10 @@ class ReportingServiceIntegrationTest : BaseTest() {
 
         val balanceSheetService = Mockito.mock(BalanceSheetService::class.java)
         val cashManagementService = Mockito.mock(CashManagementService::class.java)
+        val authService = Mockito.mock(AuthService::class.java)
+        runBlocking {
+            Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
+        }
 
         reportingService = ReportingServiceImpl(
             saleRepo,
@@ -54,7 +58,8 @@ class ReportingServiceIntegrationTest : BaseTest() {
             com.chibychibystore.repository.PengeluaranRepository(db.pengeluaranDao()),
             purchaseRepo,
             balanceSheetService,
-            cashManagementService
+            cashManagementService,
+            authService
         )
     }
 

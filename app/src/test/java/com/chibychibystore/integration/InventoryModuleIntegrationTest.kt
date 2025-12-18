@@ -13,11 +13,13 @@ import com.chibychibystore.service.ProductServiceImpl
 import com.chibychibystore.service.WarehouseServiceImpl
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mockito
 import org.robolectric.RobolectricTestRunner
 import com.chibychibystore.testutils.BaseTest
 import java.util.Date
@@ -55,8 +57,12 @@ class InventoryModuleIntegrationTest : BaseTest() {
         produkRepository = ProdukRepository(database.produkDao())
 
         // Setup services
-        warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository)
-        productService = ProductServiceImpl(produkRepository)
+        val authService = Mockito.mock(com.chibychibystore.service.AuthService::class.java)
+        runBlocking {
+            Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
+        }
+        warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, authService)
+        productService = ProductServiceImpl(produkRepository, authService)
     }
 
     @After

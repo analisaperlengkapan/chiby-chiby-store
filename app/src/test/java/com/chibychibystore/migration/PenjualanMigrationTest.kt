@@ -227,6 +227,7 @@ class PenjualanMigrationTest {
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE penjualan ADD COLUMN isRefunded INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE pengguna ADD COLUMN isActive INTEGER NOT NULL DEFAULT 1")
             }
         }
 
@@ -247,6 +248,13 @@ class PenjualanMigrationTest {
             it.moveToNext()
             val second = it.getInt(0)
             assertEquals(0, second)
+        }
+
+        // Verify isActive column in pengguna
+        val cursor2 = sqLite.query("SELECT isActive FROM pengguna WHERE id = 1")
+        cursor2.use {
+            it.moveToFirst()
+            assertEquals(1, it.getInt(0))
         }
 
         db.close()

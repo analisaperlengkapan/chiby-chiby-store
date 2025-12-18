@@ -21,6 +21,8 @@ object DatabaseModule {
             override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
                 // Add isRefunded column to penjualan table, default 0 (false)
                 database.execSQL("ALTER TABLE penjualan ADD COLUMN isRefunded INTEGER NOT NULL DEFAULT 0")
+                // Add isActive column to pengguna table, default 1 (true)
+                database.execSQL("ALTER TABLE pengguna ADD COLUMN isActive INTEGER NOT NULL DEFAULT 1")
             }
         }
 

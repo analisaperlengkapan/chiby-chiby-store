@@ -37,8 +37,12 @@ class SaleServiceUnitTest {
         val itemRepo = Mockito.mock(ItemPenjualanRepository::class.java)
         val produkRepo = Mockito.mock(ProdukRepository::class.java)
         val printer = Mockito.mock(PrinterService::class.java)
+        val authService = Mockito.mock(AuthService::class.java)
+        runBlocking {
+            Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
+        }
 
-        val service = SaleServiceImpl(penjualanRepo, itemRepo, produkRepo, printer)
+        val service = SaleServiceImpl(penjualanRepo, itemRepo, produkRepo, printer, authService)
 
         val res = service.refundSale(penjualanId)
         assertTrue(res.isFailure)

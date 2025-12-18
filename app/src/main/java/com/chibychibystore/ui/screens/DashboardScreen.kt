@@ -4,6 +4,11 @@ import com.chibychibystore.ui.components.shared.AppTopBar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -63,8 +68,11 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("id", "ID")) }
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy HH:mm", Locale("id", "ID")) }
+    
+    // Theme references to avoid repeated Composable calls in LazyColumn items
+    val colorScheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
+    val shapes = MaterialTheme.shapes
 
     val bottomNavItems = listOf(
         BottomNavItem("Dashboard", Icons.Default.Dashboard, Screen.Dashboard.route),
@@ -119,29 +127,46 @@ fun DashboardScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
-                            )
+                                containerColor = colorScheme.primaryContainer.copy(alpha = 0.7f)
+                            ),
+                            shape = shapes.extraLarge,
+                            border = BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.1f))
                         ) {
                             Column(
-                                modifier = Modifier.padding(16.dp),
+                                modifier = Modifier
+                                    .padding(24.dp)
+                                    .fillMaxWidth(),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
                                     text = "Penjualan Hari Ini",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    style = typography.titleMedium,
+                                    color = colorScheme.onPrimaryContainer,
+                                    fontWeight = FontWeight.Medium
                                 )
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = formatCurrency(uiState.todaySales),
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    style = typography.displaySmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = colorScheme.primary
                                 )
-                                Text(
-                                    text = "${uiState.todayTransactionCount} transaksi",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            color = colorScheme.primary.copy(alpha = 0.1f),
+                                            shape = shapes.small
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "${uiState.todayTransactionCount} transaksi",
+                                        style = typography.labelLarge,
+                                        color = colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
                             }
                         }
                     }

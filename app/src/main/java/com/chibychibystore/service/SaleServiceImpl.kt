@@ -92,7 +92,8 @@ class SaleServiceImpl @Inject constructor(
     private val penjualanRepository: PenjualanRepository,
     private val itemPenjualanRepository: ItemPenjualanRepository,
     private val produkRepository: ProdukRepository,
-    private val printerService: PrinterService
+    private val printerService: PrinterService,
+    private val authService: AuthService
 ) : SaleService {
 
     /**
@@ -173,6 +174,9 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun createSale(sale: Penjualan, items: List<ItemPenjualan>): Result<PenjualanWithItems> {
         try {
+            if (!authService.hasPermission("CREATE_SALES")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk membuat penjualan"))
+            }
             // Basic validations
             if (items.isEmpty()) {
                 return Result.failure(Exception("item penjualan harus ada"))
@@ -255,6 +259,9 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun getSale(id: Long): Result<PenjualanWithItems?> {
         return try {
+            if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
+            }
             penjualanRepository.getPenjualanWithItemsById(id)
         } catch (e: Exception) {
             Result.failure(e)
@@ -307,6 +314,9 @@ class SaleServiceImpl @Inject constructor(
         cashierId: Long?
     ): Result<List<Penjualan>> {
         return try {
+            if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
+            }
             // Get a snapshot of all sales (do not collect indefinitely)
             val salesSnapshot = penjualanRepository.getAllPenjualan().first()
 
@@ -337,6 +347,9 @@ class SaleServiceImpl @Inject constructor(
         val lock = refundLocks.computeIfAbsent(id) { Mutex() }
         return lock.withLock {
             try {
+                if (!authService.hasPermission("APPROVE_LARGE_TRANSACTIONS")) {
+                    return Result.failure(Exception("Tidak memiliki izin untuk melakukan refund"))
+                }
                 val penjualanRes = penjualanRepository.getPenjualanById(id)
                 val penjualan = penjualanRes.getOrNull() ?: return Result.failure(Exception("Penjualan dengan ID $id tidak ditemukan"))
 
@@ -370,6 +383,9 @@ class SaleServiceImpl @Inject constructor(
 
     override suspend fun cancelSale(id: Long): Result<Unit> {
         return try {
+            if (!authService.hasPermission("APPROVE_LARGE_TRANSACTIONS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk membatalkan penjualan"))
+            }
             val penjualanRes = penjualanRepository.getPenjualanById(id)
             val penjualan = penjualanRes.getOrNull() ?: return Result.failure(Exception("Penjualan dengan ID $id tidak ditemukan"))
 
@@ -444,6 +460,9 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun searchSales(query: String): Result<List<Penjualan>> {
         return try {
+            if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
+            }
             // Take a snapshot from the flow instead of collecting indefinitely
             val sales = penjualanRepository.searchPenjualan(query).first()
             Result.success(sales.toMutableList())
@@ -500,6 +519,9 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun updateSale(id: Long, sale: Penjualan): Result<Penjualan> {
         return try {
+            if (!authService.hasPermission("APPROVE_LARGE_TRANSACTIONS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk mengupdate penjualan"))
+            }
             val updateResult = penjualanRepository.updatePenjualan(id, sale)
             if (updateResult.isSuccess) {
                 Result.success(sale)
@@ -565,6 +587,9 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun deleteSale(id: Long): Result<Unit> {
         return try {
+            if (!authService.hasPermission("APPROVE_LARGE_TRANSACTIONS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk menghapus penjualan"))
+            }
             // Get sale with items first
             val saleResult = penjualanRepository.getPenjualanWithItemsById(id)
             val saleWithItems = saleResult.getOrNull() ?: return Result.failure(saleResult.exceptionOrNull() ?: Exception("Penjualan tidak ditemukan"))
@@ -692,6 +717,9 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun getTotalSalesByDateRange(startDate: String, endDate: String): Result<Double> {
         return try {
+            if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
+            }
             val startLocalDate = java.time.LocalDate.parse(startDate)
             val endLocalDate = java.time.LocalDate.parse(endDate)
             penjualanRepository.getTotalPenjualanByDateRange(startLocalDate, endLocalDate)

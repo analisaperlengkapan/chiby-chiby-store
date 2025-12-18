@@ -266,6 +266,11 @@ class AuthServiceImpl @Inject constructor(
                 return Result.failure(ChibyChibyException.AuthenticationError("Username atau password salah"))
             }
 
+            // Check if user is active
+            if (!user.isActive) {
+                return Result.failure(ChibyChibyException.AuthenticationError("Akun Anda telah dinonaktifkan. Silakan hubungi admin."))
+            }
+
             // Set current user dan buat session baru
             currentUser = user
 
@@ -500,7 +505,8 @@ class AuthServiceImpl @Inject constructor(
         return when (permission) {
             "CREATE_SALES",
             "VIEW_INVENTORY",
-            "VIEW_DAILY_SALES_REPORT" -> true
+            "VIEW_DAILY_SALES_REPORT",
+            "VIEW_SALES_REPORTS" -> true
             else -> false
         }
     }

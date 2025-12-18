@@ -81,11 +81,15 @@ interface WarehouseService {
 @Singleton
 class WarehouseServiceImpl @Inject constructor(
     private val warehouseRepository: GudangRepository,
-    private val productRepository: ProdukRepository
+    private val productRepository: ProdukRepository,
+    private val authService: AuthService
 ) : WarehouseService {
 
     override suspend fun createWarehouse(warehouse: Gudang): Result<Gudang> {
         return try {
+            if (!authService.hasPermission("MANAGE_WAREHOUSES")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk mengelola gudang"))
+            }
             // Validasi input handled by repository
             val idResult = warehouseRepository.createGudang(warehouse)
             if (idResult.isFailure) return Result.failure(idResult.exceptionOrNull() ?: Exception("Gagal membuat gudang"))
@@ -104,6 +108,9 @@ class WarehouseServiceImpl @Inject constructor(
 
     override suspend fun updateWarehouse(warehouse: Gudang): Result<Gudang> {
         return try {
+            if (!authService.hasPermission("MANAGE_WAREHOUSES")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk mengupdate gudang"))
+            }
             val updateResult = warehouseRepository.updateGudang(warehouse)
             if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengupdate gudang"))
             Result.success(warehouse)
@@ -114,6 +121,9 @@ class WarehouseServiceImpl @Inject constructor(
 
     override suspend fun deleteWarehouse(id: Long): Result<Unit> {
         return try {
+            if (!authService.hasPermission("MANAGE_WAREHOUSES")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk menghapus gudang"))
+            }
             // Cek apakah gudang masih memiliki produk
             // Note: getProductsByWarehouse returns Flow, we take first emission
             val productsInWarehouse = productRepository.getProdukByWarehouse(id).first()
@@ -129,6 +139,9 @@ class WarehouseServiceImpl @Inject constructor(
 
     override suspend fun getWarehouse(id: Long): Result<Gudang?> {
         return try {
+            if (!authService.hasPermission("VIEW_INVENTORY")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat gudang"))
+            }
             val result = warehouseRepository.getGudangById(id)
             if (result.isSuccess) {
                 Result.success(result.getOrNull())
@@ -142,6 +155,9 @@ class WarehouseServiceImpl @Inject constructor(
 
     override suspend fun getWarehouses(): Result<List<Gudang>> {
         return try {
+            if (!authService.hasPermission("VIEW_INVENTORY")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat daftar gudang"))
+            }
             val warehouses = warehouseRepository.getAllGudang().first()
             Result.success(warehouses)
         } catch (e: Exception) {
@@ -151,6 +167,9 @@ class WarehouseServiceImpl @Inject constructor(
 
     override suspend fun assignProductToWarehouse(productId: Long, warehouseId: Long): Result<Unit> {
         return try {
+            if (!authService.hasPermission("MANAGE_WAREHOUSES")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk mengelola lokasi produk"))
+            }
             // Validasi bahwa gudang exists
             val warehouseResult = warehouseRepository.getGudangById(warehouseId)
             if (warehouseResult.isFailure) {
@@ -178,6 +197,9 @@ class WarehouseServiceImpl @Inject constructor(
         quantity: Int
     ): Result<Unit> {
         return try {
+            if (!authService.hasPermission("MANAGE_WAREHOUSES")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk mentransfer stok"))
+            }
             if (quantity <= 0) {
                 return Result.failure(Exception("Jumlah transfer harus lebih dari 0"))
             }
@@ -233,6 +255,9 @@ class WarehouseServiceImpl @Inject constructor(
 
     override suspend fun getWarehouseStock(warehouseId: Long): Result<List<Produk>> {
         return try {
+            if (!authService.hasPermission("VIEW_INVENTORY")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat stok gudang"))
+            }
             val products = productRepository.getProdukByWarehouse(warehouseId).first()
             Result.success(products)
         } catch (e: Exception) {
@@ -242,6 +267,9 @@ class WarehouseServiceImpl @Inject constructor(
 
     override suspend fun getAllWarehouseStock(): Result<Map<Gudang, List<Produk>>> {
         return try {
+            if (!authService.hasPermission("VIEW_INVENTORY")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat semua stok gudang"))
+            }
             val warehouses = warehouseRepository.getAllGudang().first()
             val result = mutableMapOf<Gudang, List<Produk>>()
 

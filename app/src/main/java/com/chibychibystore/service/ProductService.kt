@@ -243,7 +243,8 @@ interface ProductService {
  */
 @Singleton
 class ProductServiceImpl @Inject constructor(
-    private val productRepository: ProdukRepository
+    private val productRepository: ProdukRepository,
+    private val authService: AuthService
 ) : ProductService {
 
     /**
@@ -265,6 +266,9 @@ class ProductServiceImpl @Inject constructor(
      */
     override suspend fun createProduct(product: Produk): Result<Produk> {
         return try {
+            if (!authService.hasPermission("EDIT_INVENTORY")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
+            }
             // Validasi input berdasarkan business rules
             validateProduct(product)
 
@@ -288,6 +292,9 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun updateProduct(product: Produk): Result<Produk> {
         return try {
+            if (!authService.hasPermission("EDIT_INVENTORY")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
+            }
             // Validasi input
             validateProduct(product)
 
@@ -314,6 +321,9 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun deleteProduct(id: String): Result<Unit> {
         return try {
+            if (!authService.hasPermission("EDIT_INVENTORY")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
+            }
             val deleteResult = productRepository.deleteProduk(id.toLong())
             if (deleteResult.isFailure) return Result.failure(deleteResult.exceptionOrNull() ?: Exception("Gagal menghapus produk"))
             Result.success(Unit)
@@ -324,6 +334,9 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun getProduct(id: String): Result<Produk?> {
         return try {
+            if (!authService.hasPermission("VIEW_INVENTORY")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
+            }
             val product = productRepository.getProdukById(id.toLong()).getOrNull()
             Result.success(product)
         } catch (e: Exception) {
@@ -337,6 +350,9 @@ class ProductServiceImpl @Inject constructor(
         searchQuery: String?
     ): Result<List<Produk>> {
         return try {
+            if (!authService.hasPermission("VIEW_INVENTORY")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
+            }
             val flow = when {
                 !searchQuery.isNullOrBlank() -> productRepository.searchProduk(searchQuery)
                 categoryId != null -> productRepository.getProdukByCategory(categoryId.toLong())
@@ -352,6 +368,9 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun searchProducts(query: String): Result<List<Produk>> {
         return try {
+            if (!authService.hasPermission("VIEW_INVENTORY")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
+            }
             val products = productRepository.searchProduk(query).first()
             Result.success(products)
         } catch (e: Exception) {
@@ -361,6 +380,9 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun updateStock(productId: String, newStock: Int): Result<Unit> {
         return try {
+            if (!authService.hasPermission("EDIT_INVENTORY")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
+            }
             if (newStock < 0) {
                 return Result.failure(Exception("Stok tidak boleh negatif"))
             }
@@ -375,6 +397,9 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun getLowStockProducts(): Result<List<Produk>> {
         return try {
+            if (!authService.hasPermission("VIEW_INVENTORY")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
+            }
             val products = productRepository.getLowStockProduk().first()
             Result.success(products)
         } catch (e: Exception) {

@@ -10,11 +10,13 @@ import com.chibychibystore.service.SaleServiceImpl
 import com.chibychibystore.testutils.TestDataBuilder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mockito
 import org.robolectric.RobolectricTestRunner
 import com.chibychibystore.testutils.BaseTest
 import java.util.Date
@@ -54,11 +56,16 @@ class SalesModuleIntegrationTest : BaseTest() {
 
         // Setup service (use a test printer stub)
         val printerStub = com.chibychibystore.testutils.TestPrinterService()
+        val authService = Mockito.mock(com.chibychibystore.service.AuthService::class.java)
+        runBlocking {
+            Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
+        }
         saleService = SaleServiceImpl(
             penjualanRepository,
             itemPenjualanRepository,
             produkRepository,
-            printerStub
+            printerStub,
+            authService
         )
     }
 

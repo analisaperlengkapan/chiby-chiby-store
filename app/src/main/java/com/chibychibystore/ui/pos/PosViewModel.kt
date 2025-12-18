@@ -286,6 +286,7 @@ class PosViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PosUiState())
     val uiState: StateFlow<PosUiState> = _uiState
+    private var searchJob: kotlinx.coroutines.Job? = null
 
     /**
      * Search produk berdasarkan query untuk ditambahkan ke cart
@@ -356,12 +357,16 @@ class PosViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(searchQuery = query)
 
         if (query.isBlank()) {
+            searchJob?.cancel()
             _uiState.value = _uiState.value.copy(searchResults = emptyList(), isSearching = false)
             return
         }
 
-        viewModelScope.launch {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSearching = true)
+            // Debounce delay
+            kotlinx.coroutines.delay(300)
 
             try {
                 val result = productService.searchProducts(query)
@@ -378,11 +383,13 @@ class PosViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    searchResults = emptyList(),
-                    isSearching = false,
-                    error = "Error: ${e.message}"
-                )
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    _uiState.value = _uiState.value.copy(
+                        searchResults = emptyList(),
+                        isSearching = false,
+                        error = "Error: ${e.message}"
+                    )
+                }
             }
         }
     }

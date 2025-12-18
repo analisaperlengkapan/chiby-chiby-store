@@ -46,6 +46,7 @@ class PosEndToEndIntegrationTest : BaseTest() {
     private lateinit var itemPenjualanRepo: ItemPenjualanRepository
     private lateinit var productService: ProductServiceImpl
     private lateinit var saleService: SaleService
+    private lateinit var authService: AuthService
 
     @Before
     fun setup() {
@@ -58,9 +59,14 @@ class PosEndToEndIntegrationTest : BaseTest() {
         penjualanRepo = PenjualanRepository(db.penjualanDao(), db.itemPenjualanDao())
         itemPenjualanRepo = ItemPenjualanRepository(db.itemPenjualanDao())
 
-        productService = ProductServiceImpl(produkRepo)
+        authService = Mockito.mock(AuthService::class.java)
+        runBlocking {
+            Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
+        }
+
+        productService = ProductServiceImpl(produkRepo, authService)
         val printer = Mockito.mock(PrinterService::class.java)
-        saleService = SaleServiceImpl(penjualanRepo, itemPenjualanRepo, produkRepo, printer)
+        saleService = SaleServiceImpl(penjualanRepo, itemPenjualanRepo, produkRepo, printer, authService)
     }
 
     @After

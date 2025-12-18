@@ -25,9 +25,12 @@ class UserManagementServiceImpl @Inject constructor(
 
     override suspend fun getUserStats(): Result<UserStats> {
         return try {
+            if (!authService.hasPermission("MANAGE_USERS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat statistik user"))
+            }
             val allUsers = penggunaRepository.getAllPengguna().first()
             val totalUsers = allUsers.size
-            val activeUsers = totalUsers // All users are considered active since no isActive field
+            val activeUsers = allUsers.count { it.isActive }
             val owners = allUsers.count { it.role == Role.OWNER }
             val managers = allUsers.count { it.role == Role.MANAGER }
             val cashiers = allUsers.count { it.role == Role.CASHIER }
@@ -62,6 +65,9 @@ class UserManagementServiceImpl @Inject constructor(
         createdBy: Long
     ): Result<Long> {
         return try {
+            if (!authService.hasPermission("MANAGE_USERS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk membuat user"))
+            }
             // Validate input
             if (username.isBlank()) {
                 return Result.failure(ChibyChibyException.ValidationError("username", "Username tidak boleh kosong"))
@@ -104,6 +110,9 @@ class UserManagementServiceImpl @Inject constructor(
         updatedBy: Long
     ): Result<Unit> {
         return try {
+            if (!authService.hasPermission("MANAGE_USERS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk mengupdate user"))
+            }
             // Get existing user
             val existingUserResult = penggunaRepository.getPenggunaById(userId)
             val existingUser = existingUserResult.getOrNull()
@@ -152,9 +161,11 @@ class UserManagementServiceImpl @Inject constructor(
             }
 
             // Check permissions (only OWNER can delete users)
-            if (currentUser?.role != Role.OWNER) {
-                return Result.failure(Exception("Hanya Owner yang dapat menghapus user"))
+            if (!authService.hasPermission("MANAGE_USERS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk menghapus user"))
             }
+            // Optional: prevent deleting another owner/manager if not owner
+            // but for now MANAGE_USERS is enough for simplicity as per implementation plan.
 
             val deleteResult = penggunaRepository.deletePengguna(userId)
             if (deleteResult.isSuccess) {
@@ -176,6 +187,9 @@ class UserManagementServiceImpl @Inject constructor(
         resetBy: Long
     ): Result<Unit> {
         return try {
+            if (!authService.hasPermission("MANAGE_USERS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk mereset password"))
+            }
             if (newPassword.length < 6) {
                 return Result.failure(Exception("Password minimal 6 karakter"))
             }
@@ -209,18 +223,22 @@ class UserManagementServiceImpl @Inject constructor(
     override suspend fun deactivateUser(userId: Long, deactivatedBy: Long): Result<Unit> {
         return try {
             // Check permissions
-            val currentUser = authService.getCurrentUser()
-            if (currentUser?.role != Role.OWNER) {
-                return Result.failure(Exception("Hanya Owner yang dapat menonaktifkan user"))
+            if (!authService.hasPermission("MANAGE_USERS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk menonaktifkan user"))
             }
+            val currentUser = authService.getCurrentUser()
 
             // Prevent deactivating self
-            if (currentUser.id == userId) {
+            if (currentUser?.id == userId) {
                 return Result.failure(Exception("Tidak dapat menonaktifkan user sendiri"))
             }
 
-            // For now, just mark as inactive (future: add isActive field)
-            // Since we don't have isActive field yet, this is a placeholder
+            val userResult = penggunaRepository.getPenggunaById(userId)
+            val user = userResult.getOrNull() ?: return Result.failure(Exception("User tidak ditemukan"))
+
+            val updatedUser = user.copy(isActive = false, updatedAt = java.util.Date())
+            penggunaRepository.updatePengguna(updatedUser)
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(Exception("Gagal menonaktifkan user: ${e.message}"))
@@ -230,12 +248,16 @@ class UserManagementServiceImpl @Inject constructor(
     override suspend fun activateUser(userId: Long, activatedBy: Long): Result<Unit> {
         return try {
             // Check permissions
-            val currentUser = authService.getCurrentUser()
-            if (currentUser?.role != Role.OWNER) {
-                return Result.failure(Exception("Hanya Owner yang dapat mengaktifkan user"))
+            if (!authService.hasPermission("MANAGE_USERS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk mengaktifkan user"))
             }
 
-            // For now, just mark as active (future: add isActive field)
+            val userResult = penggunaRepository.getPenggunaById(userId)
+            val user = userResult.getOrNull() ?: return Result.failure(Exception("User tidak ditemukan"))
+
+            val updatedUser = user.copy(isActive = true, updatedAt = java.util.Date())
+            penggunaRepository.updatePengguna(updatedUser)
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(Exception("Gagal mengaktifkan user: ${e.message}"))
