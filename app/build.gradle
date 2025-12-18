@@ -202,6 +202,8 @@ dependencies {
     
     // PDF generation
     implementation 'com.itextpdf:itext7-core:7.2.5'
+    // Force a newer Gson version (override transitive gson 2.8.9 from tink) to address known issues
+    implementation 'com.google.code.gson:gson:2.13.2'
     
     // Testing
     testImplementation 'junit:junit:4.13.2'
