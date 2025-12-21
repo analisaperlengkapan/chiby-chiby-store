@@ -252,10 +252,10 @@ fun rememberCurrencyFormatter(): (Double) -> String {
 @Composable
 private fun ProductSearchItem(
     product: Produk,
+    formatCurrency: (Double) -> String,
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val formatCurrency = rememberCurrencyFormatter()
     
     Card(
         modifier = Modifier
