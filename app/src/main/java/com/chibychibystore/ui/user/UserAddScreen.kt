@@ -95,9 +95,15 @@ fun UserAddScreen(
                     scope.launch {
                         if (validateInput(username, password, confirmPassword)) {
                             isLoading = true
-                            // TODO: Implement create user logic
+                            val result = viewModel.createUser(username, password, selectedRole)
                             isLoading = false
-                            navController.navigateUp()
+                            if (result.isSuccess) {
+                                navController.navigateUp()
+                            } else {
+                                snackbarHostState.showSnackbar(
+                                    message = result.exceptionOrNull()?.message ?: "Gagal membuat pengguna"
+                                )
+                            }
                         }
                     }
                 },
