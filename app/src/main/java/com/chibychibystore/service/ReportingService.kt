@@ -51,17 +51,83 @@ interface ReportingService {
     fun observeSalesMetrics(): Flow<SalesMetrics>
 
     // Additional helper reporting methods used by UI and PDF export
-    suspend fun getGrossSales(startDate: LocalDate, endDate: LocalDate): Result<Map<String, Any>>
-    suspend fun getProfitMargin(startDate: LocalDate, endDate: LocalDate): Result<Map<String, Any>>
-    suspend fun getNetProfit(startDate: LocalDate, endDate: LocalDate): Result<Map<String, Any>>
-    suspend fun getSalesByProduct(startDate: LocalDate, endDate: LocalDate): Result<List<Map<String, Any>>>
-    suspend fun getSalesByCategory(startDate: LocalDate, endDate: LocalDate): Result<List<Map<String, Any>>>
-    suspend fun getSalesTrend(startDate: LocalDate, endDate: LocalDate): Result<List<Map<String, Any>>>
-    suspend fun getIncomeStatement(date: LocalDate): Result<Map<String, Any>>
+    suspend fun getGrossSales(startDate: LocalDate, endDate: LocalDate): Result<GrossSalesReport>
+    suspend fun getProfitMargin(startDate: LocalDate, endDate: LocalDate): Result<ProfitMarginReport>
+    suspend fun getNetProfit(startDate: LocalDate, endDate: LocalDate): Result<NetProfitReport>
+    suspend fun getSalesByProduct(startDate: LocalDate, endDate: LocalDate): Result<List<ProductSales>>
+    suspend fun getSalesByCategory(startDate: LocalDate, endDate: LocalDate): Result<List<CategorySales>>
+    suspend fun getSalesTrend(startDate: LocalDate, endDate: LocalDate): Result<List<TrendData>>
+    suspend fun getIncomeStatement(date: LocalDate): Result<IncomeStatement>
     suspend fun getCashFlow(startDate: LocalDate, endDate: LocalDate): Result<CashFlow>
-    suspend fun getExpenseReport(startDate: LocalDate, endDate: LocalDate): Result<Map<String, Any>>
-    suspend fun getBalanceSheet(asOfDate: LocalDate): Result<Map<String, Any>>
+    suspend fun getExpenseReport(startDate: LocalDate, endDate: LocalDate): Result<ExpenseReport>
+    suspend fun getBalanceSheet(asOfDate: LocalDate): Result<BalanceSheet>
 }
+
+// DTOs for Reporting
+
+data class GrossSalesReport(
+    val totalSales: Double,
+    val totalTransactions: Int,
+    val averageTransaction: Double
+)
+
+data class ProfitMarginReport(
+    val totalRevenue: Double,
+    val totalCost: Double,
+    val grossProfit: Double,
+    val profitMargin: Double
+)
+
+data class NetProfitReport(
+    val grossProfit: Double,
+    val totalExpenses: Double,
+    val netProfit: Double,
+    val profitMargin: Double
+)
+
+data class ProductSales(
+    val productId: Long,
+    val productName: String,
+    val quantitySold: Int,
+    val totalRevenue: Double,
+    val totalCost: Double,
+    val profit: Double
+)
+
+data class CategorySales(
+    val categoryId: Long,
+    val categoryName: String,
+    val quantitySold: Int,
+    val totalRevenue: Double,
+    val totalCost: Double,
+    val profit: Double
+)
+
+data class TrendData(
+    val date: LocalDate,
+    val sales: Double,
+    val transactions: Int
+)
+
+data class IncomeStatement(
+    val revenue: Double,
+    val costOfGoodsSold: Double,
+    val grossProfit: Double,
+    val operatingExpenses: Double,
+    val netIncome: Double
+)
+
+data class ExpenseReport(
+    val totalExpenses: Double,
+    val expensesByCategory: Map<Any, Double> // Using Any for category enum or string
+)
+
+data class BalanceSheet(
+    val assets: Double,
+    val liabilities: Double,
+    val equity: Double,
+    val inventoryValue: Double
+)
 
 // Simple DTO used by reporting for cash flow export
 data class CashFlow(
@@ -75,7 +141,7 @@ data class CashFlow(
 )
 
 /**
- * Data classes untuk reporting
+ * Data classes untuk basic reporting
  */
 data class DailySalesReport(
     val date: LocalDate,

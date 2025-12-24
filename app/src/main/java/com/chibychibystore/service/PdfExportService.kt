@@ -16,7 +16,6 @@ import com.itextpdf.kernel.font.PdfFontFactory
 import com.itextpdf.io.font.constants.StandardFonts
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
-import java.io.IOException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -181,7 +180,6 @@ class PdfExportService @Inject constructor(
     /**
      * Export Income Statement to PDF
      */
-    // PDF export for income statement - single date overload (month end)
     suspend fun exportIncomeStatement(date: LocalDate): Result<String> {
         return try {
             val reportData = reportingService.getIncomeStatement(date)
@@ -277,7 +275,7 @@ class PdfExportService @Inject constructor(
 
     private fun createGrossSalesPdf(
         filePath: String,
-        data: Map<String, Any>,
+        data: GrossSalesReport,
         startDate: LocalDate,
         endDate: LocalDate
     ) {
@@ -293,18 +291,14 @@ class PdfExportService @Inject constructor(
             val summaryTable = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f)))
             summaryTable.setWidth(UnitValue.createPercentValue(100f))
 
-            val totalSales = (data["totalSales"] as? Number)?.toDouble() ?: 0.0
-            val totalTransactions = (data["totalTransactions"] as? Number)?.toInt() ?: 0
-            val averageTransaction = (data["averageTransaction"] as? Number)?.toDouble() ?: 0.0
-
             summaryTable.addCell(createHeaderCell("Total Penjualan"))
-            summaryTable.addCell(createDataCell("Rp ${"%,.0f".format(totalSales)}"))
+            summaryTable.addCell(createDataCell("Rp ${"%,.0f".format(data.totalSales)}"))
 
             summaryTable.addCell(createHeaderCell("Jumlah Transaksi"))
-            summaryTable.addCell(createDataCell("${totalTransactions}"))
+            summaryTable.addCell(createDataCell("${data.totalTransactions}"))
 
             summaryTable.addCell(createHeaderCell("Rata-rata per Transaksi"))
-            summaryTable.addCell(createDataCell("Rp ${"%,.0f".format(averageTransaction)}"))
+            summaryTable.addCell(createDataCell("Rp ${"%,.0f".format(data.averageTransaction)}"))
 
             document.add(summaryTable as com.itextpdf.layout.element.IBlockElement)
 
@@ -318,7 +312,7 @@ class PdfExportService @Inject constructor(
 
     private fun createProfitMarginPdf(
         filePath: String,
-        data: Map<String, Any>,
+        data: ProfitMarginReport,
         startDate: LocalDate,
         endDate: LocalDate
     ) {
@@ -332,22 +326,17 @@ class PdfExportService @Inject constructor(
             val table = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f)))
             table.setWidth(UnitValue.createPercentValue(100f))
 
-            val totalRevenue = (data["revenue"] as? Number)?.toDouble() ?: 0.0
-            val totalCost = (data["costOfGoodsSold"] as? Number)?.toDouble() ?: 0.0
-            val grossProfit = (data["grossProfit"] as? Number)?.toDouble() ?: 0.0
-            val profitMargin = (data["marginPercentage"] as? Number)?.toDouble() ?: 0.0
-
             table.addCell(createHeaderCell("Total Pendapatan"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(totalRevenue)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.totalRevenue)}"))
 
             table.addCell(createHeaderCell("Total Biaya"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(totalCost)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.totalCost)}"))
 
             table.addCell(createHeaderCell("Laba Kotor"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(grossProfit)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.grossProfit)}"))
 
             table.addCell(createHeaderCell("Margin Keuntungan"))
-            table.addCell(createDataCell("${"%.1f".format(profitMargin)}%"))
+            table.addCell(createDataCell("${"%.1f".format(data.profitMargin)}%"))
 
             document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
@@ -359,7 +348,7 @@ class PdfExportService @Inject constructor(
 
     private fun createNetProfitPdf(
         filePath: String,
-        data: Map<String, Any>,
+        data: NetProfitReport,
         startDate: LocalDate,
         endDate: LocalDate
     ) {
@@ -373,22 +362,17 @@ class PdfExportService @Inject constructor(
             val table = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f)))
             table.setWidth(UnitValue.createPercentValue(100f))
 
-            val grossProfit = (data["grossProfit"] as? Number)?.toDouble() ?: 0.0
-            val totalExpenses = (data["totalExpenses"] as? Number)?.toDouble() ?: 0.0
-            val netProfit = (data["netProfit"] as? Number)?.toDouble() ?: 0.0
-            val profitMargin = (data["profitMargin"] as? Number)?.toDouble() ?: 0.0
-
             table.addCell(createHeaderCell("Laba Kotor"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(grossProfit)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.grossProfit)}"))
 
             table.addCell(createHeaderCell("Total Pengeluaran"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(totalExpenses)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.totalExpenses)}"))
 
             table.addCell(createHeaderCell("Laba Bersih"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(netProfit)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.netProfit)}"))
 
             table.addCell(createHeaderCell("Margin Keuntungan"))
-            table.addCell(createDataCell("${"%.1f".format(profitMargin)}%"))
+            table.addCell(createDataCell("${"%.1f".format(data.profitMargin)}%"))
 
             document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
@@ -400,7 +384,7 @@ class PdfExportService @Inject constructor(
 
     private fun createSalesByProductPdf(
         filePath: String,
-        data: List<Map<String, Any>>,
+        data: List<ProductSales>,
         startDate: LocalDate,
         endDate: LocalDate
     ) {
@@ -423,17 +407,11 @@ class PdfExportService @Inject constructor(
 
             // Data rows
             data.take(20).forEach { product ->
-                val name = product["productName"] as? String ?: "-"
-                val qty = (product["quantity"] as? Number)?.toInt() ?: 0
-                val revenue = (product["revenue"] as? Number)?.toDouble() ?: 0.0
-                val cost = (product["totalCost"] as? Number)?.toDouble() ?: 0.0
-                val profit = (product["profit"] as? Number)?.toDouble() ?: (revenue - cost)
-
-                table.addCell(createDataCell(name))
-                table.addCell(createDataCell("${qty}"))
-                table.addCell(createDataCell("Rp ${"%,.0f".format(revenue)}"))
-                table.addCell(createDataCell("Rp ${"%,.0f".format(cost)}"))
-                table.addCell(createDataCell("Rp ${"%.0f".format(profit)}"))
+                table.addCell(createDataCell(product.productName))
+                table.addCell(createDataCell("${product.quantitySold}"))
+                table.addCell(createDataCell("Rp ${"%,.0f".format(product.totalRevenue)}"))
+                table.addCell(createDataCell("Rp ${"%,.0f".format(product.totalCost)}"))
+                table.addCell(createDataCell("Rp ${"%.0f".format(product.profit)}"))
             }
 
             document.add(table as com.itextpdf.layout.element.IBlockElement)
@@ -446,7 +424,7 @@ class PdfExportService @Inject constructor(
 
     private fun createSalesByCategoryPdf(
         filePath: String,
-        data: List<Map<String, Any>>,
+        data: List<CategorySales>,
         startDate: LocalDate,
         endDate: LocalDate
     ) {
@@ -467,17 +445,11 @@ class PdfExportService @Inject constructor(
             table.addCell(createHeaderCell("Laba"))
 
             data.forEach { category ->
-                val name = category["categoryName"] as? String ?: "-"
-                val qty = (category["quantitySold"] as? Number)?.toInt() ?: 0
-                val revenue = (category["totalRevenue"] as? Number)?.toDouble() ?: 0.0
-                val cost = (category["totalCost"] as? Number)?.toDouble() ?: 0.0
-                val profit = (category["profit"] as? Number)?.toDouble() ?: (revenue - cost)
-
-                table.addCell(createDataCell(name))
-                table.addCell(createDataCell("${qty}"))
-                table.addCell(createDataCell("Rp ${"%,.0f".format(revenue)}"))
-                table.addCell(createDataCell("Rp ${"%,.0f".format(cost)}"))
-                table.addCell(createDataCell("Rp ${"%.0f".format(profit)}"))
+                table.addCell(createDataCell(category.categoryName))
+                table.addCell(createDataCell("${category.quantitySold}"))
+                table.addCell(createDataCell("Rp ${"%,.0f".format(category.totalRevenue)}"))
+                table.addCell(createDataCell("Rp ${"%,.0f".format(category.totalCost)}"))
+                table.addCell(createDataCell("Rp ${"%.0f".format(category.profit)}"))
             }
 
             document.add(table as com.itextpdf.layout.element.IBlockElement)
@@ -490,7 +462,7 @@ class PdfExportService @Inject constructor(
 
     private fun createSalesTrendPdf(
         filePath: String,
-        data: List<Map<String, Any>>,
+        data: List<TrendData>,
         startDate: LocalDate,
         endDate: LocalDate
     ) {
@@ -509,13 +481,9 @@ class PdfExportService @Inject constructor(
             table.addCell(createHeaderCell("Transaksi"))
 
             data.forEach { trend ->
-                val date = trend["date"] as? java.time.LocalDate
-                val sales = (trend["sales"] as? Number)?.toDouble() ?: 0.0
-                val transactions = (trend["transactions"] as? Number)?.toInt() ?: 0
-
-                table.addCell(createDataCell(date?.format(dateFormatter) ?: "-"))
-                table.addCell(createDataCell("Rp ${"%,.0f".format(sales)}"))
-                table.addCell(createDataCell("${transactions}"))
+                table.addCell(createDataCell(trend.date.format(dateFormatter)))
+                table.addCell(createDataCell("Rp ${"%,.0f".format(trend.sales)}"))
+                table.addCell(createDataCell("${trend.transactions}"))
             }
 
             document.add(table as com.itextpdf.layout.element.IBlockElement)
@@ -528,7 +496,7 @@ class PdfExportService @Inject constructor(
 
     private fun createIncomeStatementPdf(
         filePath: String,
-        data: Map<String, Any>,
+        data: IncomeStatement,
         date: LocalDate
     ) {
         val writer = PdfWriter(filePath)
@@ -541,26 +509,20 @@ class PdfExportService @Inject constructor(
             val table = Table(UnitValue.createPercentArray(floatArrayOf(60f, 40f)))
             table.setWidth(UnitValue.createPercentValue(100f))
 
-            val revenue = (data["revenue"] as? Number)?.toDouble() ?: 0.0
-            val costOfGoods = (data["costOfGoodsSold"] as? Number)?.toDouble() ?: 0.0
-            val grossProfit = (data["grossProfit"] as? Number)?.toDouble() ?: 0.0
-            val operatingExpenses = (data["operatingExpenses"] as? Number)?.toDouble() ?: 0.0
-            val netIncome = (data["netIncome"] as? Number)?.toDouble() ?: 0.0
-
             table.addCell(createHeaderCell("Pendapatan"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(revenue)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.revenue)}"))
 
             table.addCell(createHeaderCell("Harga Pokok Penjualan"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(costOfGoods)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.costOfGoodsSold)}"))
 
             table.addCell(createHeaderCell("Laba Kotor"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(grossProfit)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.grossProfit)}"))
 
             table.addCell(createHeaderCell("Beban Operasional"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(operatingExpenses)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.operatingExpenses)}"))
 
             table.addCell(createHeaderCell("Laba Bersih"))
-            table.addCell(createDataCell("Rp ${"%.0f".format(netIncome)}"))
+            table.addCell(createDataCell("Rp ${"%.0f".format(data.netIncome)}"))
 
             document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
@@ -611,7 +573,7 @@ class PdfExportService @Inject constructor(
 
     private fun createExpenseReportPdf(
         filePath: String,
-        data: Map<String, Any>,
+        data: ExpenseReport,
         startDate: LocalDate,
         endDate: LocalDate
     ) {
@@ -626,9 +588,8 @@ class PdfExportService @Inject constructor(
             val summaryTable = Table(UnitValue.createPercentArray(floatArrayOf(60f, 40f)))
             summaryTable.setWidth(UnitValue.createPercentValue(100f))
 
-            val totalExpenses = (data["totalExpenses"] as? Number)?.toDouble() ?: 0.0
             summaryTable.addCell(createHeaderCell("Total Pengeluaran"))
-            summaryTable.addCell(createDataCell("Rp ${"%.0f".format(totalExpenses)}"))
+            summaryTable.addCell(createDataCell("Rp ${"%.0f".format(data.totalExpenses)}"))
 
             document.add(summaryTable as com.itextpdf.layout.element.IBlockElement)
             document.add(Paragraph("\n"))
@@ -640,12 +601,10 @@ class PdfExportService @Inject constructor(
             categoryTable.addCell(createHeaderCell("Kategori"))
             categoryTable.addCell(createHeaderCell("Jumlah"))
 
-            val byCategory = data["expensesByCategory"] as? Map<*, *> ?: emptyMap<Any, Any>()
-            byCategory.forEach { (category, amount) ->
-                val name = (category as? String) ?: category.toString()
-                val amt = (amount as? Number)?.toDouble() ?: 0.0
+            data.expensesByCategory.forEach { (category, amount) ->
+                val name = if (category is Enum<*>) category.name else category.toString()
                 categoryTable.addCell(createDataCell(name))
-                categoryTable.addCell(createDataCell("Rp ${"%.0f".format(amt)}"))
+                categoryTable.addCell(createDataCell("Rp ${"%.0f".format(amount)}"))
             }
 
             document.add(categoryTable as com.itextpdf.layout.element.IBlockElement)
@@ -658,7 +617,7 @@ class PdfExportService @Inject constructor(
 
     private fun createBalanceSheetPdf(
         filePath: String,
-        data: Map<String, Any>,
+        data: BalanceSheet,
         asOfDate: LocalDate
     ) {
         val writer = PdfWriter(filePath)
@@ -671,22 +630,17 @@ class PdfExportService @Inject constructor(
             val table = Table(UnitValue.createPercentArray(floatArrayOf(60f, 40f)))
             table.setWidth(UnitValue.createPercentValue(100f))
 
-            val assets = (data["assets"] as? Number)?.toDouble() ?: 0.0
-            val liabilities = (data["liabilities"] as? Number)?.toDouble() ?: 0.0
-            val equity = (data["equity"] as? Number)?.toDouble() ?: 0.0
-            val inventoryValue = (data["inventoryValue"] as? Number)?.toDouble() ?: 0.0
-
             table.addCell(createHeaderCell("Total Aset"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(assets)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.assets)}"))
 
             table.addCell(createHeaderCell("Total Liabilitas"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(liabilities)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.liabilities)}"))
 
             table.addCell(createHeaderCell("Ekuitas"))
-            table.addCell(createDataCell("Rp ${"%,.0f".format(equity)}"))
+            table.addCell(createDataCell("Rp ${"%,.0f".format(data.equity)}"))
 
             table.addCell(createHeaderCell("Nilai Inventaris"))
-            table.addCell(createDataCell("Rp ${"%.0f".format(inventoryValue)}"))
+            table.addCell(createDataCell("Rp ${"%.0f".format(data.inventoryValue)}"))
 
             document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)

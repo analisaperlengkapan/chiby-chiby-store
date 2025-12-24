@@ -1,54 +1,44 @@
-@file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.reports
-import com.chibychibystore.data.local.entity.Produk
-import com.chibychibystore.ui.components.shared.AppTopBar
-import com.chibychibystore.ui.components.shared.ErrorMessage
-import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import android.content.Intent
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
-import com.chibychibystore.data.model.*
+import com.chibychibystore.R
 import com.chibychibystore.service.*
-import com.chibychibystore.ui.components.special.*
-import com.chibychibystore.ui.components.shared.*
+import com.chibychibystore.ui.components.shared.AppTopBar
+import com.chibychibystore.ui.components.shared.DatePickerDialog
+// Chart components are in the same package, so no need to import them
 import java.io.File
-import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.*
 
 /**
- * Reports Screen with PDF Export
- * Displays various business reports with filtering and visualization
+ * Reports Screen
+ * Menampilkan berbagai laporan bisnis dengan filter dan visualisasi
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportsScreen(
-    navController: NavController,
+    onNavigateBack: () -> Unit,
     viewModel: ReportsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Handle PDF export success
+    // Handle export success
     LaunchedEffect(uiState.exportSuccess) {
         uiState.exportSuccess?.let { filePath ->
-            viewModel.clearExportSuccess()
             val file = File(filePath)
             val uri = FileProvider.getUriForFile(
                 context,
@@ -64,6 +54,7 @@ fun ReportsScreen(
             try {
                 context.startActivity(intent)
             } catch (e: Exception) {
+                // Fallback: share
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "application/pdf"
                     putExtra(Intent.EXTRA_STREAM, uri)
@@ -71,15 +62,15 @@ fun ReportsScreen(
                 }
                 context.startActivity(Intent.createChooser(shareIntent, "Buka PDF"))
             }
+            viewModel.clearExportSuccess()
         }
     }
 
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Laporan",
-                navigationIcon = Icons.Filled.ArrowBack,
-                onNavigationClick = { navController.popBackStack() },
+                title = stringResource(R.string.reports_title),
+                onBackClick = onNavigateBack,
                 actions = {
                     IconButton(
                         onClick = { viewModel.exportCurrentReportToPdf() },
@@ -87,11 +78,11 @@ fun ReportsScreen(
                     ) {
                         if (uiState.isExporting) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier.size(24.dp),
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Icon(Icons.Default.Download, "Export PDF")
+                            Icon(Icons.Default.Download, contentDescription = "Export PDF")
                         }
                     }
                 }
@@ -103,63 +94,42 @@ fun ReportsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            LazyColumn(
-                modifier = Modifier.weight(1f)
-            ) {
-                item {
-                    ReportTypeSelector(
-                        selectedType = uiState.selectedReportType,
-                        onTypeSelected = { viewModel.selectReportType(it) }
-                    )
-                }
+            // Report Type Selector
+            ReportTypeSelector(
+                selectedType = uiState.selectedReportType,
+                onTypeSelected = viewModel::selectReportType
+            )
 
-                item {
-                    DateRangeFilter(
-                        startDate = uiState.startDate,
-                        endDate = uiState.endDate,
-                        onStartDateChange = { viewModel.setStartDate(it) },
-                        onEndDateChange = { viewModel.setEndDate(it) }
-                    )
-                }
-
-                item {
-                    when (uiState.selectedReportType) {
-                        ReportType.GROSS_SALES -> GrossSalesReport(uiState.reportData)
-                        ReportType.PROFIT_MARGIN -> ProfitMarginReport(uiState.reportData)
-                        ReportType.NET_PROFIT -> NetProfitReport(uiState.reportData)
-                        ReportType.SALES_BY_PRODUCT -> SalesByProductReport(uiState.reportData)
-                        ReportType.SALES_BY_CATEGORY -> SalesByCategoryReport(uiState.reportData)
-                        ReportType.SALES_TREND -> SalesTrendReport(uiState.reportData)
-                        ReportType.INCOME_STATEMENT -> IncomeStatementReport(uiState.reportData)
-                        ReportType.CASH_FLOW -> CashFlowReport(uiState.reportData)
-                        ReportType.EXPENSE_REPORT -> ExpenseReport(uiState.reportData)
-                        ReportType.BALANCE_SHEET -> BalanceSheetReport(uiState.reportData)
-                    }
-                }
-            }
+            // Date Range Filter
+            DateRangeFilter(
+                startDate = uiState.startDate,
+                endDate = uiState.endDate,
+                onStartDateSelected = viewModel::setStartDate,
+                onEndDateSelected = viewModel::setEndDate
+            )
 
             if (uiState.isLoading) {
-                LoadingIndicator()
-            }
-
-            uiState.error?.let { error ->
-                androidx.compose.material3.Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = androidx.compose.material3.CardDefaults.cardColors(
-                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
-                        contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
-                    ),
-                    shape = androidx.compose.material3.MaterialTheme.shapes.medium
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        androidx.compose.material3.Text(text = error)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (uiState.error != null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Error: ${uiState.error}", color = MaterialTheme.colorScheme.error)
+                }
+            } else {
+                // Report Content
+                Box(modifier = Modifier.weight(1f)) {
+                    when (uiState.selectedReportType) {
+                        ReportType.GROSS_SALES -> GrossSalesReportScreen(uiState.reportData as? GrossSalesReport)
+                        ReportType.PROFIT_MARGIN -> ProfitMarginReportScreen(uiState.reportData as? ProfitMarginReport)
+                        ReportType.NET_PROFIT -> NetProfitReportScreen(uiState.reportData as? NetProfitReport)
+                        ReportType.SALES_BY_PRODUCT -> SalesByProductReportScreen(uiState.reportData as? List<ProductSales>)
+                        ReportType.SALES_BY_CATEGORY -> SalesByCategoryReportScreen(uiState.reportData as? List<CategorySales>)
+                        ReportType.SALES_TREND -> SalesTrendReportScreen(uiState.reportData as? List<TrendData>)
+                        ReportType.INCOME_STATEMENT -> IncomeStatementReportScreen(uiState.reportData as? IncomeStatement)
+                        ReportType.CASH_FLOW -> CashFlowReportScreen(uiState.reportData as? CashFlow)
+                        ReportType.EXPENSE_REPORT -> ExpenseReportScreen(uiState.reportData as? ExpenseReport)
+                        ReportType.BALANCE_SHEET -> BalanceSheetReportScreen(uiState.reportData as? BalanceSheet)
                     }
                 }
             }
@@ -167,386 +137,356 @@ fun ReportsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ReportTypeSelector(
     selectedType: ReportType,
     onTypeSelected: (ReportType) -> Unit
 ) {
-    Card(
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Jenis Laporan",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+        OutlinedTextField(
+            value = selectedType.displayName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.reports_select_type)) },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor()
+        )
 
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
             ReportType.values().forEach { type ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = selectedType == type,
-                        onClick = { onTypeSelected(type) }
-                    )
-                    Text(
-                        text = type.displayName,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
+                DropdownMenuItem(
+                    text = { Text(type.displayName) },
+                    onClick = {
+                        onTypeSelected(type)
+                        expanded = false
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                )
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DateRangeFilter(
     startDate: LocalDate?,
     endDate: LocalDate?,
-    onStartDateChange: (LocalDate) -> Unit,
-    onEndDateChange: (LocalDate) -> Unit
+    onStartDateSelected: (LocalDate) -> Unit,
+    onEndDateSelected: (LocalDate) -> Unit
 ) {
-    Card(
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
+
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Periode",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-                // Make dates clickable to allow setting via provided callbacks (improves UX and avoids unused parameter warnings)
-                Text(
-                    text = startDate?.format(formatter) ?: "-",
-                    modifier = Modifier.clickable { onStartDateChange(startDate ?: LocalDate.now()) }
-                )
-                Text("s/d")
-                Text(
-                    text = endDate?.format(formatter) ?: "-",
-                    modifier = Modifier.clickable { onEndDateChange(endDate ?: LocalDate.now()) }
-                )
+        OutlinedTextField(
+            value = startDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
+            onValueChange = {},
+            label = { Text(stringResource(R.string.reports_start_date)) },
+            readOnly = true,
+            modifier = Modifier.weight(1f),
+            trailingIcon = {
+                IconButton(onClick = { showStartDatePicker = true }) {
+                    Icon(Icons.Default.DateRange, contentDescription = "Select start date")
+                }
             }
-        }
-    }
-}
+        )
 
-@Composable
-private fun GrossSalesReport(data: Any?) {
-    when (data) {
-        is Map<*, *> -> {
-            val totalSales = (data["totalSales"] as? Number)?.toDouble() ?: 0.0
-            val avg = (data["averageTransaction"] as? Number)?.toDouble() ?: 0.0
-            Column(modifier = Modifier.padding(16.dp)) {
-                MetricCard(
-                    title = "Total Penjualan",
-                    value = "Rp ${"%,.0f".format(totalSales)}"
-                )
-                MetricCard(
-                    title = "Rata-rata Transaksi",
-                    value = "Rp ${"%,.0f".format(avg)}"
-                )
+        OutlinedTextField(
+            value = endDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
+            onValueChange = {},
+            label = { Text(stringResource(R.string.reports_end_date)) },
+            readOnly = true,
+            modifier = Modifier.weight(1f),
+            trailingIcon = {
+                IconButton(onClick = { showEndDatePicker = true }) {
+                    Icon(Icons.Default.DateRange, contentDescription = "Select end date")
+                }
             }
-        }
-        else -> EmptyReportMessage()
+        )
     }
-}
 
-@Composable
-private fun ProfitMarginReport(data: Any?) {
-    when (data) {
-        is Map<*, *> -> {
-            val revenue = (data["revenue"] as? Number)?.toDouble() ?: 0.0
-            val cost = (data["costOfGoodsSold"] as? Number)?.toDouble() ?: 0.0
-            val gross = (data["grossProfit"] as? Number)?.toDouble() ?: 0.0
-            val margin = (data["marginPercentage"] as? Number)?.toDouble() ?: 0.0
-            Column(modifier = Modifier.padding(16.dp)) {
-                MetricCard(
-                    title = "Pendapatan",
-                    value = "Rp ${"%,.0f".format(revenue)}"
-                )
-                MetricCard(
-                    title = "HPP",
-                    value = "Rp ${"%,.0f".format(cost)}"
-                )
-                MetricCard(
-                    title = "Laba Kotor",
-                    value = "Rp ${"%,.0f".format(gross)}"
-                )
-                MetricCard(
-                    title = "Margin",
-                    value = "${"%.2f".format(margin)}%"
-                )
-            }
-        }
-        else -> EmptyReportMessage()
-    }
-}
+    if (showStartDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = startDate?.toEpochDay()?.times(24 * 60 * 60 * 1000)
+        )
 
-@Composable
-private fun NetProfitReport(data: Any?) {
-    when (data) {
-        is Map<*, *> -> {
-            val gross = (data["grossProfit"] as? Number)?.toDouble() ?: 0.0
-            val expenses = (data["totalExpenses"] as? Number)?.toDouble() ?: 0.0
-            val net = (data["netProfit"] as? Number)?.toDouble() ?: 0.0
-            val margin = (data["profitMargin"] as? Number)?.toDouble() ?: 0.0
-            Column(modifier = Modifier.padding(16.dp)) {
-                MetricCard(
-                    title = "Laba Kotor",
-                    value = "Rp ${"%,.0f".format(gross)}"
-                )
-                MetricCard(
-                    title = "Total Biaya",
-                    value = "Rp ${"%,.0f".format(expenses)}"
-                )
-                MetricCard(
-                    title = "Laba Bersih",
-                    value = "Rp ${"%,.0f".format(net)}"
-                )
-                MetricCard(
-                    title = "Margin Bersih",
-                    value = "${"%.2f".format(margin)}%"
-                )
-            }
-        }
-        else -> EmptyReportMessage()
-    }
-}
-
-@Composable
-private fun SalesByProductReport(data: Any?) {
-    val productSales = (data as? List<*>)?.filterIsInstance<Map<*, *>>().orEmpty()
-    if (productSales.isNotEmpty()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Top 10 Produk",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            BarChart(
-                title = "Top 10 Produk",
-                data = productSales.take(10).map { ((it["productName"] as? String) ?: "-") to ((it["revenue"] as? Number)?.toFloat() ?: 0f) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-            )
-        }
-    } else {
-        EmptyReportMessage()
-    }
-}
-
-@Composable
-private fun SalesByCategoryReport(data: Any?) {
-    val categorySales = (data as? List<*>)?.filterIsInstance<Map<*, *>>().orEmpty()
-    if (categorySales.isNotEmpty()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Penjualan per Kategori",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            BarChart(
-                title = "Penjualan per Kategori",
-                data = categorySales.map { ((it["categoryName"] as? String) ?: "-") to ((it["totalRevenue"] as? Number)?.toFloat() ?: 0f) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-            )
-        }
-    } else {
-        EmptyReportMessage()
-    }
-}
-
-@Composable
-private fun SalesTrendReport(data: Any?) {
-    val trendData = (data as? List<*>)?.filterIsInstance<Map<*, *>>().orEmpty()
-    if (trendData.isNotEmpty()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Trend Penjualan Harian",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            LineChart(
-                title = "Trend Penjualan Harian",
-                data = trendData.map { ((it["date"] as? java.time.LocalDate)?.toString() ?: "-") to ((it["sales"] as? Number)?.toFloat() ?: 0f) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-            )
-        }
-    } else {
-        EmptyReportMessage()
-    }
-}
-
-@Composable
-private fun IncomeStatementReport(data: Any?) {
-    val map = (data as? Map<*, *>) ?: emptyMap<Any, Any>()
-    val revenue = (map["revenue"] as? Number)?.toDouble() ?: 0.0
-    val costOfGoods = (map["costOfGoodsSold"] as? Number)?.toDouble() ?: 0.0
-    val grossProfit = (map["grossProfit"] as? Number)?.toDouble() ?: 0.0
-    val operatingExpenses = (map["operatingExpenses"] as? Number)?.toDouble() ?: 0.0
-    val netIncome = (map["netIncome"] as? Number)?.toDouble() ?: 0.0
-
-    if (map.isNotEmpty()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            MetricCard(
-                title = "Pendapatan",
-                value = "Rp ${"%,.0f".format(revenue)}"
-            )
-            MetricCard(
-                title = "HPP",
-                value = "Rp ${"%,.0f".format(costOfGoods)}"
-            )
-            MetricCard(
-                title = "Laba Kotor",
-                value = "Rp ${"%,.0f".format(grossProfit)}"
-            )
-            MetricCard(
-                title = "Biaya Operasional",
-                value = "Rp ${"%,.0f".format(operatingExpenses)}"
-            )
-            MetricCard(
-                title = "Laba Bersih",
-                value = "Rp ${"%,.0f".format(netIncome)}"
-            )
-        }
-    } else {
-        EmptyReportMessage()
-    }
-}
-
-@Composable
-private fun CashFlowReport(data: Any?) {
-    when (data) {
-        is CashFlow -> {
-            Column(modifier = Modifier.padding(16.dp)) {
-                MetricCard(
-                    title = "Arus Kas Operasional",
-                    value = "Rp ${"%,.0f".format(data.operatingCashFlow)}"
-                )
-                MetricCard(
-                    title = "Arus Kas Investasi",
-                    value = "Rp ${"%,.0f".format(data.investingCashFlow)}"
-                )
-                MetricCard(
-                    title = "Arus Kas Finansial",
-                    value = "Rp ${"%,.0f".format(data.financingCashFlow)}"
-                )
-                MetricCard(
-                    title = "Arus Kas Bersih",
-                    value = "Rp ${"%,.0f".format(data.netCashFlow)}"
-                )
-            }
-        }
-        else -> EmptyReportMessage()
-    }
-}
-
-@Composable
-private fun ExpenseReport(data: Any?) {
-    val map = (data as? Map<*, *>) ?: emptyMap<Any, Any>()
-    if (map.isNotEmpty()) {
-        val total = (map["totalExpenses"] as? Number)?.toDouble() ?: 0.0
-        val byCategory = map["expensesByCategory"] as? Map<*, *> ?: emptyMap<Any, Any>()
-
-        Column(modifier = Modifier.padding(16.dp)) {
-            MetricCard(
-                title = "Total Pengeluaran",
-                value = "Rp ${"%,.0f".format(total)}"
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Pengeluaran per Kategori",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            PieChart(
-                title = "Distribusi Pengeluaran",
-                data = byCategory.entries.map { entry ->
-                    val key = entry.key
-                    val label = when (key) {
-                        is com.chibychibystore.data.local.entity.ExpenseCategory -> key.displayName
-                        else -> key.toString()
+        DatePickerDialog(
+            onDismissRequest = { showStartDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val selectedDate = LocalDate.ofEpochDay(millis / (24 * 60 * 60 * 1000))
+                        onStartDateSelected(selectedDate)
                     }
-                    label to ((entry.value as? Number)?.toFloat() ?: 0f)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-            )
-        }
-    } else {
-        EmptyReportMessage()
-    }
-}
-
-@Composable
-private fun BalanceSheetReport(data: Any?) {
-    val map = (data as? Map<*, *>) ?: emptyMap<Any, Any>()
-    if (map.isNotEmpty()) {
-        val assets = (map["assets"] as? Number)?.toDouble() ?: 0.0
-        val liabilities = (map["liabilities"] as? Number)?.toDouble() ?: 0.0
-        val equity = (map["equity"] as? Number)?.toDouble() ?: 0.0
-        val inventoryValue = (map["inventoryValue"] as? Number)?.toDouble() ?: 0.0
-
-        Column(modifier = Modifier.padding(16.dp)) {
-            MetricCard(
-                title = "Total Aset",
-                value = "Rp ${"%,.0f".format(assets)}"
-            )
-            MetricCard(
-                title = "Total Liabilitas",
-                value = "Rp ${"%,.0f".format(liabilities)}"
-            )
-            MetricCard(
-                title = "Ekuitas",
-                value = "Rp ${"%,.0f".format(equity)}"
-            )
-            MetricCard(
-                title = "Nilai Persediaan",
-                value = "Rp ${"%,.0f".format(inventoryValue)}"
-            )
-        }
-    } else {
-        EmptyReportMessage()
-    }
-}
-
-@Composable
-private fun EmptyReportMessage() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            contentAlignment = Alignment.Center
+                    showStartDatePicker = false
+                }) {
+                    Text(stringResource(R.string.common_ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStartDatePicker = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
         ) {
-            Text(
-                text = "Memuat data laporan...",
-                style = MaterialTheme.typography.bodyLarge
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showEndDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = endDate?.toEpochDay()?.times(24 * 60 * 60 * 1000)
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { showEndDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val selectedDate = LocalDate.ofEpochDay(millis / (24 * 60 * 60 * 1000))
+                        onEndDateSelected(selectedDate)
+                    }
+                    showEndDatePicker = false
+                }) {
+                    Text(stringResource(R.string.common_ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEndDatePicker = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+}
+
+// Report display components
+
+@Composable
+private fun GrossSalesReportScreen(data: GrossSalesReport?) {
+    if (data == null) return
+    Column(modifier = Modifier.padding(16.dp)) {
+        MetricCard(
+            title = "Total Penjualan",
+            value = "Rp ${"%,.0f".format(data.totalSales)}",
+            subtitle = "${data.totalTransactions} transaksi"
+        )
+        MetricCard(
+            title = "Rata-rata per Transaksi",
+            value = "Rp ${"%,.0f".format(data.averageTransaction)}"
+        )
+    }
+}
+
+@Composable
+private fun ProfitMarginReportScreen(data: ProfitMarginReport?) {
+    if (data == null) return
+    Column(modifier = Modifier.padding(16.dp)) {
+        MetricCard(
+            title = "Total Pendapatan",
+            value = "Rp ${"%,.0f".format(data.totalRevenue)}"
+        )
+        MetricCard(
+            title = "Total Biaya",
+            value = "Rp ${"%,.0f".format(data.totalCost)}"
+        )
+        MetricCard(
+            title = "Laba Kotor",
+            value = "Rp ${"%,.0f".format(data.grossProfit)}"
+        )
+        MetricCard(
+            title = "Margin Keuntungan",
+            value = "${"%.1f".format(data.profitMargin)}%"
+        )
+    }
+}
+
+@Composable
+private fun NetProfitReportScreen(data: NetProfitReport?) {
+    if (data == null) return
+    Column(modifier = Modifier.padding(16.dp)) {
+        MetricCard(
+            title = "Laba Kotor",
+            value = "Rp ${"%,.0f".format(data.grossProfit)}"
+        )
+        MetricCard(
+            title = "Total Pengeluaran",
+            value = "Rp ${"%,.0f".format(data.totalExpenses)}"
+        )
+        MetricCard(
+            title = "Laba Bersih",
+            value = "Rp ${"%,.0f".format(data.netProfit)}",
+            subtitle = "${"%.1f".format(data.profitMargin)}% margin"
+        )
+    }
+}
+
+@Composable
+private fun SalesByProductReportScreen(data: List<ProductSales>?) {
+    if (data == null) return
+    Column(modifier = Modifier.padding(16.dp)) {
+        if (data.isNotEmpty()) {
+            val chartData = data.take(10).map { it.productName to it.totalRevenue.toFloat() }
+            BarChart(
+                data = chartData,
+                title = "Penjualan per Produk (Top 10)"
+            )
+        } else {
+            Text("Tidak ada data penjualan produk")
+        }
+    }
+}
+
+@Composable
+private fun SalesByCategoryReportScreen(data: List<CategorySales>?) {
+    if (data == null) return
+    Column(modifier = Modifier.padding(16.dp)) {
+        if (data.isNotEmpty()) {
+            val chartData = data.map { it.categoryName to it.totalRevenue.toFloat() }
+            BarChart(
+                data = chartData,
+                title = "Penjualan per Kategori"
+            )
+        } else {
+            Text("Tidak ada data penjualan kategori")
+        }
+    }
+}
+
+@Composable
+private fun SalesTrendReportScreen(data: List<TrendData>?) {
+    if (data == null) return
+    Column(modifier = Modifier.padding(16.dp)) {
+        if (data.isNotEmpty()) {
+            val chartData = data.map { it.date.toString() to it.sales.toFloat() }
+            LineChart(
+                data = chartData,
+                title = "Trend Penjualan Harian"
+            )
+        } else {
+            Text("Tidak ada data trend penjualan")
+        }
+    }
+}
+
+@Composable
+private fun IncomeStatementReportScreen(data: IncomeStatement?) {
+    if (data == null) return
+    Column(modifier = Modifier.padding(16.dp)) {
+        MetricCard(
+            title = "Pendapatan",
+            value = "Rp ${"%,.0f".format(data.revenue)}"
+        )
+        MetricCard(
+            title = "Harga Pokok Penjualan",
+            value = "Rp ${"%,.0f".format(data.costOfGoodsSold)}"
+        )
+        MetricCard(
+            title = "Laba Kotor",
+            value = "Rp ${"%,.0f".format(data.grossProfit)}"
+        )
+        MetricCard(
+            title = "Beban Operasional",
+            value = "Rp ${"%,.0f".format(data.operatingExpenses)}"
+        )
+        MetricCard(
+            title = "Laba Bersih",
+            value = "Rp ${"%,.0f".format(data.netIncome)}"
+        )
+    }
+}
+
+@Composable
+private fun CashFlowReportScreen(data: CashFlow?) {
+    if (data == null) return
+    Column(modifier = Modifier.padding(16.dp)) {
+        MetricCard(
+            title = "Arus Kas Operasional",
+            value = "Rp ${"%,.0f".format(data.operatingCashFlow)}"
+        )
+        MetricCard(
+            title = "Arus Kas Investasi",
+            value = "Rp ${"%,.0f".format(data.investingCashFlow)}"
+        )
+        MetricCard(
+            title = "Arus Kas Pendanaan",
+            value = "Rp ${"%,.0f".format(data.financingCashFlow)}"
+        )
+        MetricCard(
+            title = "Arus Kas Bersih",
+            value = "Rp ${"%,.0f".format(data.netCashFlow)}"
+        )
+        MetricCard(
+            title = "Saldo Akhir",
+            value = "Rp ${"%,.0f".format(data.endingCash)}"
+        )
+    }
+}
+
+@Composable
+private fun ExpenseReportScreen(data: ExpenseReport?) {
+    if (data == null) return
+    Column(modifier = Modifier.padding(16.dp)) {
+        MetricCard(
+            title = "Total Pengeluaran",
+            value = "Rp ${"%,.0f".format(data.totalExpenses)}"
+        )
+        if (data.expensesByCategory.isNotEmpty()) {
+            val chartData = data.expensesByCategory.map {
+                val name = if (it.key is Enum<*>) (it.key as Enum<*>).name else it.key.toString()
+                name to it.value.toFloat()
+            }
+            PieChart(
+                data = chartData,
+                title = "Pengeluaran per Kategori"
             )
         }
+    }
+}
+
+@Composable
+private fun BalanceSheetReportScreen(data: BalanceSheet?) {
+    if (data == null) return
+    Column(modifier = Modifier.padding(16.dp)) {
+        MetricCard(
+            title = "Total Aset",
+            value = "Rp ${"%,.0f".format(data.assets)}"
+        )
+        MetricCard(
+            title = "Total Liabilitas",
+            value = "Rp ${"%,.0f".format(data.liabilities)}"
+        )
+        MetricCard(
+            title = "Ekuitas",
+            value = "Rp ${"%,.0f".format(data.equity)}"
+        )
+        MetricCard(
+            title = "Nilai Inventaris",
+            value = "Rp ${"%,.0f".format(data.inventoryValue)}"
+        )
     }
 }
