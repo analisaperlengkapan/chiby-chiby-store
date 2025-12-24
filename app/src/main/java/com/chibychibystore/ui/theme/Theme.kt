@@ -16,62 +16,52 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryLight,
-    onPrimary = White,
-    primaryContainer = PrimaryDark,
-    onPrimaryContainer = PrimaryContainerLight,
-    secondary = SecondaryLight,
-    onSecondary = Neutral10,
-    secondaryContainer = SecondaryDark,
-    onSecondaryContainer = SecondaryContainerLight,
-    tertiary = TertiaryLight,
+    primary = ChibyPinkLight,
+    onPrimary = ChibyPinkDark,
+    primaryContainer = ChibyPinkDark,
+    onPrimaryContainer = ChibyPinkLight,
+    secondary = ChibyYellowSecondary,
+    onSecondary = ChibyYellowDark,
+    secondaryContainer = ChibyYellowDark,
+    onSecondaryContainer = ChibyYellowLight,
+    tertiary = ChibyTeal,
     onTertiary = White,
-    tertiaryContainer = TertiaryDark,
-    onTertiaryContainer = Neutral90,
-    error = Error,
-    onError = White,
-    errorContainer = Red30,
-    onErrorContainer = Red90,
     background = Neutral10,
-    onBackground = Neutral95,
-    surface = Neutral20,
-    onSurface = Neutral95,
-    surfaceVariant = Neutral30,
-    onSurfaceVariant = Neutral80,
-    outline = Neutral30
+    onBackground = Neutral90,
+    surface = Neutral10,
+    onSurface = Neutral90,
+    surfaceVariant = Neutral20,
+    onSurfaceVariant = Neutral90,
+    error = Error,
+    onError = White
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryDark,
+    primary = ChibyPinkPrimary,
     onPrimary = White,
-    primaryContainer = PrimaryContainerLight,
-    onPrimaryContainer = OnPrimaryContainerLight,
-    secondary = SecondaryDark,
-    onSecondary = White,
-    secondaryContainer = SecondaryContainerLight,
-    onSecondaryContainer = OnSecondaryContainerLight,
-    tertiary = TertiaryDark,
+    primaryContainer = ChibyPinkLight,
+    onPrimaryContainer = OnChibyPinkContainer,
+    secondary = ChibyYellowSecondary,
+    onSecondary = Black,
+    secondaryContainer = ChibyYellowLight,
+    onSecondaryContainer = OnChibyYellowContainer,
+    tertiary = ChibyTealDark,
     onTertiary = White,
-    tertiaryContainer = Neutral90,
-    onTertiaryContainer = Neutral10,
-    error = Error,
-    onError = White,
-    errorContainer = Red90,
-    onErrorContainer = Red10,
     background = Neutral99,
     onBackground = Neutral10,
     surface = White,
     onSurface = Neutral10,
     surfaceVariant = Neutral95,
-    onSurfaceVariant = Neutral30,
-    outline = Neutral80
+    onSurfaceVariant = Neutral20,
+    error = Error,
+    onError = White
 )
 
 @Composable
 fun ChibyChibyStoreTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Disable dynamic color to enforce Chiby Chiby brand identity
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
