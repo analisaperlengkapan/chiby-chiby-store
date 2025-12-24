@@ -150,4 +150,61 @@ class UserDetailViewModelTest {
         verify(userManagementService).deleteUser(eq(userId), eq(currentUserId))
         assertTrue(onSuccessCalled)
     }
+
+    @Test
+    fun `saveUser failure should show error`() = runTest {
+        val user = Pengguna(
+            id = userId,
+            username = "testuser",
+            passwordHash = "hash",
+            role = Role.CASHIER,
+            permissions = "[]",
+            createdAt = Date(),
+            updatedAt = Date()
+        )
+
+        Mockito.`when`(userManagementService.getUserById(userId)).thenReturn(Result.success(user))
+        viewModel.loadUser(userId)
+        advanceUntilIdle()
+
+        viewModel.toggleEditMode()
+
+        Mockito.`when`(authService.getCurrentUser()).thenReturn(currentUser)
+        Mockito.`when`(userManagementService.updateUser(any(), anyOrNull(), anyOrNull(), anyOrNull(), any()))
+            .thenReturn(Result.failure(Exception("Update failed")))
+
+        viewModel.saveUser()
+        advanceUntilIdle()
+
+        val uiState = viewModel.uiState.value
+        assertFalse(uiState.isLoading)
+        assertTrue(uiState.isEditMode) // Should remain in edit mode
+        assertEquals("Update failed", uiState.error)
+    }
+
+    @Test
+    fun `saveUser should fail when session expired`() = runTest {
+        val user = Pengguna(
+            id = userId,
+            username = "testuser",
+            passwordHash = "hash",
+            role = Role.CASHIER,
+            permissions = "[]",
+            createdAt = Date(),
+            updatedAt = Date()
+        )
+
+        Mockito.`when`(userManagementService.getUserById(userId)).thenReturn(Result.success(user))
+        viewModel.loadUser(userId)
+        advanceUntilIdle()
+
+        Mockito.`when`(authService.getCurrentUser()).thenReturn(null)
+
+        viewModel.saveUser()
+        advanceUntilIdle()
+
+        val uiState = viewModel.uiState.value
+        assertFalse(uiState.isLoading)
+        assertEquals("Sesi telah berakhir. Silakan login kembali.", uiState.error)
+    }
 }
