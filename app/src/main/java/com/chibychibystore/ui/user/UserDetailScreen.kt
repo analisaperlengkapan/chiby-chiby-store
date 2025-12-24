@@ -237,9 +237,21 @@ class UserDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                // TODO: Implement get user by ID
-                // For now, just set loading to false
-                _uiState.value = _uiState.value.copy(isLoading = false)
+                val result = userManagementService.getUserById(userId)
+                if (result.isSuccess) {
+                    val user = result.getOrNull()
+                    originalUser = user
+                    _uiState.value = _uiState.value.copy(
+                        user = user,
+                        isLoading = false
+                    )
+                } else {
+                    val error = result.exceptionOrNull()?.message ?: "Gagal memuat pengguna"
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = error
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
