@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.util.*
@@ -50,43 +51,47 @@ class ExpenseViewModel @Inject constructor(
      */
     fun loadExpenses() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
-                val startDate = _uiState.value.startDate ?: Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000) // 30 hari lalu
-                val endDate = _uiState.value.endDate ?: Date()
+                val currentState = _uiState.value
+                val startDate = currentState.startDate ?: Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000) // 30 hari lalu
+                val endDate = currentState.endDate ?: Date()
+                val category = currentState.selectedCategory
 
                 // Convert to LocalDate for service
                 val startLocalDate = java.time.Instant.ofEpochMilli(startDate.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
                 val endLocalDate = java.time.Instant.ofEpochMilli(endDate.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
 
-                val result = expenseService.getExpenses(startLocalDate, endLocalDate)
+                // Pass category name to service for optimized filtering
+                val result = expenseService.getExpenses(
+                    startLocalDate,
+                    endLocalDate,
+                    category?.name
+                )
 
                 val expensesList = when (result) {
                     is com.chibychibystore.data.model.Result.Success -> result.data
                     is com.chibychibystore.data.model.Result.Failure -> emptyList()
                 }
 
-                var filteredExpenses = expensesList
-
-                // Filter by category if selected
-                _uiState.value.selectedCategory?.let { category ->
-                    filteredExpenses = filteredExpenses.filter { it.category == category }
-                }
-
                 // Calculate total
-                val total = filteredExpenses.sumOf { it.amount }
+                val total = expensesList.sumOf { it.amount }
 
-                _uiState.value = _uiState.value.copy(
-                    expenses = filteredExpenses,
-                    totalExpenses = total,
-                    isLoading = false
-                )
+                _uiState.update {
+                    it.copy(
+                        expenses = expensesList,
+                        totalExpenses = total,
+                        isLoading = false
+                    )
+                }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Terjadi kesalahan",
-                    isLoading = false
-                )
+                _uiState.update {
+                    it.copy(
+                        error = e.message ?: "Terjadi kesalahan",
+                        isLoading = false
+                    )
+                }
             }
         }
     }
@@ -95,7 +100,7 @@ class ExpenseViewModel @Inject constructor(
      * Set filter tanggal mulai
      */
     fun setStartDate(date: Date?) {
-        _uiState.value = _uiState.value.copy(startDate = date)
+        _uiState.update { it.copy(startDate = date) }
         loadExpenses()
     }
 
@@ -103,7 +108,7 @@ class ExpenseViewModel @Inject constructor(
      * Set filter tanggal akhir
      */
     fun setEndDate(date: Date?) {
-        _uiState.value = _uiState.value.copy(endDate = date)
+        _uiState.update { it.copy(endDate = date) }
         loadExpenses()
     }
 
@@ -111,7 +116,7 @@ class ExpenseViewModel @Inject constructor(
      * Set filter kategori
      */
     fun setCategoryFilter(category: ExpenseCategory?) {
-        _uiState.value = _uiState.value.copy(selectedCategory = category)
+        _uiState.update { it.copy(selectedCategory = category) }
         loadExpenses()
     }
 
@@ -119,11 +124,13 @@ class ExpenseViewModel @Inject constructor(
      * Set semua filter sekaligus
      */
     fun setFilters(startDate: Date?, endDate: Date?, category: ExpenseCategory?) {
-        _uiState.value = _uiState.value.copy(
-            startDate = startDate,
-            endDate = endDate,
-            selectedCategory = category
-        )
+        _uiState.update {
+            it.copy(
+                startDate = startDate,
+                endDate = endDate,
+                selectedCategory = category
+            )
+        }
         loadExpenses()
     }
 
@@ -132,17 +139,19 @@ class ExpenseViewModel @Inject constructor(
      */
     fun deleteExpense(expenseId: Long) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
                 // Note: Delete functionality would be implemented in ExpenseService
                 // For now, just reload the list
                 loadExpenses()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Gagal menghapus pengeluaran",
-                    isLoading = false
-                )
+                _uiState.update {
+                    it.copy(
+                        error = e.message ?: "Gagal menghapus pengeluaran",
+                        isLoading = false
+                    )
+                }
             }
         }
     }
@@ -151,11 +160,13 @@ class ExpenseViewModel @Inject constructor(
      * Reset filter
      */
     fun resetFilters() {
-        _uiState.value = _uiState.value.copy(
-            startDate = null,
-            endDate = null,
-            selectedCategory = null
-        )
+        _uiState.update {
+            it.copy(
+                startDate = null,
+                endDate = null,
+                selectedCategory = null
+            )
+        }
         loadExpenses()
     }
 
@@ -163,6 +174,6 @@ class ExpenseViewModel @Inject constructor(
      * Clear error
      */
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 }

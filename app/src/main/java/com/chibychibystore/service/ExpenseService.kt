@@ -38,6 +38,7 @@ interface ExpenseService {
     
     /**
      * Mendapatkan semua pengeluaran dengan filter
+     * @param category Filter berdasarkan nama kategori (opsional)
      */
     suspend fun getExpenses(
         startDate: LocalDate? = null,
