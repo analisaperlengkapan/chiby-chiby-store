@@ -342,7 +342,8 @@ fun ExpenseFilterDialog(
                                     expanded = false
                                 }
                             )
-                            ExpenseCategory.values().forEach { category ->
+                            val categories = remember { ExpenseCategory.values() }
+                            categories.forEach { category ->
                                 DropdownMenuItem(
                                     text = { Text(category.displayName) },
                                     onClick = {
