@@ -47,7 +47,7 @@ fun UserDetailScreen(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Konfirmasi Hapus") },
-            text = { Text("Apakah Anda yakin ingin menghapus pengguna ini?") },
+            text = { Text("Apakah Anda yakin ingin menghapus pengguna ${uiState.user?.username ?: ""}?") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -84,7 +84,10 @@ fun UserDetailScreen(
                         )
                     }
                     IconButton(
-                        onClick = { showDeleteDialog = true }
+                        onClick = {
+                            // Show delete confirmation dialog
+                            showDeleteDialog = true
+                        }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
