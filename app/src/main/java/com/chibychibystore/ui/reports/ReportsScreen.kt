@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,9 +18,7 @@ import com.chibychibystore.R
 import com.chibychibystore.service.*
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.DatePickerDialog
-import com.chibychibystore.ui.components.special.BarChart
-import com.chibychibystore.ui.components.special.LineChart
-import com.chibychibystore.ui.components.special.PieChart
+// Chart components are in the same package, so no need to import them
 import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -353,7 +350,7 @@ private fun SalesByProductReportScreen(data: List<ProductSales>?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         if (data.isNotEmpty()) {
-            val chartData = data.take(10).map { it.productName to it.totalRevenue }
+            val chartData = data.take(10).map { it.productName to it.totalRevenue.toFloat() }
             BarChart(
                 data = chartData,
                 title = "Penjualan per Produk (Top 10)"
@@ -369,7 +366,7 @@ private fun SalesByCategoryReportScreen(data: List<CategorySales>?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         if (data.isNotEmpty()) {
-            val chartData = data.map { it.categoryName to it.totalRevenue }
+            val chartData = data.map { it.categoryName to it.totalRevenue.toFloat() }
             BarChart(
                 data = chartData,
                 title = "Penjualan per Kategori"
@@ -385,7 +382,7 @@ private fun SalesTrendReportScreen(data: List<TrendData>?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         if (data.isNotEmpty()) {
-            val chartData = data.map { it.date.toString() to it.sales }
+            val chartData = data.map { it.date.toString() to it.sales.toFloat() }
             LineChart(
                 data = chartData,
                 title = "Trend Penjualan Harian"
@@ -461,7 +458,7 @@ private fun ExpenseReportScreen(data: ExpenseReport?) {
         if (data.expensesByCategory.isNotEmpty()) {
             val chartData = data.expensesByCategory.map {
                 val name = if (it.key is Enum<*>) (it.key as Enum<*>).name else it.key.toString()
-                name to it.value
+                name to it.value.toFloat()
             }
             PieChart(
                 data = chartData,
@@ -491,43 +488,5 @@ private fun BalanceSheetReportScreen(data: BalanceSheet?) {
             title = "Nilai Inventaris",
             value = "Rp ${"%,.0f".format(data.inventoryValue)}"
         )
-    }
-}
-
-@Composable
-private fun MetricCard(
-    title: String,
-    value: String,
-    subtitle: String? = null
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleLarge
-            )
-            if (subtitle != null) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
     }
 }
