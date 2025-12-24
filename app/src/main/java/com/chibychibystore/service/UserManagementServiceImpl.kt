@@ -140,6 +140,7 @@ class UserManagementServiceImpl @Inject constructor(
             val updatedUser = existingUser.copy(
                 username = username ?: existingUser.username,
                 role = role ?: existingUser.role,
+                isActive = isActive ?: existingUser.isActive,
                 updatedAt = java.util.Date()
             )
 

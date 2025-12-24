@@ -24,6 +24,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -310,14 +311,16 @@ class UserDetailViewModel @Inject constructor(
 
     fun saveUser() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val currentUser = authService.getCurrentUser()
                 if (currentUser == null) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "Sesi telah berakhir. Silakan login kembali."
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "Sesi telah berakhir. Silakan login kembali."
+                        )
+                    }
                     return@launch
                 }
 
@@ -333,21 +336,28 @@ class UserDetailViewModel @Inject constructor(
 
                 if (result.isSuccess) {
                     originalUser = userToSave
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isEditMode = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isEditMode = false
+                        )
+                    }
                 } else {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = result.exceptionOrNull()?.message ?: "Gagal menyimpan pengguna"
-                    )
+                    val errorMessage = result.exceptionOrNull()?.message ?: "Gagal menyimpan pengguna"
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = errorMessage
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Terjadi kesalahan saat menyimpan"
-                )
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = e.message ?: "Terjadi kesalahan saat menyimpan"
+                    )
+                }
             }
         }
     }
