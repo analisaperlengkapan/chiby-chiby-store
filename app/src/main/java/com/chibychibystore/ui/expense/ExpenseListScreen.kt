@@ -39,7 +39,7 @@ fun ExpenseListScreen(
     viewModel: ExpenseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showFilterDialog by remember { mutableStateOf(false) }
+    var showFilterDialog by remember { mutableStateOf(false) } // State for filter dialog
 
     Scaffold(
         topBar = {
@@ -76,7 +76,7 @@ fun ExpenseListScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        IconButton(onClick = { showFilterDialog = true }) {
+                        IconButton(onClick = { showFilterDialog = true /* Show dialog */ }) {
                             Icon(Icons.Default.FilterList, contentDescription = "Filter")
                         }
                     }
@@ -86,8 +86,9 @@ fun ExpenseListScreen(
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (uiState.startDate != null && uiState.endDate != null) {
+                val dateRangeFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("id", "ID")) }
                                 Text(
-                                    text = "${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(uiState.startDate!!)} - ${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(uiState.endDate!!)}",
+                    text = "${dateRangeFormatter.format(uiState.startDate!!)} - ${dateRangeFormatter.format(uiState.endDate!!)}",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -184,6 +185,7 @@ fun ExpenseListScreen(
         }
     }
 
+    // Render filter dialog
     if (showFilterDialog) {
         ExpenseFilterDialog(
             currentStartDate = uiState.startDate,
@@ -203,6 +205,8 @@ private fun ExpenseItem(
     expense: Pengeluaran,
     onClick: () -> Unit
 ) {
+    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("id", "ID")) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -241,7 +245,7 @@ private fun ExpenseItem(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(expense.expenseDate),
+                        text = dateFormatter.format(expense.expenseDate),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -295,9 +299,12 @@ fun ExpenseFilterDialog(
                 Column {
                     Text("Rentang Waktu", style = MaterialTheme.typography.labelLarge)
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    val dateRangeFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("id", "ID")) }
+
                     OutlinedTextField(
                         value = if (startDate != null && endDate != null) {
-                            "${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(startDate)} - ${SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(endDate)}"
+                            "${dateRangeFormatter.format(startDate)} - ${dateRangeFormatter.format(endDate)}"
                         } else {
                             "Pilih Tanggal"
                         },
