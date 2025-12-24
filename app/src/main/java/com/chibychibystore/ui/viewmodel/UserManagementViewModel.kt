@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
+import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.UserManagementService
 import com.chibychibystore.service.UserStats
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -234,7 +235,8 @@ data class ResetPasswordFormState(
  */
 @HiltViewModel
 class UserManagementViewModel @Inject constructor(
-    private val userManagementService: UserManagementService
+    private val userManagementService: UserManagementService,
+    private val authService: AuthService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UserManagementUiState())
@@ -581,8 +583,14 @@ class UserManagementViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // TODO: Get current user ID from AuthService
-                val currentUserId = 1L // Placeholder
+                val currentUserId = authService.getCurrentUser()?.id
+                if (currentUserId == null) {
+                    _createUserFormState.value = _createUserFormState.value.copy(
+                        isSubmitting = false,
+                        errorMessage = "Sesi tidak valid. Silakan login kembali."
+                    )
+                    return@launch
+                }
 
                 userManagementService.createUser(
                     username = formState.username,
@@ -683,8 +691,14 @@ class UserManagementViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // TODO: Get current user ID from AuthService
-                val currentUserId = 1L // Placeholder
+                val currentUserId = authService.getCurrentUser()?.id
+                if (currentUserId == null) {
+                    _editUserFormState.value = _editUserFormState.value.copy(
+                        isSubmitting = false,
+                        errorMessage = "Sesi tidak valid. Silakan login kembali."
+                    )
+                    return@launch
+                }
 
                 userManagementService.updateUser(
                     userId = selectedUser.id,
@@ -756,8 +770,15 @@ class UserManagementViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // TODO: Get current user ID from AuthService
-                val currentUserId = 1L // Placeholder
+                val currentUserId = authService.getCurrentUser()?.id
+                if (currentUserId == null) {
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = "Sesi tidak valid. Silakan login kembali.",
+                        showDeleteUserDialog = false
+                    )
+                    clearMessagesAfterDelay()
+                    return@launch
+                }
 
                 userManagementService.deleteUser(
                     userId = selectedUser.id,
@@ -865,8 +886,14 @@ class UserManagementViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // TODO: Get current user ID from AuthService
-                val currentUserId = 1L // Placeholder
+                val currentUserId = authService.getCurrentUser()?.id
+                if (currentUserId == null) {
+                    _resetPasswordFormState.value = _resetPasswordFormState.value.copy(
+                        isSubmitting = false,
+                        errorMessage = "Sesi tidak valid. Silakan login kembali."
+                    )
+                    return@launch
+                }
 
                 userManagementService.resetUserPassword(
                     userId = selectedUser.id,
