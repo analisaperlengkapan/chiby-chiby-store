@@ -314,13 +314,6 @@ data class DashboardUiState(
  * - Multi-store dashboard aggregation
  * - Predictive alerts berdasarkan historical data
  *
- * **Current Implementation Notes:**
- * Saat ini menggunakan mock data untuk development dan testing.
- * Future implementation akan menggunakan real services:
- * - SaleService untuk sales metrics
- * - ProductService untuk inventory alerts
- * - ReportingService untuk advanced analytics
- *
  * @property uiState Reactive state flow untuk dashboard UI updates
  */
 @HiltViewModel
@@ -345,37 +338,13 @@ class DashboardViewModel @Inject constructor(
      *
      * **Business Logic:**
      * 1. Set loading state untuk UI feedback
-     * 2. Load semua metrics secara parallel/simultaneous:
+     * 2. Load semua metrics:
      *    - Today sales total
      *    - Today transaction count
-     *    - Low stock products
-     *    - Recent transactions
+     *    - Low stock products (dari ProdukRepository)
+     *    - Recent transactions (dari SaleService)
      * 3. Aggregate data dan update UI state
      * 4. Handle errors dengan user-friendly messages
-     *
-     * **Current Implementation (Mock Data):**
-     * ```kotlin
-     * // Generate realistic mock data untuk development
-     * val todaySales = Random.nextDouble(1_000_000.0, 5_000_000.0)
-     * val transactionCount = Random.nextInt(10, 50)
-     * val lowStockItems = generateMockLowStockItems()
-     * val recentTransactions = generateMockRecentTransactions()
-     * ```
-     *
-     * **Future Implementation (Real Services):**
-     * ```kotlin
-     * // Parallel loading dengan coroutines
-     * val todaySalesDeferred = async { saleService.getTodayTotalSales() }
-     * val transactionCountDeferred = async { saleService.getTodayTransactionCount() }
-     * val lowStockDeferred = async { productService.getLowStockProducts() }
-     * val recentDeferred = async { saleService.getRecentSales(limit = 10) }
-     *
-     * // Await all results
-     * val todaySales = todaySalesDeferred.await()
-     * val transactionCount = transactionCountDeferred.await()
-     * val lowStockItems = lowStockDeferred.await()
-     * val recentTransactions = recentDeferred.await()
-     * ```
      *
      * **Data Validation:**
      * - Sales amount: Must be >= 0
@@ -424,7 +393,8 @@ class DashboardViewModel @Inject constructor(
      * **Dependencies:**
      * - [viewModelScope]: Lifecycle-aware coroutine execution
      * - [_uiState]: Mutable state untuk UI updates
-     * - Mock data generators (temporary): generateMockLowStockItems, generateMockRecentTransactions
+     * - [saleService]: Service untuk data penjualan
+     * - [produkRepository]: Repository untuk data produk
      *
      * **Testing:**
      * ```kotlin
@@ -500,179 +470,6 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Generate mock data untuk produk dengan stok rendah
-     *
-     * Method temporary yang menghasilkan data mock untuk development dan testing.
-     * Akan diganti dengan real ProductService.getLowStockProducts() call.
-     *
-     * **Business Logic:**
-     * Simulate products dengan stock levels di bawah threshold minimum.
-     * Products ini akan ditampilkan sebagai alerts di dashboard.
-     *
-     * **Mock Data Strategy:**
-     * - Realistic product names dan barcodes (Indonesian market)
-     * - Varied stock levels (1-5) untuk menunjukkan urgency
-     * - Different categories untuk diversity
-     * - Consistent pricing structure
-     *
-     * **Data Structure:**
-     * ```kotlin
-     * // Mock low stock products
-     * val products = listOf(
-     *     Product(
-     *         name = "Indomie Goreng",
-     *         stock = 5,  // Below minimum threshold
-     *         category = "Food",
-     *         price = 3500.0
-     *     ),
-     *     Product(
-     *         name = "Coca Cola 1.5L",
-     *         stock = 3,  // Critical level
-     *         category = "Beverages",
-     *         price = 8500.0
-     *     )
-     * )
-     * ```
-     *
-     * **Future Replacement:**
-     * ```kotlin
-     * // Real implementation
-     * suspend fun getLowStockProducts(): List<Produk> {
-     *     return productService.getProducts()
-     *         .filter { it.stockQuantity <= it.minStock }
-     *         .sortedBy { it.stockQuantity } // Most critical first
-     *         .take(10) // Limit for dashboard display
-     * }
-     * ```
-     *
-     * **Testing Considerations:**
-     * - Mock data harus consistent across test runs
-     - Data harus realistic untuk UI testing
-     * - Include edge cases: empty list, single item, many items
-     *
-     * **Performance:**
-     * - Lightweight: Static data generation
-     * - Fast execution: No database calls
-     * - Memory efficient: Small fixed-size list
-     *
-     * @return List produk mock dengan stok rendah untuk dashboard alerts
-     */
-    private fun generateMockLowStockItems(): List<Produk> {
-        // TODO: Replace with actual low stock query
-        return listOf(
-            Produk(
-                id = 1,
-                name = "Indomie Goreng",
-                barcode = "8996001410022",
-                sellingPrice = 3500.0,
-                costPrice = 3000.0,
-                stockQuantity = 5,
-                categoryId = 1,
-                warehouseId = 1
-            ),
-            Produk(
-                id = 2,
-                name = "Coca Cola 1.5L",
-                barcode = "8996001410039",
-                sellingPrice = 8500.0,
-                costPrice = 7500.0,
-                stockQuantity = 3,
-                categoryId = 2,
-                warehouseId = 1
-            )
-        )
-    }
-
-    /**
-     * Generate mock data untuk transaksi penjualan terbaru
-     *
-     * Method temporary yang menghasilkan data mock untuk recent sales activity.
-     * Akan diganti dengan real SaleService.getRecentSales() call.
-     *
-     * **Business Logic:**
-     * Simulate recent sales transactions untuk activity overview di dashboard.
-     * Menampilkan transaksi terbaru dengan realistic amounts dan timestamps.
-     *
-     * **Mock Data Strategy:**
-     * - Varied transaction amounts (realistic retail values)
-     * - Recent timestamps (current time, 1 hour ago, etc.)
-     * - Payment scenarios (exact payment, with change)
-     * - Consistent user association
-     *
-     * **Data Structure:**
-     * ```kotlin
-     * // Mock recent transactions
-     * val transactions = listOf(
-     *     Sale(
-     *         id = 1,
-     *         date = System.currentTimeMillis(),
-     *         total = 12500.0,  // Recent sale
-     *         payment = 12500.0,
-     *         change = 0.0,
-     *         userId = 1
-     *     ),
-     *     Sale(
-     *         id = 2,
-     *         date = System.currentTimeMillis() - 3600000,  // 1 hour ago
-     *         total = 28500.0,
-     *         payment = 30000.0,
-     *         change = 1500.0,
-     *         userId = 1
-     *     )
-     * )
-     * ```
-     *
-     * **Future Replacement:**
-     * ```kotlin
-     * // Real implementation
-     * suspend fun getRecentTransactions(limit: Int = 10): List<Penjualan> {
-     *     return saleService.getSales(
-     *         dateRange = DateRange.recent(),
-     *         limit = limit,
-     *         sortBy = SortBy.DATE_DESC
-     *     )
-     * }
-     * ```
-     *
-     * **Business Value:**
-     * - Show recent business activity
-     * - Enable quick navigation to transaction details
-     * - Provide context untuk sales performance
-     * - Support operational monitoring
-     *
-     * **Testing Considerations:**
-     * - Consistent timestamps untuk reproducible tests
-     * - Realistic amounts untuk UI validation
-     * - Include various payment scenarios
-     * - Test empty list scenarios
-     *
-     * **Performance:**
-     * - Lightweight: Static data generation
-     * - Fast execution: No complex calculations
-     * - Memory efficient: Small fixed-size list
-     *
-     * @return List transaksi penjualan mock terbaru untuk dashboard activity
-     */
-    private fun generateMockRecentTransactions(): List<Penjualan> {
-        // TODO: Replace with actual recent transactions query
-        return listOf(
-            Penjualan(
-                id = 1,
-                saleDate = java.util.Date(System.currentTimeMillis()),
-                totalAmount = 150000.0,
-                paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.CASH,
-                cashierId = 1
-            ),
-            Penjualan(
-                id = 2,
-                saleDate = java.util.Date(System.currentTimeMillis() - 3600000), // 1 hour ago
-                totalAmount = 28500.0,
-                paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.CASH,
-                cashierId = 1
-            )
-        )
-    }
 
     /**
      * Refresh data dashboard secara manual
