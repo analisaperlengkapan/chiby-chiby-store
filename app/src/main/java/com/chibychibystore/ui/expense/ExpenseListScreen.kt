@@ -76,7 +76,7 @@ fun ExpenseListScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        IconButton(onClick = { showFilterDialog = true /* Show dialog */ }) {
+                        IconButton(onClick = { showFilterDialog = true }) {
                             Icon(Icons.Default.FilterList, contentDescription = "Filter")
                         }
                     }
