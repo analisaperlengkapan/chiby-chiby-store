@@ -4,12 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
+import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.UserManagementService
 import com.chibychibystore.service.UserStats
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -234,7 +236,8 @@ data class ResetPasswordFormState(
  */
 @HiltViewModel
 class UserManagementViewModel @Inject constructor(
-    private val userManagementService: UserManagementService
+    private val userManagementService: UserManagementService,
+    private val authService: AuthService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UserManagementUiState())
@@ -307,21 +310,25 @@ class UserManagementViewModel @Inject constructor(
      */
     private fun loadUsers() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
             try {
                 userManagementService.getAllUsers().collectLatest { users ->
-                    _uiState.value = _uiState.value.copy(
-                        users = users,
-                        filteredUsers = filterUsers(users, _uiState.value.searchQuery, _uiState.value.selectedRole),
-                        isLoading = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            users = users,
+                            filteredUsers = filterUsers(users, it.searchQuery, it.selectedRole),
+                            isLoading = false
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = "Gagal memuat pengguna: ${e.message}"
-                )
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "Gagal memuat pengguna: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -353,7 +360,7 @@ class UserManagementViewModel @Inject constructor(
     private fun loadUserStats() {
         viewModelScope.launch {
             userManagementService.getUserStats().onSuccess { stats ->
-                _uiState.value = _uiState.value.copy(userStats = stats)
+                _uiState.update { it.copy(userStats = stats) }
             }.onFailure { error ->
                 // Stats are not critical, so we don't show error for this
             }
@@ -379,7 +386,7 @@ class UserManagementViewModel @Inject constructor(
      * @param query The search query string entered by the user
      */
     fun onSearchQueryChange(query: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = query)
+        _uiState.update { it.copy(searchQuery = query) }
         updateFilteredUsers()
     }
 
@@ -402,7 +409,7 @@ class UserManagementViewModel @Inject constructor(
      * @param role The role to filter by, or null to show all roles
      */
     fun onRoleFilterChange(role: Role?) {
-        _uiState.value = _uiState.value.copy(selectedRole = role)
+        _uiState.update { it.copy(selectedRole = role) }
         updateFilteredUsers()
     }
 
@@ -424,10 +431,11 @@ class UserManagementViewModel @Inject constructor(
      * - Immediate UI updates
      */
     private fun updateFilteredUsers() {
-        val state = _uiState.value
-        _uiState.value = state.copy(
-            filteredUsers = filterUsers(state.users, state.searchQuery, state.selectedRole)
-        )
+        _uiState.update { state ->
+            state.copy(
+                filteredUsers = filterUsers(state.users, state.searchQuery, state.selectedRole)
+            )
+        }
     }
 
     /**
@@ -476,8 +484,8 @@ class UserManagementViewModel @Inject constructor(
      * `onCreateUser*Change()` handlers to update the form as the user types.
      */
     fun showCreateUserDialog() {
-        _uiState.value = _uiState.value.copy(showCreateUserDialog = true)
-        _createUserFormState.value = CreateUserFormState()
+        _uiState.update { it.copy(showCreateUserDialog = true) }
+        _createUserFormState.update { CreateUserFormState() }
     }
 
     /**
@@ -487,7 +495,7 @@ class UserManagementViewModel @Inject constructor(
      * to preserve values or rely on [showCreateUserDialog] which resets the form.
      */
     fun hideCreateUserDialog() {
-        _uiState.value = _uiState.value.copy(showCreateUserDialog = false)
+        _uiState.update { it.copy(showCreateUserDialog = false) }
     }
 
     /**
@@ -496,10 +504,12 @@ class UserManagementViewModel @Inject constructor(
      * Clears any existing form error message to support “fix and retry” UX.
      */
     fun onCreateUserUsernameChange(username: String) {
-        _createUserFormState.value = _createUserFormState.value.copy(
-            username = username,
-            errorMessage = null
-        )
+        _createUserFormState.update {
+            it.copy(
+                username = username,
+                errorMessage = null
+            )
+        }
     }
 
     /**
@@ -508,10 +518,12 @@ class UserManagementViewModel @Inject constructor(
      * Clears any existing form error message to support “fix and retry” UX.
      */
     fun onCreateUserPasswordChange(password: String) {
-        _createUserFormState.value = _createUserFormState.value.copy(
-            password = password,
-            errorMessage = null
-        )
+        _createUserFormState.update {
+            it.copy(
+                password = password,
+                errorMessage = null
+            )
+        }
     }
 
     /**
@@ -520,10 +532,12 @@ class UserManagementViewModel @Inject constructor(
      * Clears any existing form error message to support “fix and retry” UX.
      */
     fun onCreateUserConfirmPasswordChange(confirmPassword: String) {
-        _createUserFormState.value = _createUserFormState.value.copy(
-            confirmPassword = confirmPassword,
-            errorMessage = null
-        )
+        _createUserFormState.update {
+            it.copy(
+                confirmPassword = confirmPassword,
+                errorMessage = null
+            )
+        }
     }
 
     /**
@@ -533,7 +547,7 @@ class UserManagementViewModel @Inject constructor(
      * username/password rather than role selection.
      */
     fun onCreateUserRoleChange(role: Role) {
-        _createUserFormState.value = _createUserFormState.value.copy(role = role)
+        _createUserFormState.update { it.copy(role = role) }
     }
 
     /**
@@ -563,26 +577,34 @@ class UserManagementViewModel @Inject constructor(
 
         // Validation
         if (formState.username.isBlank()) {
-            _createUserFormState.value = formState.copy(errorMessage = "Username tidak boleh kosong")
+            _createUserFormState.update { it.copy(errorMessage = "Username tidak boleh kosong") }
             return
         }
 
         if (formState.password.isBlank()) {
-            _createUserFormState.value = formState.copy(errorMessage = "Password tidak boleh kosong")
+            _createUserFormState.update { it.copy(errorMessage = "Password tidak boleh kosong") }
             return
         }
 
         if (formState.password != formState.confirmPassword) {
-            _createUserFormState.value = formState.copy(errorMessage = "Password konfirmasi tidak cocok")
+            _createUserFormState.update { it.copy(errorMessage = "Password konfirmasi tidak cocok") }
             return
         }
 
-        _createUserFormState.value = formState.copy(isSubmitting = true, errorMessage = null)
+        _createUserFormState.update { it.copy(isSubmitting = true, errorMessage = null) }
 
         viewModelScope.launch {
             try {
-                // TODO: Get current user ID from AuthService
-                val currentUserId = 1L // Placeholder
+                val currentUserId = authService.getCurrentUser()?.id
+                if (currentUserId == null) {
+                    _createUserFormState.update {
+                        it.copy(
+                            isSubmitting = false,
+                            errorMessage = "Sesi tidak valid. Silakan login kembali."
+                        )
+                    }
+                    return@launch
+                }
 
                 userManagementService.createUser(
                     username = formState.username,
@@ -590,23 +612,29 @@ class UserManagementViewModel @Inject constructor(
                     role = formState.role,
                     createdBy = currentUserId
                 ).onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        successMessage = "Pengguna berhasil dibuat",
-                        showCreateUserDialog = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            successMessage = "Pengguna berhasil dibuat",
+                            showCreateUserDialog = false
+                        )
+                    }
                     loadUserStats() // Refresh stats
                     clearMessagesAfterDelay()
                 }.onFailure { error ->
-                    _createUserFormState.value = _createUserFormState.value.copy(
-                        isSubmitting = false,
-                        errorMessage = error.message ?: "Gagal membuat pengguna"
-                    )
+                    _createUserFormState.update {
+                        it.copy(
+                            isSubmitting = false,
+                            errorMessage = error.message ?: "Gagal membuat pengguna"
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _createUserFormState.value = _createUserFormState.value.copy(
-                    isSubmitting = false,
-                    errorMessage = "Terjadi kesalahan: ${e.message}"
-                )
+                _createUserFormState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        errorMessage = "Terjadi kesalahan: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -621,22 +649,26 @@ class UserManagementViewModel @Inject constructor(
      * includes an active flag.
      */
     fun showEditUserDialog(user: Pengguna) {
-        _uiState.value = _uiState.value.copy(
-            showEditUserDialog = true,
-            selectedUser = user
-        )
-        _editUserFormState.value = EditUserFormState(
-            username = user.username,
-            role = user.role,
-            isActive = true // TODO: Add isActive field to Pengguna entity
-        )
+        _uiState.update {
+            it.copy(
+                showEditUserDialog = true,
+                selectedUser = user
+            )
+        }
+        _editUserFormState.update {
+            EditUserFormState(
+                username = user.username,
+                role = user.role,
+                isActive = true // TODO: Add isActive field to Pengguna entity
+            )
+        }
     }
 
     /**
      * Closes the edit-user dialog.
      */
     fun hideEditUserDialog() {
-        _uiState.value = _uiState.value.copy(showEditUserDialog = false)
+        _uiState.update { it.copy(showEditUserDialog = false) }
     }
 
     /**
@@ -645,17 +677,19 @@ class UserManagementViewModel @Inject constructor(
      * Clears any existing form error message to support “fix and retry” UX.
      */
     fun onEditUserUsernameChange(username: String) {
-        _editUserFormState.value = _editUserFormState.value.copy(
-            username = username,
-            errorMessage = null
-        )
+        _editUserFormState.update {
+            it.copy(
+                username = username,
+                errorMessage = null
+            )
+        }
     }
 
     /**
      * Updates the role field in the edit-user form.
      */
     fun onEditUserRoleChange(role: Role) {
-        _editUserFormState.value = _editUserFormState.value.copy(role = role)
+        _editUserFormState.update { it.copy(role = role) }
     }
 
     /**
@@ -675,16 +709,24 @@ class UserManagementViewModel @Inject constructor(
         val selectedUser = _uiState.value.selectedUser ?: return
 
         if (formState.username.isBlank()) {
-            _editUserFormState.value = formState.copy(errorMessage = "Username tidak boleh kosong")
+            _editUserFormState.update { it.copy(errorMessage = "Username tidak boleh kosong") }
             return
         }
 
-        _editUserFormState.value = formState.copy(isSubmitting = true, errorMessage = null)
+        _editUserFormState.update { it.copy(isSubmitting = true, errorMessage = null) }
 
         viewModelScope.launch {
             try {
-                // TODO: Get current user ID from AuthService
-                val currentUserId = 1L // Placeholder
+                val currentUserId = authService.getCurrentUser()?.id
+                if (currentUserId == null) {
+                    _editUserFormState.update {
+                        it.copy(
+                            isSubmitting = false,
+                            errorMessage = "Sesi tidak valid. Silakan login kembali."
+                        )
+                    }
+                    return@launch
+                }
 
                 userManagementService.updateUser(
                     userId = selectedUser.id,
@@ -693,22 +735,28 @@ class UserManagementViewModel @Inject constructor(
                     isActive = formState.isActive,
                     updatedBy = currentUserId
                 ).onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        successMessage = "Pengguna berhasil diperbarui",
-                        showEditUserDialog = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            successMessage = "Pengguna berhasil diperbarui",
+                            showEditUserDialog = false
+                        )
+                    }
                     clearMessagesAfterDelay()
                 }.onFailure { error ->
-                    _editUserFormState.value = _editUserFormState.value.copy(
-                        isSubmitting = false,
-                        errorMessage = error.message ?: "Gagal memperbarui pengguna"
-                    )
+                    _editUserFormState.update {
+                        it.copy(
+                            isSubmitting = false,
+                            errorMessage = error.message ?: "Gagal memperbarui pengguna"
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _editUserFormState.value = _editUserFormState.value.copy(
-                    isSubmitting = false,
-                    errorMessage = "Terjadi kesalahan: ${e.message}"
-                )
+                _editUserFormState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        errorMessage = "Terjadi kesalahan: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -719,17 +767,19 @@ class UserManagementViewModel @Inject constructor(
      * The selected user is stored in [UserManagementUiState.selectedUser].
      */
     fun showDeleteUserDialog(user: Pengguna) {
-        _uiState.value = _uiState.value.copy(
-            showDeleteUserDialog = true,
-            selectedUser = user
-        )
+        _uiState.update {
+            it.copy(
+                showDeleteUserDialog = true,
+                selectedUser = user
+            )
+        }
     }
 
     /**
      * Closes the delete confirmation dialog.
      */
     fun hideDeleteUserDialog() {
-        _uiState.value = _uiState.value.copy(showDeleteUserDialog = false)
+        _uiState.update { it.copy(showDeleteUserDialog = false) }
     }
 
     /**
@@ -756,31 +806,46 @@ class UserManagementViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // TODO: Get current user ID from AuthService
-                val currentUserId = 1L // Placeholder
+                val currentUserId = authService.getCurrentUser()?.id
+                if (currentUserId == null) {
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = "Sesi tidak valid. Silakan login kembali.",
+                            showDeleteUserDialog = false
+                        )
+                    }
+                    clearMessagesAfterDelay()
+                    return@launch
+                }
 
                 userManagementService.deleteUser(
                     userId = selectedUser.id,
                     deletedBy = currentUserId
                 ).onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        successMessage = "Pengguna berhasil dihapus",
-                        showDeleteUserDialog = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            successMessage = "Pengguna berhasil dihapus",
+                            showDeleteUserDialog = false
+                        )
+                    }
                     loadUserStats() // Refresh stats
                     clearMessagesAfterDelay()
                 }.onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = error.message ?: "Gagal menghapus pengguna",
-                        showDeleteUserDialog = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = error.message ?: "Gagal menghapus pengguna",
+                            showDeleteUserDialog = false
+                        )
+                    }
                     clearMessagesAfterDelay()
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    errorMessage = "Terjadi kesalahan: ${e.message}",
-                    showDeleteUserDialog = false
-                )
+                _uiState.update {
+                    it.copy(
+                        errorMessage = "Terjadi kesalahan: ${e.message}",
+                        showDeleteUserDialog = false
+                    )
+                }
                 clearMessagesAfterDelay()
             }
         }
@@ -790,18 +855,20 @@ class UserManagementViewModel @Inject constructor(
      * Opens the reset-password dialog for a selected user and resets the password form.
      */
     fun showResetPasswordDialog(user: Pengguna) {
-        _uiState.value = _uiState.value.copy(
-            showResetPasswordDialog = true,
-            selectedUser = user
-        )
-        _resetPasswordFormState.value = ResetPasswordFormState()
+        _uiState.update {
+            it.copy(
+                showResetPasswordDialog = true,
+                selectedUser = user
+            )
+        }
+        _resetPasswordFormState.update { ResetPasswordFormState() }
     }
 
     /**
      * Closes the reset-password dialog.
      */
     fun hideResetPasswordDialog() {
-        _uiState.value = _uiState.value.copy(showResetPasswordDialog = false)
+        _uiState.update { it.copy(showResetPasswordDialog = false) }
     }
 
     /**
@@ -810,10 +877,12 @@ class UserManagementViewModel @Inject constructor(
      * Clears any existing form error message to support “fix and retry” UX.
      */
     fun onResetPasswordChange(password: String) {
-        _resetPasswordFormState.value = _resetPasswordFormState.value.copy(
-            newPassword = password,
-            errorMessage = null
-        )
+        _resetPasswordFormState.update {
+            it.copy(
+                newPassword = password,
+                errorMessage = null
+            )
+        }
     }
 
     /**
@@ -822,10 +891,12 @@ class UserManagementViewModel @Inject constructor(
      * Clears any existing form error message to support “fix and retry” UX.
      */
     fun onResetPasswordConfirmChange(confirmPassword: String) {
-        _resetPasswordFormState.value = _resetPasswordFormState.value.copy(
-            confirmPassword = confirmPassword,
-            errorMessage = null
-        )
+        _resetPasswordFormState.update {
+            it.copy(
+                confirmPassword = confirmPassword,
+                errorMessage = null
+            )
+        }
     }
 
     /**
@@ -852,43 +923,57 @@ class UserManagementViewModel @Inject constructor(
         val selectedUser = _uiState.value.selectedUser ?: return
 
         if (formState.newPassword.isBlank()) {
-            _resetPasswordFormState.value = formState.copy(errorMessage = "Password baru tidak boleh kosong")
+            _resetPasswordFormState.update { it.copy(errorMessage = "Password baru tidak boleh kosong") }
             return
         }
 
         if (formState.newPassword != formState.confirmPassword) {
-            _resetPasswordFormState.value = formState.copy(errorMessage = "Password konfirmasi tidak cocok")
+            _resetPasswordFormState.update { it.copy(errorMessage = "Password konfirmasi tidak cocok") }
             return
         }
 
-        _resetPasswordFormState.value = formState.copy(isSubmitting = true, errorMessage = null)
+        _resetPasswordFormState.update { it.copy(isSubmitting = true, errorMessage = null) }
 
         viewModelScope.launch {
             try {
-                // TODO: Get current user ID from AuthService
-                val currentUserId = 1L // Placeholder
+                val currentUserId = authService.getCurrentUser()?.id
+                if (currentUserId == null) {
+                    _resetPasswordFormState.update {
+                        it.copy(
+                            isSubmitting = false,
+                            errorMessage = "Sesi tidak valid. Silakan login kembali."
+                        )
+                    }
+                    return@launch
+                }
 
                 userManagementService.resetUserPassword(
                     userId = selectedUser.id,
                     newPassword = formState.newPassword,
                     resetBy = currentUserId
                 ).onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        successMessage = "Password berhasil direset",
-                        showResetPasswordDialog = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            successMessage = "Password berhasil direset",
+                            showResetPasswordDialog = false
+                        )
+                    }
                     clearMessagesAfterDelay()
                 }.onFailure { error ->
-                    _resetPasswordFormState.value = _resetPasswordFormState.value.copy(
-                        isSubmitting = false,
-                        errorMessage = error.message ?: "Gagal mereset password"
-                    )
+                    _resetPasswordFormState.update {
+                        it.copy(
+                            isSubmitting = false,
+                            errorMessage = error.message ?: "Gagal mereset password"
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _resetPasswordFormState.value = _resetPasswordFormState.value.copy(
-                    isSubmitting = false,
-                    errorMessage = "Terjadi kesalahan: ${e.message}"
-                )
+                _resetPasswordFormState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        errorMessage = "Terjadi kesalahan: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -899,10 +984,10 @@ class UserManagementViewModel @Inject constructor(
      * This is typically called after the user dismisses an error banner/snackbar.
      */
     fun clearError() {
-        _uiState.value = _uiState.value.copy(errorMessage = null)
-        _createUserFormState.value = _createUserFormState.value.copy(errorMessage = null)
-        _editUserFormState.value = _editUserFormState.value.copy(errorMessage = null)
-        _resetPasswordFormState.value = _resetPasswordFormState.value.copy(errorMessage = null)
+        _uiState.update { it.copy(errorMessage = null) }
+        _createUserFormState.update { it.copy(errorMessage = null) }
+        _editUserFormState.update { it.copy(errorMessage = null) }
+        _resetPasswordFormState.update { it.copy(errorMessage = null) }
     }
 
     /**
@@ -914,10 +999,12 @@ class UserManagementViewModel @Inject constructor(
     private fun clearMessagesAfterDelay() {
         viewModelScope.launch {
             kotlinx.coroutines.delay(3000)
-            _uiState.value = _uiState.value.copy(
-                successMessage = null,
-                errorMessage = null
-            )
+            _uiState.update {
+                it.copy(
+                    successMessage = null,
+                    errorMessage = null
+                )
+            }
         }
     }
 }
