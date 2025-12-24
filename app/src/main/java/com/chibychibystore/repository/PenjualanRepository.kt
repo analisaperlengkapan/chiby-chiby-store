@@ -141,11 +141,27 @@ class PenjualanRepository @Inject constructor(
      */
     suspend fun getTotalPenjualanByDateRange(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Result<Double> {
         return try {
-            val sales = getSalesInDateRange(startDate, endDate)
-            val total = sales.sumOf { it.totalAmount }
+            // Optimized query: let the database do the sum
+            val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+            val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+            val total = penjualanDao.getTotalSalesAmount(start, end) ?: 0.0
             Result.success(total)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getTotalPenjualanByDateRange", e))
+        }
+    }
+
+    /**
+     * Get penjualan count by date range
+     */
+    suspend fun getPenjualanCountByDateRange(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Result<Int> {
+        return try {
+            val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+            val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+            val count = penjualanDao.getPenjualanCountByDateRange(start, end)
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getPenjualanCountByDateRange", e))
         }
     }
 

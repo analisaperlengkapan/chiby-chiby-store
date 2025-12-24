@@ -140,6 +140,11 @@ interface SaleService {
     suspend fun getTotalSalesByDateRange(startDate: String, endDate: String): Result<Double>
 
     /**
+     * Get sales count by date range
+     */
+    suspend fun getSalesCountByDateRange(startDate: String, endDate: String): Result<Int>
+
+    /**
      * Observable untuk semua penjualan
      */
     fun observeSales(): Flow<List<Penjualan>>

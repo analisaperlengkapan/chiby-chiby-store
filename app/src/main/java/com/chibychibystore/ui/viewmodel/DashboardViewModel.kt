@@ -467,27 +467,26 @@ class DashboardViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // Real implementation using services/repositories
+                // Real implementation using services/repositories with parallel loading
                 val today = LocalDate.now().toString() // yyyy-MM-dd
 
-                // Get today's sales list
-                val salesRes = saleService.getSales(today, today, null)
-                val sales = salesRes.getOrNull() ?: emptyList()
-                val todaySalesTotal = sales.sumOf { it.totalAmount }
-                val todayTransactionCount = sales.size
+                // Parallel execution for dashboard metrics
+                val todaySalesDeferred = kotlinx.coroutines.async { saleService.getTotalSalesByDateRange(today, today) }
+                val transactionCountDeferred = kotlinx.coroutines.async { saleService.getSalesCountByDateRange(today, today) }
+                val lowStockDeferred = kotlinx.coroutines.async { produkRepository.getLowStockProduk().first() }
+                val recentSalesDeferred = kotlinx.coroutines.async { saleService.getRecentSales(10) }
 
-                // Low stock products (take first page/current value)
-                val lowStock = produkRepository.getLowStockProduk().first()
-
-                // Recent transactions (latest 10)
-                val recentSalesRes = saleService.getRecentSales(10)
-                val recent = recentSalesRes.getOrNull() ?: emptyList()
+                // Await results
+                val todaySalesRes = todaySalesDeferred.await()
+                val transactionCountRes = transactionCountDeferred.await()
+                val lowStock = lowStockDeferred.await()
+                val recentSalesRes = recentSalesDeferred.await()
 
                 _uiState.value = _uiState.value.copy(
-                    todaySales = todaySalesTotal,
-                    todayTransactionCount = todayTransactionCount,
+                    todaySales = todaySalesRes.getOrNull() ?: 0.0,
+                    todayTransactionCount = transactionCountRes.getOrNull() ?: 0,
                     lowStockItems = lowStock,
-                    recentTransactions = recent,
+                    recentTransactions = recentSalesRes.getOrNull() ?: emptyList(),
                     isLoading = false,
                     errorMessage = null
                 )

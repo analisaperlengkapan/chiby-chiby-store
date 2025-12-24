@@ -51,6 +51,9 @@ interface PenjualanDao {
     @Query("SELECT COUNT(*) FROM penjualan")
     suspend fun getPenjualanCount(): Int
 
+    @Query("SELECT COUNT(*) FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate")
+    suspend fun getPenjualanCountByDateRange(startDate: Date, endDate: Date): Int
+
     @Query("SELECT SUM(totalAmount) FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate")
     suspend fun getTotalSalesAmount(startDate: Date, endDate: Date): Double?
 }
