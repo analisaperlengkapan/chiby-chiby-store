@@ -32,7 +32,6 @@ fun UserAddScreen(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf(Role.CASHIER) }
-    var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -94,9 +93,7 @@ fun UserAddScreen(
                 onClick = {
                     scope.launch {
                         if (validateInput(username, password, confirmPassword)) {
-                            isLoading = true
                             val result = viewModel.createUser(username, password, selectedRole)
-                            isLoading = false
                             if (result.isSuccess) {
                                 navController.navigateUp()
                             } else {
@@ -108,7 +105,7 @@ fun UserAddScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading
+                enabled = !uiState.isLoading
             )
         }
     }

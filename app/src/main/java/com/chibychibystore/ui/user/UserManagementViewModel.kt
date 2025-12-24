@@ -33,11 +33,19 @@ class UserManagementViewModel @Inject constructor(
         loadUsers()
     }
 
+    /**
+     * Membuat pengguna baru
+     *
+     * @param username Username pengguna baru
+     * @param password Password pengguna baru
+     * @param role Role pengguna
+     * @return Result berisi ID pengguna yang baru dibuat
+     */
     suspend fun createUser(username: String, password: String, role: Role): Result<Long> {
         _uiState.value = _uiState.value.copy(isLoading = true, error = null)
         try {
             val currentUser = authService.getCurrentUser()
-            val createdBy = currentUser?.id ?: 0L // Fallback to 0 if no user found, though practically should be logged in
+            val createdBy = currentUser?.id ?: 0L
 
             val result = userManagementService.createUser(
                 username = username,
@@ -47,7 +55,6 @@ class UserManagementViewModel @Inject constructor(
             )
 
             if (result.isSuccess) {
-                // Refresh list
                 loadUsers()
             } else {
                 _uiState.value = _uiState.value.copy(
