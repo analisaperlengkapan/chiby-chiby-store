@@ -15,6 +15,11 @@ interface UserManagementService {
     fun getAllUsers(): Flow<List<Pengguna>>
 
     /**
+     * Get user by ID
+     */
+    suspend fun getUserById(userId: Long): Result<Pengguna>
+
+    /**
      * Get users by role
      */
     fun getUsersByRole(role: Role): Flow<List<Pengguna>>

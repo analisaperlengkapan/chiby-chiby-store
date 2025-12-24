@@ -23,6 +23,17 @@ class UserManagementServiceImpl @Inject constructor(
     override fun getAllUsers(): Flow<List<Pengguna>> =
         penggunaRepository.getAllPengguna()
 
+    override suspend fun getUserById(userId: Long): Result<Pengguna> {
+        return try {
+            if (!authService.hasPermission("MANAGE_USERS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat detail user"))
+            }
+            penggunaRepository.getPenggunaById(userId)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getUserById", e))
+        }
+    }
+
     override suspend fun getUserStats(): Result<UserStats> {
         return try {
             if (!authService.hasPermission("MANAGE_USERS")) {

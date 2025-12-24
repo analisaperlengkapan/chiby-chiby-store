@@ -37,9 +37,35 @@ fun UserDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(userId) {
         viewModel.loadUser(userId)
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Konfirmasi Hapus") },
+            text = { Text("Apakah Anda yakin ingin menghapus pengguna ini?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteUser {
+                            navController.navigateUp()
+                        }
+                    }
+                ) {
+                    Text("Hapus", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Batal")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -58,11 +84,7 @@ fun UserDetailScreen(
                         )
                     }
                     IconButton(
-                        onClick = {
-                            scope.launch {
-                                // TODO: Show delete confirmation dialog
-                            }
-                        }
+                        onClick = { showDeleteDialog = true }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
@@ -133,6 +155,7 @@ private fun UserDetailContent(
 ) {
     var username by remember(user.username) { mutableStateOf(user.username) }
     var selectedRole by remember(user.role) { mutableStateOf(user.role) }
+    val roles = remember { Role.values() }
 
     Column(
         modifier = modifier
@@ -157,7 +180,7 @@ private fun UserDetailContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Role.values().forEach { role ->
+                roles.forEach { role ->
                     FilterChip(
                         selected = selectedRole == role,
                         onClick = {
@@ -223,6 +246,7 @@ private fun UserDetailContent(
 @HiltViewModel
 class UserDetailViewModel @Inject constructor(
     private val userManagementService: com.chibychibystore.service.UserManagementService,
+    private val authService: com.chibychibystore.service.AuthService,
     savedStateHandle: SavedStateHandle
 ) : androidx.lifecycle.ViewModel() {
 
@@ -237,9 +261,21 @@ class UserDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                // TODO: Implement get user by ID
-                // For now, just set loading to false
-                _uiState.value = _uiState.value.copy(isLoading = false)
+                val result = userManagementService.getUserById(userId)
+                if (result.isSuccess) {
+                    val user = result.getOrNull()
+                    originalUser = user
+                    _uiState.value = _uiState.value.copy(
+                        user = user,
+                        isLoading = false
+                    )
+                } else {
+                    val error = result.exceptionOrNull()?.message ?: "Gagal memuat pengguna"
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = error
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -271,8 +307,45 @@ class UserDetailViewModel @Inject constructor(
 
     fun saveUser() {
         viewModelScope.launch {
-            // TODO: Implement save user logic
-            _uiState.value = _uiState.value.copy(isEditMode = false)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                val currentUser = authService.getCurrentUser()
+                if (currentUser == null) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Sesi telah berakhir. Silakan login kembali."
+                    )
+                    return@launch
+                }
+
+                val userToSave = _uiState.value.user ?: return@launch
+
+                val result = userManagementService.updateUser(
+                    userId = userToSave.id,
+                    username = userToSave.username,
+                    role = userToSave.role,
+                    isActive = null, // Not updating active status here
+                    updatedBy = currentUser.id
+                )
+
+                if (result.isSuccess) {
+                    originalUser = userToSave
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isEditMode = false
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = result.exceptionOrNull()?.message ?: "Gagal menyimpan pengguna"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Terjadi kesalahan saat menyimpan"
+                )
+            }
         }
     }
 
@@ -281,6 +354,42 @@ class UserDetailViewModel @Inject constructor(
             user = originalUser,
             isEditMode = false
         )
+    }
+
+    fun deleteUser(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                val currentUser = authService.getCurrentUser()
+                if (currentUser == null) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Sesi telah berakhir. Silakan login kembali."
+                    )
+                    return@launch
+                }
+
+                val result = userManagementService.deleteUser(
+                    userId = userId,
+                    deletedBy = currentUser.id
+                )
+
+                if (result.isSuccess) {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    onSuccess()
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = result.exceptionOrNull()?.message ?: "Gagal menghapus pengguna"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Terjadi kesalahan saat menghapus"
+                )
+            }
+        }
     }
 }
 
