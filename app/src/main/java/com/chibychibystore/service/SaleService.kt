@@ -105,6 +105,11 @@ interface SaleService {
     ): Result<List<Penjualan>>
 
     /**
+     * Get recent sales with limit
+     */
+    suspend fun getRecentSales(limit: Int): Result<List<Penjualan>>
+
+    /**
      * Search penjualan berdasarkan query
      */
     suspend fun searchSales(query: String): Result<List<Penjualan>>

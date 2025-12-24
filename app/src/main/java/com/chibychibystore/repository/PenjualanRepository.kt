@@ -28,6 +28,11 @@ class PenjualanRepository @Inject constructor(
     fun getAllPenjualan(): Flow<List<Penjualan>> = penjualanDao.getAllPenjualan()
 
     /**
+     * Get recent sales with limit
+     */
+    fun getRecentPenjualan(limit: Int): Flow<List<Penjualan>> = penjualanDao.getRecentPenjualan(limit)
+
+    /**
      * Get penjualan by ID
      */
     suspend fun getPenjualanById(id: Long): Result<Penjualan> {

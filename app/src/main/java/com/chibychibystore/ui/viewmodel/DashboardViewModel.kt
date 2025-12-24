@@ -480,8 +480,8 @@ class DashboardViewModel @Inject constructor(
                 val lowStock = produkRepository.getLowStockProduk().first()
 
                 // Recent transactions (latest 10)
-                val allSalesRes = saleService.getSales(null, null, null)
-                val recent = (allSalesRes.getOrNull() ?: emptyList()).sortedByDescending { it.saleDate }.take(10)
+                val recentSalesRes = saleService.getRecentSales(10)
+                val recent = recentSalesRes.getOrNull() ?: emptyList()
 
                 _uiState.value = _uiState.value.copy(
                     todaySales = todaySalesTotal,
@@ -580,96 +580,6 @@ class DashboardViewModel @Inject constructor(
                 stockQuantity = 3,
                 categoryId = 2,
                 warehouseId = 1
-            )
-        )
-    }
-
-    /**
-     * Generate mock data untuk transaksi penjualan terbaru
-     *
-     * Method temporary yang menghasilkan data mock untuk recent sales activity.
-     * Akan diganti dengan real SaleService.getRecentSales() call.
-     *
-     * **Business Logic:**
-     * Simulate recent sales transactions untuk activity overview di dashboard.
-     * Menampilkan transaksi terbaru dengan realistic amounts dan timestamps.
-     *
-     * **Mock Data Strategy:**
-     * - Varied transaction amounts (realistic retail values)
-     * - Recent timestamps (current time, 1 hour ago, etc.)
-     * - Payment scenarios (exact payment, with change)
-     * - Consistent user association
-     *
-     * **Data Structure:**
-     * ```kotlin
-     * // Mock recent transactions
-     * val transactions = listOf(
-     *     Sale(
-     *         id = 1,
-     *         date = System.currentTimeMillis(),
-     *         total = 12500.0,  // Recent sale
-     *         payment = 12500.0,
-     *         change = 0.0,
-     *         userId = 1
-     *     ),
-     *     Sale(
-     *         id = 2,
-     *         date = System.currentTimeMillis() - 3600000,  // 1 hour ago
-     *         total = 28500.0,
-     *         payment = 30000.0,
-     *         change = 1500.0,
-     *         userId = 1
-     *     )
-     * )
-     * ```
-     *
-     * **Future Replacement:**
-     * ```kotlin
-     * // Real implementation
-     * suspend fun getRecentTransactions(limit: Int = 10): List<Penjualan> {
-     *     return saleService.getSales(
-     *         dateRange = DateRange.recent(),
-     *         limit = limit,
-     *         sortBy = SortBy.DATE_DESC
-     *     )
-     * }
-     * ```
-     *
-     * **Business Value:**
-     * - Show recent business activity
-     * - Enable quick navigation to transaction details
-     * - Provide context untuk sales performance
-     * - Support operational monitoring
-     *
-     * **Testing Considerations:**
-     * - Consistent timestamps untuk reproducible tests
-     * - Realistic amounts untuk UI validation
-     * - Include various payment scenarios
-     * - Test empty list scenarios
-     *
-     * **Performance:**
-     * - Lightweight: Static data generation
-     * - Fast execution: No complex calculations
-     * - Memory efficient: Small fixed-size list
-     *
-     * @return List transaksi penjualan mock terbaru untuk dashboard activity
-     */
-    private fun generateMockRecentTransactions(): List<Penjualan> {
-        // TODO: Replace with actual recent transactions query
-        return listOf(
-            Penjualan(
-                id = 1,
-                saleDate = java.util.Date(System.currentTimeMillis()),
-                totalAmount = 150000.0,
-                paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.CASH,
-                cashierId = 1
-            ),
-            Penjualan(
-                id = 2,
-                saleDate = java.util.Date(System.currentTimeMillis() - 3600000), // 1 hour ago
-                totalAmount = 28500.0,
-                paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.CASH,
-                cashierId = 1
             )
         )
     }

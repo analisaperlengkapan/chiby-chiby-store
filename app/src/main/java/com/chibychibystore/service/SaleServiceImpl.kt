@@ -340,6 +340,18 @@ class SaleServiceImpl @Inject constructor(
         }
     }
 
+    override suspend fun getRecentSales(limit: Int): Result<List<Penjualan>> {
+        return try {
+            if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
+            }
+            val sales = penjualanRepository.getRecentPenjualan(limit).first()
+            Result.success(sales)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // Per-sale mutexes to prevent concurrent refunds
     private val refundLocks = ConcurrentHashMap<Long, Mutex>()
 

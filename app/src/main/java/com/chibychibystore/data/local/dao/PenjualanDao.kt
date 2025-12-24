@@ -28,6 +28,9 @@ interface PenjualanDao {
     @Query("SELECT * FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate ORDER BY saleDate DESC")
     fun getPenjualanByDateRange(startDate: Date, endDate: Date): Flow<List<Penjualan>>
 
+    @Query("SELECT * FROM penjualan ORDER BY saleDate DESC LIMIT :limit")
+    fun getRecentPenjualan(limit: Int): Flow<List<Penjualan>>
+
     @Transaction
     @Query("SELECT * FROM penjualan WHERE id = :id")
     suspend fun getPenjualanWithItems(id: Long): PenjualanWithItems?
