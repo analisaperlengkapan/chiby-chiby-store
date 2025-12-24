@@ -193,7 +193,10 @@ private fun WarehouseDetailContent(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(products) { product ->
+                items(
+                    items = products,
+                    key = { it.id }
+                ) { product ->
                     WarehouseProductItem(
                         product = product,
                         onClick = { onProductClick(product) },
