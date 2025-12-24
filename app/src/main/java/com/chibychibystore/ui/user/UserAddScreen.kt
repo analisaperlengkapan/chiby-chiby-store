@@ -33,6 +33,12 @@ fun UserAddScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf(Role.CASHIER) }
 
+    var usernameError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+
+    val roles = remember { Role.values() }
+
     Scaffold(
         topBar = {
                 AppTopBar(
@@ -52,23 +58,40 @@ fun UserAddScreen(
         ) {
             TextFieldOutlined(
                 value = username,
-                onValueChange = { username = it },
+                onValueChange = {
+                    username = it
+                    usernameError = null
+                },
                 label = "Username",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = usernameError != null,
+                errorMessage = usernameError
             )
 
             TextFieldOutlined(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    passwordError = null
+                },
                 label = "Password",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = passwordError != null,
+                errorMessage = passwordError,
+                isPassword = true
             )
 
             TextFieldOutlined(
                 value = confirmPassword,
-                onValueChange = { confirmPassword = it },
+                onValueChange = {
+                    confirmPassword = it
+                    confirmPasswordError = null
+                },
                 label = "Konfirmasi Password",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = confirmPasswordError != null,
+                errorMessage = confirmPasswordError,
+                isPassword = true
             )
 
             // Role Selection
@@ -77,7 +100,7 @@ fun UserAddScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Role.values().forEach { role ->
+                roles.forEach { role ->
                     FilterChip(
                         selected = selectedRole == role,
                         onClick = { selectedRole = role },
@@ -91,8 +114,28 @@ fun UserAddScreen(
             ButtonPrimary(
                 text = "Simpan",
                 onClick = {
-                    scope.launch {
-                        if (validateInput(username, password, confirmPassword)) {
+                    // Reset errors
+                    usernameError = null
+                    passwordError = null
+                    confirmPasswordError = null
+
+                    var isValid = true
+
+                    if (username.isBlank()) {
+                        usernameError = "Username tidak boleh kosong"
+                        isValid = false
+                    }
+                    if (password.length < 6) {
+                        passwordError = "Password minimal 6 karakter"
+                        isValid = false
+                    }
+                    if (password != confirmPassword) {
+                        confirmPasswordError = "Password tidak cocok"
+                        isValid = false
+                    }
+
+                    if (isValid) {
+                        scope.launch {
                             val result = viewModel.createUser(username, password, selectedRole)
                             if (result.isSuccess) {
                                 navController.navigateUp()
@@ -109,10 +152,4 @@ fun UserAddScreen(
             )
         }
     }
-}
-
-private fun validateInput(username: String, password: String, confirmPassword: String): Boolean {
-    return username.isNotBlank() &&
-           password.length >= 6 &&
-           password == confirmPassword
 }
