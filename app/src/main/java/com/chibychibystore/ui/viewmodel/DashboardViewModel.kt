@@ -8,6 +8,7 @@ import com.chibychibystore.data.local.entity.Produk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.chibychibystore.service.SaleService
 import com.chibychibystore.repository.ProdukRepository
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -471,10 +472,10 @@ class DashboardViewModel @Inject constructor(
                 val today = LocalDate.now().toString() // yyyy-MM-dd
 
                 // Parallel execution for dashboard metrics
-                val todaySalesDeferred = kotlinx.coroutines.async { saleService.getTotalSalesByDateRange(today, today) }
-                val transactionCountDeferred = kotlinx.coroutines.async { saleService.getSalesCountByDateRange(today, today) }
-                val lowStockDeferred = kotlinx.coroutines.async { produkRepository.getLowStockProduk().first() }
-                val recentSalesDeferred = kotlinx.coroutines.async { saleService.getRecentSales(10) }
+                val todaySalesDeferred = async { saleService.getTotalSalesByDateRange(today, today) }
+                val transactionCountDeferred = async { saleService.getSalesCountByDateRange(today, today) }
+                val lowStockDeferred = async { produkRepository.getLowStockProduk().first() }
+                val recentSalesDeferred = async { saleService.getRecentSales(10) }
 
                 // Await results
                 val todaySalesRes = todaySalesDeferred.await()
@@ -497,90 +498,6 @@ class DashboardViewModel @Inject constructor(
                 )
             }
         }
-    }
-
-    /**
-     * Generate mock data untuk produk dengan stok rendah
-     *
-     * Method temporary yang menghasilkan data mock untuk development dan testing.
-     * Akan diganti dengan real ProductService.getLowStockProducts() call.
-     *
-     * **Business Logic:**
-     * Simulate products dengan stock levels di bawah threshold minimum.
-     * Products ini akan ditampilkan sebagai alerts di dashboard.
-     *
-     * **Mock Data Strategy:**
-     * - Realistic product names dan barcodes (Indonesian market)
-     * - Varied stock levels (1-5) untuk menunjukkan urgency
-     * - Different categories untuk diversity
-     * - Consistent pricing structure
-     *
-     * **Data Structure:**
-     * ```kotlin
-     * // Mock low stock products
-     * val products = listOf(
-     *     Product(
-     *         name = "Indomie Goreng",
-     *         stock = 5,  // Below minimum threshold
-     *         category = "Food",
-     *         price = 3500.0
-     *     ),
-     *     Product(
-     *         name = "Coca Cola 1.5L",
-     *         stock = 3,  // Critical level
-     *         category = "Beverages",
-     *         price = 8500.0
-     *     )
-     * )
-     * ```
-     *
-     * **Future Replacement:**
-     * ```kotlin
-     * // Real implementation
-     * suspend fun getLowStockProducts(): List<Produk> {
-     *     return productService.getProducts()
-     *         .filter { it.stockQuantity <= it.minStock }
-     *         .sortedBy { it.stockQuantity } // Most critical first
-     *         .take(10) // Limit for dashboard display
-     * }
-     * ```
-     *
-     * **Testing Considerations:**
-     * - Mock data harus consistent across test runs
-     - Data harus realistic untuk UI testing
-     * - Include edge cases: empty list, single item, many items
-     *
-     * **Performance:**
-     * - Lightweight: Static data generation
-     * - Fast execution: No database calls
-     * - Memory efficient: Small fixed-size list
-     *
-     * @return List produk mock dengan stok rendah untuk dashboard alerts
-     */
-    private fun generateMockLowStockItems(): List<Produk> {
-        // TODO: Replace with actual low stock query
-        return listOf(
-            Produk(
-                id = 1,
-                name = "Indomie Goreng",
-                barcode = "8996001410022",
-                sellingPrice = 3500.0,
-                costPrice = 3000.0,
-                stockQuantity = 5,
-                categoryId = 1,
-                warehouseId = 1
-            ),
-            Produk(
-                id = 2,
-                name = "Coca Cola 1.5L",
-                barcode = "8996001410039",
-                sellingPrice = 8500.0,
-                costPrice = 7500.0,
-                stockQuantity = 3,
-                categoryId = 2,
-                warehouseId = 1
-            )
-        )
     }
 
     /**
