@@ -4,14 +4,15 @@ package com.chibychibystore.ui.user
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.chibychibystore.R
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.ButtonPrimary
@@ -79,13 +80,17 @@ fun UserAddScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (uiState.isLoading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
             TextFieldOutlined(
                 value = username,
                 onValueChange = {
                     username = it
                     usernameError = null
                 },
-                label = "Username",
+                label = stringResource(R.string.username),
                 modifier = Modifier.fillMaxWidth(),
                 isError = usernameError != null,
                 errorMessage = usernameError
@@ -97,7 +102,7 @@ fun UserAddScreen(
                     password = it
                     passwordError = null
                 },
-                label = "Password",
+                label = stringResource(R.string.password),
                 modifier = Modifier.fillMaxWidth(),
                 isError = passwordError != null,
                 errorMessage = passwordError,
@@ -135,7 +140,7 @@ fun UserAddScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             ButtonPrimary(
-                text = "Simpan",
+                text = stringResource(R.string.common_save),
                 onClick = {
                     if (validateInput()) {
                         scope.launch {
