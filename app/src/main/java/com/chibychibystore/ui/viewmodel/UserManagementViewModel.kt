@@ -628,7 +628,7 @@ class UserManagementViewModel @Inject constructor(
         _editUserFormState.value = EditUserFormState(
             username = user.username,
             role = user.role,
-            isActive = true // TODO: Add isActive field to Pengguna entity
+            isActive = user.isActive
         )
     }
 
