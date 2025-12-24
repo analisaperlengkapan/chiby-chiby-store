@@ -166,14 +166,20 @@ fun ExpenseListScreen(
                     }
                 }
                 else -> {
+                    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("id", "ID")) }
+
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(uiState.expenses) { expense ->
+                        items(
+                            items = uiState.expenses,
+                            key = { it.id }
+                        ) { expense ->
                             ExpenseItem(
                                 expense = expense,
+                                dateFormatter = dateFormatter,
                                 onClick = {
                                     navController.navigate(Screen.ExpenseDetail.createRoute(expense.id))
                                 }
@@ -203,10 +209,9 @@ fun ExpenseListScreen(
 @Composable
 private fun ExpenseItem(
     expense: Pengeluaran,
+    dateFormatter: SimpleDateFormat,
     onClick: () -> Unit
 ) {
-    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("id", "ID")) }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
