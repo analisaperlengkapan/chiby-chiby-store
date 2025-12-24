@@ -32,7 +32,6 @@ fun UserAddScreen(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf(Role.CASHIER) }
-    var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -94,15 +93,19 @@ fun UserAddScreen(
                 onClick = {
                     scope.launch {
                         if (validateInput(username, password, confirmPassword)) {
-                            isLoading = true
-                            // TODO: Implement create user logic
-                            isLoading = false
-                            navController.navigateUp()
+                            val result = viewModel.createUser(username, password, selectedRole)
+                            if (result.isSuccess) {
+                                navController.navigateUp()
+                            } else {
+                                snackbarHostState.showSnackbar(
+                                    message = result.exceptionOrNull()?.message ?: "Gagal membuat pengguna"
+                                )
+                            }
                         }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading
+                enabled = !uiState.isLoading
             )
         }
     }

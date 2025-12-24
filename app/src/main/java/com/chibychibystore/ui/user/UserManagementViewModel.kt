@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.Role
+import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.UserManagementService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +22,8 @@ data class UserManagementUiState(
 
 @HiltViewModel
 class UserManagementViewModel @Inject constructor(
-    private val userManagementService: UserManagementService
+    private val userManagementService: UserManagementService,
+    private val authService: AuthService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UserManagementUiState())
@@ -28,6 +31,46 @@ class UserManagementViewModel @Inject constructor(
 
     init {
         loadUsers()
+    }
+
+    /**
+     * Membuat pengguna baru
+     *
+     * @param username Username pengguna baru
+     * @param password Password pengguna baru
+     * @param role Role pengguna
+     * @return Result berisi ID pengguna yang baru dibuat
+     */
+    suspend fun createUser(username: String, password: String, role: Role): Result<Long> {
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+        try {
+            val currentUser = authService.getCurrentUser()
+            val createdBy = currentUser?.id ?: 0L
+
+            val result = userManagementService.createUser(
+                username = username,
+                password = password,
+                role = role,
+                createdBy = createdBy
+            )
+
+            if (result.isSuccess) {
+                loadUsers()
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = result.exceptionOrNull()?.message ?: "Gagal membuat pengguna"
+                )
+            }
+            return result
+        } catch (e: Exception) {
+            val errorMessage = e.message ?: "Terjadi kesalahan saat membuat pengguna"
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                error = errorMessage
+            )
+            return Result.failure(e)
+        }
     }
 
     private fun loadUsers() {
