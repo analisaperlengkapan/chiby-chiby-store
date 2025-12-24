@@ -116,6 +116,18 @@ class ExpenseViewModel @Inject constructor(
     }
 
     /**
+     * Set semua filter sekaligus
+     */
+    fun setFilters(startDate: Date?, endDate: Date?, category: ExpenseCategory?) {
+        _uiState.value = _uiState.value.copy(
+            startDate = startDate,
+            endDate = endDate,
+            selectedCategory = category
+        )
+        loadExpenses()
+    }
+
+    /**
      * Hapus pengeluaran
      */
     fun deleteExpense(expenseId: Long) {
