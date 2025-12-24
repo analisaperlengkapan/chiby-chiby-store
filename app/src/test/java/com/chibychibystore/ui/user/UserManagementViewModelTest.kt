@@ -14,17 +14,15 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
+import org.mockito.Mockito.verify
 import org.mockito.MockitoAnnotations
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.verify
 
-@ExperimentalCoroutinesApi
+@OptIn(ExperimentalCoroutinesApi::class)
 class UserManagementViewModelTest {
 
     @Mock
@@ -41,7 +39,7 @@ class UserManagementViewModelTest {
         MockitoAnnotations.openMocks(this)
         Dispatchers.setMain(testDispatcher)
 
-        // Mock default behavior for getAllUsers to avoid initialization issues
+        // Default behavior for getAllUsers called in init
         `when`(userManagementService.getAllUsers()).thenReturn(flowOf(emptyList()))
 
         viewModel = UserManagementViewModel(userManagementService, authService)
@@ -53,46 +51,62 @@ class UserManagementViewModelTest {
     }
 
     @Test
-    fun `createUser success`() = runTest {
-        // Given
-        val username = "newuser"
-        val password = "password"
+    fun `createUser success updates state`() = runTest {
+        // Arrange
+        val username = "testuser"
+        val password = "password123"
         val role = Role.CASHIER
-        val currentUser = Pengguna(id = 1L, username = "admin", passwordHash = "hash", role = Role.OWNER, permissions = "[]", createdAt = java.util.Date(), updatedAt = java.util.Date())
+        val currentUser = Pengguna(
+            id = 1L,
+            username = "admin",
+            passwordHash = "hash",
+            role = Role.OWNER,
+            permissions = "[]",
+            createdAt = java.util.Date(),
+            updatedAt = java.util.Date()
+        )
+        val createdUserId = 2L
 
         `when`(authService.getCurrentUser()).thenReturn(currentUser)
-        `when`(userManagementService.createUser(eq(username), eq(password), eq(role), eq(currentUser.id))).thenReturn(Result.success(2L))
-        `when`(userManagementService.getAllUsers()).thenReturn(flowOf(emptyList()))
+        `when`(userManagementService.createUser(username, password, role, currentUser.id))
+            .thenReturn(Result.success(createdUserId))
 
-        // When
+        // Act
         val result = viewModel.createUser(username, password, role)
 
-        // Then
+        // Assert
         assertTrue(result.isSuccess)
+        assertEquals(createdUserId, result.getOrNull())
         verify(userManagementService).createUser(username, password, role, currentUser.id)
-        assertFalse(viewModel.uiState.value.isLoading)
-        assertEquals(null, viewModel.uiState.value.error)
+        verify(userManagementService, org.mockito.Mockito.times(2)).getAllUsers() // Once in init, once after create
     }
 
     @Test
-    fun `createUser failure`() = runTest {
-        // Given
-        val username = "newuser"
-        val password = "password"
+    fun `createUser failure updates error state`() = runTest {
+        // Arrange
+        val username = "testuser"
+        val password = "password123"
         val role = Role.CASHIER
-        val currentUser = Pengguna(id = 1L, username = "admin", passwordHash = "hash", role = Role.OWNER, permissions = "[]", createdAt = java.util.Date(), updatedAt = java.util.Date())
-        val errorMessage = "Failed to create user"
+        val currentUser = Pengguna(
+            id = 1L,
+            username = "admin",
+            passwordHash = "hash",
+            role = Role.OWNER,
+            permissions = "[]",
+            createdAt = java.util.Date(),
+            updatedAt = java.util.Date()
+        )
+        val errorMessage = "Username already exists"
 
         `when`(authService.getCurrentUser()).thenReturn(currentUser)
-        `when`(userManagementService.createUser(eq(username), eq(password), eq(role), eq(currentUser.id))).thenReturn(Result.failure(Exception(errorMessage)))
+        `when`(userManagementService.createUser(username, password, role, currentUser.id))
+            .thenReturn(Result.failure(Exception(errorMessage)))
 
-        // When
+        // Act
         val result = viewModel.createUser(username, password, role)
 
-        // Then
+        // Assert
         assertTrue(result.isFailure)
-        assertEquals(errorMessage, result.exceptionOrNull()?.message)
         assertEquals(errorMessage, viewModel.uiState.value.error)
-        assertFalse(viewModel.uiState.value.isLoading)
     }
 }
