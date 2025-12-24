@@ -92,7 +92,8 @@ fun UserAddScreen(
                 text = "Simpan",
                 onClick = {
                     scope.launch {
-                        if (validateInput(username, password, confirmPassword)) {
+                        val validationError = validateInput(username, password, confirmPassword)
+                        if (validationError == null) {
                             val result = viewModel.createUser(username, password, selectedRole)
                             if (result.isSuccess) {
                                 navController.navigateUp()
@@ -101,6 +102,8 @@ fun UserAddScreen(
                                     message = result.exceptionOrNull()?.message ?: "Gagal membuat pengguna"
                                 )
                             }
+                        } else {
+                            snackbarHostState.showSnackbar(validationError)
                         }
                     }
                 },
@@ -111,8 +114,9 @@ fun UserAddScreen(
     }
 }
 
-private fun validateInput(username: String, password: String, confirmPassword: String): Boolean {
-    return username.isNotBlank() &&
-           password.length >= 6 &&
-           password == confirmPassword
+private fun validateInput(username: String, password: String, confirmPassword: String): String? {
+    if (username.isBlank()) return "Username tidak boleh kosong"
+    if (password.length < 6) return "Password minimal 6 karakter"
+    if (password != confirmPassword) return "Password tidak cocok"
+    return null
 }
