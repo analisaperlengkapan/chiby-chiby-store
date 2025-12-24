@@ -114,7 +114,7 @@ fun WarehouseDetailScreen(
                         warehouse = selectedWarehouse,
                         products = uiState.products,
                         onProductClick = { product ->
-                            // TODO: Navigate to product detail or show product actions
+                            navController.navigate(Screen.ProductDetail.createRoute(product.id.toString()))
                         },
                         onTransferStock = { product ->
                             selectedProductForTransfer = product
