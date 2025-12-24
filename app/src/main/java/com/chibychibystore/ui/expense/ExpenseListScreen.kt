@@ -365,8 +365,17 @@ fun ExpenseFilterDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Batal")
+            Row {
+                TextButton(onClick = {
+                    startDate = null
+                    endDate = null
+                    selectedCategory = null
+                }) {
+                    Text("Reset")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Batal")
+                }
             }
         }
     )
