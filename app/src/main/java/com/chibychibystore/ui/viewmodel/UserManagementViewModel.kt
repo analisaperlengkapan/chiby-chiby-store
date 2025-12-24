@@ -659,6 +659,13 @@ class UserManagementViewModel @Inject constructor(
     }
 
     /**
+     * Updates the isActive field in the edit-user form.
+     */
+    fun onEditUserIsActiveChange(isActive: Boolean) {
+        _editUserFormState.value = _editUserFormState.value.copy(isActive = isActive)
+    }
+
+    /**
      * Updates the selected user using the current edit-user form state.
      *
      * Preconditions:

@@ -198,7 +198,10 @@ fun UserManagementScreen(
         onCreateConfirmPasswordChange = viewModel::onCreateUserConfirmPasswordChange,
         onCreateRoleChange = viewModel::onCreateUserRoleChange,
         onEditUsernameChange = viewModel::onEditUserUsernameChange,
-        onEditRoleChange = viewModel::onEditUserRoleChange
+        onEditRoleChange = viewModel::onEditUserRoleChange,
+        onEditIsActiveChange = viewModel::onEditUserIsActiveChange,
+        onResetPasswordChange = viewModel::onResetPasswordChange,
+        onResetPasswordConfirmChange = viewModel::onResetPasswordConfirmChange
     )
 }
 
