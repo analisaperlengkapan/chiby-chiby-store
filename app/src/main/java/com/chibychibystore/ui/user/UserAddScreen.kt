@@ -39,6 +39,29 @@ fun UserAddScreen(
 
     val roles = remember { Role.values() }
 
+    fun validateInput(): Boolean {
+        // Reset errors
+        usernameError = null
+        passwordError = null
+        confirmPasswordError = null
+
+        var isValid = true
+
+        if (username.isBlank()) {
+            usernameError = "Username tidak boleh kosong"
+            isValid = false
+        }
+        if (password.length < 6) {
+            passwordError = "Password minimal 6 karakter"
+            isValid = false
+        }
+        if (password != confirmPassword) {
+            confirmPasswordError = "Password tidak cocok"
+            isValid = false
+        }
+        return isValid
+    }
+
     Scaffold(
         topBar = {
                 AppTopBar(
@@ -114,27 +137,7 @@ fun UserAddScreen(
             ButtonPrimary(
                 text = "Simpan",
                 onClick = {
-                    // Reset errors
-                    usernameError = null
-                    passwordError = null
-                    confirmPasswordError = null
-
-                    var isValid = true
-
-                    if (username.isBlank()) {
-                        usernameError = "Username tidak boleh kosong"
-                        isValid = false
-                    }
-                    if (password.length < 6) {
-                        passwordError = "Password minimal 6 karakter"
-                        isValid = false
-                    }
-                    if (password != confirmPassword) {
-                        confirmPasswordError = "Password tidak cocok"
-                        isValid = false
-                    }
-
-                    if (isValid) {
+                    if (validateInput()) {
                         scope.launch {
                             val result = viewModel.createUser(username, password, selectedRole)
                             if (result.isSuccess) {
