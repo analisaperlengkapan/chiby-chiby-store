@@ -21,6 +21,10 @@ data class Pengguna(
     val passwordHash: String,
     val role: Role,
     val permissions: String? = null, // JSON string
+    /**
+     * Indicates if the user account is active.
+     * Inactive users cannot log in.
+     */
     val isActive: Boolean = true,
     @Serializable(with = DateSerializer::class)
     val createdAt: Date = Date(),

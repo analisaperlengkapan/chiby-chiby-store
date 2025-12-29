@@ -60,9 +60,15 @@ fun DateRangePickerDialog(
     var endDate by remember { mutableStateOf(initialEndDate) }
     var isSelectingStart by remember { mutableStateOf(true) }
 
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = if (isSelectingStart) startDate?.time else endDate?.time ?: System.currentTimeMillis()
-    )
+    val datePickerState = key(isSelectingStart) {
+        rememberDatePickerState(
+            initialSelectedDateMillis = if (isSelectingStart) {
+                startDate?.time ?: System.currentTimeMillis()
+            } else {
+                endDate?.time ?: startDate?.time ?: System.currentTimeMillis()
+            }
+        )
+    }
 
     androidx.compose.material3.DatePickerDialog(
         onDismissRequest = onDismiss,

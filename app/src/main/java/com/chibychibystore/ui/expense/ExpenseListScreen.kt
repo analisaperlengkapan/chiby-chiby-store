@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.expense
+
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.ErrorMessage
 import com.chibychibystore.ui.components.shared.LoadingIndicator
@@ -38,7 +39,7 @@ fun ExpenseListScreen(
     viewModel: ExpenseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showDateRangePicker by remember { mutableStateOf(false) }
+    var showFilterDialog by remember { mutableStateOf(false) } // State for filter dialog
 
     Scaffold(
         topBar = {
@@ -75,91 +76,44 @@ fun ExpenseListScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        IconButton(onClick = { /* TODO: Show filter dialog */ }) {
+                        IconButton(onClick = { showFilterDialog = true }) {
                             Icon(Icons.Default.FilterList, contentDescription = "Filter")
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    if (uiState.startDate != null || uiState.selectedCategory != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    // Date Range Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = uiState.startDate?.let {
-                                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)
-                            } ?: "",
-                            onValueChange = { },
-                            label = { Text("Tanggal Mulai") },
-                            modifier = Modifier.weight(1f),
-                            readOnly = true,
-                            trailingIcon = {
-                                IconButton(onClick = { showDateRangePicker = true }) {
-                                    Icon(Icons.Default.DateRange, contentDescription = "Pilih Tanggal")
-                                }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (uiState.startDate != null && uiState.endDate != null) {
+                val dateRangeFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("id", "ID")) }
+                                Text(
+                    text = "${dateRangeFormatter.format(uiState.startDate!!)} - ${dateRangeFormatter.format(uiState.endDate!!)}",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                             }
-                        )
 
-                        OutlinedTextField(
-                            value = uiState.endDate?.let {
-                                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)
-                            } ?: "",
-                            onValueChange = { },
-                            label = { Text("Tanggal Akhir") },
-                            modifier = Modifier.weight(1f),
-                            readOnly = true,
-                            trailingIcon = {
-                                IconButton(onClick = { showDateRangePicker = true }) {
-                                    Icon(Icons.Default.DateRange, contentDescription = "Pilih Tanggal")
-                                }
+                            if (uiState.startDate != null && uiState.selectedCategory != null) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("|")
+                                Spacer(modifier = Modifier.width(8.dp))
                             }
-                        )
-                    }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Category Filter
-                    var expanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = it }
-                    ) {
-                        OutlinedTextField(
-                            value = uiState.selectedCategory?.displayName ?: "Semua Kategori",
-                            onValueChange = { },
-                            label = { Text("Kategori") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(),
-                            readOnly = true,
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                            }
-                        )
-
-                        ExposedDropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Semua Kategori") },
-                                onClick = {
-                                    viewModel.setCategoryFilter(null)
-                                    expanded = false
-                                }
-                            )
-                            ExpenseCategory.values().forEach { category ->
-                                DropdownMenuItem(
-                                    text = { Text(category.displayName) },
-                                    onClick = {
-                                        viewModel.setCategoryFilter(category)
-                                        expanded = false
-                                    }
+                            if (uiState.selectedCategory != null) {
+                                Text(
+                                    text = uiState.selectedCategory!!.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
+                    } else {
+                         Spacer(modifier = Modifier.height(4.dp))
+                         Text(
+                            text = "Menampilkan data 30 hari terakhir",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -212,14 +166,20 @@ fun ExpenseListScreen(
                     }
                 }
                 else -> {
+                    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("id", "ID")) }
+
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(uiState.expenses) { expense ->
+                        items(
+                            items = uiState.expenses,
+                            key = { it.id }
+                        ) { expense ->
                             ExpenseItem(
                                 expense = expense,
+                                dateFormatter = dateFormatter,
                                 onClick = {
                                     navController.navigate(Screen.ExpenseDetail.createRoute(expense.id))
                                 }
@@ -231,17 +191,17 @@ fun ExpenseListScreen(
         }
     }
 
-    // Date Range Picker Dialog
-    if (showDateRangePicker) {
-        com.chibychibystore.ui.components.DateRangePickerDialog(
-            initialStartDate = uiState.startDate,
-            initialEndDate = uiState.endDate,
-            onDateRangeSelected = { startDate, endDate ->
-                viewModel.setStartDate(startDate)
-                viewModel.setEndDate(endDate)
-                showDateRangePicker = false
+    // Render filter dialog
+    if (showFilterDialog) {
+        ExpenseFilterDialog(
+            currentStartDate = uiState.startDate,
+            currentEndDate = uiState.endDate,
+            currentCategory = uiState.selectedCategory,
+            onApply = { startDate, endDate, category ->
+                viewModel.setFilters(startDate, endDate, category)
+                showFilterDialog = false
             },
-            onDismiss = { showDateRangePicker = false }
+            onDismiss = { showFilterDialog = false }
         )
     }
 }
@@ -249,6 +209,7 @@ fun ExpenseListScreen(
 @Composable
 private fun ExpenseItem(
     expense: Pengeluaran,
+    dateFormatter: SimpleDateFormat,
     onClick: () -> Unit
 ) {
     Card(
@@ -289,7 +250,7 @@ private fun ExpenseItem(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(expense.expenseDate),
+                        text = dateFormatter.format(expense.expenseDate),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -302,4 +263,132 @@ private fun ExpenseItem(
 private fun formatCurrency(amount: Double): String {
     val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
     return format.format(amount)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExpenseFilterDialog(
+    currentStartDate: Date?,
+    currentEndDate: Date?,
+    currentCategory: ExpenseCategory?,
+    onApply: (Date?, Date?, ExpenseCategory?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var startDate by remember { mutableStateOf(currentStartDate) }
+    var endDate by remember { mutableStateOf(currentEndDate) }
+    var selectedCategory by remember { mutableStateOf(currentCategory) }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    if (showDatePicker) {
+        com.chibychibystore.ui.components.DateRangePickerDialog(
+            initialStartDate = startDate,
+            initialEndDate = endDate,
+            onDateRangeSelected = { start, end ->
+                startDate = start
+                endDate = end
+                showDatePicker = false
+            },
+            onDismiss = { showDatePicker = false }
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Filter Pengeluaran") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Date Range Section
+                Column {
+                    Text("Rentang Waktu", style = MaterialTheme.typography.labelLarge)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val dateRangeFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("id", "ID")) }
+
+                    OutlinedTextField(
+                        value = if (startDate != null && endDate != null) {
+                            "${dateRangeFormatter.format(startDate)} - ${dateRangeFormatter.format(endDate)}"
+                        } else {
+                            "Pilih Tanggal"
+                        },
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = {
+                            IconButton(onClick = { showDatePicker = true }) {
+                                Icon(Icons.Default.DateRange, contentDescription = "Pilih Tanggal")
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showDatePicker = true }
+                    )
+                }
+
+                // Category Section
+                Column {
+                    Text("Kategori", style = MaterialTheme.typography.labelLarge)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    var expanded by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedCategory?.displayName ?: "Semua Kategori",
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Semua Kategori") },
+                                onClick = {
+                                    selectedCategory = null
+                                    expanded = false
+                                }
+                            )
+                            val categories = remember { ExpenseCategory.values() }
+                            categories.forEach { category ->
+                                DropdownMenuItem(
+                                    text = { Text(category.displayName) },
+                                    onClick = {
+                                        selectedCategory = category
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onApply(startDate, endDate, selectedCategory) }
+            ) {
+                Text("Terapkan")
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = {
+                    startDate = null
+                    endDate = null
+                    selectedCategory = null
+                }) {
+                    Text("Reset")
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Batal")
+                }
+            }
+        }
+    )
 }

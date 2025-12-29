@@ -315,13 +315,6 @@ data class DashboardUiState(
  * - Multi-store dashboard aggregation
  * - Predictive alerts berdasarkan historical data
  *
- * **Current Implementation Notes:**
- * Saat ini menggunakan mock data untuk development dan testing.
- * Future implementation akan menggunakan real services:
- * - SaleService untuk sales metrics
- * - ProductService untuk inventory alerts
- * - ReportingService untuk advanced analytics
- *
  * @property uiState Reactive state flow untuk dashboard UI updates
  */
 @HiltViewModel
@@ -346,37 +339,13 @@ class DashboardViewModel @Inject constructor(
      *
      * **Business Logic:**
      * 1. Set loading state untuk UI feedback
-     * 2. Load semua metrics secara parallel/simultaneous:
+     * 2. Load semua metrics:
      *    - Today sales total
      *    - Today transaction count
-     *    - Low stock products
-     *    - Recent transactions
+     *    - Low stock products (dari ProdukRepository)
+     *    - Recent transactions (dari SaleService)
      * 3. Aggregate data dan update UI state
      * 4. Handle errors dengan user-friendly messages
-     *
-     * **Current Implementation (Mock Data):**
-     * ```kotlin
-     * // Generate realistic mock data untuk development
-     * val todaySales = Random.nextDouble(1_000_000.0, 5_000_000.0)
-     * val transactionCount = Random.nextInt(10, 50)
-     * val lowStockItems = generateMockLowStockItems()
-     * val recentTransactions = generateMockRecentTransactions()
-     * ```
-     *
-     * **Future Implementation (Real Services):**
-     * ```kotlin
-     * // Parallel loading dengan coroutines
-     * val todaySalesDeferred = async { saleService.getTodayTotalSales() }
-     * val transactionCountDeferred = async { saleService.getTodayTransactionCount() }
-     * val lowStockDeferred = async { productService.getLowStockProducts() }
-     * val recentDeferred = async { saleService.getRecentSales(limit = 10) }
-     *
-     * // Await all results
-     * val todaySales = todaySalesDeferred.await()
-     * val transactionCount = transactionCountDeferred.await()
-     * val lowStockItems = lowStockDeferred.await()
-     * val recentTransactions = recentDeferred.await()
-     * ```
      *
      * **Data Validation:**
      * - Sales amount: Must be >= 0
@@ -425,7 +394,8 @@ class DashboardViewModel @Inject constructor(
      * **Dependencies:**
      * - [viewModelScope]: Lifecycle-aware coroutine execution
      * - [_uiState]: Mutable state untuk UI updates
-     * - Mock data generators (temporary): generateMockLowStockItems, generateMockRecentTransactions
+     * - [saleService]: Service untuk data penjualan
+     * - [produkRepository]: Repository untuk data produk
      *
      * **Testing:**
      * ```kotlin
@@ -499,6 +469,8 @@ class DashboardViewModel @Inject constructor(
             }
         }
     }
+
+
 
     /**
      * Refresh data dashboard secara manual
