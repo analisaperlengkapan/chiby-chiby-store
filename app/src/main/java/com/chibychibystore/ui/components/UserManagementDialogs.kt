@@ -39,7 +39,10 @@ fun UserManagementDialogs(
     onCreateConfirmPasswordChange: (String) -> Unit,
     onCreateRoleChange: (Role) -> Unit,
     onEditUsernameChange: (String) -> Unit,
-    onEditRoleChange: (Role) -> Unit
+    onEditRoleChange: (Role) -> Unit,
+    onEditIsActiveChange: (Boolean) -> Unit,
+    onResetPasswordChange: (String) -> Unit,
+    onResetPasswordConfirmChange: (String) -> Unit
 ) {
     // Create User Dialog
     if (showCreateDialog) {
@@ -177,6 +180,18 @@ fun UserManagementDialogs(
                         }
                     }
 
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Akun Aktif")
+                        Switch(
+                            checked = editUserFormState.isActive,
+                            onCheckedChange = onEditIsActiveChange
+                        )
+                    }
+
                     editUserFormState.errorMessage?.let { error ->
                         Text(
                             text = error,
@@ -246,7 +261,7 @@ fun UserManagementDialogs(
 
                     OutlinedTextField(
                         value = resetPasswordFormState.newPassword,
-                        onValueChange = { /* onResetPasswordChange */ },
+                        onValueChange = onResetPasswordChange,
                         label = { Text("Password Baru") },
                         modifier = Modifier.fillMaxWidth(),
                         isError = resetPasswordFormState.errorMessage?.contains("password", ignoreCase = true) == true
@@ -254,7 +269,7 @@ fun UserManagementDialogs(
 
                     OutlinedTextField(
                         value = resetPasswordFormState.confirmPassword,
-                        onValueChange = { /* onResetPasswordConfirmChange */ },
+                        onValueChange = onResetPasswordConfirmChange,
                         label = { Text("Konfirmasi Password Baru") },
                         modifier = Modifier.fillMaxWidth(),
                         isError = resetPasswordFormState.errorMessage?.contains("konfirmasi", ignoreCase = true) == true

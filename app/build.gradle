@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
     id 'kotlin-kapt'
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'com.google.dagger.hilt.android'
@@ -16,7 +17,7 @@ jacoco {
 
 android {
     namespace 'com.chibychibystore'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.chibychibystore"
@@ -47,9 +48,6 @@ android {
     }
     buildFeatures {
         compose true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion '1.5.15'
     }
     packagingOptions {
         resources {

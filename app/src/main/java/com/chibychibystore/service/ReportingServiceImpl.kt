@@ -309,7 +309,7 @@ class ReportingServiceImpl @Inject constructor(
             val expenses = pengeluaranRepository.getExpensesInDateRange(startDate, endDate)
             val total = expenses.sumOf { it.amount }
             val byCategory = expenses.groupBy { it.category }.mapValues { entry -> entry.value.sumOf { it.amount } }
-            Result.success(ExpenseReport(total, byCategory))
+            Result.success(ExpenseReport(total, byCategory.mapKeys { it.key as Any }))
         }
     } catch (e: Exception) {
         Result.failure(Exception("getExpenseReport failed", e))

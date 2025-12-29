@@ -258,7 +258,7 @@ fun AppNavigation(
                     }
                 }
             ) {
-                ReportsScreen(navController = navController)
+            ReportsScreen(onNavigateBack = { navController.popBackStack() })
             }
         }
 

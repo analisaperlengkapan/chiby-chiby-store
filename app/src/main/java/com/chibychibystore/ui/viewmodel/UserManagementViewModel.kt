@@ -659,7 +659,7 @@ class UserManagementViewModel @Inject constructor(
             EditUserFormState(
                 username = user.username,
                 role = user.role,
-                isActive = true // TODO: Add isActive field to Pengguna entity
+                isActive = user.isActive
             )
         }
     }
@@ -690,6 +690,13 @@ class UserManagementViewModel @Inject constructor(
      */
     fun onEditUserRoleChange(role: Role) {
         _editUserFormState.update { it.copy(role = role) }
+    }
+
+    /**
+     * Updates the isActive field in the edit-user form.
+     */
+    fun onEditUserIsActiveChange(isActive: Boolean) {
+        _editUserFormState.value = _editUserFormState.value.copy(isActive = isActive)
     }
 
     /**

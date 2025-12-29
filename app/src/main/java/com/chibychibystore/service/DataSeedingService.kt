@@ -42,25 +42,25 @@ class DataSeedingService @Inject constructor(
             Pengguna(
                 id = 0,
                 username = "owner",
-                passwordHash = "hashed_password_owner",
+                passwordHash = hashPassword("owner123"),
                 role = Role.OWNER
             ),
             Pengguna(
                 id = 0,
                 username = "manager",
-                passwordHash = "hashed_password_manager",
+                passwordHash = hashPassword("manager123"),
                 role = Role.MANAGER
             ),
             Pengguna(
                 id = 0,
                 username = "cashier",
-                passwordHash = "hashed_password_cashier",
+                passwordHash = hashPassword("cashier123"),
                 role = Role.CASHIER
             ),
             Pengguna(
                 id = 0,
                 username = "warehouse",
-                passwordHash = "hashed_password_warehouse",
+                passwordHash = hashPassword("warehouse123"),
                 role = Role.WAREHOUSE
             )
         )
@@ -68,6 +68,13 @@ class DataSeedingService @Inject constructor(
         defaultUsers.forEach { user ->
             penggunaRepository.createPengguna(user)
         }
+    }
+
+    private fun hashPassword(password: String): String {
+        val bytes = password.toByteArray()
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        val digest = md.digest(bytes)
+        return digest.fold("") { str, it -> str + "%02x".format(it) }
     }
 
     private suspend fun seedCategories() {

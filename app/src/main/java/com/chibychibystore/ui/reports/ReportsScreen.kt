@@ -3,6 +3,7 @@ package com.chibychibystore.ui.reports
 import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
@@ -17,7 +18,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.chibychibystore.R
 import com.chibychibystore.service.*
 import com.chibychibystore.ui.components.shared.AppTopBar
-import com.chibychibystore.ui.components.shared.DatePickerDialog
+// DatePickerDialog is provided by Material3
 // Chart components are in the same package, so no need to import them
 import java.io.File
 import java.time.LocalDate
@@ -70,7 +71,8 @@ fun ReportsScreen(
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.reports_title),
-                onBackClick = onNavigateBack,
+                navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
+                onNavigationClick = onNavigateBack,
                 actions = {
                     IconButton(
                         onClick = { viewModel.exportCurrentReportToPdf() },
