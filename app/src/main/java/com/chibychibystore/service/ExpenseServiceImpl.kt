@@ -50,14 +50,16 @@ class ExpenseServiceImpl @Inject constructor(
         endDate: LocalDate?,
         category: String?
     ): Result<List<Pengeluaran>> {
+        // Implementation of getExpenses with category filtering
         return try {
             val start = startDate ?: LocalDate.now().minusDays(30)
             val end = endDate ?: LocalDate.now()
             val expenses = pengeluaranRepository.getExpensesInDateRange(start, end)
+            // Filter by category
             val filtered = category?.let { cat ->
                 expenses.filter { it.category.name == cat }
             } ?: expenses
-            Result.success(filtered)
+            Result.success(filtered) // Return filtered results
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getExpenses", e))
         }
