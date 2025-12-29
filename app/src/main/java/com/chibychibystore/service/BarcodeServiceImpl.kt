@@ -151,7 +151,6 @@ class BarcodeServiceImpl @Inject constructor(
             BarcodeFormat.CODE_128 -> com.google.zxing.BarcodeFormat.CODE_128
             BarcodeFormat.QR_CODE -> com.google.zxing.BarcodeFormat.QR_CODE
             BarcodeFormat.DATA_MATRIX -> com.google.zxing.BarcodeFormat.DATA_MATRIX
-            else -> com.google.zxing.BarcodeFormat.QR_CODE
         }
 
         val hints = mapOf(

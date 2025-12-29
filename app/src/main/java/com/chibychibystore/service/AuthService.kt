@@ -340,10 +340,10 @@ class AuthServiceImpl @Inject constructor(
 
         // Check role-based permissions berdasarkan role user
         return when (user.role) {
+            Role.OWNER -> true // Already handled above, but needed for exhaustive when
             Role.MANAGER -> hasManagerPermission(permission)
             Role.CASHIER -> hasCashierPermission(permission)
             Role.WAREHOUSE -> hasWarehousePermission(permission)
-            else -> false
         }
     }
 

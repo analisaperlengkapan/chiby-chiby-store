@@ -150,7 +150,7 @@ class UserManagementServiceImpl @Inject constructor(
             } else {
                 val cause = updateResult.exceptionOrNull()
                 Result.failure(
-                    (cause as? Exception) ?: Exception(cause ?: Exception("Gagal update user"))
+                    cause ?: Exception("Gagal update user")
                 )
             }
         } catch (e: Exception) {
@@ -185,7 +185,7 @@ class UserManagementServiceImpl @Inject constructor(
             } else {
                 val cause = deleteResult.exceptionOrNull()
                 Result.failure(
-                    (cause as? Exception) ?: Exception(cause ?: Exception("Gagal menghapus user"))
+                    cause ?: Exception("Gagal menghapus user")
                 )
             }
         } catch (e: Exception) {
@@ -224,7 +224,7 @@ class UserManagementServiceImpl @Inject constructor(
             } else {
                 val cause = updateResult.exceptionOrNull()
                 Result.failure(
-                    (cause as? Exception) ?: Exception(cause ?: Exception("Gagal reset password"))
+                    cause ?: Exception("Gagal reset password")
                 )
             }
         } catch (e: Exception) {

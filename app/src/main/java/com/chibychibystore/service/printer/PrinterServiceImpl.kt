@@ -341,7 +341,7 @@ class PrinterServiceImpl @Inject constructor(
         receipt.add("================================\n".toByteArray())
 
         // Totals
-        val currencyFormat = java.text.NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+        val currencyFormat = java.text.NumberFormat.getCurrencyInstance(Locale.Builder().setLanguage("id").setRegion("ID").build())
 
         receipt.add("Subtotal: ${currencyFormat.format(subtotal)}\n".toByteArray())
         if (tax > 0) {
@@ -373,7 +373,7 @@ class PrinterServiceImpl @Inject constructor(
     }
 
     private fun formatItemLine(name: String, quantity: Int, totalPrice: Double): String {
-        val currencyFormat = java.text.NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+        val currencyFormat = java.text.NumberFormat.getCurrencyInstance(Locale.Builder().setLanguage("id").setRegion("ID").build())
         val maxNameLength = 20
         val truncatedName = if (name.length > maxNameLength) {
             name.substring(0, maxNameLength - 3) + "..."

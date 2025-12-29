@@ -229,7 +229,7 @@ fun DashboardScreen(
 
 @Composable
 fun rememberCurrencyFormatter(): (Double) -> String {
-    val locale = remember { Locale("id", "ID") }
+    val locale = remember { Locale.Builder().setLanguage("id").setRegion("ID").build() }
     val formatter = remember { NumberFormat.getCurrencyInstance(locale) }
     return { amount -> formatter.format(amount) }
 }

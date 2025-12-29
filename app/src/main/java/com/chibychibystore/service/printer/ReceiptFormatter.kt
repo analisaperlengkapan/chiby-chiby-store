@@ -11,7 +11,7 @@ import java.util.*
  */
 object ReceiptFormatter {
 
-    private val currencyFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+    private val currencyFormat = NumberFormat.getCurrencyInstance(Locale.Builder().setLanguage("id").setRegion("ID").build())
     private val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
 
     /**
