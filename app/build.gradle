@@ -223,7 +223,7 @@ dependencies {
     androidTestImplementation platform('androidx.compose:compose-bom:2025.12.01')
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
     // Additional androidTest dependencies to support integration and Hilt tests
-    androidTestImplementation 'app.cash.turbine:turbine:0.12.3'
+    androidTestImplementation 'app.cash.turbine:turbine:1.2.1'
     androidTestImplementation 'com.google.dagger:hilt-android-testing:2.57.2'
     kaptAndroidTest 'com.google.dagger:hilt-compiler:2.57.2'
     androidTestImplementation 'org.mockito:mockito-android:5.21.0'
