@@ -105,6 +105,11 @@ interface SaleService {
     ): Result<List<Penjualan>>
 
     /**
+     * Get recent sales with limit
+     */
+    suspend fun getRecentSales(limit: Int): Result<List<Penjualan>>
+
+    /**
      * Search penjualan berdasarkan query
      */
     suspend fun searchSales(query: String): Result<List<Penjualan>>
@@ -133,6 +138,11 @@ interface SaleService {
      * Get total penjualan by date range
      */
     suspend fun getTotalSalesByDateRange(startDate: String, endDate: String): Result<Double>
+
+    /**
+     * Get sales count by date range
+     */
+    suspend fun getSalesCountByDateRange(startDate: String, endDate: String): Result<Int>
 
     /**
      * Observable untuk semua penjualan

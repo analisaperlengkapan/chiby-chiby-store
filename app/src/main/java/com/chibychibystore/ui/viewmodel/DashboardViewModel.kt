@@ -8,6 +8,7 @@ import com.chibychibystore.data.local.entity.Produk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.chibychibystore.service.SaleService
 import com.chibychibystore.repository.ProdukRepository
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -437,27 +438,26 @@ class DashboardViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // Real implementation using services/repositories
+                // Real implementation using services/repositories with parallel loading
                 val today = LocalDate.now().toString() // yyyy-MM-dd
 
-                // Get today's sales list
-                val salesRes = saleService.getSales(today, today, null)
-                val sales = salesRes.getOrNull() ?: emptyList()
-                val todaySalesTotal = sales.sumOf { it.totalAmount }
-                val todayTransactionCount = sales.size
+                // Parallel execution for dashboard metrics
+                val todaySalesDeferred = async { saleService.getTotalSalesByDateRange(today, today) }
+                val transactionCountDeferred = async { saleService.getSalesCountByDateRange(today, today) }
+                val lowStockDeferred = async { produkRepository.getLowStockProduk().first() }
+                val recentSalesDeferred = async { saleService.getRecentSales(10) }
 
-                // Low stock products (take first page/current value)
-                val lowStock = produkRepository.getLowStockProduk().first()
-
-                // Recent transactions (latest 10)
-                val allSalesRes = saleService.getSales(null, null, null)
-                val recent = (allSalesRes.getOrNull() ?: emptyList()).sortedByDescending { it.saleDate }.take(10)
+                // Await results
+                val todaySalesRes = todaySalesDeferred.await()
+                val transactionCountRes = transactionCountDeferred.await()
+                val lowStock = lowStockDeferred.await()
+                val recentSalesRes = recentSalesDeferred.await()
 
                 _uiState.value = _uiState.value.copy(
-                    todaySales = todaySalesTotal,
-                    todayTransactionCount = todayTransactionCount,
+                    todaySales = todaySalesRes.getOrNull() ?: 0.0,
+                    todayTransactionCount = transactionCountRes.getOrNull() ?: 0,
                     lowStockItems = lowStock,
-                    recentTransactions = recent,
+                    recentTransactions = recentSalesRes.getOrNull() ?: emptyList(),
                     isLoading = false,
                     errorMessage = null
                 )
@@ -469,6 +469,7 @@ class DashboardViewModel @Inject constructor(
             }
         }
     }
+
 
 
     /**

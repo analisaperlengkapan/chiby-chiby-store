@@ -28,6 +28,9 @@ interface PenjualanDao {
     @Query("SELECT * FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate ORDER BY saleDate DESC")
     fun getPenjualanByDateRange(startDate: Date, endDate: Date): Flow<List<Penjualan>>
 
+    @Query("SELECT * FROM penjualan ORDER BY saleDate DESC LIMIT :limit")
+    fun getRecentPenjualan(limit: Int): Flow<List<Penjualan>>
+
     @Transaction
     @Query("SELECT * FROM penjualan WHERE id = :id")
     suspend fun getPenjualanWithItems(id: Long): PenjualanWithItems?
@@ -47,6 +50,9 @@ interface PenjualanDao {
 
     @Query("SELECT COUNT(*) FROM penjualan")
     suspend fun getPenjualanCount(): Int
+
+    @Query("SELECT COUNT(*) FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate")
+    suspend fun getPenjualanCountByDateRange(startDate: Date, endDate: Date): Int
 
     @Query("SELECT SUM(totalAmount) FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate")
     suspend fun getTotalSalesAmount(startDate: Date, endDate: Date): Double?

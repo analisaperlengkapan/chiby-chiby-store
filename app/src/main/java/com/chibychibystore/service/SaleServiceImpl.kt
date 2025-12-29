@@ -268,6 +268,19 @@ class SaleServiceImpl @Inject constructor(
         }
     }
 
+    override suspend fun getSalesCountByDateRange(startDate: String, endDate: String): Result<Int> {
+        return try {
+            if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
+            }
+            val startLocalDate = java.time.LocalDate.parse(startDate)
+            val endLocalDate = java.time.LocalDate.parse(endDate)
+            penjualanRepository.getPenjualanCountByDateRange(startLocalDate, endLocalDate)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /**
      * Mengambil list penjualan dengan filtering opsional berdasarkan tanggal dan kasir
      *
@@ -335,6 +348,18 @@ class SaleServiceImpl @Inject constructor(
             }
 
             Result.success(filteredSales)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getRecentSales(limit: Int): Result<List<Penjualan>> {
+        return try {
+            if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+                return Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
+            }
+            val sales = penjualanRepository.getRecentPenjualan(limit).first()
+            Result.success(sales)
         } catch (e: Exception) {
             Result.failure(e)
         }
