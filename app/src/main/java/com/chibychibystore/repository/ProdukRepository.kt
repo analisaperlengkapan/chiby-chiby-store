@@ -115,15 +115,37 @@ class ProdukRepository @Inject constructor(
     }
 
     /**
-     * Update stock quantity
+     * Adjust stock quantity (Delta)
+     * Use this for sales, returns, purchases.
+     * @param quantity Positive to add, negative to subtract.
      */
-    suspend fun updateStock(id: Long, quantity: Int): Result<Unit> {
+    suspend fun adjustStock(id: Long, quantity: Int): Result<Unit> {
         return try {
-            produkDao.updateStock(id, quantity)
+            produkDao.adjustStock(id, quantity)
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("updateStock", e))
+            Result.failure(ChibyChibyException.DatabaseError("adjustStock", e))
         }
+    }
+
+    /**
+     * Set absolute stock quantity.
+     * Use this for stock taking / inventory correction.
+     */
+    suspend fun setStock(id: Long, quantity: Int): Result<Unit> {
+        return try {
+            produkDao.setStock(id, quantity)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("setStock", e))
+        }
+    }
+
+    /**
+     * Legacy support - maps to adjustStock (Delta)
+     */
+    suspend fun updateStock(id: Long, quantity: Int): Result<Unit> {
+        return adjustStock(id, quantity)
     }
 
     /**

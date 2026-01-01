@@ -185,8 +185,9 @@ class SaleServiceImpl @Inject constructor(
             // Validate payment method if using enum
             // (Assumes sale.paymentMethod is valid at this point)
 
-            // Validate and update inventory (using updateProduk for this codebase)
+            // Validate and update inventory (Atomic Delta Update)
             for (item in items) {
+                // Check current stock first (optimistic check)
                 val product = produkRepository.getProduk(item.productId)
                     ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
 
@@ -194,10 +195,10 @@ class SaleServiceImpl @Inject constructor(
                     return Result.failure(Exception("stok tidak mencukupi untuk produk ${product.name}"))
                 }
 
-                val updatedProduct = product.copy(stockQuantity = product.stockQuantity - item.quantity)
-                val updRes = produkRepository.updateProduk(updatedProduct)
-                if (updRes.isFailure) {
-                    return Result.failure(updRes.exceptionOrNull() ?: Exception("Gagal memperbarui stok untuk produk ${product.name}"))
+                // Perform atomic decrement
+                val stockResult = produkRepository.adjustStock(item.productId, -item.quantity)
+                if (stockResult.isFailure) {
+                    return Result.failure(stockResult.exceptionOrNull() ?: Exception("Gagal memperbarui stok untuk produk ${product.name}"))
                 }
             }
 
@@ -387,12 +388,15 @@ class SaleServiceImpl @Inject constructor(
                 val itemsFlow = itemPenjualanRepository.getItemsBySaleId(id)
                 val items = itemsFlow.first()
 
-                // Restore stock
+                // Restore stock (Atomic Delta Update)
                 for (item in items) {
-                    val product = produkRepository.getProduk(item.productId)
-                        ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
-                    val updated = product.copy(stockQuantity = product.stockQuantity + item.quantity)
-                    produkRepository.updateProduk(updated)
+                     // We don't need to fetch product just to update stock if we trust the ID exists,
+                     // but validating existence is safer.
+                     // Also, refund adds stock back.
+                     val stockResult = produkRepository.adjustStock(item.productId, item.quantity)
+                     if (stockResult.isFailure) {
+                         return Result.failure(stockResult.exceptionOrNull() ?: Exception("Gagal mengembalikan stok produk"))
+                     }
                 }
 
                 // Mark sale as refunded - update penjualan record
@@ -417,12 +421,12 @@ class SaleServiceImpl @Inject constructor(
             val itemsFlow = itemPenjualanRepository.getItemsBySaleId(id)
             val items = itemsFlow.first()
 
-            // Restore stock
+            // Restore stock (Atomic Delta Update)
             for (item in items) {
-                val product = produkRepository.getProduk(item.productId)
-                    ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
-                val updated = product.copy(stockQuantity = product.stockQuantity + item.quantity)
-                produkRepository.updateProduk(updated)
+                val stockResult = produkRepository.adjustStock(item.productId, item.quantity)
+                if (stockResult.isFailure) {
+                    return Result.failure(stockResult.exceptionOrNull() ?: Exception("Gagal mengembalikan stok produk"))
+                }
             }
 
             // Delete sale and its items
@@ -619,15 +623,10 @@ class SaleServiceImpl @Inject constructor(
             val saleResult = penjualanRepository.getPenjualanWithItemsById(id)
             val saleWithItems = saleResult.getOrNull() ?: return Result.failure(saleResult.exceptionOrNull() ?: Exception("Penjualan tidak ditemukan"))
 
-            // Restore inventory stock
+            // Restore inventory stock (Atomic Delta Update)
             for (item in saleWithItems.items) {
-                val productResult = produkRepository.getProdukById(item.productId)
-                val product = productResult.getOrNull()
-                if (product != null) {
-                    val newStock = product.stockQuantity + item.quantity
-                    val updateResult = produkRepository.updateStock(item.productId, newStock)
-                    if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengembalikan stok produk ${product.name}"))
-                }
+                val updateResult = produkRepository.adjustStock(item.productId, item.quantity)
+                if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengembalikan stok produk"))
             }
 
             // Delete sale
