@@ -197,6 +197,21 @@ interface ProductService {
      * @return Flow yang emit produk di warehouse tersebut
      */
     fun observeProductsByWarehouse(warehouseId: String): Flow<List<Produk>>
+
+    /**
+     * Observable stream untuk pencarian produk
+     *
+     * @param query String pencarian
+     * @return Flow yang emit hasil pencarian
+     */
+    fun observeSearchProducts(query: String): Flow<List<Produk>>
+
+    /**
+     * Observable stream untuk produk stok rendah
+     *
+     * @return Flow yang emit list produk stok rendah
+     */
+    fun observeLowStockProducts(): Flow<List<Produk>>
 }
 
 /**
@@ -324,7 +339,8 @@ class ProductServiceImpl @Inject constructor(
             if (!authService.hasPermission("EDIT_INVENTORY")) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
             }
-            val deleteResult = productRepository.deleteProduk(id.toLong())
+            val idLong = id.toLongOrNull() ?: return Result.failure(Exception("ID Produk tidak valid: $id"))
+            val deleteResult = productRepository.deleteProduk(idLong)
             if (deleteResult.isFailure) return Result.failure(deleteResult.exceptionOrNull() ?: Exception("Gagal menghapus produk"))
             Result.success(Unit)
         } catch (e: Exception) {
@@ -337,7 +353,8 @@ class ProductServiceImpl @Inject constructor(
             if (!authService.hasPermission("VIEW_INVENTORY")) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
             }
-            val product = productRepository.getProdukById(id.toLong()).getOrNull()
+            val idLong = id.toLongOrNull() ?: return Result.failure(Exception("ID Produk tidak valid: $id"))
+            val product = productRepository.getProdukById(idLong).getOrNull()
             Result.success(product)
         } catch (e: Exception) {
             Result.failure(e)
@@ -387,7 +404,8 @@ class ProductServiceImpl @Inject constructor(
                 return Result.failure(Exception("Stok tidak boleh negatif"))
             }
 
-            val stockUpdateResult = productRepository.updateStock(productId.toLong(), newStock)
+            val idLong = productId.toLongOrNull() ?: return Result.failure(Exception("ID Produk tidak valid: $productId"))
+            val stockUpdateResult = productRepository.updateStock(idLong, newStock)
             if (stockUpdateResult.isFailure) return Result.failure(stockUpdateResult.exceptionOrNull() ?: Exception("Gagal memperbarui stok"))
             Result.success(Unit)
         } catch (e: Exception) {
@@ -416,7 +434,16 @@ class ProductServiceImpl @Inject constructor(
     }
 
     override fun observeProductsByWarehouse(warehouseId: String): Flow<List<Produk>> {
-        return productRepository.getProdukByWarehouse(warehouseId.toLong())
+        val idLong = warehouseId.toLongOrNull() ?: return kotlinx.coroutines.flow.flowOf(emptyList())
+        return productRepository.getProdukByWarehouse(idLong)
+    }
+
+    override fun observeSearchProducts(query: String): Flow<List<Produk>> {
+        return productRepository.searchProduk(query)
+    }
+
+    override fun observeLowStockProducts(): Flow<List<Produk>> {
+        return productRepository.getLowStockProduk()
     }
 
     /**
