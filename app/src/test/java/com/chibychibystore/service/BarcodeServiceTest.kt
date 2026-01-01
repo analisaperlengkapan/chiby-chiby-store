@@ -11,6 +11,7 @@ import org.junit.Test
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
+import com.chibychibystore.error.ChibyChibyException
 
 class BarcodeServiceTest {
 
@@ -58,11 +59,37 @@ class BarcodeServiceTest {
         val result = barcodeService.generateBarcode(productId, BarcodeFormat.EAN_13, LabelSize.MEDIUM)
 
         // Note: Actual image generation depends on Android Bitmap/Canvas which might not work in pure unit test without Robolectric.
-        // But the logic flow should be correct. If this fails due to Bitmap/Canvas mocking, it's expected in this environment.
-        // In a real Android project, we would mock the Bitmap generation or use Robolectric.
-        // For this test, we assume if it reaches this point without crashing on logic, it's a pass on the structure.
+        // But the logic flow should be correct.
+    }
 
-        // Since we can't easily mock Bitmap in this simple test setup without Robolectric configuration:
-        // verification is limited.
+    @Test
+    fun `generateBarcode fails when product not found`() = runBlocking {
+        val productId = 99L
+        `when`(produkRepository.getProdukById(productId)).thenReturn(Result.failure(Exception("Product not found")))
+
+        val result = barcodeService.generateBarcode(productId, BarcodeFormat.EAN_13, LabelSize.MEDIUM)
+
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `generateBarcode fails when product has no barcode`() = runBlocking {
+        val productId = 2L
+        val product = Produk(
+            id = productId,
+            name = "No Barcode Product",
+            barcode = null,
+            categoryId = 1,
+            costPrice = 10000.0,
+            sellingPrice = 15000.0,
+            warehouseId = 1
+        )
+
+        `when`(produkRepository.getProdukById(productId)).thenReturn(Result.success(product))
+
+        val result = barcodeService.generateBarcode(productId, BarcodeFormat.EAN_13, LabelSize.MEDIUM)
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is ChibyChibyException.ValidationError)
     }
 }

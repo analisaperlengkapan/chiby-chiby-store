@@ -20,6 +20,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.navigation.NavController
 import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.ui.theme.Success
@@ -46,11 +47,12 @@ fun PosScreen(
     // Listen for scan results from BarcodeScannerScreen
     val currentBackStackEntry = navController.currentBackStackEntry
     val savedStateHandle = currentBackStackEntry?.savedStateHandle
+    val scannedBarcode by savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState() ?: mutableStateOf(null)
 
-    LaunchedEffect(savedStateHandle) {
-        savedStateHandle?.get<String>("scanned_barcode")?.let { barcode ->
+    LaunchedEffect(scannedBarcode) {
+        scannedBarcode?.let { barcode ->
             viewModel.onBarcodeScanned(barcode)
-            savedStateHandle.remove<String>("scanned_barcode")
+            savedStateHandle?.remove<String>("scanned_barcode")
         }
     }
 
