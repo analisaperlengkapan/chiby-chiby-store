@@ -89,9 +89,9 @@ fun UserListScreen(
         }
     }
 
-    // Handle errors
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { error ->
+    // Handle errors (mapped from errorMessage in new VM)
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { error ->
             scope.launch {
                 snackbarHostState.showSnackbar(
                     message = error,
