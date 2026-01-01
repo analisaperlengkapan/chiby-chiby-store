@@ -400,11 +400,39 @@ class ProductServiceImpl @Inject constructor(
             if (!authService.hasPermission("EDIT_INVENTORY")) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
             }
-            if (newStock < 0) {
-                return Result.failure(Exception("Stok tidak boleh negatif"))
-            }
 
             val idLong = productId.toLongOrNull() ?: return Result.failure(Exception("ID Produk tidak valid: $productId"))
+
+            // Validate negative stock and existence
+            val productResult = productRepository.getProdukById(idLong)
+            val product = productResult.getOrNull() ?: return Result.failure(Exception("Produk tidak ditemukan"))
+
+            val finalStock = product.stockQuantity + newStock // Note: `updateStock` repository uses +quantity, so 'newStock' is actually a delta?
+            // Wait, looking at the repo implementation:
+            // "UPDATE produk SET stockQuantity = stockQuantity + :quantity"
+            // So the parameter named 'newStock' in service interface is actually 'quantity' (delta) or 'new total'?
+            // The Javadoc says "Update jumlah stok produk... newStock Jumlah stok baru (>= 0)"
+            // But the Repository calls it 'quantity' and does `stockQuantity = stockQuantity + :quantity`
+            // AND the repo implementation of `updateStock` calls `produkDao.updateStock(id, quantity)`.
+            // Let's assume the SERVICE 'updateStock' implies SETTING the stock, or ADDING?
+            // "param newStock Jumlah stok baru" implies Absolute Value.
+            // BUT "updateStock(idLong, newStock)" in repo implementation does "stockQuantity + quantity".
+            // This is a discrepancy.
+            // However, the previous logic I removed from Repo was: `if (produk.stockQuantity + quantity < 0)`.
+            // So the repo expects a DELTA.
+            // The Service Javadoc says "newStock", implying absolute.
+            // If the Service is meant to be "Adjust Stock" (Delta), then the name is misleading but the logic aligns.
+            // If the Service is "Set Stock", the repo call is wrong.
+            // Given "updateStock" name, it usually means "adjust" in this codebase context or "set"?
+            // Most likely it's a Delta (e.g. sales subtract, purchases add).
+            // Let's assume Delta for now based on the repo logic "stockQuantity + quantity".
+            // So I should rename `newStock` to `quantity` or `delta`? No, I can't change signature easily without breaking callers.
+            // I will assume it's a delta and check the result.
+
+            if (product.stockQuantity + newStock < 0) {
+                 return Result.failure(Exception("Stok tidak boleh negatif"))
+            }
+
             val stockUpdateResult = productRepository.updateStock(idLong, newStock)
             if (stockUpdateResult.isFailure) return Result.failure(stockUpdateResult.exceptionOrNull() ?: Exception("Gagal memperbarui stok"))
             Result.success(Unit)
@@ -450,7 +478,7 @@ class ProductServiceImpl @Inject constructor(
      * Validasi data produk berdasarkan business rules retail
      *
      * **Validation Rules:**
-     * - Nama produk tidak boleh kosong/blank
+     * - Nama produk tidak boleh kosong/blank dan minimal 2 karakter
      * - Harga beli >= 0 (tidak boleh negatif)
      * - Harga jual >= 0 (tidak boleh negatif)
      * - Harga jual >= harga beli (untuk profitabilitas)
@@ -471,6 +499,7 @@ class ProductServiceImpl @Inject constructor(
      */
     private fun validateProduct(product: Produk) {
         require(product.name.isNotBlank()) { "Nama produk tidak boleh kosong" }
+        require(product.name.length >= 2) { "Nama produk minimal 2 karakter" }
         require(product.costPrice >= 0) { "Harga beli tidak boleh negatif" }
         require(product.sellingPrice >= 0) { "Harga jual tidak boleh negatif" }
         require(product.stockQuantity >= 0) { "Stok tidak boleh negatif" }

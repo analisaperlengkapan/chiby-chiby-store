@@ -40,14 +40,14 @@ class InventoryViewModelTest {
 
         // Then
         viewModel.uiState.test {
-            // Initial state (isLoading = true from stateIn initialValue)
+            // Initial state (from stateIn initialValue)
             val initialState = awaitItem()
-            assertTrue(initialState.isLoading)
+            assertTrue(initialState is InventoryUiState.Loading)
 
             // Loaded state
             val loadedState = awaitItem()
-            assertFalse(loadedState.isLoading)
-            assertEquals(products, loadedState.products)
+            assertTrue(loadedState is InventoryUiState.Success)
+            assertEquals(products, (loadedState as InventoryUiState.Success).products)
         }
     }
 
@@ -71,14 +71,14 @@ class InventoryViewModelTest {
         // Then
         viewModel.uiState.test {
             awaitItem() // Initial loading
-            val defaultState = awaitItem() // All products
+            val defaultState = awaitItem() as InventoryUiState.Success // All products
             assertEquals(allProducts, defaultState.products)
 
             // When
             viewModel.updateSearchQuery("Apple")
 
             // Then
-            val searchState = awaitItem()
+            val searchState = awaitItem() as InventoryUiState.Success
             assertEquals("Apple", searchState.searchQuery)
             assertEquals(searchResults, searchState.products)
         }
@@ -99,40 +99,19 @@ class InventoryViewModelTest {
 
         viewModel.uiState.test {
             // Skip synchronization emissions
-            skipItems(1) // Initial loading
+            awaitItem() // Loading
 
             // Should eventually be in search state
-            val stateWithQuery = awaitItem()
+            val stateWithQuery = awaitItem() as InventoryUiState.Success
             assertEquals("B", stateWithQuery.searchQuery)
 
             // When
             viewModel.updateSearchQuery("")
 
             // Then
-            val finalState = awaitItem()
+            val finalState = awaitItem() as InventoryUiState.Success
             assertTrue(finalState.searchQuery.isBlank())
             assertEquals(allProducts, finalState.products)
-        }
-    }
-
-    @Test
-    fun `clearError should clear error message`() = runTest {
-        // Given
-        // We simulate an error by emitting on error flow?
-        // Or directly checking if clearError updates the flow.
-        // Since we cannot inject error easily into the catch block of flows without complex mocking,
-        // we can test that initial error state is null and clearError doesn't crash.
-
-        viewModel = InventoryViewModel(productService)
-
-        // When
-        viewModel.clearError()
-
-        // Then
-        viewModel.uiState.test {
-             val item = awaitItem() // Initial loading
-             val loaded = awaitItem()
-             assertNull(loaded.error)
         }
     }
 }

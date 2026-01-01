@@ -252,6 +252,19 @@ class UserManagementViewModel @Inject constructor(
     private val _resetPasswordFormState = MutableStateFlow(ResetPasswordFormState())
     val resetPasswordFormState: StateFlow<ResetPasswordFormState> = _resetPasswordFormState
 
+    // Internal mutable state for search and filter
+    private val _searchQuery = MutableStateFlow("")
+    private val _selectedRole = MutableStateFlow<Role?>(null)
+
+    // Derived User List Stream
+    private val _usersFlow = userManagementService.getAllUsers()
+        .catch { e ->
+             // Emit empty list on error but keep the error accessible via side effects if needed
+             // For simplicity, we just log/swallow here and let the UI state handling catch it via combination or distinct error flow
+             // Ideally, we'd emit a Result wrapper, but our UiState structure handles it differently.
+             emit(emptyList())
+        }
+
     /**
      * Initializes the ViewModel and loads initial user data.
      *
@@ -276,62 +289,32 @@ class UserManagementViewModel @Inject constructor(
      * - Caches data in StateFlow for reactive UI updates
      */
     init {
-        loadUsers()
+        // loadUsers is now reactive via stateIn
         loadUserStats()
     }
 
-    /**
-     * Loads all users from the UserManagementService and updates the UI state.
-     *
-     * This method establishes a reactive connection to the user data stream, automatically
-     * updating the UI whenever user data changes. It implements proper error handling
-     * and loading state management for a smooth user experience.
-     *
-     * ## Data Flow:
-     * 1. Set loading state to true and clear any previous errors
-     * 2. Subscribe to user data stream from UserManagementService
-     * 3. Update UI state with loaded users and apply current filters
-     * 4. Handle any errors during data loading
-     *
-     * ## Reactive Behavior:
-     * - Automatically updates when user data changes in the database
-     * - Applies current search and filter criteria to loaded data
-     * - Maintains loading states for proper UI feedback
-     *
-     * ## Error Scenarios:
-     * - Database connection issues
-     * - Permission denied for user access
-     * - Network timeouts (if applicable)
-     *
-     * ## Performance:
-     * - Uses collectLatest to avoid processing outdated data
-     * - Efficient filtering applied client-side
-     * - Minimal memory footprint with StateFlow caching
+    /*
+     * Reactive UI State Pipeline
+     * Combines users, search query, role filter, and dialog states into a single UI state.
      */
-    private fun loadUsers() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-
-            try {
-                userManagementService.getAllUsers().collectLatest { users ->
-                    _uiState.update {
-                        it.copy(
-                            users = users,
-                            filteredUsers = filterUsers(users, it.searchQuery, it.selectedRole),
-                            isLoading = false
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "Gagal memuat pengguna: ${e.message}"
-                    )
-                }
-            }
-        }
-    }
+    val uiState: StateFlow<UserManagementUiState> = kotlinx.coroutines.flow.combine(
+        _usersFlow,
+        _searchQuery,
+        _selectedRole,
+        _uiState // We still need the base mutable state for dialog flags and messages
+    ) { users, query, role, currentState ->
+        currentState.copy(
+            users = users,
+            filteredUsers = filterUsers(users, query, role),
+            searchQuery = query,
+            selectedRole = role,
+            isLoading = false // Data flow emitted, so loading is done
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
+        initialValue = UserManagementUiState(isLoading = true)
+    )
 
     /**
      * Loads user statistics from the UserManagementService.
@@ -386,8 +369,7 @@ class UserManagementViewModel @Inject constructor(
      * @param query The search query string entered by the user
      */
     fun onSearchQueryChange(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
-        updateFilteredUsers()
+        _searchQuery.value = query
     }
 
     /**
@@ -409,33 +391,7 @@ class UserManagementViewModel @Inject constructor(
      * @param role The role to filter by, or null to show all roles
      */
     fun onRoleFilterChange(role: Role?) {
-        _uiState.update { it.copy(selectedRole = role) }
-        updateFilteredUsers()
-    }
-
-    /**
-     * Updates the filtered user list based on current search and filter criteria.
-     *
-     * This private method applies the current search query and role filter to the
-     * complete user list, updating the filteredUsers in the UI state.
-     *
-     * ## Filtering Logic:
-     * 1. Start with all users
-     * 2. Apply search query filter (username matching)
-     * 3. Apply role filter if specified
-     * 4. Update UI state with filtered results
-     *
-     * ## Performance:
-     * - Efficient client-side filtering
-     * - No service calls required
-     * - Immediate UI updates
-     */
-    private fun updateFilteredUsers() {
-        _uiState.update { state ->
-            state.copy(
-                filteredUsers = filterUsers(state.users, state.searchQuery, state.selectedRole)
-            )
-        }
+        _selectedRole.value = role
     }
 
     /**

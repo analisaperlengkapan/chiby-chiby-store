@@ -1,8 +1,4 @@
 package com.chibychibystore.ui.inventory
-import com.chibychibystore.data.local.entity.Produk
-import com.chibychibystore.ui.components.shared.AppTopBar
-import com.chibychibystore.ui.components.shared.ErrorMessage
-import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,8 +18,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.ui.components.shared.CardItem
+import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.ui.components.shared.AppTopBar
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 import com.chibychibystore.ui.navigation.Screen
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,9 +50,16 @@ fun InventoryScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Search Bar
+
+            // Search Bar is always visible (hoisting search state from Success or Error)
+            val searchQuery = when (val state = uiState) {
+                is InventoryUiState.Success -> state.searchQuery
+                is InventoryUiState.Error -> state.searchQuery
+                else -> ""
+            }
+
             OutlinedTextField(
-                value = uiState.searchQuery,
+                value = searchQuery,
                 onValueChange = viewModel::updateSearchQuery,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -64,71 +71,92 @@ fun InventoryScreen(
                 singleLine = true
             )
 
-            // Low Stock Alert
-            if (uiState.lowStockProducts.isNotEmpty()) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "${uiState.lowStockProducts.size} produk stok rendah",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
+            // State Handling
+            when (val state = uiState) {
+                is InventoryUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        LoadingIndicator()
                     }
                 }
-            }
-
-            // Content
-            when {
-                uiState.isLoading -> {
-                    LoadingIndicator()
+                is InventoryUiState.Error -> {
+                    ErrorContent(message = state.message)
                 }
-                uiState.error != null -> {
-                    androidx.compose.material3.Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        colors = androidx.compose.material3.CardDefaults.cardColors(
-                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
-                            contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
-                        ),
-                        shape = androidx.compose.material3.MaterialTheme.shapes.medium
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            androidx.compose.material3.Text(text = uiState.error ?: "")
-                        }
-                    }
-                }
-                uiState.products.isEmpty() -> {
-                    EmptyInventoryState(
+                is InventoryUiState.Success -> {
+                    InventoryContent(
+                        state = state,
+                        onProductClick = { product ->
+                            navController.navigate(Screen.ProductDetail.createRoute(product.id.toString()))
+                        },
                         onAddProduct = { navController.navigate(Screen.ProductAdd.route) }
                     )
                 }
-                else -> {
-                    ProductList(
-                        products = uiState.products,
-                        onProductClick = { product ->
-                            navController.navigate(Screen.ProductDetail.createRoute(product.id.toString()))
-                        }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ErrorContent(message: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer
+        ),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(text = message)
+        }
+    }
+}
+
+@Composable
+private fun InventoryContent(
+    state: InventoryUiState.Success,
+    onProductClick: (Produk) -> Unit,
+    onAddProduct: () -> Unit
+) {
+    Column {
+        // Low Stock Alert
+        if (state.lowStockProducts.isNotEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${state.lowStockProducts.size} produk stok rendah",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
             }
+        }
+
+        if (state.products.isEmpty()) {
+            EmptyInventoryState(onAddProduct = onAddProduct)
+        } else {
+            ProductList(
+                products = state.products,
+                onProductClick = onProductClick
+            )
         }
     }
 }
@@ -189,6 +217,12 @@ private fun ProductListItem(
     product: Produk,
     onClick: () -> Unit
 ) {
+    // Hoist the currency formatter to avoid recreation
+    val priceFormatted = remember(product.sellingPrice) {
+        val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+        format.format(product.sellingPrice)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -214,7 +248,7 @@ private fun ProductListItem(
                     )
                     if (product.barcode != null) {
                         Text(
-                            text = product.barcode,
+                            text = product.barcode ?: "",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -233,7 +267,7 @@ private fun ProductListItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Rp ${product.sellingPrice}",
+                    text = priceFormatted,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary

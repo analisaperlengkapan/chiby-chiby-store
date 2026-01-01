@@ -80,12 +80,7 @@ class UserManagementServiceImpl @Inject constructor(
                 return Result.failure(Exception("Tidak memiliki izin untuk membuat user"))
             }
             // Validate input
-            if (username.isBlank()) {
-                return Result.failure(ChibyChibyException.ValidationError("username", "Username tidak boleh kosong"))
-            }
-            if (password.length < 6) {
-                return Result.failure(ChibyChibyException.ValidationError("password", "Password minimal 6 karakter"))
-            }
+            validateUserData(username, password)
 
             // Check if username already exists
             val existingUserResult = penggunaRepository.getPenggunaByUsername(username)
@@ -124,6 +119,12 @@ class UserManagementServiceImpl @Inject constructor(
             if (!authService.hasPermission("MANAGE_USERS")) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengupdate user"))
             }
+
+            // Validate partial updates
+            if (username != null && username.isBlank()) {
+                return Result.failure(ChibyChibyException.ValidationError("username", "Username tidak boleh kosong"))
+            }
+
             // Get existing user
             val existingUserResult = penggunaRepository.getPenggunaById(userId)
             val existingUser = existingUserResult.getOrNull()
@@ -273,6 +274,18 @@ class UserManagementServiceImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(Exception("Gagal mengaktifkan user: ${e.message}"))
+        }
+    }
+
+    private fun validateUserData(username: String, password: String?) {
+        if (username.isBlank()) {
+            throw ChibyChibyException.ValidationError("username", "Username tidak boleh kosong")
+        }
+        if (username.length < 3) {
+            throw ChibyChibyException.ValidationError("username", "Username minimal 3 karakter")
+        }
+        if (password != null && password.length < 6) {
+            throw ChibyChibyException.ValidationError("password", "Password minimal 6 karakter")
         }
     }
 }

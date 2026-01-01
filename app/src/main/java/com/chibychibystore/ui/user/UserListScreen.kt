@@ -73,7 +73,7 @@ fun UserListScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(
-                            items = uiState.users,
+                            items = uiState.filteredUsers,
                             key = { it.id }
                         ) { user ->
                             UserListItem(
