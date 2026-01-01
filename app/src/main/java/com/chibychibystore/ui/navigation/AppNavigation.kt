@@ -21,7 +21,6 @@ import com.chibychibystore.ui.barcode.BarcodeScannerScreen
 import com.chibychibystore.ui.barcode.BarcodePrintScreen
 import com.chibychibystore.ui.screens.BackupScreen
 import com.chibychibystore.ui.screens.DashboardScreen
-import com.chibychibystore.ui.screens.UserManagementScreen
 import com.chibychibystore.ui.screens.SettingsScreen
 import com.chibychibystore.ui.reports.ReportsScreen
 import com.chibychibystore.ui.sales.SalesHistoryScreen
