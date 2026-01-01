@@ -95,20 +95,8 @@ class ProdukRepository @Inject constructor(
      */
     suspend fun createProduk(produk: Produk): Result<Long> {
         return try {
-            // Validasi input
-            validateProdukData(produk)
-
-            // Check if barcode already exists (if provided)
-            if (!produk.barcode.isNullOrBlank()) {
-                val existingProduk = produkDao.getProdukByBarcode(produk.barcode)
-                if (existingProduk != null) {
-                    return Result.failure(ChibyChibyException.ValidationError("barcode", "Barcode sudah digunakan"))
-                }
-            }
-
             val id = produkDao.insertProduk(produk)
             Result.success(id)
-
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("createProduk", e))
         }
@@ -119,24 +107,8 @@ class ProdukRepository @Inject constructor(
      */
     suspend fun updateProduk(produk: Produk): Result<Unit> {
         return try {
-            // Validasi input
-            validateProdukData(produk)
-
-            // Check if produk exists
-            val existingProduk = produkDao.getProdukById(produk.id)
-                ?: return Result.failure(ChibyChibyException.DatabaseError("Produk tidak ditemukan"))
-
-            // Check barcode uniqueness (exclude current produk)
-            if (!produk.barcode.isNullOrBlank()) {
-                val produkWithSameBarcode = produkDao.getProdukByBarcode(produk.barcode)
-                if (produkWithSameBarcode != null && produkWithSameBarcode.id != produk.id) {
-                    return Result.failure(ChibyChibyException.ValidationError("barcode", "Barcode sudah digunakan"))
-                }
-            }
-
             produkDao.updateProduk(produk)
             Result.success(Unit)
-
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("updateProduk", e))
         }
@@ -147,18 +119,8 @@ class ProdukRepository @Inject constructor(
      */
     suspend fun updateStock(id: Long, quantity: Int): Result<Unit> {
         return try {
-            // Check if produk exists
-            val produk = produkDao.getProdukById(id)
-                ?: return Result.failure(ChibyChibyException.DatabaseError("Produk tidak ditemukan"))
-
-            // Validate quantity
-            if (produk.stockQuantity + quantity < 0) {
-                return Result.failure(ChibyChibyException.ValidationError("quantity", "Stok tidak boleh negatif"))
-            }
-
             produkDao.updateStock(id, quantity)
             Result.success(Unit)
-
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("updateStock", e))
         }
@@ -205,27 +167,4 @@ class ProdukRepository @Inject constructor(
         }
     }
 
-    private fun validateProdukData(produk: Produk) {
-        if (produk.name.isBlank()) {
-            throw ChibyChibyException.ValidationError("name", "Nama produk tidak boleh kosong")
-        }
-        if (produk.name.length < 2) {
-            throw ChibyChibyException.ValidationError("name", "Nama produk minimal 2 karakter")
-        }
-        if (produk.costPrice < 0) {
-            throw ChibyChibyException.ValidationError("costPrice", "Harga beli tidak boleh negatif")
-        }
-        if (produk.sellingPrice < 0) {
-            throw ChibyChibyException.ValidationError("sellingPrice", "Harga jual tidak boleh negatif")
-        }
-        if (produk.sellingPrice < produk.costPrice) {
-            throw ChibyChibyException.ValidationError("sellingPrice", "Harga jual tidak boleh kurang dari harga beli")
-        }
-        if (produk.stockQuantity < 0) {
-            throw ChibyChibyException.ValidationError("stockQuantity", "Stok tidak boleh negatif")
-        }
-        if (produk.minStock < 0) {
-            throw ChibyChibyException.ValidationError("minStock", "Stok minimum tidak boleh negatif")
-        }
-    }
 }

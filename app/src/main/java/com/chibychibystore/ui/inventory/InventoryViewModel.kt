@@ -12,37 +12,29 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 /**
- * UI State untuk Inventory Screen
- *
- * Menyimpan state lengkap dari inventory screen termasuk:
- * - Daftar produk yang ditampilkan
- * - Query pencarian aktif
- * - Status loading dan error
- * - Produk dengan stok rendah untuk alerts
+ * Standardized UI State for Inventory Screen.
+ * Represents the distinct states the UI can be in.
  */
-data class InventoryUiState(
-    val products: List<Produk> = emptyList(),
-    val searchQuery: String = "",
-    val isLoading: Boolean = false,
-    val error: String? = null,
-    val lowStockProducts: List<Produk> = emptyList()
-)
+sealed interface InventoryUiState {
+    data object Loading : InventoryUiState
+
+    data class Success(
+        val products: List<Produk>,
+        val searchQuery: String = "",
+        val lowStockProducts: List<Produk> = emptyList()
+    ) : InventoryUiState
+
+    data class Error(val message: String) : InventoryUiState
+}
 
 /**
- * ViewModel untuk Inventory Management Screen
- *
- * Mengelola state dan business logic untuk inventory screen dengan fitur:
- * - Reactive search dan filtering
- * - Low stock monitoring via reactive stream
- * - Integration dengan ProductService
- *
- * **Architecture Pattern:**
- * - MVVM dengan reactive state management (Unidirectional Data Flow)
- * - StateFlow derived from combined flows using `stateIn`
+ * ViewModel for Inventory Management Screen
+ * Refactored to use standard MVI/UDF pattern with sealed interface state.
  */
 @HiltViewModel
 class InventoryViewModel @Inject constructor(
@@ -52,12 +44,6 @@ class InventoryViewModel @Inject constructor(
     // Search query state
     private val _searchQuery = MutableStateFlow("")
 
-    // Loading state (managed manually for now as flows from Room are instant/always loaded)
-    private val _isLoading = MutableStateFlow(true)
-
-    // Error state
-    private val _error = MutableStateFlow<String?>(null)
-
     // Derived Product Stream
     @OptIn(ExperimentalCoroutinesApi::class)
     private val _productsFlow = _searchQuery.flatMapLatest { query ->
@@ -66,45 +52,32 @@ class InventoryViewModel @Inject constructor(
         } else {
             productService.observeSearchProducts(query)
         }
-    }.catch { e ->
-        _error.value = "Gagal memuat produk: ${e.message}"
-        emit(emptyList())
     }
 
     // Low Stock Stream
     private val _lowStockFlow = productService.observeLowStockProducts()
-        .catch { e ->
-            // Silent error for low stock alert, or log it
-            emit(emptyList())
-        }
+        .catch { emit(emptyList()) }
 
     /**
-     * Public immutable state flow untuk UI consumption
-     *
-     * Combines:
-     * - Products stream (filtered by query)
-     * - Low stock stream
-     * - Search query
-     * - Loading/Error states
+     * Public immutable state flow for UI consumption
      */
     val uiState: StateFlow<InventoryUiState> = combine(
         _productsFlow,
         _lowStockFlow,
-        _searchQuery,
-        _isLoading,
-        _error
-    ) { products, lowStock, query, isLoading, error ->
-        InventoryUiState(
+        _searchQuery
+    ) { products, lowStock, query ->
+        InventoryUiState.Success(
             products = products,
             searchQuery = query,
-            isLoading = false, // Flow emitted, so we are not loading anymore
-            error = error,
             lowStockProducts = lowStock
         )
+    }.catch { e ->
+        // Convert stream errors to Error state
+        emit(InventoryUiState.Error(e.message ?: "Unknown error occurred"))
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = InventoryUiState(isLoading = true)
+        initialValue = InventoryUiState.Loading
     )
 
     /**
@@ -112,21 +85,5 @@ class InventoryViewModel @Inject constructor(
      */
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
-    }
-
-    /**
-     * Clear error message
-     */
-    fun clearError() {
-        _error.value = null
-    }
-
-    /**
-     * Refresh logic (Optional for local DB, but kept for compatibility/re-sync)
-     * For Room, flows update automatically, so this might just clear errors.
-     */
-    fun refresh() {
-        _error.value = null
-        // If we had a network fetch, we would trigger it here.
     }
 }

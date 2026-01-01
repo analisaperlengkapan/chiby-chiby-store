@@ -450,7 +450,7 @@ class ProductServiceImpl @Inject constructor(
      * Validasi data produk berdasarkan business rules retail
      *
      * **Validation Rules:**
-     * - Nama produk tidak boleh kosong/blank
+     * - Nama produk tidak boleh kosong/blank dan minimal 2 karakter
      * - Harga beli >= 0 (tidak boleh negatif)
      * - Harga jual >= 0 (tidak boleh negatif)
      * - Harga jual >= harga beli (untuk profitabilitas)
@@ -471,6 +471,7 @@ class ProductServiceImpl @Inject constructor(
      */
     private fun validateProduct(product: Produk) {
         require(product.name.isNotBlank()) { "Nama produk tidak boleh kosong" }
+        require(product.name.length >= 2) { "Nama produk minimal 2 karakter" }
         require(product.costPrice >= 0) { "Harga beli tidak boleh negatif" }
         require(product.sellingPrice >= 0) { "Harga jual tidak boleh negatif" }
         require(product.stockQuantity >= 0) { "Stok tidak boleh negatif" }
