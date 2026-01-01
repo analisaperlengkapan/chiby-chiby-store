@@ -6,11 +6,13 @@ import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.service.ProductService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -48,14 +50,16 @@ class InventoryViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
 
     // Derived Product Stream
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val _productsFlow = _searchQuery.flatMapLatest { query ->
-        if (query.isBlank()) {
-            productService.observeProducts()
-        } else {
-            productService.observeSearchProducts(query)
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    private val _productsFlow = _searchQuery
+        .debounce(300L) // Debounce search input
+        .flatMapLatest { query ->
+            if (query.isBlank()) {
+                productService.observeProducts()
+            } else {
+                productService.observeSearchProducts(query)
+            }
         }
-    }
 
     // Low Stock Stream
     private val _lowStockFlow = productService.observeLowStockProducts()

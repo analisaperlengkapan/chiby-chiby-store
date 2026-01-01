@@ -43,8 +43,17 @@ interface ProdukDao {
     @Update
     suspend fun updateProduk(produk: Produk)
 
+    /**
+     * Adjust stock by adding/subtracting quantity (Delta)
+     */
     @Query("UPDATE produk SET stockQuantity = stockQuantity + :quantity WHERE id = :id")
-    suspend fun updateStock(id: Long, quantity: Int)
+    suspend fun adjustStock(id: Long, quantity: Int)
+
+    /**
+     * Set stock to absolute value
+     */
+    @Query("UPDATE produk SET stockQuantity = :quantity WHERE id = :id")
+    suspend fun setStock(id: Long, quantity: Int)
 
     @Query("DELETE FROM produk WHERE id = :id")
     suspend fun deleteProdukById(id: Long)

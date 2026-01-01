@@ -10,6 +10,8 @@ import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.service.printer.PrinterService
 import com.chibychibystore.service.printer.ReceiptFormatter
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.data.local.database.ChibyChibyDatabase
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
@@ -93,7 +95,8 @@ class SaleServiceImpl @Inject constructor(
     private val itemPenjualanRepository: ItemPenjualanRepository,
     private val produkRepository: ProdukRepository,
     private val printerService: PrinterService,
-    private val authService: AuthService
+    private val authService: AuthService,
+    private val database: ChibyChibyDatabase
 ) : SaleService {
 
     /**
@@ -173,7 +176,7 @@ class SaleServiceImpl @Inject constructor(
      * @see ReceiptFormatter
      */
     override suspend fun createSale(sale: Penjualan, items: List<ItemPenjualan>): Result<PenjualanWithItems> {
-        try {
+        return try {
             if (!authService.hasPermission("CREATE_SALES")) {
                 return Result.failure(Exception("Tidak memiliki izin untuk membuat penjualan"))
             }
@@ -182,39 +185,46 @@ class SaleServiceImpl @Inject constructor(
                 return Result.failure(Exception("item penjualan harus ada"))
             }
 
-            // Validate payment method if using enum
-            // (Assumes sale.paymentMethod is valid at this point)
+            // Execute in transaction
+            database.withTransaction {
+                // Validate and update inventory (Atomic Delta Update)
+                for (item in items) {
+                    // Check current stock first (optimistic check)
+                    val product = produkRepository.getProduk(item.productId)
+                        ?: throw Exception("Produk dengan ID ${item.productId} tidak ditemukan")
 
-            // Validate and update inventory (using updateProduk for this codebase)
-            for (item in items) {
-                val product = produkRepository.getProduk(item.productId)
-                    ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
+                    if (product.stockQuantity < item.quantity) {
+                        throw Exception("stok tidak mencukupi untuk produk ${product.name}")
+                    }
 
-                if (product.stockQuantity < item.quantity) {
-                    return Result.failure(Exception("stok tidak mencukupi untuk produk ${product.name}"))
+                    // Perform atomic decrement
+                    val stockResult = produkRepository.adjustStock(item.productId, -item.quantity)
+                    if (stockResult.isFailure) {
+                        throw (stockResult.exceptionOrNull()
+                            ?: Exception("Gagal memperbarui stok untuk produk ${product.name}"))
+                    }
                 }
 
-                val updatedProduct = product.copy(stockQuantity = product.stockQuantity - item.quantity)
-                val updRes = produkRepository.updateProduk(updatedProduct)
-                if (updRes.isFailure) {
-                    return Result.failure(updRes.exceptionOrNull() ?: Exception("Gagal memperbarui stok untuk produk ${product.name}"))
+                // Compute total amount from items and insert penjualan
+                val totalFromItems = items.sumOf { it.totalPrice }
+                val saleWithTotal = sale.copy(totalAmount = totalFromItems)
+                val penjualanId = penjualanRepository.insertPenjualan(saleWithTotal)
+
+                // Insert items with correct saleId
+                for (item in items) {
+                    val itemWithSale = item.copy(saleId = penjualanId)
+                    itemPenjualanRepository.insertItemPenjualan(itemWithSale)
                 }
+
+                // Return result (must use getOrThrow inside transaction to propagate rollback)
+                val result = penjualanRepository.getPenjualanWithItemsById(penjualanId)
+                if (result.isFailure) {
+                    throw (result.exceptionOrNull() ?: Exception("Gagal mengambil data penjualan"))
+                }
+                result
             }
-
-            // Compute total amount from items and insert penjualan
-            val totalFromItems = items.sumOf { it.totalPrice }
-            val saleWithTotal = sale.copy(totalAmount = totalFromItems)
-            val penjualanId = penjualanRepository.insertPenjualan(saleWithTotal)
-
-            // Insert items with correct saleId
-            for (item in items) {
-                val itemWithSale = item.copy(saleId = penjualanId)
-                itemPenjualanRepository.insertItemPenjualan(itemWithSale)
-            }
-
-            return penjualanRepository.getPenjualanWithItemsById(penjualanId)
         } catch (e: Exception) {
-            return Result.failure(e)
+            Result.failure(e)
         }
     }
 
@@ -375,30 +385,39 @@ class SaleServiceImpl @Inject constructor(
                 if (!authService.hasPermission("APPROVE_LARGE_TRANSACTIONS")) {
                     return Result.failure(Exception("Tidak memiliki izin untuk melakukan refund"))
                 }
-                val penjualanRes = penjualanRepository.getPenjualanById(id)
-                val penjualan = penjualanRes.getOrNull() ?: return Result.failure(Exception("Penjualan dengan ID $id tidak ditemukan"))
 
-                // Idempotency: if already refunded, reject further refunds
-                if (penjualan.isRefunded) {
-                    return Result.failure(Exception("Penjualan dengan ID $id sudah direfund"))
+                database.withTransaction {
+                    val penjualanRes = penjualanRepository.getPenjualanById(id)
+                    val penjualan = penjualanRes.getOrNull() ?: throw Exception("Penjualan dengan ID $id tidak ditemukan")
+
+                    // Idempotency: if already refunded, reject further refunds
+                    if (penjualan.isRefunded) {
+                        throw Exception("Penjualan dengan ID $id sudah direfund")
+                    }
+
+                    // Get items for sale
+                    val itemsFlow = itemPenjualanRepository.getItemsBySaleId(id)
+                    val items = itemsFlow.first()
+
+                    // Restore stock (Atomic Delta Update)
+                    for (item in items) {
+                        // We don't need to fetch product just to update stock if we trust the ID exists,
+                        // but validating existence is safer.
+                        // Also, refund adds stock back.
+                        val stockResult = produkRepository.adjustStock(item.productId, item.quantity)
+                        if (stockResult.isFailure) {
+                            throw (stockResult.exceptionOrNull()
+                                ?: Exception("Gagal mengembalikan stok produk"))
+                        }
+                    }
+
+                    // Mark sale as refunded - update penjualan record
+                    val updatedPenjualan = penjualan.copy(isRefunded = true)
+                    val updateResult = penjualanRepository.updatePenjualan(updatedPenjualan)
+                    if (updateResult.isFailure) {
+                        throw (updateResult.exceptionOrNull() ?: Exception("Gagal mengupdate status penjualan"))
+                    }
                 }
-
-                // Get items for sale
-                val itemsFlow = itemPenjualanRepository.getItemsBySaleId(id)
-                val items = itemsFlow.first()
-
-                // Restore stock
-                for (item in items) {
-                    val product = produkRepository.getProduk(item.productId)
-                        ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
-                    val updated = product.copy(stockQuantity = product.stockQuantity + item.quantity)
-                    produkRepository.updateProduk(updated)
-                }
-
-                // Mark sale as refunded - update penjualan record
-                val updatedPenjualan = penjualan.copy(isRefunded = true)
-                penjualanRepository.updatePenjualan(updatedPenjualan)
-
                 Result.success(Unit)
             } catch (e: Exception) {
                 Result.failure(e)
@@ -411,23 +430,34 @@ class SaleServiceImpl @Inject constructor(
             if (!authService.hasPermission("APPROVE_LARGE_TRANSACTIONS")) {
                 return Result.failure(Exception("Tidak memiliki izin untuk membatalkan penjualan"))
             }
-            val penjualanRes = penjualanRepository.getPenjualanById(id)
-            val penjualan = penjualanRes.getOrNull() ?: return Result.failure(Exception("Penjualan dengan ID $id tidak ditemukan"))
 
-            val itemsFlow = itemPenjualanRepository.getItemsBySaleId(id)
-            val items = itemsFlow.first()
+            database.withTransaction {
+                val penjualanRes = penjualanRepository.getPenjualanById(id)
+                val penjualan = penjualanRes.getOrNull() ?: throw Exception("Penjualan dengan ID $id tidak ditemukan")
 
-            // Restore stock
-            for (item in items) {
-                val product = produkRepository.getProduk(item.productId)
-                    ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
-                val updated = product.copy(stockQuantity = product.stockQuantity + item.quantity)
-                produkRepository.updateProduk(updated)
+                val itemsFlow = itemPenjualanRepository.getItemsBySaleId(id)
+                val items = itemsFlow.first()
+
+                // Restore stock (Atomic Delta Update)
+                for (item in items) {
+                    val stockResult = produkRepository.adjustStock(item.productId, item.quantity)
+                    if (stockResult.isFailure) {
+                        throw (stockResult.exceptionOrNull()
+                            ?: Exception("Gagal mengembalikan stok produk"))
+                    }
+                }
+
+                // Delete sale and its items
+                val delSaleResult = penjualanRepository.deletePenjualan(id)
+                if (delSaleResult.isFailure) throw (delSaleResult.exceptionOrNull() ?: Exception("Gagal menghapus penjualan"))
+
+                // Note: itemPenjualanRepository.deleteItemPenjualanByPenjualanId might be needed if cascade delete is not set up
+                // or if repository method is manual. Assuming repository method exists and might be needed.
+                // However, user memory says Foreign Keys are set to CASCADE in entities.
+                // "onDelete = ForeignKey.CASCADE" in Penjualan/ItemPenjualan?
+                // Let's check ItemPenjualan entity later if needed, but safe to call delete items explicitly if repo supports it.
+                itemPenjualanRepository.deleteItemPenjualanByPenjualanId(id)
             }
-
-            // Delete sale and its items
-            penjualanRepository.deletePenjualan(id)
-            itemPenjualanRepository.deleteItemPenjualanByPenjualanId(id)
 
             Result.success(Unit)
         } catch (e: Exception) {
@@ -615,23 +645,25 @@ class SaleServiceImpl @Inject constructor(
             if (!authService.hasPermission("APPROVE_LARGE_TRANSACTIONS")) {
                 return Result.failure(Exception("Tidak memiliki izin untuk menghapus penjualan"))
             }
-            // Get sale with items first
-            val saleResult = penjualanRepository.getPenjualanWithItemsById(id)
-            val saleWithItems = saleResult.getOrNull() ?: return Result.failure(saleResult.exceptionOrNull() ?: Exception("Penjualan tidak ditemukan"))
 
-            // Restore inventory stock
-            for (item in saleWithItems.items) {
-                val productResult = produkRepository.getProdukById(item.productId)
-                val product = productResult.getOrNull()
-                if (product != null) {
-                    val newStock = product.stockQuantity + item.quantity
-                    val updateResult = produkRepository.updateStock(item.productId, newStock)
-                    if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengembalikan stok produk ${product.name}"))
+            database.withTransaction {
+                // Get sale with items first
+                val saleResult = penjualanRepository.getPenjualanWithItemsById(id)
+                val saleWithItems = saleResult.getOrNull() ?: throw Exception("Penjualan tidak ditemukan")
+
+                // Restore inventory stock (Atomic Delta Update)
+                for (item in saleWithItems.items) {
+                    val updateResult = produkRepository.adjustStock(item.productId, item.quantity)
+                    if (updateResult.isFailure) throw (updateResult.exceptionOrNull() ?: Exception("Gagal mengembalikan stok produk"))
                 }
-            }
 
-            // Delete sale
-            return penjualanRepository.deletePenjualan(id)
+                // Delete sale
+                val deleteResult = penjualanRepository.deletePenjualan(id)
+                if (deleteResult.isFailure) throw (deleteResult.exceptionOrNull() ?: Exception("Gagal menghapus penjualan"))
+
+                deleteResult
+            }
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
