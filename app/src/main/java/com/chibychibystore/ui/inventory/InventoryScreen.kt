@@ -51,8 +51,12 @@ fun InventoryScreen(
                 .padding(paddingValues)
         ) {
 
-            // Search Bar is always visible (hoisting search state from Success if needed, or pass empty)
-            val searchQuery = (uiState as? InventoryUiState.Success)?.searchQuery ?: ""
+            // Search Bar is always visible (hoisting search state from Success or Error)
+            val searchQuery = when (val state = uiState) {
+                is InventoryUiState.Success -> state.searchQuery
+                is InventoryUiState.Error -> state.searchQuery
+                else -> ""
+            }
 
             OutlinedTextField(
                 value = searchQuery,

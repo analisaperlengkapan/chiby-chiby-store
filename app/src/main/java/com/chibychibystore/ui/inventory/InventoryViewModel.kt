@@ -29,7 +29,10 @@ sealed interface InventoryUiState {
         val lowStockProducts: List<Produk> = emptyList()
     ) : InventoryUiState
 
-    data class Error(val message: String) : InventoryUiState
+    data class Error(
+        val message: String,
+        val searchQuery: String = "" // Preserve search query on error
+    ) : InventoryUiState
 }
 
 /**
@@ -72,8 +75,10 @@ class InventoryViewModel @Inject constructor(
             lowStockProducts = lowStock
         )
     }.catch { e ->
-        // Convert stream errors to Error state
-        emit(InventoryUiState.Error(e.message ?: "Unknown error occurred"))
+        // Convert stream errors to Error state, preserving current query if possible (accessed via side channel or just empty)
+        // Since catch handles the upstream, we don't have easy access to the latest query emission here without extra state.
+        // However, we can use the current value of _searchQuery
+        emit(InventoryUiState.Error(e.message ?: "Unknown error occurred", _searchQuery.value))
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
