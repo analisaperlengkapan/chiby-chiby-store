@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -299,7 +300,7 @@ class UserManagementViewModel @Inject constructor(
      */
     val uiState: StateFlow<UserManagementUiState> = kotlinx.coroutines.flow.combine(
         _usersFlow,
-        _searchQuery,
+        _searchQuery.debounce(300),
         _selectedRole,
         _uiState // We still need the base mutable state for dialog flags and messages
     ) { users, query, role, currentState ->
