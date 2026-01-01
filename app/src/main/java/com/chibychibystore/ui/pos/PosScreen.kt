@@ -43,6 +43,17 @@ fun PosScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val formatCurrency = rememberCurrencyFormatter()
 
+    // Listen for scan results from BarcodeScannerScreen
+    val currentBackStackEntry = navController.currentBackStackEntry
+    val savedStateHandle = currentBackStackEntry?.savedStateHandle
+
+    LaunchedEffect(savedStateHandle) {
+        savedStateHandle?.get<String>("scanned_barcode")?.let { barcode ->
+            viewModel.onBarcodeScanned(barcode)
+            savedStateHandle.remove<String>("scanned_barcode")
+        }
+    }
+
     Scaffold(
         topBar = {
             AppTopBar(
