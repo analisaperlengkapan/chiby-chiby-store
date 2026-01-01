@@ -154,8 +154,14 @@ class PrinterServiceImpl @Inject constructor(
             }
 
             // Ensure cancellation of discovery before connecting
-            if (bluetoothAdapter?.isDiscovering == true) {
-                bluetoothAdapter?.cancelDiscovery()
+            try {
+                if (bluetoothAdapter?.isDiscovering == true) {
+                    bluetoothAdapter?.cancelDiscovery()
+                }
+            } catch (e: SecurityException) {
+                Log.w(TAG, "Could not cancel discovery: missing permission", e)
+            } catch (e: Exception) {
+                Log.w(TAG, "Error cancelling discovery", e)
             }
 
             bluetoothSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)

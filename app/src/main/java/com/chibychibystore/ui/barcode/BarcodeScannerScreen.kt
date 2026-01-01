@@ -260,6 +260,23 @@ private fun BarcodeScannerView(
             cameraSettings.isBarcodeSceneModeEnabled = true
             cameraSettings.isMeteringEnabled = true
             setStatusText("")
+
+            // Set callback immediately during initialization
+            decodeContinuous(object : BarcodeCallback {
+                override fun barcodeResult(result: BarcodeResult?) {
+                    result?.let {
+                        val barcode = it.text
+                        if (!barcode.isNullOrBlank()) {
+                            Log.d("BarcodeScanner", "Scanned barcode: $barcode")
+                            onBarcodeScanned(barcode)
+                        }
+                    }
+                }
+
+                override fun possibleResultPoints(resultPoints: MutableList<com.google.zxing.ResultPoint>?) {
+                    // Optional: Handle possible result points
+                }
+            })
         }
     }
 
@@ -284,27 +301,8 @@ private fun BarcodeScannerView(
         factory = {
             barcodeView
         },
-        modifier = Modifier.fillMaxSize(),
-        update = { view ->
-            // Set callback here to ensure it's attached
-            view.decodeContinuous(object : BarcodeCallback {
-                override fun barcodeResult(result: BarcodeResult?) {
-                    result?.let {
-                        val barcode = it.text
-                        if (!barcode.isNullOrBlank()) {
-                            Log.d("BarcodeScanner", "Scanned barcode: $barcode")
-                            onBarcodeScanned(barcode)
-                        }
-                    }
-                }
-
-                override fun possibleResultPoints(resultPoints: MutableList<com.google.zxing.ResultPoint>?) {
-                    // Optional: Handle possible result points
-                }
-            })
-
-            // Note: resume() is handled by lifecycle observer above
-        }
+        modifier = Modifier.fillMaxSize()
+        // No update block needed for the view itself as config is static and callback is set in init
     )
 }
 
