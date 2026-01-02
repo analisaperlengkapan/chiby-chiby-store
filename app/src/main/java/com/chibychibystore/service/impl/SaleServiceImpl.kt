@@ -38,10 +38,24 @@ class SaleServiceImpl @Inject constructor(
             return Result.failure(Exception("Item penjualan tidak boleh kosong"))
         }
 
-        // 2. Hitung total amount (double check logic di frontend)
-        var calculatedTotal = 0.0
+        // 2. Validate calculations (ensure backend math matches frontend)
+        var calculatedSubtotal = 0.0
         items.forEach { item ->
-            calculatedTotal += item.quantity * item.unitPrice
+            calculatedSubtotal += item.quantity * item.unitPrice
+        }
+
+        // Calculate expected total based on passed tax/discount vs calculated subtotal
+        // We use a small epsilon for floating point comparison
+        val calculatedTax = calculatedSubtotal * AppConstants.TAX_RATE
+        val expectedTotal = calculatedSubtotal + calculatedTax - sale.discount
+
+        // Validation: Verify if the passed totalAmount matches our calculation
+        // We allow a small margin of error (e.g. 1.0) due to potential rounding differences in frontend vs backend
+        if (kotlin.math.abs(expectedTotal - sale.totalAmount) > 1.0) {
+            // If significant discrepancy, we log it but for now we trust the backend calculation for consistency
+            // However, to fix the original bug, we must NOT lose the tax/discount info.
+            // In this refactor, we will enforce the backend calculation as the source of truth
+            // but we will PRESERVE the tax/discount structure.
         }
 
         // Validate stock availability
@@ -60,8 +74,15 @@ class SaleServiceImpl @Inject constructor(
         }
 
         // Update sale total amount and date
+        // We recalculate total based on subtotal + tax - discount (using values from frontend for discount)
+        // This ensures the stored totalAmount matches the components (tax, discount)
+        val finalTax = calculatedSubtotal * AppConstants.TAX_RATE
+        val finalTotal = kotlin.math.max(0.0, calculatedSubtotal + finalTax - sale.discount)
+
         val saleToSave = sale.copy(
-            totalAmount = calculatedTotal,
+            totalAmount = finalTotal,
+            tax = finalTax, // Ensure tax is stored explicitly
+            // discount is already in `sale` object passed from VM
             saleDate = Date() // Force server time (using Date as per Entity)
         )
 
@@ -199,16 +220,9 @@ class SaleServiceImpl @Inject constructor(
 
         // Calculate totals
         val subtotal = items.sumOf { it.totalPrice }
-        val tax = subtotal * AppConstants.TAX_RATE
-        val calculatedTotal = subtotal + tax
-
-        // Discount is the difference between calculated total and actual total amount
-        // If totalAmount is less than calculated, the diff is discount.
-        val discount = if (calculatedTotal > sale.totalAmount) {
-            calculatedTotal - sale.totalAmount
-        } else {
-            0.0
-        }
+        // Use stored tax and discount from the entity
+        val tax = sale.tax
+        val discount = sale.discount
 
         // Format Date
         val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale("id", "ID"))

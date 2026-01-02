@@ -880,6 +880,8 @@ class PosViewModel @Inject constructor(
                 val sale = Penjualan(
                     saleDate = java.util.Date(),
                     totalAmount = currentState.total,
+                    tax = currentState.tax,
+                    discount = currentState.discount,
                     paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.valueOf(currentState.paymentMethod),
                     cashierId = cashierId
                 )
