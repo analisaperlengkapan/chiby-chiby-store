@@ -85,6 +85,15 @@ class SaleServiceImpl @Inject constructor(
                 if (stockResult is Result.Error) {
                     throw stockResult.exception
                 }
+
+                // Verify stock consistency (Post-update check)
+                // This ensures that even with race conditions, we never end up with negative stock
+                val updatedProductResult = produkRepository.getProdukById(item.productId)
+                val updatedProduct = (updatedProductResult as? Result.Success)?.data
+
+                if (updatedProduct != null && updatedProduct.stockQuantity < 0) {
+                     throw Exception("Stok tidak mencukupi untuk produk: ${updatedProduct.name}. Transaksi dibatalkan.")
+                }
             }
 
             // 5. Return complete object
@@ -202,7 +211,7 @@ class SaleServiceImpl @Inject constructor(
         }
 
         // Format Date
-        val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+        val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale("id", "ID"))
         val dateStr = try {
             formatter.format(sale.saleDate)
         } catch (e: Exception) {
@@ -210,8 +219,8 @@ class SaleServiceImpl @Inject constructor(
         }
 
         return printerService.printReceipt(
-            storeName = storeName,
-            storeAddress = storeAddress,
+            storeName = if (storeName.isBlank()) AppConstants.STORE_NAME else storeName,
+            storeAddress = if (storeAddress.isBlank()) AppConstants.STORE_ADDRESS else storeAddress,
             saleId = saleId,
             saleDate = dateStr,
             items = receiptItems,
