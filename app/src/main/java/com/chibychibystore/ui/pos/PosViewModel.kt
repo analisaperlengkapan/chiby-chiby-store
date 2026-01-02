@@ -1,5 +1,4 @@
 package com.chibychibystore.ui.pos
-import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -438,6 +437,15 @@ class PosViewModel @Inject constructor(
         // Check if product already in cart
         val existingItem = currentState.cartItems.find { it.product.id == product.id }
 
+        // Stock validation
+        val currentQuantity = existingItem?.quantity ?: 0
+        if (currentQuantity + quantity > product.stockQuantity) {
+            _uiState.update {
+                it.copy(error = "Stok tidak mencukupi. Sisa: ${product.stockQuantity}")
+            }
+            return
+        }
+
         val updatedCartItems = if (existingItem != null) {
             // Update quantity
             val newQuantity = existingItem.quantity + quantity
@@ -526,6 +534,16 @@ class PosViewModel @Inject constructor(
         }
 
         val currentState = _uiState.value
+
+        // Stock validation
+        val itemToUpdate = currentState.cartItems.find { it.product.id == productId }
+        if (itemToUpdate != null && newQuantity > itemToUpdate.product.stockQuantity) {
+            _uiState.update {
+                it.copy(error = "Stok tidak mencukupi. Sisa: ${itemToUpdate.product.stockQuantity}")
+            }
+            return
+        }
+
         val updatedCartItems = currentState.cartItems.map { item ->
             if (item.product.id == productId) {
                 item.updateQuantity(newQuantity)
@@ -1311,8 +1329,8 @@ class PosViewModel @Inject constructor(
 
                 saleService.printReceipt(
                     saleId = saleId,
-                    storeName = "Chiby Chiby Store",
-                    storeAddress = "Jl. Example No. 123, Jakarta",
+                    storeName = AppConstants.STORE_NAME,
+                    storeAddress = AppConstants.STORE_ADDRESS,
                     cashierName = cashierName
                 )
                     .onSuccess {

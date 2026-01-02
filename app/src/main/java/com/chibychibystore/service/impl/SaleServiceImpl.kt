@@ -202,7 +202,7 @@ class SaleServiceImpl @Inject constructor(
         }
 
         // Format Date
-        val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+        val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale("id", "ID"))
         val dateStr = try {
             formatter.format(sale.saleDate)
         } catch (e: Exception) {
@@ -210,8 +210,8 @@ class SaleServiceImpl @Inject constructor(
         }
 
         return printerService.printReceipt(
-            storeName = storeName,
-            storeAddress = storeAddress,
+            storeName = if (storeName.isBlank()) AppConstants.STORE_NAME else storeName,
+            storeAddress = if (storeAddress.isBlank()) AppConstants.STORE_ADDRESS else storeAddress,
             saleId = saleId,
             saleDate = dateStr,
             items = receiptItems,
