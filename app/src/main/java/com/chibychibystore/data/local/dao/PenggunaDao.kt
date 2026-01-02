@@ -23,6 +23,9 @@ interface PenggunaDao {
     @Query("SELECT * FROM pengguna WHERE role = :role")
     fun getPenggunaByRole(role: Role): Flow<List<Pengguna>>
 
+    @Query("SELECT * FROM pengguna WHERE username LIKE '%' || :query || '%'")
+    fun searchPengguna(query: String): Flow<List<Pengguna>>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPengguna(pengguna: Pengguna): Long
 
