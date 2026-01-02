@@ -674,15 +674,17 @@ class PosViewModel @Inject constructor(
      * @see PosUiState.subtotal
      */
     fun clearCart() {
-        _uiState.value = _uiState.value.copy(
-            cartItems = emptyList(),
-            subtotal = 0.0,
-            tax = 0.0,
-            discount = 0.0,
-            total = 0.0,
-            error = null,
-            successMessage = null
-        )
+        _uiState.update { currentState ->
+            currentState.copy(
+                cartItems = emptyList(),
+                subtotal = 0.0,
+                tax = 0.0,
+                discount = 0.0,
+                total = 0.0,
+                error = null,
+                successMessage = null
+            )
+        }
     }
 
     /**
@@ -903,12 +905,14 @@ class PosViewModel @Inject constructor(
 
                 if (result.isSuccess) {
                     val saleWithItems = result.getOrNull()
-                    _uiState.value = PosUiState(
-                        successMessage = "Pembayaran berhasil diproses",
-                        paymentMethod = currentState.paymentMethod,
-                        completedSaleId = saleWithItems?.penjualan?.id,
-                        showReceiptDialog = true
-                    )
+                    _uiState.update {
+                        PosUiState(
+                            successMessage = "Pembayaran berhasil diproses",
+                            paymentMethod = currentState.paymentMethod,
+                            completedSaleId = saleWithItems?.penjualan?.id,
+                            showReceiptDialog = true
+                        )
+                    }
                 } else {
                     _uiState.update {
                         it.copy(
@@ -1449,24 +1453,6 @@ class PosViewModel @Inject constructor(
      * @see dismissReceiptDialog
      */
     fun startNewTransaction() {
-        _uiState.value = PosUiState()
+        _uiState.update { PosUiState() }
     }
-
-    /**
-     * Get current date time in database format
-     *
-     * **Technical Details:**
-     * - Format: "yyyy-MM-dd HH:mm:ss"
-     * - Locale: Default system locale
-     * - Used for sale timestamps
-     *
-     * **Database Compatibility:**
-     * - SQLite DATETIME format
-     * - Consistent dengan Room entities
-     * - ISO-like format untuk sorting
-     *
-     * @return Current timestamp sebagai string
-     *
-     * @see Penjualan.saleDate
-     */
 }
