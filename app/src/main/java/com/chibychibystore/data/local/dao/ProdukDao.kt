@@ -16,6 +16,9 @@ interface ProdukDao {
     @Query("SELECT * FROM produk WHERE id = :id")
     suspend fun getProdukById(id: Long): Produk?
 
+    @Query("SELECT * FROM produk WHERE id IN (:ids)")
+    suspend fun getProdukByIds(ids: List<Long>): List<Produk>
+
     @Query("SELECT * FROM produk WHERE barcode = :barcode")
     suspend fun getProdukByBarcode(barcode: String): Produk?
 

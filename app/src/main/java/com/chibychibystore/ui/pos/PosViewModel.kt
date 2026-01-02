@@ -8,6 +8,7 @@ import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.ProductService
+import com.chibychibystore.constant.AppConstants
 import com.chibychibystore.service.SaleService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -1226,7 +1227,7 @@ class PosViewModel @Inject constructor(
     private fun updateCartTotals(cartItems: List<CartItem>) {
         _uiState.update { currentState ->
             val subtotal = cartItems.sumOf { it.totalPrice }
-            val tax = subtotal * 0.1 // 10% tax, adjust as needed
+            val tax = subtotal * AppConstants.TAX_RATE
             val discount = currentState.discount
             val total = subtotal + tax - discount
 
@@ -1468,8 +1469,4 @@ class PosViewModel @Inject constructor(
      *
      * @see Penjualan.saleDate
      */
-    private fun getCurrentDateTime(): String {
-        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        return sdf.format(Date())
-    }
 }
