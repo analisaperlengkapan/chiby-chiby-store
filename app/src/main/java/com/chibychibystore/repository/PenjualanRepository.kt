@@ -153,7 +153,7 @@ class PenjualanRepository @Inject constructor(
     }
 
     /**
-     * Get total penjualan by date range
+     * Get total penjualan by date range (Gross Amount / Cash Receipts)
      */
     suspend fun getTotalPenjualanByDateRange(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Result<Double> {
         return try {
@@ -164,6 +164,48 @@ class PenjualanRepository @Inject constructor(
             Result.success(total)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getTotalPenjualanByDateRange", e))
+        }
+    }
+
+    /**
+     * Get Total Revenue (Net Sales excluding Tax)
+     */
+    suspend fun getTotalRevenue(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Result<Double> {
+        return try {
+            val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+            val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+            val total = penjualanDao.getTotalRevenue(start, end) ?: 0.0
+            Result.success(total)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getTotalRevenue", e))
+        }
+    }
+
+    /**
+     * Get Total Tax Collected
+     */
+    suspend fun getTotalTax(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Result<Double> {
+        return try {
+            val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+            val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+            val total = penjualanDao.getTotalTax(start, end) ?: 0.0
+            Result.success(total)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getTotalTax", e))
+        }
+    }
+
+    /**
+     * Get Total Cash Receipts (including tax, minus discount)
+     */
+    suspend fun getTotalCashReceipts(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Result<Double> {
+        return try {
+            val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+            val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+            val total = penjualanDao.getTotalCashReceipts(start, end) ?: 0.0
+            Result.success(total)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getTotalCashReceipts", e))
         }
     }
 

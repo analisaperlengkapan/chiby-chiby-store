@@ -39,9 +39,9 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
         } else {
-            val sales = penjualanRepository.getSalesInDateRange(date, date)
-            val totalSales = sales.sumOf { it.totalAmount }
-            val totalTransactions = sales.size
+            // Optimized to use DB aggregation for totalAmount (Cash Receipts)
+            val totalSales = penjualanRepository.getTotalCashReceipts(date, date).getOrNull() ?: 0.0
+            val totalTransactions = penjualanRepository.getPenjualanCountByDateRange(date, date).getOrNull() ?: 0
             val avg = if (totalTransactions > 0) totalSales / totalTransactions else 0.0
             Result.success(DailySalesReport(date, totalSales, totalTransactions, avg, emptyList()))
         }
@@ -63,8 +63,11 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission(Permissions.VIEW_FINANCIAL_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan keuangan"))
         } else {
-            val totalRevenue = penjualanRepository.getTotalPenjualanByDateRange(startDate, endDate).getOrNull() ?: 0.0
+            // Use Revenue (Net Sales) for financial reporting, not Gross Cash Receipts
+            val totalRevenue = penjualanRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
             val totalExpenses = pengeluaranRepository.getTotalExpenseAmount(startDate, endDate).getOrNull() ?: 0.0
+            // Cost of Goods Sold is currently 0.0 placeholder in original code, or derived from purchases?
+            // Original code had totalCost = 0.0. Leaving as is but noting it uses Revenue now.
             val totalCost = 0.0
             val grossProfit = totalRevenue - totalCost
             val netProfit = grossProfit - totalExpenses
@@ -164,8 +167,8 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission(Permissions.VIEW_FINANCIAL_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat margin keuntungan"))
         } else {
-            // For profit calculations, revenue is the total sales in the period (including refunded sales)
-            val revenue = penjualanRepository.getTotalPenjualanByDateRange(startDate, endDate).getOrNull() ?: 0.0
+            // For profit calculations, use Revenue (Net Sales excluding tax)
+            val revenue = penjualanRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
 
             // Cost of goods sold is derived from purchases in the period (pembelian)
             val purchases = pembelianRepository.getPurchasesInDateRange(startDate, endDate)
