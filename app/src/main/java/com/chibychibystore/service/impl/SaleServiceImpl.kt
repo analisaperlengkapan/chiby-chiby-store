@@ -7,15 +7,16 @@ import com.chibychibystore.data.model.PenjualanWithItems
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
+import com.chibychibystore.constant.AppConstants
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.SaleService
 import com.chibychibystore.service.printer.PrinterService
 import com.chibychibystore.service.printer.ReceiptItem
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,13 +41,13 @@ class SaleServiceImpl @Inject constructor(
         // 2. Hitung total amount (double check logic di frontend)
         var calculatedTotal = 0.0
         items.forEach { item ->
-            calculatedTotal += item.jumlah * item.hargaSatuan
+            calculatedTotal += item.quantity * item.unitPrice
         }
 
-        // Update sale total amount
+        // Update sale total amount and date
         val saleToSave = sale.copy(
             totalAmount = calculatedTotal,
-            tanggalPenjualan = LocalDateTime.now() // Force server time
+            saleDate = Date() // Force server time (using Date as per Entity)
         )
 
         // Run in transaction via Repository
@@ -60,12 +61,15 @@ class SaleServiceImpl @Inject constructor(
             val savedItems = mutableListOf<ItemPenjualan>()
 
             for (item in items) {
-                val itemWithSaleId = item.copy(penjualanId = saleId)
+                val itemWithSaleId = item.copy(saleId = saleId) // Corrected property name: saleId
                 itemPenjualanRepository.createItemPenjualan(itemWithSaleId)
                 savedItems.add(itemWithSaleId)
 
                 // Update Stock (Subtract)
-                produkRepository.adjustStock(item.produkId, -item.jumlah)
+                val stockResult = produkRepository.adjustStock(item.productId, -item.quantity)
+                if (stockResult is Result.Error) {
+                    throw stockResult.exception
+                }
             }
 
             // 5. Return complete object
@@ -87,9 +91,7 @@ class SaleServiceImpl @Inject constructor(
     ): Result<List<Penjualan>> {
          return try {
              if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
-                // Technically cashier needs to see sales too, but maybe only their own.
-                // For now, adhere to permissions.
-                // return Result.failure(Exception("Tidak memiliki izin melihat laporan penjualan"))
+                 // Permission check logic
              }
              val sales = penjualanRepository.getAllPenjualanSync()
              Result.success(sales)
@@ -130,7 +132,6 @@ class SaleServiceImpl @Inject constructor(
 
             // Restore stock
             saleWithItems.items.forEach { item ->
-                // Note: item.productId matches the property name in ItemPenjualan
                 val stockResult = produkRepository.adjustStock(item.productId, item.quantity)
                 if (stockResult is Result.Error) {
                     throw stockResult.exception
@@ -142,7 +143,6 @@ class SaleServiceImpl @Inject constructor(
     }
 
     override suspend fun cancelSale(id: Long): Result<Unit> {
-        // Same as refund for now
         return refundSale(id)
     }
 
@@ -158,38 +158,36 @@ class SaleServiceImpl @Inject constructor(
         val sale = saleWithItems.penjualan
         val items = saleWithItems.items
 
+        // Fetch product names for receipt
         val receiptItems = items.map { item ->
-            // Need product name, fetch from repository or assuming joined data
             val product = produkRepository.getProdukById(item.productId).getOrNull()
             ReceiptItem(
-                name = product?.name ?: "Unknown",
+                name = product?.name ?: "Unknown Product",
                 quantity = item.quantity,
                 unitPrice = item.unitPrice,
                 totalPrice = item.totalPrice
             )
         }
 
-        // Calculate tax and discount (Assuming simplified calculation or fields exist)
-        // For simple POS: Tax 10% included or added?
-        // Based on PosViewModel: Tax = 10% of subtotal, Total = Subtotal + Tax - Discount
-        // We need to reverse calculate or store these values.
-        // Assuming Sale entity stores final totalAmount.
-        // Let's approximate for display if fields missing, or use 0 if not tracked separately.
-
+        // Calculate totals
         val subtotal = items.sumOf { it.totalPrice }
-        val tax = subtotal * 0.1
-        val discount = (subtotal + tax) - sale.totalAmount
+        val tax = subtotal * AppConstants.TAX_RATE
+        val calculatedTotal = subtotal + tax
 
-        // Safe check for negative discount (rounding errors)
-        val finalDiscount = if (discount > 0) discount else 0.0
+        // Discount is the difference between calculated total and actual total amount
+        // If totalAmount is less than calculated, the diff is discount.
+        val discount = if (calculatedTotal > sale.totalAmount) {
+            calculatedTotal - sale.totalAmount
+        } else {
+            0.0
+        }
 
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        // Format Date
+        val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
         val dateStr = try {
-            // Assuming saleDate is java.util.Date, convert to LocalDateTime or format directly
-            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
-            sdf.format(sale.saleDate)
+            formatter.format(sale.saleDate)
         } catch (e: Exception) {
-            LocalDateTime.now().format(formatter)
+            formatter.format(Date())
         }
 
         return printerService.printReceipt(
@@ -200,7 +198,7 @@ class SaleServiceImpl @Inject constructor(
             items = receiptItems,
             subtotal = subtotal,
             tax = tax,
-            discount = finalDiscount,
+            discount = discount,
             total = sale.totalAmount,
             paymentMethod = sale.paymentMethod.name,
             cashierName = cashierName
