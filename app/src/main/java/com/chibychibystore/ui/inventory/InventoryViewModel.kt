@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 /**
@@ -93,6 +94,6 @@ class InventoryViewModel @Inject constructor(
      * Update search query
      */
     fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
+        _searchQuery.update { query }
     }
 }
