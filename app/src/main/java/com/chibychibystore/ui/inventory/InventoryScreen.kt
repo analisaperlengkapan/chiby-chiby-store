@@ -32,8 +32,21 @@ fun InventoryScreen(
     viewModel: InventoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show Snackbar on Error
+    LaunchedEffect(uiState) {
+        if (uiState is InventoryUiState.Error) {
+            val message = (uiState as InventoryUiState.Error).message
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             AppTopBar(
                 title = "Inventory",

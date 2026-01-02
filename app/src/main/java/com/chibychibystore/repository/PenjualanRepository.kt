@@ -1,6 +1,8 @@
 package com.chibychibystore.repository
 
 import com.chibychibystore.data.local.dao.ItemPenjualanDao
+import androidx.room.withTransaction
+import com.chibychibystore.data.local.AppDatabase
 import com.chibychibystore.data.local.dao.PenjualanDao
 import com.chibychibystore.data.local.entity.ItemPenjualan
 import com.chibychibystore.data.local.entity.Penjualan
@@ -116,6 +118,20 @@ class PenjualanRepository @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("updatePenjualan", e))
+        }
+    }
+
+    /**
+     * Execute a block within a database transaction
+     */
+    suspend fun <T> runInTransaction(block: suspend () -> T): Result<T> {
+        return try {
+            val result = database.withTransaction {
+                block()
+            }
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("Transaction failed", e))
         }
     }
 
