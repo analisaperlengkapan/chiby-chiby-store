@@ -7,7 +7,7 @@ import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.repository.PenggunaRepository
 import com.chibychibystore.repository.UserSessionRepository
-import com.chibychibystore.service.AuthServiceImpl
+import com.chibychibystore.service.impl.AuthServiceImpl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher

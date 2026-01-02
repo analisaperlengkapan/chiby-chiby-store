@@ -118,30 +118,30 @@ class ExpenseViewModel @Inject constructor(
      * Set filter tanggal mulai
      */
     fun setStartDate(date: Date?) {
-        _startDate.value = date
+        _startDate.update { date }
     }
 
     /**
      * Set filter tanggal akhir
      */
     fun setEndDate(date: Date?) {
-        _endDate.value = date
+        _endDate.update { date }
     }
 
     /**
      * Set filter kategori
      */
     fun setCategoryFilter(category: ExpenseCategory?) {
-        _selectedCategory.value = category
+        _selectedCategory.update { category }
     }
 
     /**
      * Set semua filter sekaligus
      */
     fun setFilters(startDate: Date?, endDate: Date?, category: ExpenseCategory?) {
-        _startDate.value = startDate
-        _endDate.value = endDate
-        _selectedCategory.value = category
+        _startDate.update { startDate }
+        _endDate.update { endDate }
+        _selectedCategory.update { category }
     }
 
     /**
@@ -149,15 +149,15 @@ class ExpenseViewModel @Inject constructor(
      */
     fun deleteExpense(expenseId: Long) {
         viewModelScope.launch {
-            _isLoading.value = true
+            _isLoading.update { true }
             try {
                 // Note: Call service delete here
                 expenseService.deleteExpense(expenseId)
                 // Trigger reload
-                _refreshTrigger.value += 1
+                _refreshTrigger.update { it + 1 }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Gagal menghapus pengeluaran"
-                _isLoading.value = false
+                _error.update { e.message ?: "Gagal menghapus pengeluaran" }
+                _isLoading.update { false }
             }
         }
     }
@@ -166,15 +166,15 @@ class ExpenseViewModel @Inject constructor(
      * Reset filter
      */
     fun resetFilters() {
-        _startDate.value = null
-        _endDate.value = null
-        _selectedCategory.value = null
+        _startDate.update { null }
+        _endDate.update { null }
+        _selectedCategory.update { null }
     }
 
     /**
      * Clear error
      */
     fun clearError() {
-        _error.value = null
+        _error.update { null }
     }
 }

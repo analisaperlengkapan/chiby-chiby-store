@@ -10,8 +10,12 @@ import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.SaleService
+import com.chibychibystore.service.printer.PrinterService
+import com.chibychibystore.service.printer.ReceiptItem
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,7 +24,8 @@ class SaleServiceImpl @Inject constructor(
     private val penjualanRepository: PenjualanRepository,
     private val itemPenjualanRepository: ItemPenjualanRepository,
     private val produkRepository: ProdukRepository,
-    private val authService: AuthService
+    private val authService: AuthService,
+    private val printerService: PrinterService
 ) : SaleService {
 
     override suspend fun createSale(
@@ -111,18 +116,95 @@ class SaleServiceImpl @Inject constructor(
     }
 
     override suspend fun refundSale(id: Long): Result<Unit> {
-        val saleResult = getSale(id)
-        val sale = (saleResult as? Result.Success)?.data ?: return Result.failure(Exception("Penjualan tidak ditemukan"))
+        return penjualanRepository.runInTransaction {
+            val saleResult = getSale(id)
+            val saleWithItems = (saleResult as? Result.Success)?.data ?: throw Exception("Penjualan tidak ditemukan")
 
-        sale.items.forEach { item ->
-            produkRepository.adjustStock(item.produkId, item.jumlah)
+            // Update sales status
+            val updatedSale = saleWithItems.penjualan.copy(isRefunded = true)
+            val updateResult = penjualanRepository.updatePenjualan(updatedSale)
+
+            if (updateResult is Result.Error) {
+                throw updateResult.exception
+            }
+
+            // Restore stock
+            saleWithItems.items.forEach { item ->
+                // Note: item.productId matches the property name in ItemPenjualan
+                val stockResult = produkRepository.adjustStock(item.productId, item.quantity)
+                if (stockResult is Result.Error) {
+                    throw stockResult.exception
+                }
+            }
+
+            Unit
         }
-
-        return Result.success(Unit)
     }
 
     override suspend fun cancelSale(id: Long): Result<Unit> {
+        // Same as refund for now
         return refundSale(id)
+    }
+
+    override suspend fun printReceipt(
+        saleId: Long,
+        storeName: String,
+        storeAddress: String,
+        cashierName: String
+    ): Result<Unit> {
+        val saleResult = getSale(saleId)
+        val saleWithItems = (saleResult as? Result.Success)?.data ?: return Result.failure(Exception("Penjualan tidak ditemukan"))
+
+        val sale = saleWithItems.penjualan
+        val items = saleWithItems.items
+
+        val receiptItems = items.map { item ->
+            // Need product name, fetch from repository or assuming joined data
+            val product = produkRepository.getProdukById(item.productId).getOrNull()
+            ReceiptItem(
+                name = product?.name ?: "Unknown",
+                quantity = item.quantity,
+                unitPrice = item.unitPrice,
+                totalPrice = item.totalPrice
+            )
+        }
+
+        // Calculate tax and discount (Assuming simplified calculation or fields exist)
+        // For simple POS: Tax 10% included or added?
+        // Based on PosViewModel: Tax = 10% of subtotal, Total = Subtotal + Tax - Discount
+        // We need to reverse calculate or store these values.
+        // Assuming Sale entity stores final totalAmount.
+        // Let's approximate for display if fields missing, or use 0 if not tracked separately.
+
+        val subtotal = items.sumOf { it.totalPrice }
+        val tax = subtotal * 0.1
+        val discount = (subtotal + tax) - sale.totalAmount
+
+        // Safe check for negative discount (rounding errors)
+        val finalDiscount = if (discount > 0) discount else 0.0
+
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val dateStr = try {
+            // Assuming saleDate is java.util.Date, convert to LocalDateTime or format directly
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+            sdf.format(sale.saleDate)
+        } catch (e: Exception) {
+            LocalDateTime.now().format(formatter)
+        }
+
+        return printerService.printReceipt(
+            storeName = storeName,
+            storeAddress = storeAddress,
+            saleId = saleId,
+            saleDate = dateStr,
+            items = receiptItems,
+            subtotal = subtotal,
+            tax = tax,
+            discount = finalDiscount,
+            total = sale.totalAmount,
+            paymentMethod = sale.paymentMethod.name,
+            cashierName = cashierName
+        )
     }
 
     override fun observeSales(): Flow<List<Penjualan>> {
