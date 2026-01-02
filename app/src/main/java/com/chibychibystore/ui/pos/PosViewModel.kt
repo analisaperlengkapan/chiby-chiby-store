@@ -371,23 +371,24 @@ class PosViewModel @Inject constructor(
             kotlinx.coroutines.delay(300)
 
             try {
-                val result = productService.searchProducts(query)
-                if (result.isSuccess) {
-                    _uiState.update {
-                        it.copy(
-                            searchResults = result.getOrNull() ?: emptyList(),
-                            isSearching = false
-                        )
+                productService.searchProducts(query)
+                    .onSuccess { products ->
+                        _uiState.update {
+                            it.copy(
+                                searchResults = products,
+                                isSearching = false
+                            )
+                        }
                     }
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            searchResults = emptyList(),
-                            isSearching = false,
-                            error = result.exceptionOrNull()?.message ?: "Gagal mencari produk"
-                        )
+                    .onFailure { error ->
+                        _uiState.update {
+                            it.copy(
+                                searchResults = emptyList(),
+                                isSearching = false,
+                                error = error.message ?: "Gagal mencari produk"
+                            )
+                        }
                     }
-                }
             } catch (e: Exception) {
                 if (e !is kotlinx.coroutines.CancellationException) {
                     _uiState.update {
@@ -674,15 +675,17 @@ class PosViewModel @Inject constructor(
      * @see PosUiState.subtotal
      */
     fun clearCart() {
-        _uiState.value = _uiState.value.copy(
-            cartItems = emptyList(),
-            subtotal = 0.0,
-            tax = 0.0,
-            discount = 0.0,
-            total = 0.0,
-            error = null,
-            successMessage = null
-        )
+        _uiState.update { currentState ->
+            currentState.copy(
+                cartItems = emptyList(),
+                subtotal = 0.0,
+                tax = 0.0,
+                discount = 0.0,
+                total = 0.0,
+                error = null,
+                successMessage = null
+            )
+        }
     }
 
     /**
@@ -899,24 +902,25 @@ class PosViewModel @Inject constructor(
                     cashierId = cashierId
                 )
 
-                val result = saleService.createSale(sale, saleItems)
-
-                if (result.isSuccess) {
-                    val saleWithItems = result.getOrNull()
-                    _uiState.value = PosUiState(
-                        successMessage = "Pembayaran berhasil diproses",
-                        paymentMethod = currentState.paymentMethod,
-                        completedSaleId = saleWithItems?.penjualan?.id,
-                        showReceiptDialog = true
-                    )
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            isProcessingPayment = false,
-                            error = result.exceptionOrNull()?.message ?: "Gagal memproses pembayaran"
-                        )
+                saleService.createSale(sale, saleItems)
+                    .onSuccess { saleWithItems ->
+                        _uiState.update {
+                            PosUiState(
+                                successMessage = "Pembayaran berhasil diproses",
+                                paymentMethod = currentState.paymentMethod,
+                                completedSaleId = saleWithItems.penjualan.id,
+                                showReceiptDialog = true
+                            )
+                        }
                     }
-                }
+                    .onFailure { error ->
+                        _uiState.update {
+                            it.copy(
+                                isProcessingPayment = false,
+                                error = error.message ?: "Gagal memproses pembayaran"
+                            )
+                        }
+                    }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -1082,35 +1086,34 @@ class PosViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // Search product by barcode
-                val result = productService.searchProducts(barcode)
-                if (result.isSuccess) {
-                    val products = result.getOrNull() ?: emptyList()
-                    val product = products.find { it.barcode == barcode }
-
-                    if (product != null) {
-                        addProductToCart(product)
+                productService.searchProducts(barcode)
+                    .onSuccess { products ->
+                        val product = products.find { it.barcode == barcode }
+                        if (product != null) {
+                            addProductToCart(product)
+                            _uiState.update {
+                                it.copy(
+                                    isScanning = false,
+                                    error = null
+                                )
+                            }
+                        } else {
+                            _uiState.update {
+                                it.copy(
+                                    isScanning = false,
+                                    error = "Produk dengan barcode $barcode tidak ditemukan"
+                                )
+                            }
+                        }
+                    }
+                    .onFailure { error ->
                         _uiState.update {
                             it.copy(
                                 isScanning = false,
-                                error = null
-                            )
-                        }
-                    } else {
-                        _uiState.update {
-                            it.copy(
-                                isScanning = false,
-                                error = "Produk dengan barcode $barcode tidak ditemukan"
+                                error = "Gagal mencari produk dengan barcode"
                             )
                         }
                     }
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            isScanning = false,
-                            error = "Gagal mencari produk dengan barcode"
-                        )
-                    }
-                }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -1337,28 +1340,29 @@ class PosViewModel @Inject constructor(
 
             try {
                 val cashierName = authService.getCurrentUser()?.username ?: "Kasir"
-                val result = saleService.printReceipt(
+
+                saleService.printReceipt(
                     saleId = saleId,
                     storeName = "Chiby Chiby Store",
                     storeAddress = "Jl. Example No. 123, Jakarta",
                     cashierName = cashierName
                 )
-
-                if (result.isSuccess) {
-                    _uiState.update {
-                        it.copy(
-                            isPrintingReceipt = false,
-                            successMessage = "Receipt berhasil dicetak"
-                        )
+                    .onSuccess {
+                        _uiState.update {
+                            it.copy(
+                                isPrintingReceipt = false,
+                                successMessage = "Receipt berhasil dicetak"
+                            )
+                        }
                     }
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            isPrintingReceipt = false,
-                            error = result.exceptionOrNull()?.message ?: "Gagal mencetak receipt"
-                        )
+                    .onFailure { error ->
+                        _uiState.update {
+                            it.copy(
+                                isPrintingReceipt = false,
+                                error = error.message ?: "Gagal mencetak receipt"
+                            )
+                        }
                     }
-                }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -1449,24 +1453,6 @@ class PosViewModel @Inject constructor(
      * @see dismissReceiptDialog
      */
     fun startNewTransaction() {
-        _uiState.value = PosUiState()
+        _uiState.update { PosUiState() }
     }
-
-    /**
-     * Get current date time in database format
-     *
-     * **Technical Details:**
-     * - Format: "yyyy-MM-dd HH:mm:ss"
-     * - Locale: Default system locale
-     * - Used for sale timestamps
-     *
-     * **Database Compatibility:**
-     * - SQLite DATETIME format
-     * - Consistent dengan Room entities
-     * - ISO-like format untuk sorting
-     *
-     * @return Current timestamp sebagai string
-     *
-     * @see Penjualan.saleDate
-     */
 }

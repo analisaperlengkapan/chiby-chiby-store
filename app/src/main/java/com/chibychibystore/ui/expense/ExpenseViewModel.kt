@@ -151,12 +151,16 @@ class ExpenseViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.update { true }
             try {
-                // Note: Call service delete here
                 expenseService.deleteExpense(expenseId)
-                // Trigger reload
-                _refreshTrigger.update { it + 1 }
+                    .onSuccess {
+                        _refreshTrigger.update { it + 1 }
+                    }
+                    .onFailure { exception ->
+                        _error.update { exception.message ?: "Gagal menghapus pengeluaran" }
+                    }
             } catch (e: Exception) {
                 _error.update { e.message ?: "Gagal menghapus pengeluaran" }
+            } finally {
                 _isLoading.update { false }
             }
         }
