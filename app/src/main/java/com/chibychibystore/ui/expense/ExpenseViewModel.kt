@@ -151,13 +151,13 @@ class ExpenseViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.update { true }
             try {
-                // Updated to handle Result return type correctly
-                val result = expenseService.deleteExpense(expenseId)
-                if (result is com.chibychibystore.data.model.Result.Success) {
-                     _refreshTrigger.update { it + 1 }
-                } else if (result is com.chibychibystore.data.model.Result.Failure) {
-                     _error.update { result.exception.message ?: "Gagal menghapus pengeluaran" }
-                }
+                expenseService.deleteExpense(expenseId)
+                    .onSuccess {
+                        _refreshTrigger.update { it + 1 }
+                    }
+                    .onFailure { exception ->
+                        _error.update { exception.message ?: "Gagal menghapus pengeluaran" }
+                    }
             } catch (e: Exception) {
                 _error.update { e.message ?: "Gagal menghapus pengeluaran" }
             } finally {
