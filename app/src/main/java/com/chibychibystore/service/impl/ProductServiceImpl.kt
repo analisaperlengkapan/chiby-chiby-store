@@ -84,6 +84,7 @@ class ProductServiceImpl @Inject constructor(
             validateProduct(product)
 
             // Pastikan barcode unik jika ada (GS1 compliance)
+            // Pre-check for faster feedback, but handle race condition below
             if (!product.barcode.isNullOrBlank()) {
                 val existingResult = productRepository.getProdukByBarcode(product.barcode)
                 if (existingResult is Result.Success && existingResult.data.id != 0L) {
@@ -91,12 +92,23 @@ class ProductServiceImpl @Inject constructor(
                 }
             }
 
-            val createResult = productRepository.createProduk(product)
-            val createdProductId = (createResult as? Result.Success)?.data ?: return Result.failure((createResult as? Result.Error)?.exception ?: Exception("Gagal membuat produk"))
+            try {
+                val createResult = productRepository.createProduk(product)
+                val createdProductId = (createResult as? Result.Success)?.data ?: return Result.failure((createResult as? Result.Error)?.exception ?: Exception("Gagal membuat produk"))
 
-            val createdProductResult = productRepository.getProdukById(createdProductId)
-            val createdProduct = (createdProductResult as? Result.Success)?.data ?: return Result.failure((createdProductResult as? Result.Error)?.exception ?: Exception("Gagal mengambil produk yang dibuat"))
-            Result.success(createdProduct)
+                val createdProductResult = productRepository.getProdukById(createdProductId)
+                val createdProduct = (createdProductResult as? Result.Success)?.data ?: return Result.failure((createdProductResult as? Result.Error)?.exception ?: Exception("Gagal mengambil produk yang dibuat"))
+                Result.success(createdProduct)
+            } catch (e: android.database.sqlite.SQLiteConstraintException) {
+                Result.failure(Exception("Barcode sudah digunakan (Constraint Error)"))
+            } catch (e: Exception) {
+                 // Check message for constraint violation if SQLiteConstraintException isn't caught directly (wrapper issues)
+                if (e.message?.contains("constraint", ignoreCase = true) == true) {
+                    Result.failure(Exception("Barcode sudah digunakan"))
+                } else {
+                    throw e
+                }
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
