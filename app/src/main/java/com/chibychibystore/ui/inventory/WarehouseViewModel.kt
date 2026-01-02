@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -51,7 +52,7 @@ class WarehouseViewModel @Inject constructor(
     // Warehouses Stream
     private val _warehousesFlow = warehouseService.observeWarehouses()
         .catch { e ->
-            _error.value = "Gagal memuat gudang: ${e.message}"
+            _error.update { "Gagal memuat gudang: ${e.message}" }
             emit(emptyList())
         }
 
@@ -64,7 +65,7 @@ class WarehouseViewModel @Inject constructor(
             warehouseService.observeWarehouseStock(id)
         }
     }.catch { e ->
-        _error.value = "Gagal memuat stok gudang: ${e.message}"
+        _error.update { "Gagal memuat stok gudang: ${e.message}" }
         emit(emptyList())
     }
 
@@ -97,7 +98,7 @@ class WarehouseViewModel @Inject constructor(
      * Pilih gudang untuk melihat stok
      */
     fun selectWarehouse(warehouse: Gudang) {
-        _selectedWarehouseId.value = warehouse.id
+        _selectedWarehouseId.update { warehouse.id }
         clearMessages()
     }
 
@@ -111,19 +112,19 @@ class WarehouseViewModel @Inject constructor(
         quantity: Int
     ) {
         viewModelScope.launch {
-            _isTransferring.value = true
+            _isTransferring.update { true }
             clearMessages()
             try {
                 val result = warehouseService.transferStock(productId, fromWarehouseId, toWarehouseId, quantity)
                 result.onSuccess {
-                    _successMessage.value = "Transfer stok berhasil"
+                    _successMessage.update { "Transfer stok berhasil" }
                 }.onFailure { e ->
-                    _error.value = e.message ?: "Gagal transfer stok"
+                    _error.update { e.message ?: "Gagal transfer stok" }
                 }
             } catch (e: Exception) {
-                _error.value = "Terjadi kesalahan: ${e.message}"
+                _error.update { "Terjadi kesalahan: ${e.message}" }
             } finally {
-                _isTransferring.value = false
+                _isTransferring.update { false }
             }
         }
     }
@@ -133,19 +134,19 @@ class WarehouseViewModel @Inject constructor(
      */
     fun assignProductToWarehouse(productId: Long, warehouseId: Long) {
         viewModelScope.launch {
-            _isLoading.value = true
+            _isLoading.update { true }
             clearMessages()
             try {
                 val result = warehouseService.assignProductToWarehouse(productId, warehouseId)
                 result.onSuccess {
-                    _successMessage.value = "Produk berhasil dipindahkan ke gudang"
+                    _successMessage.update { "Produk berhasil dipindahkan ke gudang" }
                 }.onFailure { e ->
-                    _error.value = e.message ?: "Gagal memindahkan produk"
+                    _error.update { e.message ?: "Gagal memindahkan produk" }
                 }
             } catch (e: Exception) {
-                _error.value = "Terjadi kesalahan: ${e.message}"
+                _error.update { "Terjadi kesalahan: ${e.message}" }
             } finally {
-                _isLoading.value = false
+                _isLoading.update { false }
             }
         }
     }
@@ -155,7 +156,7 @@ class WarehouseViewModel @Inject constructor(
      */
     fun createWarehouse(name: String, location: String, capacity: Int) {
         viewModelScope.launch {
-            _isLoading.value = true
+            _isLoading.update { true }
             clearMessages()
             try {
                 val warehouse = Gudang(
@@ -167,15 +168,15 @@ class WarehouseViewModel @Inject constructor(
                 )
                 val result = warehouseService.createWarehouse(warehouse)
                 result.onSuccess { created ->
-                    _successMessage.value = "Gudang '${created.name}' berhasil dibuat"
+                    _successMessage.update { "Gudang '${created.name}' berhasil dibuat" }
                     // No manual reload needed, flow updates automatically
                 }.onFailure { e ->
-                    _error.value = e.message ?: "Gagal membuat gudang"
+                    _error.update { e.message ?: "Gagal membuat gudang" }
                 }
             } catch (e: Exception) {
-                _error.value = "Terjadi kesalahan: ${e.message}"
+                _error.update { "Terjadi kesalahan: ${e.message}" }
             } finally {
-                _isLoading.value = false
+                _isLoading.update { false }
             }
         }
     }
@@ -185,7 +186,7 @@ class WarehouseViewModel @Inject constructor(
      */
     fun updateWarehouse(warehouseId: Long, name: String, location: String, capacity: Int) {
         viewModelScope.launch {
-            _isLoading.value = true
+            _isLoading.update { true }
             clearMessages()
             try {
                 val warehouse = Gudang(
@@ -197,14 +198,14 @@ class WarehouseViewModel @Inject constructor(
                 )
                 val result = warehouseService.updateWarehouse(warehouse)
                 result.onSuccess { updated ->
-                    _successMessage.value = "Gudang '${updated.name}' berhasil diperbarui"
+                    _successMessage.update { "Gudang '${updated.name}' berhasil diperbarui" }
                 }.onFailure { e ->
-                    _error.value = e.message ?: "Gagal memperbarui gudang"
+                    _error.update { e.message ?: "Gagal memperbarui gudang" }
                 }
             } catch (e: Exception) {
-                _error.value = "Terjadi kesalahan: ${e.message}"
+                _error.update { "Terjadi kesalahan: ${e.message}" }
             } finally {
-                _isLoading.value = false
+                _isLoading.update { false }
             }
         }
     }
@@ -213,16 +214,16 @@ class WarehouseViewModel @Inject constructor(
      * Clear messages
      */
     fun clearError() {
-        _error.value = null
+        _error.update { null }
     }
 
     fun clearSuccessMessage() {
-        _successMessage.value = null
+        _successMessage.update { null }
     }
 
     private fun clearMessages() {
-        _error.value = null
-        _successMessage.value = null
+        _error.update { null }
+        _successMessage.update { null }
     }
 
     /**

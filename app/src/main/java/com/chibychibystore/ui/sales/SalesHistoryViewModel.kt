@@ -319,33 +319,40 @@ class SalesHistoryViewModel @Inject constructor(
      */
     fun loadSales() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
+                val currentState = _uiState.value
                 val result = saleService.getSales(
-                    startDate = _uiState.value.startDate?.let { dateFormat.format(it) },
-                    endDate = _uiState.value.endDate?.let { dateFormat.format(it) }
+                    startDate = currentState.startDate?.let { dateFormat.format(it) },
+                    endDate = currentState.endDate?.let { dateFormat.format(it) }
                 )
 
                 result.onSuccess { sales ->
                     val filteredSales = applySearchFilter(sales)
-                    _uiState.value = _uiState.value.copy(
-                        sales = filteredSales,
-                        isLoading = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            sales = filteredSales,
+                            isLoading = false
+                        )
+                    }
                     // Setup reactive updates
                     observeSales()
                 }.onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = exception.message ?: "Gagal memuat data penjualan"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = exception.message ?: "Gagal memuat data penjualan"
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Terjadi kesalahan: ${e.message}"
-                )
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Terjadi kesalahan: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -403,18 +410,21 @@ class SalesHistoryViewModel @Inject constructor(
      */
     private fun observeSales() {
         viewModelScope.launch {
-            val startDateStr = _uiState.value.startDate?.let { dateFormat.format(it) } ?: "1900-01-01"
-            val endDateStr = _uiState.value.endDate?.let { dateFormat.format(it) } ?: "2100-12-31"
+            val currentState = _uiState.value
+            val startDateStr = currentState.startDate?.let { dateFormat.format(it) } ?: "1900-01-01"
+            val endDateStr = currentState.endDate?.let { dateFormat.format(it) } ?: "2100-12-31"
 
             saleService.observeSalesByDateRange(startDateStr, endDateStr)
                 .catch { e ->
-                    _uiState.value = _uiState.value.copy(
-                        error = "Gagal mengamati perubahan penjualan: ${e.message}"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            error = "Gagal mengamati perubahan penjualan: ${e.message}"
+                        )
+                    }
                 }
                 .collectLatest { sales ->
                     val filteredSales = applySearchFilter(sales)
-                    _uiState.value = _uiState.value.copy(sales = filteredSales)
+                    _uiState.update { it.copy(sales = filteredSales) }
                 }
         }
     }
@@ -471,9 +481,9 @@ class SalesHistoryViewModel @Inject constructor(
      * @see SalesHistoryUiState.searchQuery
      */
     fun updateSearchQuery(query: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = query)
+        _uiState.update { it.copy(searchQuery = query) }
         val filteredSales = applySearchFilter(_uiState.value.sales)
-        _uiState.value = _uiState.value.copy(sales = filteredSales)
+        _uiState.update { it.copy(sales = filteredSales) }
     }
 
     /**
@@ -523,7 +533,7 @@ class SalesHistoryViewModel @Inject constructor(
      * @see SalesHistoryUiState.startDate
      */
     fun setStartDate(date: Date?) {
-        _uiState.value = _uiState.value.copy(startDate = date)
+        _uiState.update { it.copy(startDate = date) }
         loadSales()
     }
 
@@ -574,7 +584,7 @@ class SalesHistoryViewModel @Inject constructor(
      * @see SalesHistoryUiState.endDate
      */
     fun setEndDate(date: Date?) {
-        _uiState.value = _uiState.value.copy(endDate = date)
+        _uiState.update { it.copy(endDate = date) }
         loadSales()
     }
 
@@ -624,10 +634,12 @@ class SalesHistoryViewModel @Inject constructor(
      * @see SalesHistoryUiState.showDatePicker
      */
     fun showDatePicker(type: DatePickerType) {
-        _uiState.value = _uiState.value.copy(
-            showDatePicker = true,
-            datePickerType = type
-        )
+        _uiState.update {
+            it.copy(
+                showDatePicker = true,
+                datePickerType = type
+            )
+        }
     }
 
     /**
@@ -673,7 +685,7 @@ class SalesHistoryViewModel @Inject constructor(
      * @see SalesHistoryUiState.showDatePicker
      */
     fun hideDatePicker() {
-        _uiState.value = _uiState.value.copy(showDatePicker = false)
+        _uiState.update { it.copy(showDatePicker = false) }
     }
 
     /**
@@ -730,27 +742,33 @@ class SalesHistoryViewModel @Inject constructor(
      */
     fun loadReceipt(saleId: Long) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoadingReceipt = true, error = null)
+            _uiState.update { it.copy(isLoadingReceipt = true, error = null) }
 
             try {
                 val result = saleService.getSale(saleId)
                 result.onSuccess { saleWithItems ->
-                    _uiState.value = _uiState.value.copy(
-                        selectedSale = saleWithItems,
-                        showReceiptDialog = true,
-                        isLoadingReceipt = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            selectedSale = saleWithItems,
+                            showReceiptDialog = true,
+                            isLoadingReceipt = false
+                        )
+                    }
                 }.onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoadingReceipt = false,
-                        error = exception.message ?: "Gagal memuat struk"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoadingReceipt = false,
+                            error = exception.message ?: "Gagal memuat struk"
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoadingReceipt = false,
-                    error = "Terjadi kesalahan: ${e.message}"
-                )
+                _uiState.update {
+                    it.copy(
+                        isLoadingReceipt = false,
+                        error = "Terjadi kesalahan: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -801,10 +819,12 @@ class SalesHistoryViewModel @Inject constructor(
      * @see SalesHistoryUiState.showReceiptDialog
      */
     fun hideReceiptDialog() {
-        _uiState.value = _uiState.value.copy(
-            showReceiptDialog = false,
-            selectedSale = null
-        )
+        _uiState.update {
+            it.copy(
+                showReceiptDialog = false,
+                selectedSale = null
+            )
+        }
     }
 
     /**
@@ -867,24 +887,28 @@ class SalesHistoryViewModel @Inject constructor(
         val saleId = _uiState.value.selectedSale?.penjualan?.id ?: return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isPrintingReceipt = true, error = null)
+            _uiState.update { it.copy(isPrintingReceipt = true, error = null) }
 
             try {
                 val result = saleService.printReceipt(saleId)
                 result.onSuccess {
-                    _uiState.value = _uiState.value.copy(isPrintingReceipt = false)
+                    _uiState.update { it.copy(isPrintingReceipt = false) }
                     // Could show success message here
                 }.onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isPrintingReceipt = false,
-                        error = exception.message ?: "Gagal mencetak struk"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isPrintingReceipt = false,
+                            error = exception.message ?: "Gagal mencetak struk"
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isPrintingReceipt = false,
-                    error = "Terjadi kesalahan: ${e.message}"
-                )
+                _uiState.update {
+                    it.copy(
+                        isPrintingReceipt = false,
+                        error = "Terjadi kesalahan: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -937,7 +961,7 @@ class SalesHistoryViewModel @Inject constructor(
      * @see loadSales
      */
     fun clearFilters() {
-        _uiState.value = SalesHistoryUiState()
+        _uiState.update { SalesHistoryUiState() }
         loadSales()
     }
 
@@ -988,7 +1012,7 @@ class SalesHistoryViewModel @Inject constructor(
      * @see SalesHistoryUiState.error
      */
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 
     /**
