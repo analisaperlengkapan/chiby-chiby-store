@@ -370,7 +370,7 @@ class UserManagementViewModel @Inject constructor(
      * @param query The search query string entered by the user
      */
     fun onSearchQueryChange(query: String) {
-        _searchQuery.value = query
+        _searchQuery.update { query }
     }
 
     /**
@@ -392,7 +392,7 @@ class UserManagementViewModel @Inject constructor(
      * @param role The role to filter by, or null to show all roles
      */
     fun onRoleFilterChange(role: Role?) {
-        _selectedRole.value = role
+        _selectedRole.update { role }
     }
 
     /**
@@ -653,7 +653,7 @@ class UserManagementViewModel @Inject constructor(
      * Updates the isActive field in the edit-user form.
      */
     fun onEditUserIsActiveChange(isActive: Boolean) {
-        _editUserFormState.value = _editUserFormState.value.copy(isActive = isActive)
+        _editUserFormState.update { it.copy(isActive = isActive) }
     }
 
     /**

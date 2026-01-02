@@ -2,8 +2,7 @@ package com.chibychibystore.di
 
 import com.chibychibystore.repository.*
 import com.chibychibystore.service.*
-import com.chibychibystore.service.impl.ProductServiceImpl
-import com.chibychibystore.service.impl.SaleServiceImpl
+import com.chibychibystore.service.impl.*
 import com.chibychibystore.service.printer.PrinterService
 import com.chibychibystore.service.printer.PrinterServiceImpl
 import dagger.Binds
@@ -74,7 +73,7 @@ abstract class ServiceModule {
     @Binds
     @Singleton
     abstract fun bindExpenseService(
-        expenseServiceImpl: com.chibychibystore.service.ExpenseServiceImpl
+        expenseServiceImpl: ExpenseServiceImpl
     ): ExpenseService
     @Binds
     @Singleton

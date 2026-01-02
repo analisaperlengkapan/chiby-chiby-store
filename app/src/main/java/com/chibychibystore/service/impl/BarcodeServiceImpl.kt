@@ -1,7 +1,8 @@
-package com.chibychibystore.service
+package com.chibychibystore.service.impl
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import com.chibychibystore.service.BarcodeService
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface

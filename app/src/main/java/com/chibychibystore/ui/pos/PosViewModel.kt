@@ -12,6 +12,7 @@ import com.chibychibystore.service.SaleService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -354,41 +355,47 @@ class PosViewModel @Inject constructor(
      * @see PosUiState.isSearching
      */
     fun searchProducts(query: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = query)
+        _uiState.update { it.copy(searchQuery = query) }
 
         if (query.isBlank()) {
             searchJob?.cancel()
-            _uiState.value = _uiState.value.copy(searchResults = emptyList(), isSearching = false)
+            _uiState.update { it.copy(searchResults = emptyList(), isSearching = false) }
             return
         }
 
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSearching = true)
+            _uiState.update { it.copy(isSearching = true) }
             // Debounce delay
             kotlinx.coroutines.delay(300)
 
             try {
                 val result = productService.searchProducts(query)
                 if (result.isSuccess) {
-                    _uiState.value = _uiState.value.copy(
-                        searchResults = result.getOrNull() ?: emptyList(),
-                        isSearching = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            searchResults = result.getOrNull() ?: emptyList(),
+                            isSearching = false
+                        )
+                    }
                 } else {
-                    _uiState.value = _uiState.value.copy(
-                        searchResults = emptyList(),
-                        isSearching = false,
-                        error = result.exceptionOrNull()?.message ?: "Gagal mencari produk"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            searchResults = emptyList(),
+                            isSearching = false,
+                            error = result.exceptionOrNull()?.message ?: "Gagal mencari produk"
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 if (e !is kotlinx.coroutines.CancellationException) {
-                    _uiState.value = _uiState.value.copy(
-                        searchResults = emptyList(),
-                        isSearching = false,
-                        error = "Error: ${e.message}"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            searchResults = emptyList(),
+                            isSearching = false,
+                            error = "Error: ${e.message}"
+                        )
+                    }
                 }
             }
         }
@@ -705,7 +712,7 @@ class PosViewModel @Inject constructor(
      * @see processPayment
      */
     fun setPaymentMethod(method: String) {
-        _uiState.value = _uiState.value.copy(paymentMethod = method)
+        _uiState.update { it.copy(paymentMethod = method) }
     }
 
     /**
@@ -756,12 +763,13 @@ class PosViewModel @Inject constructor(
      * @see updateCartTotals
      */
     fun setDiscount(discount: Double) {
-        val currentState = _uiState.value
-        val newTotal = currentState.subtotal + currentState.tax - discount
-        _uiState.value = currentState.copy(
-            discount = discount,
-            total = maxOf(0.0, newTotal)
-        )
+        _uiState.update { currentState ->
+            val newTotal = currentState.subtotal + currentState.tax - discount
+            currentState.copy(
+                discount = discount,
+                total = maxOf(0.0, newTotal)
+            )
+        }
     }
 
     /**
@@ -855,7 +863,7 @@ class PosViewModel @Inject constructor(
         val currentState = _uiState.value
 
         if (currentState.cartItems.isEmpty()) {
-            _uiState.value = currentState.copy(error = "Cart kosong, tidak dapat memproses pembayaran")
+            _uiState.update { it.copy(error = "Cart kosong, tidak dapat memproses pembayaran") }
             return
         }
 
@@ -864,11 +872,11 @@ class PosViewModel @Inject constructor(
             // Get cashier ID from auth service
             val currentUser = authService.getCurrentUser()
             val cashierId = currentUser?.id ?: run {
-                _uiState.value = currentState.copy(error = "User tidak terautentikasi")
+                _uiState.update { it.copy(error = "User tidak terautentikasi") }
                 return@launch
             }
 
-            _uiState.value = currentState.copy(isProcessingPayment = true, error = null)
+            _uiState.update { it.copy(isProcessingPayment = true, error = null) }
 
             try {
                 // Create sale items from cart
@@ -901,16 +909,20 @@ class PosViewModel @Inject constructor(
                         showReceiptDialog = true
                     )
                 } else {
-                    _uiState.value = currentState.copy(
-                        isProcessingPayment = false,
-                        error = result.exceptionOrNull()?.message ?: "Gagal memproses pembayaran"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isProcessingPayment = false,
+                            error = result.exceptionOrNull()?.message ?: "Gagal memproses pembayaran"
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.value = currentState.copy(
-                    isProcessingPayment = false,
-                    error = "Error: ${e.message}"
-                )
+                _uiState.update {
+                    it.copy(
+                        isProcessingPayment = false,
+                        error = "Error: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -954,7 +966,7 @@ class PosViewModel @Inject constructor(
      * @see PosUiState.isScanning
      */
     fun startScanning() {
-        _uiState.value = _uiState.value.copy(isScanning = true)
+        _uiState.update { it.copy(isScanning = true) }
     }
 
     /**
@@ -995,7 +1007,7 @@ class PosViewModel @Inject constructor(
      * @see PosUiState.isScanning
      */
     fun stopScanning() {
-        _uiState.value = _uiState.value.copy(isScanning = false)
+        _uiState.update { it.copy(isScanning = false) }
     }
 
     /**
@@ -1076,27 +1088,35 @@ class PosViewModel @Inject constructor(
 
                     if (product != null) {
                         addProductToCart(product)
-                        _uiState.value = _uiState.value.copy(
-                            isScanning = false,
-                            error = null
-                        )
+                        _uiState.update {
+                            it.copy(
+                                isScanning = false,
+                                error = null
+                            )
+                        }
                     } else {
-                        _uiState.value = _uiState.value.copy(
-                            isScanning = false,
-                            error = "Produk dengan barcode $barcode tidak ditemukan"
-                        )
+                        _uiState.update {
+                            it.copy(
+                                isScanning = false,
+                                error = "Produk dengan barcode $barcode tidak ditemukan"
+                            )
+                        }
                     }
                 } else {
-                    _uiState.value = _uiState.value.copy(
-                        isScanning = false,
-                        error = "Gagal mencari produk dengan barcode"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isScanning = false,
+                            error = "Gagal mencari produk dengan barcode"
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isScanning = false,
-                    error = "Error scanning: ${e.message}"
-                )
+                _uiState.update {
+                    it.copy(
+                        isScanning = false,
+                        error = "Error scanning: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -1133,7 +1153,7 @@ class PosViewModel @Inject constructor(
      * @see PosUiState.error
      */
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 
     /**
@@ -1168,7 +1188,7 @@ class PosViewModel @Inject constructor(
      * @see PosUiState.successMessage
      */
     fun clearSuccessMessage() {
-        _uiState.value = _uiState.value.copy(successMessage = null)
+        _uiState.update { it.copy(successMessage = null) }
     }
 
     /**
@@ -1204,17 +1224,19 @@ class PosViewModel @Inject constructor(
      * @see PosUiState.total
      */
     private fun updateCartTotals(cartItems: List<CartItem>) {
-        val subtotal = cartItems.sumOf { it.totalPrice }
-        val tax = subtotal * 0.1 // 10% tax, adjust as needed
-        val discount = _uiState.value.discount
-        val total = subtotal + tax - discount
+        _uiState.update { currentState ->
+            val subtotal = cartItems.sumOf { it.totalPrice }
+            val tax = subtotal * 0.1 // 10% tax, adjust as needed
+            val discount = currentState.discount
+            val total = subtotal + tax - discount
 
-        _uiState.value = _uiState.value.copy(
-            cartItems = cartItems,
-            subtotal = subtotal,
-            tax = tax,
-            total = maxOf(0.0, total)
-        )
+            currentState.copy(
+                cartItems = cartItems,
+                subtotal = subtotal,
+                tax = tax,
+                total = maxOf(0.0, total)
+            )
+        }
     }
 
     /**
@@ -1305,12 +1327,12 @@ class PosViewModel @Inject constructor(
         val saleId = currentState.completedSaleId
 
         if (saleId == null) {
-            _uiState.value = currentState.copy(error = "ID penjualan tidak ditemukan")
+            _uiState.update { it.copy(error = "ID penjualan tidak ditemukan") }
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = currentState.copy(isPrintingReceipt = true, error = null)
+            _uiState.update { it.copy(isPrintingReceipt = true, error = null) }
 
             try {
                 val cashierName = authService.getCurrentUser()?.username ?: "Kasir"
@@ -1322,21 +1344,27 @@ class PosViewModel @Inject constructor(
                 )
 
                 if (result.isSuccess) {
-                    _uiState.value = currentState.copy(
-                        isPrintingReceipt = false,
-                        successMessage = "Receipt berhasil dicetak"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isPrintingReceipt = false,
+                            successMessage = "Receipt berhasil dicetak"
+                        )
+                    }
                 } else {
-                    _uiState.value = currentState.copy(
-                        isPrintingReceipt = false,
-                        error = result.exceptionOrNull()?.message ?: "Gagal mencetak receipt"
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isPrintingReceipt = false,
+                            error = result.exceptionOrNull()?.message ?: "Gagal mencetak receipt"
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.value = currentState.copy(
-                    isPrintingReceipt = false,
-                    error = "Error: ${e.message}"
-                )
+                _uiState.update {
+                    it.copy(
+                        isPrintingReceipt = false,
+                        error = "Error: ${e.message}"
+                    )
+                }
             }
         }
     }
@@ -1375,10 +1403,12 @@ class PosViewModel @Inject constructor(
      * @see startNewTransaction
      */
     fun dismissReceiptDialog() {
-        _uiState.value = _uiState.value.copy(
-            showReceiptDialog = false,
-            completedSaleId = null
-        )
+        _uiState.update {
+            it.copy(
+                showReceiptDialog = false,
+                completedSaleId = null
+            )
+        }
     }
 
     /**
