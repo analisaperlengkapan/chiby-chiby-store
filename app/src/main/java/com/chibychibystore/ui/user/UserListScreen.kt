@@ -100,7 +100,8 @@ fun UserListScreen(
                                 expanded = false
                             }
                         )
-                        Role.values().forEach { role ->
+                        val roles = remember { Role.values() }
+                        roles.forEach { role ->
                             DropdownMenuItem(
                                 text = { Text(role.name) },
                                 onClick = {

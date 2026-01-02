@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.chibychibystore.data.local.entity.ItemPenjualan
+import com.chibychibystore.data.model.TopProductDto
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -26,4 +27,7 @@ interface ItemPenjualanDao {
 
     @Query("SELECT COUNT(*) FROM item_penjualan WHERE saleId = :saleId")
     suspend fun getItemCountBySaleId(saleId: Long): Int
+
+    @Query("SELECT productId, SUM(quantity) as quantitySold, SUM(totalPrice) as totalRevenue FROM item_penjualan GROUP BY productId ORDER BY quantitySold DESC LIMIT :limit")
+    suspend fun getTopSellingProducts(limit: Int): List<TopProductDto>
 }

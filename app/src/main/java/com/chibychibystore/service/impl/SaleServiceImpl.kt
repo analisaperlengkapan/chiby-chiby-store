@@ -44,6 +44,21 @@ class SaleServiceImpl @Inject constructor(
             calculatedTotal += item.quantity * item.unitPrice
         }
 
+        // Validate stock availability
+        val productIds = items.map { it.productId }.distinct()
+        val productsResult = produkRepository.getProdukByIds(productIds)
+        if (productsResult is Result.Error) throw productsResult.exception
+        val productsMap = (productsResult as Result.Success).data.associateBy { it.id }
+
+        items.forEach { item ->
+            val product = productsMap[item.productId]
+                ?: throw Exception("Produk dengan ID ${item.productId} tidak ditemukan")
+
+            if (product.stockQuantity < item.quantity) {
+                throw Exception("Stok tidak mencukupi untuk produk: ${product.name}. Sisa: ${product.stockQuantity}, Diminta: ${item.quantity}")
+            }
+        }
+
         // Update sale total amount and date
         val saleToSave = sale.copy(
             totalAmount = calculatedTotal,

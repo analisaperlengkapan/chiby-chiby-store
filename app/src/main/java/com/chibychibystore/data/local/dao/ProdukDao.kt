@@ -66,4 +66,13 @@ interface ProdukDao {
 
     @Query("SELECT SUM(stockQuantity) FROM produk")
     suspend fun getTotalStock(): Int?
+
+    @Query("SELECT COUNT(*) FROM produk WHERE stockQuantity <= minStock AND stockQuantity > 0")
+    suspend fun countLowStock(): Int
+
+    @Query("SELECT COUNT(*) FROM produk WHERE stockQuantity = 0")
+    suspend fun countOutOfStock(): Int
+
+    @Query("SELECT SUM(stockQuantity * costPrice) FROM produk")
+    suspend fun getTotalInventoryValue(): Double?
 }

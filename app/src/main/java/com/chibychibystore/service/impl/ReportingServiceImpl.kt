@@ -1,5 +1,6 @@
 package com.chibychibystore.service.impl
 
+import com.chibychibystore.constant.Permissions
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.FinancialReport
@@ -8,6 +9,8 @@ import com.chibychibystore.service.InventoryReport
 import com.chibychibystore.service.ReportingService
 import com.chibychibystore.service.SalesSummary
 import com.chibychibystore.service.TopProduct
+import com.chibychibystore.service.ProductSalesData
+import com.chibychibystore.service.LowStockProduct
 import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.PembelianRepository
@@ -33,7 +36,7 @@ class ReportingServiceImpl @Inject constructor(
 
     // Basic reports
     override suspend fun getDailySalesReport(date: LocalDate): Result<DailySalesReport> = try {
-        if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
         } else {
             val sales = penjualanRepository.getSalesInDateRange(date, date)
@@ -47,7 +50,7 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getMonthlySalesReport(year: Int, month: Int): Result<MonthlySalesReport> = try {
-        if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
         } else {
             Result.success(MonthlySalesReport(year, month, 0.0, 0, emptyList(), emptyList()))
@@ -57,7 +60,7 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getFinancialReport(startDate: LocalDate, endDate: LocalDate): Result<FinancialReport> = try {
-        if (!authService.hasPermission("VIEW_FINANCIAL_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_FINANCIAL_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan keuangan"))
         } else {
             val totalRevenue = penjualanRepository.getTotalPenjualanByDateRange(startDate, endDate).getOrNull() ?: 0.0
@@ -73,30 +76,66 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getInventoryReport(): Result<InventoryReport> = try {
-        if (!authService.hasPermission("VIEW_INVENTORY_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_INVENTORY_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan inventory"))
         } else {
-            Result.success(InventoryReport(0, 0.0, 0, 0, emptyList()))
+            val totalProducts = produkRepository.getProdukCount().getOrNull() ?: 0
+            val totalValue = produkRepository.getTotalInventoryValue().getOrNull() ?: 0.0
+
+            val lowStockCount = produkRepository.countLowStock().getOrNull() ?: 0
+            val outOfStockCount = produkRepository.countOutOfStock().getOrNull() ?: 0
+
+            Result.success(InventoryReport(
+                totalProducts = totalProducts,
+                totalValue = totalValue,
+                lowStockCount = lowStockCount,
+                outOfStockCount = outOfStockCount,
+                categoryBreakdown = emptyList() // Needs complex aggregation
+            ))
         }
     } catch (e: Exception) {
         Result.failure(Exception("getInventoryReport failed", e))
     }
 
     override suspend fun getTopSellingProducts(limit: Int): Result<List<ProductSalesData>> = try {
-        if (!authService.hasPermission("VIEW_INVENTORY_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_INVENTORY_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat data produk terlaris"))
         } else {
-            Result.success(emptyList())
+            val topProductsDto = itemPenjualanRepository.getTopSellingProducts(limit).getOrNull() ?: emptyList()
+
+            // Hydrate with product names (N+1 problem if naive, but batch fetch is better)
+            val productIds = topProductsDto.map { it.productId }
+            val productsMap = produkRepository.getProdukByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+
+            val result = topProductsDto.map { dto ->
+                ProductSalesData(
+                    productId = dto.productId,
+                    productName = productsMap[dto.productId]?.name ?: "Unknown Product",
+                    quantitySold = dto.quantitySold,
+                    totalRevenue = dto.totalRevenue
+                )
+            }
+            Result.success(result)
         }
     } catch (e: Exception) {
         Result.failure(Exception("getTopSellingProducts failed", e))
     }
 
     override suspend fun getLowStockReport(): Result<List<LowStockProduct>> = try {
-        if (!authService.hasPermission("VIEW_INVENTORY_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_INVENTORY_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan stok rendah"))
         } else {
-            Result.success(emptyList())
+            val lowStockProducts = produkRepository.getLowStockProduk().first()
+            val result = lowStockProducts.map {
+                LowStockProduct(
+                    productId = it.id,
+                    productName = it.name,
+                    currentStock = it.stockQuantity,
+                    minStock = it.minStock,
+                    reorderQuantity = it.minStock * 2 // Simple rule
+                )
+            }
+            Result.success(result)
         }
     } catch (e: Exception) {
         Result.failure(Exception("getLowStockReport failed", e))
@@ -106,7 +145,7 @@ class ReportingServiceImpl @Inject constructor(
 
     // --- Helper methods used by UI/PDF/tests ---
     override suspend fun getGrossSales(startDate: LocalDate, endDate: LocalDate): Result<GrossSalesReport> = try {
-        if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat data penjualan kotor"))
         } else {
             val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
@@ -122,7 +161,7 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getProfitMargin(startDate: LocalDate, endDate: LocalDate): Result<ProfitMarginReport> = try {
-        if (!authService.hasPermission("VIEW_FINANCIAL_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_FINANCIAL_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat margin keuntungan"))
         } else {
             // For profit calculations, revenue is the total sales in the period (including refunded sales)
@@ -141,7 +180,7 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getNetProfit(startDate: LocalDate, endDate: LocalDate): Result<NetProfitReport> = try {
-        if (!authService.hasPermission("VIEW_FINANCIAL_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_FINANCIAL_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laba bersih"))
         } else {
             // Calculate Profit Margin first
@@ -165,7 +204,7 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getSalesByProduct(startDate: LocalDate, endDate: LocalDate): Result<List<ProductSales>> = try {
-        if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan per produk"))
         } else {
             val itemsByProduct = mutableMapOf<Long, Triple<Int, Double, Double>>() // Qty, Revenue, Cost
@@ -201,7 +240,7 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getSalesByCategory(startDate: LocalDate, endDate: LocalDate): Result<List<CategorySales>> = try {
-        if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan per kategori"))
         } else {
             val byCategory = mutableMapOf<Long, Triple<Int, Double, Double>>()
@@ -237,7 +276,7 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getSalesTrend(startDate: LocalDate, endDate: LocalDate): Result<List<TrendData>> = try {
-        if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat tren penjualan"))
         } else {
             val days = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate).toInt()
@@ -261,7 +300,7 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getIncomeStatement(date: LocalDate): Result<IncomeStatement> = try {
-        if (!authService.hasPermission("VIEW_FINANCIAL_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_FINANCIAL_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan laba rugi"))
         } else {
             val start = date.withDayOfMonth(1)
@@ -290,7 +329,7 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getCashFlow(startDate: LocalDate, endDate: LocalDate): Result<CashFlow> = try {
-        if (!authService.hasPermission("VIEW_FINANCIAL_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_FINANCIAL_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan arus kas"))
         } else {
             val summary = cashManagementService.getCashFlowSummary(startDate, endDate).getOrNull()
@@ -310,7 +349,7 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getExpenseReport(startDate: LocalDate, endDate: LocalDate): Result<ExpenseReport> = try {
-        if (!authService.hasPermission("VIEW_FINANCIAL_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_FINANCIAL_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan pengeluaran"))
         } else {
             val expenses = pengeluaranRepository.getExpensesInDateRange(startDate, endDate)
@@ -323,7 +362,7 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override suspend fun getBalanceSheet(asOfDate: LocalDate): Result<BalanceSheet> = try {
-        if (!authService.hasPermission("VIEW_FINANCIAL_REPORTS")) {
+        if (!authService.hasPermission(Permissions.VIEW_FINANCIAL_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan neraca"))
         } else {
             val bs = balanceSheetService.generateBalanceSheet(asOfDate).getOrNull()

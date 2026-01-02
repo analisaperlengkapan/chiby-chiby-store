@@ -1,6 +1,7 @@
 package com.chibychibystore.service.impl
 
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.constant.Permissions
 import com.chibychibystore.service.UserManagementService
 import com.chibychibystore.service.UserStats
 import com.chibychibystore.data.local.entity.Pengguna
@@ -27,7 +28,7 @@ class UserManagementServiceImpl @Inject constructor(
 
     override suspend fun getUserById(userId: Long): Result<Pengguna> {
         return try {
-            if (!authService.hasPermission("MANAGE_USERS")) {
+            if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat detail user"))
             }
             penggunaRepository.getPenggunaById(userId)
@@ -38,7 +39,7 @@ class UserManagementServiceImpl @Inject constructor(
 
     override suspend fun getUserStats(): Result<UserStats> {
         return try {
-            if (!authService.hasPermission("MANAGE_USERS")) {
+            if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat statistik user"))
             }
             val allUsers = penggunaRepository.getAllPengguna().first()
@@ -78,7 +79,7 @@ class UserManagementServiceImpl @Inject constructor(
         createdBy: Long
     ): Result<Long> {
         return try {
-            if (!authService.hasPermission("MANAGE_USERS")) {
+            if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk membuat user"))
             }
             // Validate input
@@ -118,7 +119,7 @@ class UserManagementServiceImpl @Inject constructor(
         updatedBy: Long
     ): Result<Unit> {
         return try {
-            if (!authService.hasPermission("MANAGE_USERS")) {
+            if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengupdate user"))
             }
 
@@ -176,7 +177,7 @@ class UserManagementServiceImpl @Inject constructor(
             }
 
             // Check permissions (only OWNER can delete users)
-            if (!authService.hasPermission("MANAGE_USERS")) {
+            if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk menghapus user"))
             }
             // Optional: prevent deleting another owner/manager if not owner
@@ -202,7 +203,7 @@ class UserManagementServiceImpl @Inject constructor(
         resetBy: Long
     ): Result<Unit> {
         return try {
-            if (!authService.hasPermission("MANAGE_USERS")) {
+            if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mereset password"))
             }
             if (newPassword.length < 6) {
@@ -238,7 +239,7 @@ class UserManagementServiceImpl @Inject constructor(
     override suspend fun deactivateUser(userId: Long, deactivatedBy: Long): Result<Unit> {
         return try {
             // Check permissions
-            if (!authService.hasPermission("MANAGE_USERS")) {
+            if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk menonaktifkan user"))
             }
             val currentUser = authService.getCurrentUser()
@@ -263,7 +264,7 @@ class UserManagementServiceImpl @Inject constructor(
     override suspend fun activateUser(userId: Long, activatedBy: Long): Result<Unit> {
         return try {
             // Check permissions
-            if (!authService.hasPermission("MANAGE_USERS")) {
+            if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengaktifkan user"))
             }
 

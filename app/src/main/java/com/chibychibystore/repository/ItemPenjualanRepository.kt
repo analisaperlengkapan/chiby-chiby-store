@@ -3,6 +3,7 @@ package com.chibychibystore.repository
 import com.chibychibystore.data.local.dao.ItemPenjualanDao
 import com.chibychibystore.data.local.entity.ItemPenjualan
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.data.model.TopProductDto
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -95,6 +96,18 @@ class ItemPenjualanRepository @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("deleteItemPenjualanByPenjualanId", e))
+        }
+    }
+
+    /**
+     * Get top selling products
+     */
+    suspend fun getTopSellingProducts(limit: Int): Result<List<TopProductDto>> {
+        return try {
+            val result = itemPenjualanDao.getTopSellingProducts(limit)
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getTopSellingProducts", e))
         }
     }
 }
