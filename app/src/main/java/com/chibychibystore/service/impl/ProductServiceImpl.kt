@@ -1,5 +1,6 @@
 package com.chibychibystore.service.impl
 
+import com.chibychibystore.constant.Permissions
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.ProdukRepository
@@ -77,7 +78,7 @@ class ProductServiceImpl @Inject constructor(
      */
     override suspend fun createProduct(product: Produk): Result<Produk> {
         return try {
-            if (!authService.hasPermission("EDIT_INVENTORY")) {
+            if (!authService.hasPermission(Permissions.EDIT_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
             }
             // Validasi input berdasarkan business rules
@@ -116,7 +117,7 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun updateProduct(product: Produk): Result<Produk> {
         return try {
-            if (!authService.hasPermission("EDIT_INVENTORY")) {
+            if (!authService.hasPermission(Permissions.EDIT_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
             }
             // Validasi input
@@ -146,7 +147,7 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun deleteProduct(id: String): Result<Unit> {
         return try {
-            if (!authService.hasPermission("EDIT_INVENTORY")) {
+            if (!authService.hasPermission(Permissions.EDIT_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
             }
             val idLong = id.toLongOrNull() ?: return Result.failure(Exception("ID Produk tidak valid: $id"))
@@ -160,7 +161,7 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun getProduct(id: String): Result<Produk?> {
         return try {
-            if (!authService.hasPermission("VIEW_INVENTORY")) {
+            if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
             }
             val idLong = id.toLongOrNull() ?: return Result.failure(Exception("ID Produk tidak valid: $id"))
@@ -180,7 +181,7 @@ class ProductServiceImpl @Inject constructor(
         searchQuery: String?
     ): Result<List<Produk>> {
         return try {
-            if (!authService.hasPermission("VIEW_INVENTORY")) {
+            if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
             }
             val flow = when {
@@ -198,7 +199,7 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun searchProducts(query: String): Result<List<Produk>> {
         return try {
-            if (!authService.hasPermission("VIEW_INVENTORY")) {
+            if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
             }
             val products = productRepository.searchProduk(query).first()
@@ -210,7 +211,7 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun updateStock(productId: String, newStock: Int): Result<Unit> {
         return try {
-            if (!authService.hasPermission("EDIT_INVENTORY")) {
+            if (!authService.hasPermission(Permissions.EDIT_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
             }
 
@@ -237,7 +238,7 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun getLowStockProducts(): Result<List<Produk>> {
         return try {
-            if (!authService.hasPermission("VIEW_INVENTORY")) {
+            if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
             }
             val products = productRepository.getLowStockProduk().first()
