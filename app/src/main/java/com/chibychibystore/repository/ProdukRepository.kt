@@ -38,6 +38,18 @@ class ProdukRepository @Inject constructor(
     }
 
     /**
+     * Get produk by multiple IDs
+     */
+    suspend fun getProdukByIds(ids: List<Long>): Result<List<Produk>> {
+        return try {
+            val produkList = produkDao.getProdukByIds(ids)
+            Result.success(produkList)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getProdukByIds", e))
+        }
+    }
+
+    /**
      * Compatibility wrapper for legacy code / tests that expect a nullable Produk return
      */
     suspend fun getProduk(id: Long): Produk? {

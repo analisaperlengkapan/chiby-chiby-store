@@ -158,9 +158,13 @@ class SaleServiceImpl @Inject constructor(
         val sale = saleWithItems.penjualan
         val items = saleWithItems.items
 
-        // Fetch product names for receipt
+        // Fetch product names for receipt (optimized batch fetch)
+        val productIds = items.map { it.productId }.distinct()
+        val productsResult = produkRepository.getProdukByIds(productIds)
+        val productsMap = productsResult.getOrNull()?.associateBy { it.id } ?: emptyMap()
+
         val receiptItems = items.map { item ->
-            val product = produkRepository.getProdukById(item.productId).getOrNull()
+            val product = productsMap[item.productId]
             ReceiptItem(
                 name = product?.name ?: "Unknown Product",
                 quantity = item.quantity,
