@@ -201,4 +201,40 @@ class ProdukRepository @Inject constructor(
         }
     }
 
+    /**
+     * Count low stock products
+     */
+    suspend fun countLowStock(): Result<Int> {
+        return try {
+            val count = produkDao.countLowStock()
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("countLowStock", e))
+        }
+    }
+
+    /**
+     * Count out of stock products
+     */
+    suspend fun countOutOfStock(): Result<Int> {
+        return try {
+            val count = produkDao.countOutOfStock()
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("countOutOfStock", e))
+        }
+    }
+
+    /**
+     * Get total inventory value (stock * costPrice)
+     */
+    suspend fun getTotalInventoryValue(): Result<Double> {
+        return try {
+            val value = produkDao.getTotalInventoryValue() ?: 0.0
+            Result.success(value)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getTotalInventoryValue", e))
+        }
+    }
+
 }
