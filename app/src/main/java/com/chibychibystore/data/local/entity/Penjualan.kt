@@ -30,6 +30,8 @@ data class Penjualan(
     @Serializable(with = DateSerializer::class)
     val saleDate: Date,
     val totalAmount: Double,
+    val tax: Double = 0.0,
+    val discount: Double = 0.0,
     val paymentMethod: PaymentMethod,
     val cashierId: Long,
     @Serializable(with = DateSerializer::class)

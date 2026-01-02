@@ -40,7 +40,7 @@ import com.chibychibystore.data.local.entity.Produk
         Pengeluaran::class,
         UserSession::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

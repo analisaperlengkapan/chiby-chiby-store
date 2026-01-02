@@ -56,4 +56,16 @@ interface PenjualanDao {
 
     @Query("SELECT SUM(totalAmount) FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate")
     suspend fun getTotalSalesAmount(startDate: Date, endDate: Date): Double?
+
+    @Query("SELECT SUM(totalAmount - tax) FROM penjualan WHERE isRefunded = 0 AND saleDate BETWEEN :startDate AND :endDate")
+    suspend fun getTotalRevenue(startDate: Date, endDate: Date): Double?
+
+    @Query("SELECT SUM(tax) FROM penjualan WHERE isRefunded = 0 AND saleDate BETWEEN :startDate AND :endDate")
+    suspend fun getTotalTax(startDate: Date, endDate: Date): Double?
+
+    @Query("SELECT SUM(discount) FROM penjualan WHERE isRefunded = 0 AND saleDate BETWEEN :startDate AND :endDate")
+    suspend fun getTotalDiscount(startDate: Date, endDate: Date): Double?
+
+    @Query("SELECT SUM(totalAmount) FROM penjualan WHERE isRefunded = 0 AND saleDate BETWEEN :startDate AND :endDate")
+    suspend fun getTotalCashReceipts(startDate: Date, endDate: Date): Double?
 }
