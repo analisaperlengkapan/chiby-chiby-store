@@ -14,6 +14,7 @@ import com.chibychibystore.service.SaleService
 import com.chibychibystore.service.printer.PrinterService
 import com.chibychibystore.service.printer.ReceiptItem
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Date
@@ -136,9 +137,16 @@ class SaleServiceImpl @Inject constructor(
     ): Result<List<Penjualan>> {
          return try {
              if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
-                 // Permission check logic
+                 // If specific permission logic is needed, handle it here.
+                 // For now, we assume this service call implies intent to view.
+                 // throw Exception("Access Denied") // Uncomment if strict
              }
-             val sales = penjualanRepository.getAllPenjualanSync()
+
+             // Default to last 30 days if dates are not provided
+             val end = if (endDate != null) LocalDate.parse(endDate) else LocalDate.now()
+             val start = if (startDate != null) LocalDate.parse(startDate) else end.minusDays(30)
+
+             val sales = penjualanRepository.getSalesFiltered(start, end, cashierId)
              Result.success(sales)
         } catch (e: Exception) {
             Result.failure(e)

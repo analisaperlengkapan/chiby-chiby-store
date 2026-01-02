@@ -151,11 +151,12 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat data penjualan kotor"))
         } else {
-            val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
-            // Exclude refunded sales from gross calculations
-            val salesFiltered = sales.filter { !it.isRefunded }
-            val totalSales = salesFiltered.sumOf { it.totalAmount }
-            val totalTransactions = salesFiltered.size
+            // Optimized using DB aggregation
+            val totalSales = penjualanRepository.getTotalCashReceipts(startDate, endDate).getOrNull() ?: 0.0
+
+            // Optimized count using DB query
+            val totalTransactions = penjualanRepository.getPenjualanCountNonRefunded(startDate, endDate).getOrNull() ?: 0
+
             val avg = if (totalTransactions > 0) totalSales / totalTransactions else 0.0
             Result.success(GrossSalesReport(totalSales, totalTransactions, avg))
         }
@@ -210,30 +211,27 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan per produk"))
         } else {
-            val itemsByProduct = mutableMapOf<Long, Triple<Int, Double, Double>>() // Qty, Revenue, Cost
-            val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
-            // Exclude refunded sales
-            val salesFiltered = sales.filter { !it.isRefunded }
+            // Optimized using single SQL query aggregation
+            val statsResult = itemPenjualanRepository.getProductSalesStats(startDate, endDate)
+            val salesStats = statsResult.getOrNull() ?: emptyList()
 
-            salesFiltered.forEach { sale ->
-                val items = itemPenjualanRepository.getItemsBySaleId(sale.id).first()
-                items.forEach { item ->
-                    val prod = produkRepository.getProduk(item.productId)
-                    val cost = (prod?.costPrice ?: 0.0) * item.quantity
-                    val current = itemsByProduct[item.productId] ?: Triple(0, 0.0, 0.0)
-                    itemsByProduct[item.productId] = Triple(current.first + item.quantity, current.second + item.totalPrice, current.third + cost)
-                }
-            }
+            // Bulk fetch product details to avoid N+1
+            val productIds = salesStats.map { it.productId }
+            val productsMap = produkRepository.getProdukByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
 
-            val result = itemsByProduct.map { (pid, triple) ->
-                val prod = produkRepository.getProduk(pid)
+            val result = salesStats.map { stat ->
+                val prod = productsMap[stat.productId]
+                val costPrice = prod?.costPrice ?: 0.0
+                val totalCost = costPrice * stat.quantitySold
+                val profit = stat.totalRevenue - totalCost
+
                 ProductSales(
-                    productId = pid,
-                    productName = prod?.name ?: "-",
-                    quantitySold = triple.first,
-                    totalRevenue = triple.second,
-                    totalCost = triple.third,
-                    profit = triple.second - triple.third
+                    productId = stat.productId,
+                    productName = prod?.name ?: "Unknown Product",
+                    quantitySold = stat.quantitySold.toInt(),
+                    totalRevenue = stat.totalRevenue,
+                    totalCost = totalCost,
+                    profit = profit
                 )
             }
             Result.success(result)

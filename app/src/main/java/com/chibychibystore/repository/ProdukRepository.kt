@@ -78,6 +78,18 @@ class ProdukRepository @Inject constructor(
     }
 
     /**
+     * Get multiple produk by IDs
+     */
+    suspend fun getProdukByIds(ids: List<Long>): Result<List<Produk>> {
+        return try {
+            val products = produkDao.getProdukByIds(ids)
+            Result.success(products)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getProdukByIds", e))
+        }
+    }
+
+    /**
      * Get produk by category
      */
     fun getProdukByCategory(categoryId: Long): Flow<List<Produk>> = produkDao.getProdukByCategory(categoryId)
