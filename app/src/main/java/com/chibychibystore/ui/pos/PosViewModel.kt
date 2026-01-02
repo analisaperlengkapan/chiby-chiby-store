@@ -11,8 +11,15 @@ import com.chibychibystore.service.ProductService
 import com.chibychibystore.constant.AppConstants
 import com.chibychibystore.service.SaleService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -288,118 +295,68 @@ class PosViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PosUiState())
     val uiState: StateFlow<PosUiState> = _uiState
-    private var searchJob: kotlinx.coroutines.Job? = null
+
+    // Search query state for reactive pipeline
+    private val _searchQuery = MutableStateFlow("")
+
+    init {
+        setupSearchPipeline()
+    }
+
+    /**
+     * Initializes the reactive search pipeline.
+     * Uses debounce and flatMapLatest to handle search queries efficiently.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    private fun setupSearchPipeline() {
+        viewModelScope.launch {
+            _searchQuery
+                .debounce(300L) // Debounce input to reduce unnecessary calls
+                .onEach { query ->
+                    // Set loading state only if query is not blank
+                    if (query.isNotBlank()) {
+                        _uiState.update { it.copy(isSearching = true) }
+                    }
+                }
+                .flatMapLatest { query ->
+                    if (query.isBlank()) {
+                        flowOf(emptyList())
+                    } else {
+                        // Use observeSearchProducts for real-time updates (e.g., stock changes)
+                        productService.observeSearchProducts(query)
+                            .catch { e ->
+                                _uiState.update { it.copy(error = e.message ?: "Gagal mencari produk") }
+                                emit(emptyList())
+                            }
+                    }
+                }
+                .collect { products ->
+                    _uiState.update {
+                        it.copy(
+                            searchResults = products,
+                            isSearching = false
+                        )
+                    }
+                }
+        }
+    }
 
     /**
      * Search produk berdasarkan query untuk ditambahkan ke cart
      *
-     * **Business Logic Flow:**
-     * 1. **Input Validation**: Check jika query kosong (immediate return)
-     * 2. **State Update**: Set searchQuery dan isSearching = true
-     * 3. **Async Search**: Call ProductService.searchProducts() dalam coroutine
-     * 4. **Result Processing**: Update searchResults atau error state
-     * 5. **UI Update**: Trigger reactive UI updates melalui StateFlow
-     *
-     * **Search Behavior:**
-     * - Real-time search saat user mengetik
-     * - Case-insensitive partial matching
-     * - Search by name dan barcode
-     * - Debouncing recommended di UI layer
-     *
-     * **State Management:**
-     * - searchQuery: Tracks current search input
-     * - isSearching: Loading state untuk UI feedback
-     * - searchResults: List produk yang match query
-     * - error: Error message jika search gagal
-     *
-     * **Error Scenarios:**
-     * - Network/Database errors: User-friendly error message
-     * - Service unavailable: Graceful degradation
-     * - Invalid query: Handled by service layer
-     * - Empty results: Normal case, not error
-     *
-     * **Performance Considerations:**
-     * - Async execution untuk non-blocking UI
-     * - ViewModelScope untuk automatic cancellation
-     * - Minimal state updates untuk efficiency
-     * - Service-level caching untuk repeated queries
-     *
-     * **UI Integration:**
-     * - Triggers search results display
-     * - Shows loading indicator during search
-     * - Displays error messages jika gagal
-     * - Enables product selection untuk cart addition
-     *
-     * **Usage Example:**
-     * ```kotlin
-     * // In Composable - with debouncing
-     * var searchQuery by remember { mutableStateOf("") }
-     * val debouncedQuery by remember(searchQuery) {
-     *     derivedStateOf {
-     *         // Debounce logic here
-     *         searchQuery
-     *     }
-     * }
-     *
-     * LaunchedEffect(debouncedQuery) {
-     *     if (debouncedQuery.isNotBlank()) {
-     *         viewModel.searchProducts(debouncedQuery)
-     *     }
-     * }
-     * ```
+     * **Refactored to use Reactive Stream Pattern**
+     * Instead of manual coroutine management, this updates the `_searchQuery` flow
+     * which triggers the pipeline defined in `setupSearchPipeline`.
      *
      * @param query Search query string (name/barcode, case-insensitive)
-     *
-     * @see ProductService.searchProducts
-     * @see PosUiState.searchQuery
-     * @see PosUiState.searchResults
-     * @see PosUiState.isSearching
      */
     fun searchProducts(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
+        _searchQuery.value = query
 
+        // Immediate clear if blank (optional optimization as flow also handles it)
         if (query.isBlank()) {
-            searchJob?.cancel()
             _uiState.update { it.copy(searchResults = emptyList(), isSearching = false) }
-            return
-        }
-
-        searchJob?.cancel()
-        searchJob = viewModelScope.launch {
-            _uiState.update { it.copy(isSearching = true) }
-            // Debounce delay
-            kotlinx.coroutines.delay(300)
-
-            try {
-                productService.searchProducts(query)
-                    .onSuccess { products ->
-                        _uiState.update {
-                            it.copy(
-                                searchResults = products,
-                                isSearching = false
-                            )
-                        }
-                    }
-                    .onFailure { error ->
-                        _uiState.update {
-                            it.copy(
-                                searchResults = emptyList(),
-                                isSearching = false,
-                                error = error.message ?: "Gagal mencari produk"
-                            )
-                        }
-                    }
-            } catch (e: Exception) {
-                if (e !is kotlinx.coroutines.CancellationException) {
-                    _uiState.update {
-                        it.copy(
-                            searchResults = emptyList(),
-                            isSearching = false,
-                            error = "Error: ${e.message}"
-                        )
-                    }
-                }
-            }
         }
     }
 

@@ -10,8 +10,14 @@ import com.chibychibystore.service.UserStats
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -257,15 +263,6 @@ class UserManagementViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     private val _selectedRole = MutableStateFlow<Role?>(null)
 
-    // Derived User List Stream
-    private val _usersFlow = userManagementService.getAllUsers()
-        .catch { e ->
-             // Emit empty list on error but keep the error accessible via side effects if needed
-             // For simplicity, we just log/swallow here and let the UI state handling catch it via combination or distinct error flow
-             // Ideally, we'd emit a Result wrapper, but our UiState structure handles it differently.
-             emit(emptyList())
-        }
-
     /**
      * Initializes the ViewModel and loads initial user data.
      *
@@ -298,24 +295,45 @@ class UserManagementViewModel @Inject constructor(
      * Reactive UI State Pipeline
      * Combines users, search query, role filter, and dialog states into a single UI state.
      */
-    val uiState: StateFlow<UserManagementUiState> = kotlinx.coroutines.flow.combine(
-        _usersFlow,
-        _searchQuery.debounce(300),
-        _selectedRole,
-        _uiState // We still need the base mutable state for dialog flags and messages
-    ) { users, query, role, currentState ->
-        currentState.copy(
-            users = users,
-            filteredUsers = filterUsers(users, query, role),
-            searchQuery = query,
-            selectedRole = role,
-            isLoading = false // Data flow emitted, so loading is done
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    val uiState: StateFlow<UserManagementUiState> = run {
+        val filteredUsersFlow = _searchQuery
+            .debounce(300L)
+            .flatMapLatest { query ->
+                if (query.isBlank()) {
+                    userManagementService.getAllUsers()
+                } else {
+                    userManagementService.searchUsers(query)
+                }
+            }
+            .catch { emit(emptyList()) }
+
+        combine(
+            filteredUsersFlow,
+            _searchQuery,
+            _selectedRole,
+            _uiState // We still need the base mutable state for dialog flags and messages
+        ) { users, query, role, currentState ->
+            // Apply role filter in memory since we already fetched by query
+            val finalFilteredUsers = if (role != null) {
+                users.filter { it.role == role }
+            } else {
+                users
+            }
+
+            currentState.copy(
+                users = users, // Note: This might represent filtered list now if searching
+                filteredUsers = finalFilteredUsers,
+                searchQuery = query,
+                selectedRole = role,
+                isLoading = false // Data flow emitted, so loading is done
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = UserManagementUiState(isLoading = true)
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
-        initialValue = UserManagementUiState(isLoading = true)
-    )
+    }
 
     /**
      * Loads user statistics from the UserManagementService.
@@ -395,40 +413,6 @@ class UserManagementViewModel @Inject constructor(
         _selectedRole.update { role }
     }
 
-    /**
-     * Applies search and role filters to a list of users.
-     *
-     * This method implements the core filtering logic for user management,
-     * supporting both text search and role-based filtering.
-     *
-     * ## Filter Criteria:
-     * - **Search Query**: Matches username (case-insensitive partial match)
-     * - **Role Filter**: Exact role match or null for all roles
-     * - **Combined Filtering**: Both criteria must be satisfied
-     *
-     * ## Search Algorithm:
-     * - Username contains query string (partial match)
-     * - Case-insensitive comparison
-     * - Empty query matches all users
-     *
-     * ## Role Filtering:
-     * - Null role parameter matches all roles
-     * - Specific role matches exact role enum value
-     * - Supports all defined roles (OWNER, MANAGER, CASHIER, WAREHOUSE)
-     *
-     * @param users The complete list of users to filter
-     * @param query The search query string (empty string matches all)
-     * @param role The role filter (null matches all roles)
-     * @return Filtered list of users matching both criteria
-     */
-    private fun filterUsers(users: List<Pengguna>, query: String, role: Role?): List<Pengguna> {
-        return users.filter { user ->
-            val matchesQuery = query.isBlank() ||
-                    user.username.contains(query, ignoreCase = true)
-            val matchesRole = role == null || user.role == role
-            matchesQuery && matchesRole
-        }
-    }
 
     /**
      * Opens the create-user dialog and resets the create-user form.

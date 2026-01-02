@@ -66,6 +66,9 @@ class UserManagementServiceImpl @Inject constructor(
     override fun getUsersByRole(role: Role): Flow<List<Pengguna>> =
         penggunaRepository.getPenggunaByRole(role)
 
+    override fun searchUsers(query: String): Flow<List<Pengguna>> =
+        penggunaRepository.searchPengguna(query)
+
     override fun canDeleteLastOwner(): Flow<Boolean> {
         return penggunaRepository.getAllPengguna().map { users ->
             users.count { it.role == Role.OWNER } > 1

@@ -61,6 +61,11 @@ class PenggunaRepository @Inject constructor(
     fun getPenggunaByRole(role: Role): Flow<List<Pengguna>> = penggunaDao.getPenggunaByRole(role)
 
     /**
+     * Search pengguna
+     */
+    fun searchPengguna(query: String): Flow<List<Pengguna>> = penggunaDao.searchPengguna(query)
+
+    /**
      * Create pengguna baru
      */
     suspend fun createPengguna(pengguna: Pengguna): Result<Long> {
