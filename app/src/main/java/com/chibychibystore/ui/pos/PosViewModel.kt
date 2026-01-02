@@ -439,10 +439,7 @@ class PosViewModel @Inject constructor(
 
         // Stock validation
         val currentQuantity = existingItem?.quantity ?: 0
-        if (currentQuantity + quantity > product.stockQuantity) {
-            _uiState.update {
-                it.copy(error = "Stok tidak mencukupi. Sisa: ${product.stockQuantity}")
-            }
+        if (!validateStock(product, currentQuantity + quantity)) {
             return
         }
 
@@ -537,11 +534,10 @@ class PosViewModel @Inject constructor(
 
         // Stock validation
         val itemToUpdate = currentState.cartItems.find { it.product.id == productId }
-        if (itemToUpdate != null && newQuantity > itemToUpdate.product.stockQuantity) {
-            _uiState.update {
-                it.copy(error = "Stok tidak mencukupi. Sisa: ${itemToUpdate.product.stockQuantity}")
+        if (itemToUpdate != null) {
+            if (!validateStock(itemToUpdate.product, newQuantity)) {
+                return
             }
-            return
         }
 
         val updatedCartItems = currentState.cartItems.map { item ->
@@ -1440,5 +1436,19 @@ class PosViewModel @Inject constructor(
      */
     fun startNewTransaction() {
         _uiState.update { PosUiState() }
+    }
+
+    /**
+     * Helper to validate stock availability
+     * Returns true if stock is sufficient, false otherwise (and updates error state)
+     */
+    private fun validateStock(product: Produk, requestedQuantity: Int): Boolean {
+        if (requestedQuantity > product.stockQuantity) {
+            _uiState.update {
+                it.copy(error = "Stok tidak mencukupi. Sisa: ${product.stockQuantity}")
+            }
+            return false
+        }
+        return true
     }
 }

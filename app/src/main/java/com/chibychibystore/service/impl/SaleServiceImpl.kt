@@ -85,6 +85,15 @@ class SaleServiceImpl @Inject constructor(
                 if (stockResult is Result.Error) {
                     throw stockResult.exception
                 }
+
+                // Verify stock consistency (Post-update check)
+                // This ensures that even with race conditions, we never end up with negative stock
+                val updatedProductResult = produkRepository.getProdukById(item.productId)
+                val updatedProduct = (updatedProductResult as? Result.Success)?.data
+
+                if (updatedProduct != null && updatedProduct.stockQuantity < 0) {
+                     throw Exception("Stok tidak mencukupi untuk produk: ${updatedProduct.name}. Transaksi dibatalkan.")
+                }
             }
 
             // 5. Return complete object
