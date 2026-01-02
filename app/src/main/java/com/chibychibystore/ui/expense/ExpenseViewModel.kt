@@ -39,99 +39,109 @@ class ExpenseViewModel @Inject constructor(
     private val expenseService: ExpenseService
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ExpenseUiState())
-    val uiState: StateFlow<ExpenseUiState> = _uiState
+    // Filter States
+    private val _startDate = MutableStateFlow<Date?>(Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000)) // Default 30 days
+    private val _endDate = MutableStateFlow<Date?>(Date())
+    private val _selectedCategory = MutableStateFlow<ExpenseCategory?>(null)
+    private val _refreshTrigger = MutableStateFlow(0) // Trigger for manual reload
 
-    init {
-        loadExpenses()
-    }
+    // UI Feedback States
+    private val _isLoading = MutableStateFlow(false)
+    private val _error = MutableStateFlow<String?>(null)
 
-    /**
-     * Load pengeluaran dengan filter
-     */
-    fun loadExpenses() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+    // Data Loading Pipeline
+    @kotlinx.coroutines.ExperimentalCoroutinesApi
+    private val _expensesDataFlow = kotlinx.coroutines.flow.combine(
+        _startDate,
+        _endDate,
+        _selectedCategory,
+        _refreshTrigger
+    ) { start, end, category, _ ->
+        Triple(start, end, category)
+    }.kotlinx.coroutines.flow.flatMapLatest { (start, end, category) ->
+        _isLoading.value = true
+        _error.value = null
 
+        kotlinx.coroutines.flow.flow {
             try {
-                val currentState = _uiState.value
-                val startDate = currentState.startDate ?: Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000) // 30 hari lalu
-                val endDate = currentState.endDate ?: Date()
-                val category = currentState.selectedCategory
-
                 // Convert to LocalDate for service
-                val startLocalDate = java.time.Instant.ofEpochMilli(startDate.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-                val endLocalDate = java.time.Instant.ofEpochMilli(endDate.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                val startLocalDate = start?.let { java.time.Instant.ofEpochMilli(it.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate() }
+                val endLocalDate = end?.let { java.time.Instant.ofEpochMilli(it.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate() }
 
-                // Pass category name to service for optimized filtering
                 val result = expenseService.getExpenses(
                     startLocalDate,
                     endLocalDate,
                     category?.name
                 )
 
-                val expensesList = when (result) {
+                val list = when (result) {
                     is com.chibychibystore.data.model.Result.Success -> result.data
-                    is com.chibychibystore.data.model.Result.Failure -> emptyList()
+                    is com.chibychibystore.data.model.Result.Failure -> {
+                        _error.value = result.exception.message
+                        emptyList()
+                    }
                 }
-
-                // Calculate total
-                val total = expensesList.sumOf { it.amount }
-
-                _uiState.update {
-                    it.copy(
-                        expenses = expensesList,
-                        totalExpenses = total,
-                        isLoading = false
-                    )
-                }
+                emit(list)
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        error = e.message ?: "Terjadi kesalahan",
-                        isLoading = false
-                    )
-                }
+                _error.value = e.message ?: "Terjadi kesalahan"
+                emit(emptyList())
+            } finally {
+                _isLoading.value = false
             }
         }
     }
+
+    val uiState: StateFlow<ExpenseUiState> = kotlinx.coroutines.flow.combine(
+        _expensesDataFlow,
+        _startDate,
+        _endDate,
+        _selectedCategory,
+        _isLoading,
+        _error
+    ) { expenses, start, end, category, loading, errorMsg ->
+        ExpenseUiState(
+            expenses = expenses,
+            startDate = start,
+            endDate = end,
+            selectedCategory = category,
+            isLoading = loading,
+            error = errorMsg,
+            totalExpenses = expenses.sumOf { it.amount }
+        )
+    }.kotlinx.coroutines.flow.stateIn(
+        scope = viewModelScope,
+        started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
+        initialValue = ExpenseUiState(isLoading = true)
+    )
 
     /**
      * Set filter tanggal mulai
      */
     fun setStartDate(date: Date?) {
-        _uiState.update { it.copy(startDate = date) }
-        loadExpenses()
+        _startDate.value = date
     }
 
     /**
      * Set filter tanggal akhir
      */
     fun setEndDate(date: Date?) {
-        _uiState.update { it.copy(endDate = date) }
-        loadExpenses()
+        _endDate.value = date
     }
 
     /**
      * Set filter kategori
      */
     fun setCategoryFilter(category: ExpenseCategory?) {
-        _uiState.update { it.copy(selectedCategory = category) }
-        loadExpenses()
+        _selectedCategory.value = category
     }
 
     /**
      * Set semua filter sekaligus
      */
     fun setFilters(startDate: Date?, endDate: Date?, category: ExpenseCategory?) {
-        _uiState.update {
-            it.copy(
-                startDate = startDate,
-                endDate = endDate,
-                selectedCategory = category
-            )
-        }
-        loadExpenses()
+        _startDate.value = startDate
+        _endDate.value = endDate
+        _selectedCategory.value = category
     }
 
     /**
@@ -139,19 +149,15 @@ class ExpenseViewModel @Inject constructor(
      */
     fun deleteExpense(expenseId: Long) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-
+            _isLoading.value = true
             try {
-                // Note: Delete functionality would be implemented in ExpenseService
-                // For now, just reload the list
-                loadExpenses()
+                // Note: Call service delete here
+                expenseService.deleteExpense(expenseId)
+                // Trigger reload
+                _refreshTrigger.value += 1
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        error = e.message ?: "Gagal menghapus pengeluaran",
-                        isLoading = false
-                    )
-                }
+                _error.value = e.message ?: "Gagal menghapus pengeluaran"
+                _isLoading.value = false
             }
         }
     }
@@ -160,20 +166,15 @@ class ExpenseViewModel @Inject constructor(
      * Reset filter
      */
     fun resetFilters() {
-        _uiState.update {
-            it.copy(
-                startDate = null,
-                endDate = null,
-                selectedCategory = null
-            )
-        }
-        loadExpenses()
+        _startDate.value = null
+        _endDate.value = null
+        _selectedCategory.value = null
     }
 
     /**
      * Clear error
      */
     fun clearError() {
-        _uiState.update { it.copy(error = null) }
+        _error.value = null
     }
 }
