@@ -98,20 +98,6 @@ abstract class ServiceModule {
     companion object {
         @Provides
         @Singleton
-        fun provideAuthUseCases(
-            login: com.chibychibystore.usecase.LoginUseCase,
-            logout: com.chibychibystore.usecase.LogoutUseCase,
-            changePassword: com.chibychibystore.usecase.ChangePasswordUseCase,
-            getCurrentUser: com.chibychibystore.usecase.GetCurrentUserUseCase,
-            checkPermission: com.chibychibystore.usecase.CheckPermissionUseCase
-        ): com.chibychibystore.usecase.AuthUseCases {
-            return com.chibychibystore.usecase.AuthUseCases(
-                login, logout, changePassword, getCurrentUser, checkPermission
-            )
-        }
-
-        @Provides
-        @Singleton
         fun provideBluetoothAdapter(): android.bluetooth.BluetoothAdapter? {
             return try {
                 android.bluetooth.BluetoothAdapter.getDefaultAdapter()
