@@ -32,7 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import com.chibychibystore.ui.components.shared.*
-import com.chibychibystore.ui.components.special.ChartView
+import com.chibychibystore.ui.reports.BarChart
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -72,7 +72,8 @@ fun DashboardScreen(
     // Optimized formatters
     val formatCurrency = rememberCurrencyFormatter()
     val formatDate = rememberDateFormatter()
-    
+    val formatDayName = rememberDayNameFormatter()
+
     // Theme references to avoid repeated Composable calls in LazyColumn items
     val colorScheme = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
@@ -206,20 +207,19 @@ fun DashboardScreen(
                         }
                     }
 
-                    // Sales Chart (placeholder)
-                    item {
-                        ChartView(
-                            title = "Trend Penjualan 7 Hari Terakhir",
-                            data = listOf(
-                                com.chibychibystore.ui.components.special.ChartData("Sen", 120000f, MaterialTheme.colorScheme.primary),
-                                com.chibychibystore.ui.components.special.ChartData("Sel", 150000f, MaterialTheme.colorScheme.primary),
-                                com.chibychibystore.ui.components.special.ChartData("Rab", 180000f, MaterialTheme.colorScheme.primary),
-                                com.chibychibystore.ui.components.special.ChartData("Kam", 140000f, MaterialTheme.colorScheme.primary),
-                                com.chibychibystore.ui.components.special.ChartData("Jum", 200000f, MaterialTheme.colorScheme.primary),
-                                com.chibychibystore.ui.components.special.ChartData("Sab", 220000f, MaterialTheme.colorScheme.primary),
-                                com.chibychibystore.ui.components.special.ChartData("Min", uiState.todaySales.toFloat(), MaterialTheme.colorScheme.primary)
+                    // Sales Chart
+                    if (uiState.salesTrend.isNotEmpty()) {
+                        item {
+                            val chartData = remember(uiState.salesTrend) {
+                                uiState.salesTrend.map {
+                                    formatDayName(it.date) to it.sales.toFloat()
+                                }
+                            }
+                            BarChart(
+                                title = "Trend Penjualan 7 Hari Terakhir",
+                                data = chartData
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -239,4 +239,11 @@ fun rememberDateFormatter(): (Long) -> String {
     val locale = remember { Locale.getDefault() }
     val formatter = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", locale) }
     return { timestamp -> formatter.format(Date(timestamp)) }
+}
+
+@Composable
+fun rememberDayNameFormatter(): (java.time.LocalDate) -> String {
+    val locale = remember { Locale("id", "ID") }
+    val formatter = remember { java.time.format.DateTimeFormatter.ofPattern("EEE", locale) }
+    return { date -> date.format(formatter) }
 }

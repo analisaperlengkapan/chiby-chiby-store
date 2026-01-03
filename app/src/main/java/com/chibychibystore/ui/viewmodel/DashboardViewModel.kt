@@ -7,6 +7,8 @@ import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.Produk
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.chibychibystore.service.SaleService
+import com.chibychibystore.service.ReportingService
+import com.chibychibystore.service.TrendData
 import com.chibychibystore.repository.ProdukRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
@@ -162,6 +164,7 @@ import kotlin.random.Random
  * @property todayTransactionCount Jumlah transaksi penjualan hari ini
  * @property lowStockItems Daftar produk dengan stok rendah yang perlu restock
  * @property recentTransactions Transaksi penjualan terbaru untuk activity overview
+ * @property salesTrend Data tren penjualan 7 hari terakhir
  * @property isLoading Status loading data dashboard
  * @property errorMessage Error message jika gagal memuat data (null = no error)
  */
@@ -170,6 +173,7 @@ data class DashboardUiState(
     val todayTransactionCount: Int = 0,
     val lowStockItems: List<Produk> = emptyList(),
     val recentTransactions: List<Penjualan> = emptyList(),
+    val salesTrend: List<TrendData> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null
 )
@@ -320,6 +324,7 @@ data class DashboardUiState(
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val saleService: SaleService,
+    private val reportingService: ReportingService,
     private val produkRepository: ProdukRepository
 ) : ViewModel() {
 
@@ -439,25 +444,30 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // Real implementation using services/repositories with parallel loading
-                val today = LocalDate.now().toString() // yyyy-MM-dd
+                val todayDate = LocalDate.now()
+                val today = todayDate.toString() // yyyy-MM-dd
+                val sevenDaysAgo = todayDate.minusDays(6)
 
                 // Parallel execution for dashboard metrics
                 val todaySalesDeferred = async { saleService.getTotalSalesByDateRange(today, today) }
                 val transactionCountDeferred = async { saleService.getSalesCountByDateRange(today, today) }
                 val lowStockDeferred = async { produkRepository.getLowStockProduk().first() }
                 val recentSalesDeferred = async { saleService.getRecentSales(10) }
+                val salesTrendDeferred = async { reportingService.getSalesTrend(sevenDaysAgo, todayDate) }
 
                 // Await results
                 val todaySalesRes = todaySalesDeferred.await()
                 val transactionCountRes = transactionCountDeferred.await()
                 val lowStock = lowStockDeferred.await()
                 val recentSalesRes = recentSalesDeferred.await()
+                val salesTrendRes = salesTrendDeferred.await()
 
                 _uiState.value = _uiState.value.copy(
                     todaySales = todaySalesRes.getOrNull() ?: 0.0,
                     todayTransactionCount = transactionCountRes.getOrNull() ?: 0,
                     lowStockItems = lowStock,
                     recentTransactions = recentSalesRes.getOrNull() ?: emptyList(),
+                    salesTrend = salesTrendRes.getOrNull() ?: emptyList(),
                     isLoading = false,
                     errorMessage = null
                 )

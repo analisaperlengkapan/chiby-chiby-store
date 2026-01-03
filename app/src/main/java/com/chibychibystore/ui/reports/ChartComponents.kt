@@ -73,7 +73,8 @@ fun MetricCard(
 
 /**
  * Bar Chart Component
- * Displays data as vertical bars
+ * Displays data as vertical bars.
+ * Used in Dashboard and Reports screens.
  */
 @Composable
 fun BarChart(
