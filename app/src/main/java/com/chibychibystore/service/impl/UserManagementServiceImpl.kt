@@ -42,13 +42,13 @@ class UserManagementServiceImpl @Inject constructor(
             if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat statistik user"))
             }
-            val allUsers = userRepository.getAllUsers().first()
-            val totalUsers = allUsers.size
-            val activeUsers = allUsers.count { it.isActive }
-            val owners = allUsers.count { it.role == Role.OWNER }
-            val managers = allUsers.count { it.role == Role.MANAGER }
-            val cashiers = allUsers.count { it.role == Role.CASHIER }
-            val warehouseStaff = allUsers.count { it.role == Role.WAREHOUSE }
+
+            val totalUsers = userRepository.getUserCount().getOrNull() ?: 0
+            val activeUsers = userRepository.countActiveUsers().getOrNull() ?: 0
+            val owners = userRepository.countByRole(Role.OWNER).getOrNull() ?: 0
+            val managers = userRepository.countByRole(Role.MANAGER).getOrNull() ?: 0
+            val cashiers = userRepository.countByRole(Role.CASHIER).getOrNull() ?: 0
+            val warehouseStaff = userRepository.countByRole(Role.WAREHOUSE).getOrNull() ?: 0
 
             Result.success(UserStats(
                 totalUsers = totalUsers,

@@ -33,6 +33,22 @@ class ExpenseRepository @Inject constructor(
 
     fun getExpensesByDateRange(startDate: Date, endDate: Date): Flow<List<Expense>> = expenseDao.getExpensesByDateRange(startDate, endDate)
 
+    suspend fun getExpensesByDateRangeList(startDate: Date, endDate: Date): List<Expense> {
+        return try {
+            expenseDao.getExpensesByDateRangeList(startDate, endDate)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun getExpensesByDateRangeAndCategory(startDate: Date, endDate: Date, category: ExpenseCategory): List<Expense> {
+        return try {
+            expenseDao.getExpensesByDateRangeAndCategory(startDate, endDate, category)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     suspend fun createExpense(expense: Expense): Result<Long> {
         return try {
             val id = expenseDao.insertExpense(expense)

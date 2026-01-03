@@ -107,6 +107,24 @@ class UserRepository @Inject constructor(
         }
     }
 
+    suspend fun countActiveUsers(): Result<Int> {
+        return try {
+            val count = userDao.countActiveUsers()
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("countActiveUsers", e))
+        }
+    }
+
+    suspend fun countByRole(role: Role): Result<Int> {
+        return try {
+            val count = userDao.countByRole(role)
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("countByRole", e))
+        }
+    }
+
     private fun validateUserData(user: User) {
         if (user.username.isBlank()) {
             throw ChibyChibyException.ValidationError("Username cannot be empty")
