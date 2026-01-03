@@ -2,7 +2,7 @@ package com.chibychibystore.ui.supplier
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.Pemasok
+import com.chibychibystore.data.local.entity.Supplier
 import com.chibychibystore.service.SupplierService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,10 +17,10 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SupplierUiState(
-    val suppliers: List<Pemasok> = emptyList(),
+    val suppliers: List<Supplier> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val selectedSupplier: Pemasok? = null,
+    val selectedSupplier: Supplier? = null,
     val isAddEditDialogVisible: Boolean = false
 )
 
@@ -88,7 +88,7 @@ class SupplierViewModel @Inject constructor(
         )
     }
 
-    fun onEditSupplierClick(supplier: Pemasok) {
+    fun onEditSupplierClick(supplier: Supplier) {
         _uiState.value = _uiState.value.copy(
             selectedSupplier = supplier,
             isAddEditDialogVisible = true
@@ -129,7 +129,7 @@ class SupplierViewModel @Inject constructor(
                 )
             }.onFailure { e ->
                 _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Gagal menyimpan pemasok"
+                    error = e.message ?: "Gagal menyimpan supplier"
                 )
             }
         }
@@ -143,7 +143,7 @@ class SupplierViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(
-                        error = e.message ?: "Gagal menghapus pemasok"
+                        error = e.message ?: "Gagal menghapus supplier"
                     )
                 }
         }

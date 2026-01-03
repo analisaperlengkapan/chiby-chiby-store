@@ -264,7 +264,7 @@ class PrinterServiceImpl @Inject constructor(
     }
 
     override suspend fun printBarcodeLabels(
-        product: com.chibychibystore.data.local.entity.Produk,
+        product: com.chibychibystore.data.local.entity.Product,
         labelSize: com.chibychibystore.ui.barcode.LabelSize,
         quantity: Int
     ): Result<Unit> = withContext(Dispatchers.IO) {
@@ -422,7 +422,7 @@ class PrinterServiceImpl @Inject constructor(
     }
 
     private fun buildBarcodeLabelData(
-        product: com.chibychibystore.data.local.entity.Produk,
+        product: com.chibychibystore.data.local.entity.Product,
         labelSize: com.chibychibystore.ui.barcode.LabelSize
     ): ByteArray {
         val label = mutableListOf<ByteArray>()

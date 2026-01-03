@@ -39,7 +39,7 @@ fun UserDetailScreen(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Konfirmasi Hapus") },
-            text = { Text("Apakah Anda yakin ingin menghapus pengguna ${uiState.user?.username ?: ""}?") },
+            text = { Text("Apakah Anda yakin ingin menghapus user ${uiState.user?.username ?: ""}?") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -63,7 +63,7 @@ fun UserDetailScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Detail Pengguna",
+                title = "Detail User",
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
@@ -140,7 +140,7 @@ fun UserDetailScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun UserDetailContent(
-    user: com.chibychibystore.data.local.entity.Pengguna,
+    user: com.chibychibystore.data.local.entity.User,
     isEditMode: Boolean,
     onUsernameChange: (String) -> Unit,
     onRoleChange: (Role) -> Unit,

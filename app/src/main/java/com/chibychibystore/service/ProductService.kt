@@ -1,8 +1,8 @@
 package com.chibychibystore.service
 
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.data.model.Result
-import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.ProductRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -10,17 +10,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Product Service untuk manajemen produk di Chiby Chiby Store
+ * Product Service untuk manajemen product di Chiby Chiby Store
  *
- * Service ini menangani semua operasi CRUD untuk produk retail, termasuk:
+ * Service ini menangani semua operasi CRUD untuk product retail, termasuk:
  * - Manajemen inventory dan stok
- * - Validasi data produk (harga, barcode, dll)
- * - Search dan filtering produk
+ * - Validasi data product (harga, barcode, dll)
+ * - Search dan filtering product
  * - Real-time updates melalui Flow
  * - Business rules untuk inventory management
  *
  * **Fitur Utama:**
- * - CRUD operations untuk produk
+ * - CRUD operations untuk product
  * - Barcode uniqueness validation
  * - Stock management dengan business rules
  * - Advanced search dan filtering
@@ -31,42 +31,42 @@ import javax.inject.Singleton
  * - Barcode harus unik di seluruh sistem
  * - Harga jual harus >= harga beli
  * - Stok tidak boleh negatif
- * - Produk harus memiliki kategori dan warehouse
+ * - Product harus memiliki kategori dan warehouse
  *
  * **Integration Points:**
- * - [ProdukRepository] untuk data access
+ * - [ProductRepository] untuk data access
  * - [SaleService] untuk stock updates saat penjualan
  * - [PurchaseService] untuk stock updates saat pembelian
  * - UI components untuk reactive updates
  *
  * @author Chiby Chiby Store Development Team
  * @since 1.0.0
- * @see Produk
- * @see ProdukRepository
+ * @see Product
+ * @see ProductRepository
  * @see SaleService
  */
 interface ProductService {
 
     /**
-     * Membuat produk baru dengan validasi komprehensif
+     * Membuat product baru dengan validasi komprehensif
      *
      * **Validasi yang dilakukan:**
-     * - Nama produk tidak kosong
+     * - Nama product tidak kosong
      * - Harga beli dan jual > 0
      * - Harga jual >= harga beli
      * - Barcode unik (jika disediakan)
      * - Kategori dan warehouse valid
      * - Stok awal >= 0
      *
-     * @param product Data produk yang akan dibuat
-     * @return Result dengan produk yang berhasil dibuat atau exception
+     * @param product Data product yang akan dibuat
+     * @return Result dengan product yang berhasil dibuat atau exception
      *
      * @throws IllegalArgumentException jika validasi gagal
      * @throws Exception jika barcode sudah digunakan
      *
      * @sample
      * ```kotlin
-     * val newProduct = Produk(
+     * val newProduct = Product(
      *     name = "Indomie Goreng",
      *     barcode = "8996001600017",
      *     costPrice = 2500.0,
@@ -78,138 +78,138 @@ interface ProductService {
      * val result = productService.createProduct(newProduct)
      * ```
      */
-    suspend fun createProduct(product: Produk): Result<Produk>
+    suspend fun createProduct(product: Product): Result<Product>
 
     /**
-     * Update data produk existing
+     * Update data product existing
      *
-     * Method ini memperbarui semua field produk kecuali ID.
+     * Method ini memperbarui semua field product kecuali ID.
      * Semua validasi yang sama dengan createProduct diterapkan.
      *
-     * @param product Produk dengan data terbaru (ID harus valid)
-     * @return Result dengan produk yang berhasil diupdate
+     * @param product Product dengan data terbaru (ID harus valid)
+     * @return Result dengan product yang berhasil diupdate
      *
      * @throws IllegalArgumentException jika validasi gagal
-     * @throws Exception jika produk tidak ditemukan atau barcode konflik
+     * @throws Exception jika product tidak ditemukan atau barcode konflik
      */
-    suspend fun updateProduct(product: Produk): Result<Produk>
+    suspend fun updateProduct(product: Product): Result<Product>
 
     /**
-     * Menghapus produk dari sistem
+     * Menghapus product dari sistem
      *
      * **Business Rules:**
-     * - Produk tidak boleh memiliki transaksi penjualan yang terkait
+     * - Product tidak boleh memiliki transaksi penjualan yang terkait
      * - Foreign key constraints akan mencegah delete jika masih ada referensi
      *
-     * @param id ID produk yang akan dihapus
+     * @param id ID product yang akan dihapus
      * @return Result menunjukkan keberhasilan operasi
      *
-     * @throws Exception jika produk masih memiliki referensi atau tidak ditemukan
+     * @throws Exception jika product masih memiliki referensi atau tidak ditemukan
      */
     suspend fun deleteProduct(id: String): Result<Unit>
 
     /**
-     * Mendapatkan produk berdasarkan ID
+     * Mendapatkan product berdasarkan ID
      *
-     * @param id ID produk yang dicari
-     * @return Result dengan produk atau null jika tidak ditemukan
+     * @param id ID product yang dicari
+     * @return Result dengan product atau null jika tidak ditemukan
      */
-    suspend fun getProduct(id: String): Result<Produk?>
+    suspend fun getProduct(id: String): Result<Product?>
 
     /**
-     * Mendapatkan daftar produk dengan filtering opsional
+     * Mendapatkan daftar product dengan filtering opsional
      *
      * **Filter Options:**
-     * - categoryId: Filter berdasarkan kategori produk
+     * - categoryId: Filter berdasarkan kategori product
      * - warehouseId: Filter berdasarkan lokasi warehouse
-     * - searchQuery: Pencarian berdasarkan nama produk
+     * - searchQuery: Pencarian berdasarkan nama product
      *
      * @param categoryId Filter kategori (optional)
      * @param warehouseId Filter warehouse (optional)
      * @param searchQuery Query pencarian (optional)
-     * @return Result dengan list produk yang sesuai filter
+     * @return Result dengan list product yang sesuai filter
      */
     suspend fun getProducts(
         categoryId: String? = null,
         warehouseId: String? = null,
         searchQuery: String? = null
-    ): Result<List<Produk>>
+    ): Result<List<Product>>
 
     /**
-     * Pencarian produk berdasarkan query text
+     * Pencarian product berdasarkan query text
      *
-     * Mencari produk berdasarkan nama atau barcode dengan case-insensitive matching.
+     * Mencari product berdasarkan nama atau barcode dengan case-insensitive matching.
      *
-     * @param query String pencarian (nama produk atau barcode)
-     * @return Result dengan list produk yang match
+     * @param query String pencarian (nama product atau barcode)
+     * @return Result dengan list product yang match
      */
-    suspend fun searchProducts(query: String): Result<List<Produk>>
+    suspend fun searchProducts(query: String): Result<List<Product>>
 
     /**
-     * Update jumlah stok produk
+     * Update jumlah stok product
      *
      * **Business Rules:**
      * - Stok akhir tidak boleh negatif
      * - Update stok akan tercatat dalam history
      * - Memicu low stock alerts jika diperlukan
      *
-     * @param productId ID produk yang stoknya akan diupdate
+     * @param productId ID product yang stoknya akan diupdate
      * @param newStock Jumlah stok baru (>= 0)
      * @return Result menunjukkan keberhasilan operasi
      *
      * @throws IllegalArgumentException jika newStock < 0
-     * @throws Exception jika produk tidak ditemukan
+     * @throws Exception jika product tidak ditemukan
      */
     suspend fun updateStock(productId: String, newStock: Int): Result<Unit>
 
     /**
-     * Mendapatkan produk dengan stok rendah
+     * Mendapatkan product dengan stok rendah
      *
-     * Mengembalikan produk yang stoknya <= minStock atau stok kritis (< 10).
+     * Mengembalikan product yang stoknya <= minStock atau stok kritis (< 10).
      * Berguna untuk inventory alerts dan reorder planning.
      *
-     * @return Result dengan list produk stok rendah
+     * @return Result dengan list product stok rendah
      */
-    suspend fun getLowStockProducts(): Result<List<Produk>>
+    suspend fun getLowStockProducts(): Result<List<Product>>
 
     /**
-     * Observable stream untuk semua produk
+     * Observable stream untuk semua product
      *
-     * Flow ini akan emit setiap kali ada perubahan pada data produk.
+     * Flow ini akan emit setiap kali ada perubahan pada data product.
      * Berguna untuk reactive UI updates di inventory screens.
      *
-     * @return Flow yang emit list semua produk
+     * @return Flow yang emit list semua product
      */
-    fun observeProducts(): Flow<List<Produk>>
+    fun observeProducts(): Flow<List<Product>>
 
     /**
-     * Observable stream untuk produk berdasarkan kategori
+     * Observable stream untuk product berdasarkan kategori
      *
      * @param categoryId ID kategori yang akan difilter
-     * @return Flow yang emit produk dalam kategori tersebut
+     * @return Flow yang emit product dalam kategori tersebut
      */
-    fun observeProductsByCategory(categoryId: String): Flow<List<Produk>>
+    fun observeProductsByCategory(categoryId: String): Flow<List<Product>>
 
     /**
-     * Observable stream untuk produk berdasarkan warehouse
+     * Observable stream untuk product berdasarkan warehouse
      *
      * @param warehouseId ID warehouse yang akan difilter
-     * @return Flow yang emit produk di warehouse tersebut
+     * @return Flow yang emit product di warehouse tersebut
      */
-    fun observeProductsByWarehouse(warehouseId: String): Flow<List<Produk>>
+    fun observeProductsByWarehouse(warehouseId: String): Flow<List<Product>>
 
     /**
-     * Observable stream untuk pencarian produk
+     * Observable stream untuk pencarian product
      *
      * @param query String pencarian
      * @return Flow yang emit hasil pencarian
      */
-    fun observeSearchProducts(query: String): Flow<List<Produk>>
+    fun observeSearchProducts(query: String): Flow<List<Product>>
 
     /**
-     * Observable stream untuk produk stok rendah
+     * Observable stream untuk product stok rendah
      *
-     * @return Flow yang emit list produk stok rendah
+     * @return Flow yang emit list product stok rendah
      */
-    fun observeLowStockProducts(): Flow<List<Produk>>
+    fun observeLowStockProducts(): Flow<List<Product>>
 }

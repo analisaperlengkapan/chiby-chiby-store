@@ -110,7 +110,7 @@ fun SettingsScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "Profil Pengguna",
+                                text = "Profil User",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )

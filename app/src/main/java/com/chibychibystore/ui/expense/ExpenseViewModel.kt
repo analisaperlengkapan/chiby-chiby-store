@@ -3,7 +3,7 @@ package com.chibychibystore.ui.expense
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.ExpenseCategory
-import com.chibychibystore.data.local.entity.Pengeluaran
+import com.chibychibystore.data.local.entity.Expense
 import com.chibychibystore.service.ExpenseService
 import com.chibychibystore.data.model.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,7 +21,7 @@ import javax.inject.Inject
  * UI State untuk Expense Screen
  */
 data class ExpenseUiState(
-    val expenses: List<Pengeluaran> = emptyList(),
+    val expenses: List<Expense> = emptyList(),
     val startDate: Date? = null,
     val endDate: Date? = null,
     val selectedCategory: ExpenseCategory? = null,
@@ -32,7 +32,7 @@ data class ExpenseUiState(
 
 /**
  * ViewModel untuk Expense Management
- * Mengelola daftar pengeluaran dengan filter tanggal dan kategori
+ * Mengelola daftar expense dengan filter tanggal dan kategori
  */
 @HiltViewModel
 class ExpenseViewModel @Inject constructor(
@@ -145,7 +145,7 @@ class ExpenseViewModel @Inject constructor(
     }
 
     /**
-     * Hapus pengeluaran
+     * Hapus expense
      */
     fun deleteExpense(expenseId: Long) {
         viewModelScope.launch {
@@ -156,10 +156,10 @@ class ExpenseViewModel @Inject constructor(
                         _refreshTrigger.update { it + 1 }
                     }
                     .onFailure { exception ->
-                        _error.update { exception.message ?: "Gagal menghapus pengeluaran" }
+                        _error.update { exception.message ?: "Gagal menghapus expense" }
                     }
             } catch (e: Exception) {
-                _error.update { e.message ?: "Gagal menghapus pengeluaran" }
+                _error.update { e.message ?: "Gagal menghapus expense" }
             } finally {
                 _isLoading.update { false }
             }

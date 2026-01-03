@@ -6,10 +6,10 @@ import com.chibychibystore.service.BarcodeService
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
-import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.ProductRepository
 import com.google.zxing.EncodeHintType
 import com.google.zxing.MultiFormatWriter
 import com.google.zxing.WriterException
@@ -26,7 +26,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class BarcodeServiceImpl @Inject constructor(
-    private val produkRepository: ProdukRepository
+    private val productRepository: ProductRepository
 ) : BarcodeService {
 
     private val writer = MultiFormatWriter()
@@ -39,7 +39,7 @@ class BarcodeServiceImpl @Inject constructor(
     ): Result<BarcodeData> = withContext(Dispatchers.IO) {
         try {
             // Get product data
-            val productResult = produkRepository.getProdukById(productId)
+            val productResult = productRepository.getProductById(productId)
             val product = productResult.getOrNull() ?: return@withContext Result.failure(
                 ChibyChibyException.DatabaseError("Product dengan ID $productId tidak ditemukan")
             )
@@ -47,7 +47,7 @@ class BarcodeServiceImpl @Inject constructor(
             // Validate barcode format for product
             if (product.barcode.isNullOrBlank()) {
                 return@withContext Result.failure(
-                    ChibyChibyException.ValidationError("barcode", "Produk tidak memiliki barcode")
+                    ChibyChibyException.ValidationError("barcode", "Product tidak memiliki barcode")
                 )
             }
 
@@ -192,7 +192,7 @@ class BarcodeServiceImpl @Inject constructor(
      */
     private fun createLabeledBarcode(
         barcodeImage: Bitmap,
-        product: Produk,
+        product: Product,
         size: LabelSize
     ): Bitmap {
         val labelHeight = 60 // Space for text below barcode

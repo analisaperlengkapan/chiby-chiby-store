@@ -2,11 +2,11 @@ package com.chibychibystore.service.impl
 
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.repository.UserSessionRepository
-import com.chibychibystore.repository.PenggunaRepository
+import com.chibychibystore.repository.UserRepository
 import com.chibychibystore.data.local.entity.UserSession
-import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.User
 import com.chibychibystore.data.local.entity.Role
-import com.chibychibystore.data.local.dao.PenggunaDao
+import com.chibychibystore.data.local.dao.UserDao
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -22,7 +22,7 @@ import javax.inject.Singleton
  * Room database untuk penyimpanan data user dan session management.
  *
  * **Komponen Utama:**
- * - [PenggunaDao]: Untuk operasi CRUD pada tabel users
+ * - [UserDao]: Untuk operasi CRUD pada tabel users
  * - [UserSessionRepository]: Untuk manajemen session user
  * - SHA-256 hashing: Untuk secure password storage
  * - Session timeout: 24 jam dari aktivitas terakhir
@@ -42,23 +42,23 @@ import javax.inject.Singleton
  * - Room database untuk data persistence
  * - Kotlin Coroutines untuk async operations
  *
- * @property penggunaDao DAO untuk operasi user database
+ * @property userDao DAO untuk operasi user database
  * @property userSessionRepository Repository untuk session management
  * @property currentUser User yang sedang login (in-memory state)
  *
  * @constructor Inject dependencies melalui Hilt
- * @param penggunaDao DAO untuk user operations
+ * @param userDao DAO untuk user operations
  * @param userSessionRepository Repository untuk session operations
  *
  * @author Chiby Chiby Store Development Team
  * @since 1.0.0
  * @see AuthService
- * @see PenggunaDao
+ * @see UserDao
  * @see UserSessionRepository
  */
 @Singleton
 class AuthServiceImpl @Inject constructor(
-    private val penggunaDao: PenggunaDao,
+    private val userDao: UserDao,
     private val userSessionRepository: UserSessionRepository
 ) : AuthService {
 
@@ -68,7 +68,7 @@ class AuthServiceImpl @Inject constructor(
      * State ini tidak persistent dan akan hilang saat aplikasi restart.
      * Gunakan [initializeSession] untuk memulihkan session dari database.
      */
-    private var currentUser: Pengguna? = null
+    private var currentUser: User? = null
 
     /**
      * Implementasi login dengan validasi komprehensif
@@ -87,9 +87,9 @@ class AuthServiceImpl @Inject constructor(
      *
      * @param username Username input dari user
      * @param password Password plain text (akan di-hash)
-     * @return Result<Pengguna> dengan user data jika berhasil
+     * @return Result<User> dengan user data jika berhasil
      */
-    override suspend fun login(username: String, password: String): Result<Pengguna> {
+    override suspend fun login(username: String, password: String): Result<User> {
         return try {
             // Validasi input
             if (username.isBlank()) {
@@ -100,7 +100,7 @@ class AuthServiceImpl @Inject constructor(
             }
 
             // Cari user berdasarkan username
-            val user = penggunaDao.getPenggunaByUsername(username)
+            val user = userDao.getUserByUsername(username)
                 ?: return Result.failure(ChibyChibyException.AuthenticationError("Username atau password salah"))
 
             // Verifikasi password dengan hash comparison
@@ -147,7 +147,7 @@ class AuthServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun getCurrentUser(): Pengguna? {
+    override suspend fun getCurrentUser(): User? {
         return currentUser
     }
 
@@ -219,7 +219,7 @@ class AuthServiceImpl @Inject constructor(
                 updatedAt = java.util.Date()
             )
 
-            penggunaDao.updatePengguna(updatedUser)
+            userDao.updateUser(updatedUser)
             currentUser = updatedUser
 
             Result.success(Unit)
@@ -229,7 +229,7 @@ class AuthServiceImpl @Inject constructor(
         }
     }
 
-    override fun observeCurrentUser(): Flow<Pengguna?> {
+    override fun observeCurrentUser(): Flow<User?> {
         // For now return flow with current user
         // In a more advanced implementation, this could observe database changes
         return kotlinx.coroutines.flow.flowOf(currentUser)
@@ -246,7 +246,7 @@ class AuthServiceImpl @Inject constructor(
 
                 if (sessionAge < maxSessionAge) {
                     // Restore user from session
-                    val user = penggunaDao.getPenggunaById(activeSession.userId)
+                    val user = userDao.getUserById(activeSession.userId)
                     if (user != null) {
                         currentUser = user
                         // Update last activity

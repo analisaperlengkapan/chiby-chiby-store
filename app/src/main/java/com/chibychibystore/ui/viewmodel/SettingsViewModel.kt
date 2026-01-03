@@ -3,7 +3,7 @@ import com.chibychibystore.ui.components.shared.ErrorMessage
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.User
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.BackupService
 import com.chibychibystore.data.model.Result
@@ -128,10 +128,10 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * Memuat data pengguna saat ini untuk ditampilkan di settings
+     * Memuat data user saat ini untuk ditampilkan di settings
      *
      * Method private yang dipanggil otomatis saat ViewModel diinisialisasi.
-     * Mengambil data pengguna yang sedang login dari AuthService dan mengupdate UI state.
+     * Mengambil data user yang sedang login dari AuthService dan mengupdate UI state.
      * Operasi ini dilakukan secara asynchronous menggunakan coroutine.
      *
      * **Business Logic:**
@@ -146,12 +146,12 @@ class SettingsViewModel @Inject constructor(
      * state.copy(currentUser = user, isLoading = false)
      *
      * // Error case:
-     * state.copy(error = "Gagal memuat data pengguna", isLoading = false)
+     * state.copy(error = "Gagal memuat data user", isLoading = false)
      * ```
      *
      * **Error Handling:**
      * - Exception dari AuthService: Ditangkap dan dikonversi ke user-friendly message
-     * - Default error message: "Gagal memuat data pengguna"
+     * - Default error message: "Gagal memuat data user"
      * - State tetap konsisten: loading selalu diset false setelah operasi
      *
      * **Threading:**
@@ -196,7 +196,7 @@ class SettingsViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Gagal memuat data pengguna",
+                    error = e.message ?: "Gagal memuat data user",
                     isLoading = false
                 )
             }
@@ -204,7 +204,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * Mengubah password pengguna saat ini
+     * Mengubah password user saat ini
      *
      * Method public yang dipanggil dari UI untuk mengubah password user.
      * Melakukan validasi dan update password melalui AuthService.
@@ -325,7 +325,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * Logout pengguna dari aplikasi
+     * Logout user dari aplikasi
      *
      * Method public yang dipanggil dari UI untuk mengakhiri session user.
      * Membersihkan authentication state dan menavigasi ke login screen.
@@ -746,8 +746,8 @@ class SettingsViewModel @Inject constructor(
  * Semua field bersifat immutable dan perubahan state dilakukan melalui copy().
  *
  * **State Fields:**
- * - `currentUser`: Data pengguna yang sedang login (nullable = not loaded)
- * - `isLoading`: Status loading data pengguna saat startup
+ * - `currentUser`: Data user yang sedang login (nullable = not loaded)
+ * - `isLoading`: Status loading data user saat startup
  * - `isChangingPassword`: Status proses perubahan password
  * - `passwordChangeSuccess`: Flag sukses perubahan password
  * - `error`: Error message yang ditampilkan (nullable = no error)
@@ -834,8 +834,8 @@ class SettingsViewModel @Inject constructor(
  * }
  * ```
  *
- * @property currentUser Data pengguna yang sedang login untuk profile display
- * @property isLoading Status loading data pengguna saat aplikasi startup
+ * @property currentUser Data user yang sedang login untuk profile display
+ * @property isLoading Status loading data user saat aplikasi startup
  * @property isChangingPassword Status proses perubahan password sedang berlangsung
  * @property passwordChangeSuccess Flag yang menandai password berhasil diubah
  * @property error Error message yang ditampilkan ke user (null = no error)
@@ -843,7 +843,7 @@ class SettingsViewModel @Inject constructor(
  * @property isCreatingBackup Status proses pembuatan backup sedang berlangsung
  */
 data class SettingsUiState(
-    val currentUser: Pengguna? = null,
+    val currentUser: User? = null,
     val isLoading: Boolean = true,
     val isChangingPassword: Boolean = false,
     val passwordChangeSuccess: Boolean = false,

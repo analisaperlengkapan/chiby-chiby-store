@@ -12,7 +12,7 @@ class DataSeedingService @Inject constructor(
     private val penggunaRepository: PenggunaRepository,
     private val kategoriRepository: KategoriRepository,
     private val gudangRepository: GudangRepository,
-    private val produkRepository: ProdukRepository,
+    private val productRepository: ProductRepository,
     private val pemasokRepository: PemasokRepository,
     private val pengeluaranRepository: PengeluaranRepository
 ) {
@@ -79,10 +79,10 @@ class DataSeedingService @Inject constructor(
 
     private suspend fun seedCategories() {
         val defaultCategories = listOf(
-            Kategori(id = 0, name = "Makanan", description = "Produk makanan"),
-            Kategori(id = 0, name = "Minuman", description = "Produk minuman"),
-            Kategori(id = 0, name = "Pakaian", description = "Produk pakaian"),
-            Kategori(id = 0, name = "Elektronik", description = "Produk elektronik")
+            Kategori(id = 0, name = "Makanan", description = "Product makanan"),
+            Kategori(id = 0, name = "Minuman", description = "Product minuman"),
+            Kategori(id = 0, name = "Pakaian", description = "Product pakaian"),
+            Kategori(id = 0, name = "Elektronik", description = "Product elektronik")
         )
 
         defaultCategories.forEach { category ->
@@ -114,7 +114,7 @@ class DataSeedingService @Inject constructor(
 
     private suspend fun seedProducts() {
         val defaultProducts = listOf(
-            Produk(
+            Product(
                 id = 0,
                 name = "Nasi Goreng",
                 barcode = "123456789012",
@@ -125,7 +125,7 @@ class DataSeedingService @Inject constructor(
                 stockQuantity = 100,
                 minStock = 10
             ),
-            Produk(
+            Product(
                 id = 0,
                 name = "Teh Botol",
                 barcode = "123456789013",
@@ -136,7 +136,7 @@ class DataSeedingService @Inject constructor(
                 stockQuantity = 200,
                 minStock = 20
             ),
-            Produk(
+            Product(
                 id = 0,
                 name = "Kaos Polos",
                 barcode = "123456789014",
@@ -147,7 +147,7 @@ class DataSeedingService @Inject constructor(
                 stockQuantity = 50,
                 minStock = 5
             ),
-            Produk(
+            Product(
                 id = 0,
                 name = "Handphone",
                 barcode = "123456789015",
@@ -161,7 +161,7 @@ class DataSeedingService @Inject constructor(
         )
 
         defaultProducts.forEach { product ->
-            produkRepository.createProduk(product)
+            productRepository.createProduct(product)
         }
     }
 

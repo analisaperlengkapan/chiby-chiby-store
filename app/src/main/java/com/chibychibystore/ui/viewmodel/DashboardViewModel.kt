@@ -3,13 +3,13 @@ import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.Penjualan
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Sale
+import com.chibychibystore.data.local.entity.Product
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.chibychibystore.service.SaleService
 import com.chibychibystore.service.ReportingService
 import com.chibychibystore.service.TrendData
-import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.ProductRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
@@ -29,7 +29,7 @@ import kotlin.random.Random
  * **State Fields:**
  * - `todaySales`: Total penjualan hari ini dalam Rupiah
  * - `todayTransactionCount`: Jumlah transaksi penjualan hari ini
- * - `lowStockItems`: Daftar produk dengan stok rendah (< min_stock)
+ * - `lowStockItems`: Daftar product dengan stok rendah (< min_stock)
  * - `recentTransactions`: 5-10 transaksi penjualan terbaru
  * - `isLoading`: Status loading data dashboard
  * - `errorMessage`: Error message jika gagal memuat data
@@ -162,7 +162,7 @@ import kotlin.random.Random
  *
  * @property todaySales Total penjualan hari ini dalam Rupiah
  * @property todayTransactionCount Jumlah transaksi penjualan hari ini
- * @property lowStockItems Daftar produk dengan stok rendah yang perlu restock
+ * @property lowStockItems Daftar product dengan stok rendah yang perlu restock
  * @property recentTransactions Transaksi penjualan terbaru untuk activity overview
  * @property salesTrend Data tren penjualan 7 hari terakhir
  * @property isLoading Status loading data dashboard
@@ -171,8 +171,8 @@ import kotlin.random.Random
 data class DashboardUiState(
     val todaySales: Double = 0.0,
     val todayTransactionCount: Int = 0,
-    val lowStockItems: List<Produk> = emptyList(),
-    val recentTransactions: List<Penjualan> = emptyList(),
+    val lowStockItems: List<Product> = emptyList(),
+    val recentTransactions: List<Sale> = emptyList(),
     val salesTrend: List<TrendData> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null
@@ -325,7 +325,7 @@ data class DashboardUiState(
 class DashboardViewModel @Inject constructor(
     private val saleService: SaleService,
     private val reportingService: ReportingService,
-    private val produkRepository: ProdukRepository
+    private val productRepository: ProductRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -347,7 +347,7 @@ class DashboardViewModel @Inject constructor(
      * 2. Load semua metrics:
      *    - Today sales total
      *    - Today transaction count
-     *    - Low stock products (dari ProdukRepository)
+     *    - Low stock products (dari ProductRepository)
      *    - Recent transactions (dari SaleService)
      * 3. Aggregate data dan update UI state
      * 4. Handle errors dengan user-friendly messages
@@ -400,7 +400,7 @@ class DashboardViewModel @Inject constructor(
      * - [viewModelScope]: Lifecycle-aware coroutine execution
      * - [_uiState]: Mutable state untuk UI updates
      * - [saleService]: Service untuk data penjualan
-     * - [produkRepository]: Repository untuk data produk
+     * - [productRepository]: Repository untuk data product
      *
      * **Testing:**
      * ```kotlin
@@ -451,7 +451,7 @@ class DashboardViewModel @Inject constructor(
                 // Parallel execution for dashboard metrics
                 val todaySalesDeferred = async { saleService.getTotalSalesByDateRange(today, today) }
                 val transactionCountDeferred = async { saleService.getSalesCountByDateRange(today, today) }
-                val lowStockDeferred = async { produkRepository.getLowStockProduk().first() }
+                val lowStockDeferred = async { productRepository.getLowStockProduct().first() }
                 val recentSalesDeferred = async { saleService.getRecentSales(10) }
                 val salesTrendDeferred = async { reportingService.getSalesTrend(sevenDaysAgo, todayDate) }
 

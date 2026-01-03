@@ -130,7 +130,7 @@ class WarehouseViewModel @Inject constructor(
     }
 
     /**
-     * Assign produk ke gudang
+     * Assign product ke gudang
      */
     fun assignProductToWarehouse(productId: Long, warehouseId: Long) {
         viewModelScope.launch {
@@ -139,9 +139,9 @@ class WarehouseViewModel @Inject constructor(
             try {
                 val result = warehouseService.assignProductToWarehouse(productId, warehouseId)
                 result.onSuccess {
-                    _successMessage.update { "Produk berhasil dipindahkan ke gudang" }
+                    _successMessage.update { "Product berhasil dipindahkan ke gudang" }
                 }.onFailure { e ->
-                    _error.update { e.message ?: "Gagal memindahkan produk" }
+                    _error.update { e.message ?: "Gagal memindahkan product" }
                 }
             } catch (e: Exception) {
                 _error.update { "Terjadi kesalahan: ${e.message}" }
@@ -168,7 +168,7 @@ class WarehouseViewModel @Inject constructor(
                 )
                 val result = warehouseService.createWarehouse(warehouse)
                 result.onSuccess { created ->
-                    _successMessage.update { "Gudang '${created.name}' berhasil dibuat" }
+                    _successMessage.update { "Warehouse '${created.name}' berhasil dibuat" }
                     // No manual reload needed, flow updates automatically
                 }.onFailure { e ->
                     _error.update { e.message ?: "Gagal membuat gudang" }
@@ -198,7 +198,7 @@ class WarehouseViewModel @Inject constructor(
                 )
                 val result = warehouseService.updateWarehouse(warehouse)
                 result.onSuccess { updated ->
-                    _successMessage.update { "Gudang '${updated.name}' berhasil diperbarui" }
+                    _successMessage.update { "Warehouse '${updated.name}' berhasil diperbarui" }
                 }.onFailure { e ->
                     _error.update { e.message ?: "Gagal memperbarui gudang" }
                 }

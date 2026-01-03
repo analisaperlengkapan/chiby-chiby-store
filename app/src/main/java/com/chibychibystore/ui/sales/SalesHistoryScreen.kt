@@ -40,7 +40,7 @@ fun SalesHistoryScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Riwayat Penjualan",
+                title = "Riwayat Sale",
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.popBackStack() },
                 actions = {
@@ -238,7 +238,7 @@ private fun SaleItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Penjualan #${sale.id}",
+                    "Sale #${sale.id}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -292,7 +292,7 @@ private fun ReceiptDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "Struk Penjualan #${saleWithItems.sale.id}",
+                "Struk Sale #${saleWithItems.sale.id}",
                 style = MaterialTheme.typography.headlineSmall
             )
         },

@@ -19,8 +19,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.local.entity.Gudang
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Warehouse
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.ui.components.shared.CardItem
 import com.chibychibystore.ui.navigation.Screen
 
@@ -35,7 +35,7 @@ fun WarehouseDetailScreen(
 
     // Dialog state
     var showTransferDialog by remember { mutableStateOf(false) }
-    var selectedProductForTransfer by remember { mutableStateOf<Produk?>(null) }
+    var selectedProductForTransfer by remember { mutableStateOf<Product?>(null) }
 
     // Load warehouse data when screen opens
     LaunchedEffect(warehouseId) {
@@ -51,7 +51,7 @@ fun WarehouseDetailScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = selectedWarehouse?.name ?: "Detail Gudang",
+                title = selectedWarehouse?.name ?: "Detail Warehouse",
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
@@ -70,7 +70,7 @@ fun WarehouseDetailScreen(
                         val warehouse = selectedWarehouse ?: return@IconButton
                         navController.navigate(Screen.WarehouseEdit.createRoute(warehouse.id.toString()))
                     }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit Gudang")
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Warehouse")
                     }
                 }
             )
@@ -169,10 +169,10 @@ fun WarehouseDetailScreen(
 
 @Composable
 private fun WarehouseDetailContent(
-    warehouse: Gudang,
-    products: List<Produk>,
-    onProductClick: (Produk) -> Unit,
-    onTransferStock: (Produk) -> Unit
+    warehouse: Warehouse,
+    products: List<Product>,
+    onProductClick: (Product) -> Unit,
+    onTransferStock: (Product) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize()
@@ -210,7 +210,7 @@ private fun WarehouseDetailContent(
 
 @Composable
 private fun WarehouseInfoHeader(
-    warehouse: Gudang,
+    warehouse: Warehouse,
     productCount: Int,
     totalStock: Int
 ) {
@@ -250,7 +250,7 @@ private fun WarehouseInfoHeader(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "$productCount produk",
+                    text = "$productCount product",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -267,7 +267,7 @@ private fun WarehouseInfoHeader(
 
 @Composable
 private fun WarehouseProductItem(
-    product: Produk,
+    product: Product,
     onClick: () -> Unit,
     onTransferClick: () -> Unit
 ) {
@@ -380,7 +380,7 @@ private fun WarehouseNotFoundState(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Gudang tidak ditemukan",
+            text = "Warehouse tidak ditemukan",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Medium
         )
@@ -388,7 +388,7 @@ private fun WarehouseNotFoundState(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Gudang yang Anda cari tidak tersedia atau telah dihapus",
+            text = "Warehouse yang Anda cari tidak tersedia atau telah dihapus",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -428,7 +428,7 @@ private fun WarehouseEmptyProductsState() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Belum ada produk",
+            text = "Belum ada product",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Medium
         )
@@ -436,7 +436,7 @@ private fun WarehouseEmptyProductsState() {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Gudang ini belum memiliki produk. Tambahkan produk dari menu Inventory.",
+            text = "Warehouse ini belum memiliki product. Tambahkan product dari menu Inventory.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center

@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.chibychibystore.data.local.entity.Pemasok
+import com.chibychibystore.data.local.entity.Supplier
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.CardItem
 import com.chibychibystore.ui.components.shared.LoadingIndicator
@@ -34,13 +34,13 @@ fun SupplierListScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Daftar Pemasok",
+                title = "Daftar Supplier",
                 onNavigationClick = { navController.popBackStack() }
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { viewModel.onAddSupplierClick() }) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah Pemasok")
+                Icon(Icons.Default.Add, contentDescription = "Tambah Supplier")
             }
         }
     ) { paddingValues ->
@@ -56,13 +56,13 @@ fun SupplierListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                placeholder = { Text("Cari pemasok...") },
+                placeholder = { Text("Cari supplier...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Cari") },
                 singleLine = true
             )
 
             if (uiState.isLoading) {
-                LoadingIndicator(message = "Memuat data pemasok...")
+                LoadingIndicator(message = "Memuat data supplier...")
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -79,7 +79,7 @@ fun SupplierListScreen(
                     if (uiState.suppliers.isEmpty()) {
                         item {
                             Text(
-                                text = "Belum ada data pemasok",
+                                text = "Belum ada data supplier",
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(32.dp),
@@ -120,7 +120,7 @@ fun SupplierListScreen(
 
 @Composable
 fun SupplierItem(
-    supplier: Pemasok,
+    supplier: Supplier,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
@@ -174,7 +174,7 @@ fun SupplierItem(
 
 @Composable
 fun SupplierDialog(
-    supplier: Pemasok?,
+    supplier: Supplier?,
     onDismiss: () -> Unit,
     onSave: (SupplierFormData) -> Unit
 ) {
@@ -186,7 +186,7 @@ fun SupplierDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (supplier == null) "Tambah Pemasok" else "Edit Pemasok") },
+        title = { Text(if (supplier == null) "Tambah Supplier" else "Edit Supplier") },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -198,7 +198,7 @@ fun SupplierDialog(
                         name = it
                         isNameError = it.isBlank()
                     },
-                    label = { Text("Nama Pemasok *") },
+                    label = { Text("Nama Supplier *") },
                     isError = isNameError,
                     supportingText = if (isNameError) { { Text("Nama wajib diisi") } } else null,
                     singleLine = true,

@@ -145,7 +145,7 @@ fun DashboardScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = "Penjualan Hari Ini",
+                                    text = "Sale Hari Ini",
                                     style = typography.titleMedium,
                                     color = colorScheme.onPrimaryContainer,
                                     fontWeight = FontWeight.Medium
@@ -182,7 +182,7 @@ fun DashboardScreen(
                         item {
                             CardItem(
                                 title = "Peringatan Stok Rendah",
-                                subtitle = "${uiState.lowStockItems.size} produk stok rendah",
+                                subtitle = "${uiState.lowStockItems.size} product stok rendah",
                                 icon = Icons.Default.Warning,
                                 onClick = { onNavigateToRoute(Screen.Inventory.route) }
                             )
@@ -217,7 +217,7 @@ fun DashboardScreen(
                                 }
                             }
                             BarChart(
-                                title = "Trend Penjualan 7 Hari Terakhir",
+                                title = "Trend Sale 7 Hari Terakhir",
                                 data = chartData
                             )
                         }

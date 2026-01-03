@@ -2,9 +2,9 @@ package com.chibychibystore.ui.pos
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.ItemPenjualan
-import com.chibychibystore.data.local.entity.Penjualan
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.ItemSale
+import com.chibychibystore.data.local.entity.Sale
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.ProductService
 import com.chibychibystore.constant.AppConstants
@@ -33,19 +33,19 @@ import javax.inject.Inject
  * Data class untuk item dalam shopping cart POS
  *
  * **Business Purpose:**
- * - Representasi produk yang dipilih customer dalam transaksi
+ * - Representasi product yang dipilih customer dalam transaksi
  * - Menyimpan quantity dan harga untuk perhitungan total
  * - Immutable data structure untuk thread safety
  * - Support untuk quantity updates tanpa side effects
  *
  * **Business Rules:**
  * - Quantity harus > 0 (tidak boleh 0 atau negatif)
- * - Unit price menggunakan produk selling price sebagai default
+ * - Unit price menggunakan product selling price sebagai default
  * - Total price = unitPrice * quantity (otomatis calculated)
  * - Product reference immutable untuk data consistency
  *
  * **Usage Context:**
- * - Created ketika customer menambah produk ke cart
+ * - Created ketika customer menambah product ke cart
  * - Updated ketika quantity diubah via UI
  * - Used untuk calculate cart totals dan create sale items
  * - Passed ke SaleService untuk transaction processing
@@ -57,28 +57,28 @@ import javax.inject.Inject
  *
  * **Integration Points:**
  * - UI: Display dalam cart list dengan quantity controls
- * - SaleService: Converted ke ItemPenjualan untuk database storage
+ * - SaleService: Converted ke ItemSale untuk database storage
  * - Receipt printing: Used untuk generate receipt items
  *
- * @property product Produk yang dipilih customer (immutable reference)
- * @property quantity Jumlah produk dalam cart (harus > 0)
+ * @property product Product yang dipilih customer (immutable reference)
+ * @property quantity Jumlah product dalam cart (harus > 0)
  * @property unitPrice Harga per unit (default: product.sellingPrice)
  * @property totalPrice Total harga untuk quantity ini (calculated: unitPrice * quantity)
  *
  * @constructor Create cart item dengan product dan quantity
- * @param product Produk yang akan ditambahkan ke cart
- * @param quantity Jumlah produk (default: 1)
+ * @param product Product yang akan ditambahkan ke cart
+ * @param quantity Jumlah product (default: 1)
  * @param unitPrice Harga per unit (default: product.sellingPrice)
  * @param totalPrice Total harga (auto-calculated jika tidak disediakan)
  *
  * @author Chiby Chiby Store Development Team
  * @since 1.0.0
- * @see Produk
- * @see ItemPenjualan
+ * @see Product
+ * @see ItemSale
  * @see PosViewModel
  */
 data class CartItem(
-    val product: Produk,
+    val product: Product,
     val quantity: Int,
     val unitPrice: Double = product.sellingPrice,
     val totalPrice: Double = product.sellingPrice * quantity
@@ -157,9 +157,9 @@ data class CartItem(
  * - Cart state drives list display dan totals
  * - Payment state controls checkout flow
  *
- * @property cartItems List produk dalam shopping cart
- * @property searchQuery Query pencarian produk saat ini
- * @property searchResults Hasil pencarian produk dari database
+ * @property cartItems List product dalam shopping cart
+ * @property searchQuery Query pencarian product saat ini
+ * @property searchResults Hasil pencarian product dari database
  * @property isSearching Flag menunjukkan search operation sedang berlangsung
  * @property isProcessingPayment Flag menunjukkan payment sedang diproses
  * @property paymentMethod Metode pembayaran (CASH/CARD)
@@ -183,7 +183,7 @@ data class CartItem(
 data class PosUiState(
     val cartItems: List<CartItem> = emptyList(),
     val searchQuery: String = "",
-    val searchResults: List<Produk> = emptyList(),
+    val searchResults: List<Product> = emptyList(),
     val isSearching: Boolean = false,
     val isProcessingPayment: Boolean = false,
     val paymentMethod: String = "CASH",
@@ -271,7 +271,7 @@ data class PosUiState(
  * }
  * ```
  *
- * @property productService Service untuk operasi produk dan inventory
+ * @property productService Service untuk operasi product dan inventory
  * @property saleService Service untuk transaction processing dan receipts
  * @property uiState Reactive state flow untuk UI consumption
  *
@@ -348,7 +348,7 @@ class PosViewModel @Inject constructor(
     }
 
     /**
-     * Search produk berdasarkan query untuk ditambahkan ke cart
+     * Search product berdasarkan query untuk ditambahkan ke cart
      *
      * **Refactored to use Reactive Stream Pattern**
      * Instead of manual coroutine management, this updates the `_searchQuery` flow
@@ -371,10 +371,10 @@ class PosViewModel @Inject constructor(
     }
 
     /**
-     * Tambah produk ke shopping cart dengan quantity handling
+     * Tambah product ke shopping cart dengan quantity handling
      *
      * **Business Logic Flow:**
-     * 1. **Duplicate Check**: Cek jika produk sudah ada di cart
+     * 1. **Duplicate Check**: Cek jika product sudah ada di cart
      * 2. **Quantity Update**: Jika sudah ada, tambah quantity
      * 3. **New Item Addition**: Jika belum ada, buat CartItem baru
      * 4. **Totals Recalculation**: Update subtotal, tax, discount, total
@@ -422,8 +422,8 @@ class PosViewModel @Inject constructor(
      * viewModel.addProductToCart(scannedProduct, quantity = 1)
      * ```
      *
-     * @param product Produk yang akan ditambahkan ke cart
-     * @param quantity Jumlah produk yang akan ditambahkan (default: 1)
+     * @param product Product yang akan ditambahkan ke cart
+     * @param quantity Jumlah product yang akan ditambahkan (default: 1)
      *
      * @throws IllegalArgumentException jika quantity <= 0 (via CartItem validation)
      *
@@ -431,7 +431,7 @@ class PosViewModel @Inject constructor(
      * @see updateCartTotals
      * @see PosUiState.cartItems
      */
-    fun addProductToCart(product: Produk, quantity: Int = 1) {
+    fun addProductToCart(product: Product, quantity: Int = 1) {
         _uiState.update { currentState ->
             // Check if product already in cart
             val existingItem = currentState.cartItems.find { it.product.id == product.id }
@@ -462,7 +462,7 @@ class PosViewModel @Inject constructor(
     }
 
     /**
-     * Update quantity produk di cart dengan validation
+     * Update quantity product di cart dengan validation
      *
      * **Business Logic Flow:**
      * 1. **Item Lookup**: Cari item di cart berdasarkan productId
@@ -517,7 +517,7 @@ class PosViewModel @Inject constructor(
      * viewModel.updateCartItemQuantity(productId, 0)
      * ```
      *
-     * @param productId ID produk yang akan diupdate
+     * @param productId ID product yang akan diupdate
      * @param newQuantity Quantity baru (0 untuk remove)
      *
      * @see CartItem.updateQuantity
@@ -552,7 +552,7 @@ class PosViewModel @Inject constructor(
     }
 
     /**
-     * Hapus produk dari cart
+     * Hapus product dari cart
      *
      * **Business Logic Flow:**
      * 1. **Item Removal**: Filter out item dari cart list
@@ -596,7 +596,7 @@ class PosViewModel @Inject constructor(
      * viewModel.removeCartItem(cartItem.productId)
      * ```
      *
-     * @param productId ID produk yang akan dihapus
+     * @param productId ID product yang akan dihapus
      *
      * @see updateCartTotals
      * @see PosUiState.cartItems
@@ -765,7 +765,7 @@ class PosViewModel @Inject constructor(
      * **Business Logic Flow:**
      * 1. **Validation**: Cek cart tidak kosong, payment method valid
      * 2. **Transaction Creation**: Convert cart items ke SaleItems
-     * 3. **Sale Processing**: Create Penjualan dengan SaleService
+     * 3. **Sale Processing**: Create Sale dengan SaleService
      * 4. **Inventory Update**: Automatic stock reduction via SaleService
      * 5. **State Reset**: Clear cart, show success, enable receipt printing
      * 6. **Error Handling**: Comprehensive error handling dengan user feedback
@@ -868,7 +868,7 @@ class PosViewModel @Inject constructor(
             try {
                 // Create sale items from cart
                 val saleItems = currentState.cartItems.map { cartItem ->
-                    ItemPenjualan(
+                    ItemSale(
                         saleId = 0, // Will be set by repository
                         productId = cartItem.product.id,
                         quantity = cartItem.quantity,
@@ -878,7 +878,7 @@ class PosViewModel @Inject constructor(
                 }
 
                 // Create sale
-                val sale = Penjualan(
+                val sale = Sale(
                     saleDate = java.util.Date(),
                     totalAmount = currentState.total,
                     tax = currentState.tax,
@@ -1060,7 +1060,7 @@ class PosViewModel @Inject constructor(
      *
      * @param barcode Detected barcode string dari scanner
      *
-     * @throws ProductNotFound jika barcode tidak cocok dengan produk manapun
+     * @throws ProductNotFound jika barcode tidak cocok dengan product manapun
      * @throws ServiceError jika product search gagal
      *
      * @see ProductService.searchProducts
@@ -1086,7 +1086,7 @@ class PosViewModel @Inject constructor(
                             _uiState.update {
                                 it.copy(
                                     isScanning = false,
-                                    error = "Produk dengan barcode $barcode tidak ditemukan"
+                                    error = "Product dengan barcode $barcode tidak ditemukan"
                                 )
                             }
                         }
@@ -1095,7 +1095,7 @@ class PosViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isScanning = false,
-                                error = "Gagal mencari produk dengan barcode"
+                                error = "Gagal mencari product dengan barcode"
                             )
                         }
                     }
@@ -1414,7 +1414,7 @@ class PosViewModel @Inject constructor(
     /**
      * Helper to check stock availability (pure function).
      */
-    private fun isStockSufficient(product: Produk, requestedQuantity: Int): Boolean {
+    private fun isStockSufficient(product: Product, requestedQuantity: Int): Boolean {
         return requestedQuantity <= product.stockQuantity
     }
 }
