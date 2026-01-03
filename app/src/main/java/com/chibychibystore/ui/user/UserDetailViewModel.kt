@@ -3,7 +3,7 @@ package com.chibychibystore.ui.user
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.User
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.UserManagementService
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class UserDetailUiState(
-    val user: Pengguna? = null,
+    val user: User? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
     val isEditMode: Boolean = false
@@ -34,7 +34,7 @@ class UserDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(UserDetailUiState())
     val uiState: StateFlow<UserDetailUiState> = _uiState.asStateFlow()
 
-    private var originalUser: Pengguna? = null
+    private var originalUser: User? = null
 
     fun loadUser(userId: Long) {
         viewModelScope.launch {
@@ -49,7 +49,7 @@ class UserDetailViewModel @Inject constructor(
                         isLoading = false
                     )
                 } else {
-                    val error = result.exceptionOrNull()?.message ?: "Gagal memuat pengguna"
+                    val error = result.exceptionOrNull()?.message ?: "Gagal memuat user"
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = error
@@ -58,7 +58,7 @@ class UserDetailViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.message ?: "Gagal memuat pengguna"
+                    error = e.message ?: "Gagal memuat user"
                 )
             }
         }
@@ -118,7 +118,7 @@ class UserDetailViewModel @Inject constructor(
                         )
                     }
                 } else {
-                    val errorMessage = result.exceptionOrNull()?.message ?: "Gagal menyimpan pengguna"
+                    val errorMessage = result.exceptionOrNull()?.message ?: "Gagal menyimpan user"
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -168,7 +168,7 @@ class UserDetailViewModel @Inject constructor(
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = result.exceptionOrNull()?.message ?: "Gagal menghapus pengguna"
+                        error = result.exceptionOrNull()?.message ?: "Gagal menghapus user"
                     )
                 }
             } catch (e: Exception) {

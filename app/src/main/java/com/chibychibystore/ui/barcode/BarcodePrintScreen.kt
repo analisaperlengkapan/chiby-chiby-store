@@ -16,7 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chibychibystore.R
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.ui.components.shared.AppTopBar
 
 /**
@@ -31,7 +31,7 @@ enum class LabelSize(val displayName: String, val width: Int, val height: Int) {
 
 /**
  * Barcode Print Screen
- * Mengelola pencetakan label barcode untuk produk
+ * Mengelola pencetakan label barcode untuk product
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,12 +101,12 @@ fun BarcodePrintScreen(
 
 @Composable
 private fun ProductSelectionSection(
-    products: List<Produk>,
-    selectedProduct: Produk?,
+    products: List<Product>,
+    selectedProduct: Product?,
     searchQuery: String,
     isLoading: Boolean,
     onSearchQueryChange: (String) -> Unit,
-    onProductSelected: (Produk) -> Unit
+    onProductSelected: (Product) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -162,7 +162,7 @@ private fun ProductSelectionSection(
                             )
                         }
                         IconButton(onClick = { onProductSelected(product) }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Ubah produk")
+                            Icon(Icons.Default.Edit, contentDescription = "Ubah product")
                         }
                     }
                 }
@@ -209,7 +209,7 @@ private fun ProductSelectionSection(
 
 @Composable
 private fun ProductListItem(
-    product: Produk,
+    product: Product,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -370,7 +370,7 @@ private fun LabelConfigurationSection(
 
 @Composable
 private fun LabelPreviewSection(
-    product: Produk,
+    product: Product,
     labelSize: LabelSize,
     quantity: Int
 ) {

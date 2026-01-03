@@ -3,7 +3,7 @@ package com.chibychibystore.ui.expense
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.ExpenseCategory
-import com.chibychibystore.data.local.entity.Pengeluaran
+import com.chibychibystore.data.local.entity.Expense
 import com.chibychibystore.service.ExpenseService
 import com.chibychibystore.data.model.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +16,7 @@ import javax.inject.Inject
  * UI State untuk Expense Detail Screen
  */
 data class ExpenseDetailUiState(
-    val expense: Pengeluaran? = null,
+    val expense: Expense? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
     val isEditing: Boolean = false,
@@ -27,7 +27,7 @@ data class ExpenseDetailUiState(
 )
 
 /**
- * ViewModel untuk detail pengeluaran
+ * ViewModel untuk detail expense
  */
 @HiltViewModel
 class ExpenseDetailViewModel @Inject constructor(
@@ -38,7 +38,7 @@ class ExpenseDetailViewModel @Inject constructor(
     val uiState: StateFlow<ExpenseDetailUiState> = _uiState
 
     /**
-     * Load pengeluaran berdasarkan ID
+     * Load expense berdasarkan ID
      */
     fun loadExpense(expenseId: Long) {
         viewModelScope.launch {
@@ -54,7 +54,7 @@ class ExpenseDetailViewModel @Inject constructor(
                     }
                     is com.chibychibystore.data.model.Result.Failure -> {
                         _uiState.value = _uiState.value.copy(
-                            error = result.exception.message ?: "Gagal memuat pengeluaran",
+                            error = result.exception.message ?: "Gagal memuat expense",
                             isLoading = false
                         )
                     }
@@ -171,7 +171,7 @@ class ExpenseDetailViewModel @Inject constructor(
                 onSuccess()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Gagal menghapus pengeluaran",
+                    error = e.message ?: "Gagal menghapus expense",
                     isLoading = false
                 )
             }

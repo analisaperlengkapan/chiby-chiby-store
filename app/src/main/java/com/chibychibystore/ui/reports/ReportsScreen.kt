@@ -293,7 +293,7 @@ private fun GrossSalesReportScreen(data: GrossSalesReport?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         MetricCard(
-            title = "Total Penjualan",
+            title = "Total Sale",
             value = "Rp ${"%,.0f".format(data.totalSales)}",
             subtitle = "${data.totalTransactions} transaksi"
         )
@@ -336,7 +336,7 @@ private fun NetProfitReportScreen(data: NetProfitReport?) {
             value = "Rp ${"%,.0f".format(data.grossProfit)}"
         )
         MetricCard(
-            title = "Total Pengeluaran",
+            title = "Total Expense",
             value = "Rp ${"%,.0f".format(data.totalExpenses)}"
         )
         MetricCard(
@@ -355,10 +355,10 @@ private fun SalesByProductReportScreen(data: List<ProductSales>?) {
             val chartData = data.take(10).map { it.productName to it.totalRevenue.toFloat() }
             BarChart(
                 data = chartData,
-                title = "Penjualan per Produk (Top 10)"
+                title = "Sale per Product (Top 10)"
             )
         } else {
-            Text("Tidak ada data penjualan produk")
+            Text("Tidak ada data penjualan product")
         }
     }
 }
@@ -371,7 +371,7 @@ private fun SalesByCategoryReportScreen(data: List<CategorySales>?) {
             val chartData = data.map { it.categoryName to it.totalRevenue.toFloat() }
             BarChart(
                 data = chartData,
-                title = "Penjualan per Kategori"
+                title = "Sale per Category"
             )
         } else {
             Text("Tidak ada data penjualan kategori")
@@ -387,7 +387,7 @@ private fun SalesTrendReportScreen(data: List<TrendData>?) {
             val chartData = data.map { it.date.toString() to it.sales.toFloat() }
             LineChart(
                 data = chartData,
-                title = "Trend Penjualan Harian"
+                title = "Trend Sale Harian"
             )
         } else {
             Text("Tidak ada data trend penjualan")
@@ -404,7 +404,7 @@ private fun IncomeStatementReportScreen(data: IncomeStatement?) {
             value = "Rp ${"%,.0f".format(data.revenue)}"
         )
         MetricCard(
-            title = "Harga Pokok Penjualan",
+            title = "Harga Pokok Sale",
             value = "Rp ${"%,.0f".format(data.costOfGoodsSold)}"
         )
         MetricCard(
@@ -454,7 +454,7 @@ private fun ExpenseReportScreen(data: ExpenseReport?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         MetricCard(
-            title = "Total Pengeluaran",
+            title = "Total Expense",
             value = "Rp ${"%,.0f".format(data.totalExpenses)}"
         )
         if (data.expensesByCategory.isNotEmpty()) {
@@ -464,7 +464,7 @@ private fun ExpenseReportScreen(data: ExpenseReport?) {
             }
             PieChart(
                 data = chartData,
-                title = "Pengeluaran per Kategori"
+                title = "Expense per Category"
             )
         }
     }

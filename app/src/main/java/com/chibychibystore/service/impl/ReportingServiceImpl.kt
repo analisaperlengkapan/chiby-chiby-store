@@ -13,8 +13,8 @@ import com.chibychibystore.service.ProductSalesData
 import com.chibychibystore.service.LowStockProduct
 import com.chibychibystore.repository.SaleItemRepository
 import com.chibychibystore.repository.SaleRepository
-import com.chibychibystore.repository.PembelianRepository
-import com.chibychibystore.repository.PengeluaranRepository
+import com.chibychibystore.repository.PurchaseRepository
+import com.chibychibystore.repository.ExpenseRepository
 import com.chibychibystore.repository.ProductRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -27,8 +27,8 @@ class ReportingServiceImpl @Inject constructor(
     private val saleRepository: SaleRepository,
     private val saleItemRepository: SaleItemRepository,
     private val productRepository: ProductRepository,
-    private val pengeluaranRepository: PengeluaranRepository,
-    private val pembelianRepository: PembelianRepository,
+    private val expenseRepository: ExpenseRepository,
+    private val purchaseRepository: PurchaseRepository,
     private val balanceSheetService: BalanceSheetService,
     private val cashManagementService: CashManagementService,
     private val authService: AuthService
@@ -65,7 +65,7 @@ class ReportingServiceImpl @Inject constructor(
         } else {
             // Use Revenue (Net Sales) for financial reporting, not Gross Cash Receipts
             val totalRevenue = saleRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
-            val totalExpenses = pengeluaranRepository.getTotalExpenseAmount(startDate, endDate).getOrNull() ?: 0.0
+            val totalExpenses = expenseRepository.getTotalExpenseAmount(startDate, endDate).getOrNull() ?: 0.0
             // Cost of Goods Sold is currently 0.0 placeholder in original code, or derived from purchases?
             // Original code had totalCost = 0.0. Leaving as is but noting it uses Revenue now.
             val totalCost = 0.0
@@ -102,7 +102,7 @@ class ReportingServiceImpl @Inject constructor(
 
     override suspend fun getTopSellingProducts(limit: Int): Result<List<ProductSalesData>> = try {
         if (!authService.hasPermission(Permissions.VIEW_INVENTORY_REPORTS)) {
-            Result.failure(Exception("Tidak memiliki izin untuk melihat data produk terlaris"))
+            Result.failure(Exception("Tidak memiliki izin untuk melihat data product terlaris"))
         } else {
             val topProductsDto = saleItemRepository.getTopSellingProducts(limit).getOrNull() ?: emptyList()
 
@@ -172,7 +172,7 @@ class ReportingServiceImpl @Inject constructor(
             val revenue = saleRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
 
             // Cost of goods sold is derived from purchases in the period (pembelian)
-            val purchases = pembelianRepository.getPurchasesInDateRange(startDate, endDate)
+            val purchases = purchaseRepository.getPurchasesInDateRange(startDate, endDate)
             val costOfGoods = purchases.sumOf { it.totalAmount }
 
             val grossProfit = revenue - costOfGoods
@@ -192,7 +192,7 @@ class ReportingServiceImpl @Inject constructor(
             val grossProfit = profitRes?.grossProfit ?: 0.0
 
             // Calculate Expenses
-            val expenses = pengeluaranRepository.getExpensesInDateRange(startDate, endDate)
+            val expenses = expenseRepository.getExpensesInDateRange(startDate, endDate)
             val totalExpenses = expenses.sumOf { it.amount }
 
             val netProfit = grossProfit - totalExpenses
@@ -209,7 +209,7 @@ class ReportingServiceImpl @Inject constructor(
 
     override suspend fun getSalesByProduct(startDate: LocalDate, endDate: LocalDate): Result<List<ProductSales>> = try {
         if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
-            Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan per produk"))
+            Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan per product"))
         } else {
             // Optimized using single SQL query aggregation
             val statsResult = saleItemRepository.getProductSalesStats(startDate, endDate)
@@ -316,7 +316,7 @@ class ReportingServiceImpl @Inject constructor(
                     cogs += (prod?.costPrice ?: 0.0) * item.quantity
                 }
             }
-            val expenses = pengeluaranRepository.getExpensesInDateRange(start, end)
+            val expenses = expenseRepository.getExpensesInDateRange(start, end)
             val operatingExpenses = expenses.sumOf { it.amount }
             val grossProfit = revenue - cogs
             val net = grossProfit - operatingExpenses
@@ -351,7 +351,7 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission(Permissions.VIEW_FINANCIAL_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan pengeluaran"))
         } else {
-            val expenses = pengeluaranRepository.getExpensesInDateRange(startDate, endDate)
+            val expenses = expenseRepository.getExpensesInDateRange(startDate, endDate)
             val total = expenses.sumOf { it.amount }
             val byCategory = expenses.groupBy { it.category }.mapValues { entry -> entry.value.sumOf { it.amount } }
             Result.success(ExpenseReport(total, byCategory.mapKeys { it.key as Any }))

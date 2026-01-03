@@ -52,7 +52,7 @@ fun UserAddScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Tambah Pengguna",
+                title = "Tambah User",
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() }
             )

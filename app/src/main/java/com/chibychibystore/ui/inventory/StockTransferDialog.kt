@@ -11,19 +11,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.chibychibystore.data.local.entity.Gudang
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Warehouse
+import com.chibychibystore.data.local.entity.Product
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StockTransferDialog(
-    product: Produk,
-    fromWarehouse: Gudang,
-    availableWarehouses: List<Gudang>,
+    product: Product,
+    fromWarehouse: Warehouse,
+    availableWarehouses: List<Warehouse>,
     onTransfer: (toWarehouseId: Long, quantity: Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedWarehouse by remember { mutableStateOf<Gudang?>(null) }
+    var selectedWarehouse by remember { mutableStateOf<Warehouse?>(null) }
     var quantity by remember { mutableStateOf("") }
     var quantityError by remember { mutableStateOf<String?>(null) }
 
@@ -107,7 +107,7 @@ fun StockTransferDialog(
 
                 // Target warehouse selection
                 Text(
-                    text = "Pilih Gudang Tujuan",
+                    text = "Pilih Warehouse Tujuan",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
                 )
@@ -195,7 +195,7 @@ fun StockTransferDialog(
 
 @Composable
 private fun WarehouseSelectionCard(
-    warehouse: Gudang,
+    warehouse: Warehouse,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {

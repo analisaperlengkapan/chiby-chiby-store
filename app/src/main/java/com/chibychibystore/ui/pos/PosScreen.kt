@@ -25,7 +25,7 @@ import androidx.navigation.NavController
 import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.ui.theme.Success
 import com.chibychibystore.ui.theme.Error as CustomError
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.CardItem
 import com.chibychibystore.ui.components.shared.ErrorMessage
@@ -175,7 +175,7 @@ private fun SearchBar(
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        placeholder = { Text("Cari produk berdasarkan nama atau barcode...") },
+        placeholder = { Text("Cari product berdasarkan nama atau barcode...") },
         leadingIcon = {
             Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary)
         },
@@ -193,9 +193,9 @@ private fun SearchBar(
 
 @Composable
 private fun ProductSearchPanel(
-    searchResults: List<Produk>,
+    searchResults: List<Product>,
     isSearching: Boolean,
-    onProductClick: (Produk) -> Unit,
+    onProductClick: (Product) -> Unit,
     formatCurrency: (Double) -> String,
     modifier: Modifier = Modifier
 ) {
@@ -229,7 +229,7 @@ private fun ProductSearchPanel(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Ketik untuk mencari produk",
+                        text = "Ketik untuk mencari product",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -264,7 +264,7 @@ fun rememberCurrencyFormatter(): (Double) -> String {
 
 @Composable
 private fun ProductSearchItem(
-    product: Produk,
+    product: Product,
     formatCurrency: (Double) -> String,
     onClick: () -> Unit
 ) {

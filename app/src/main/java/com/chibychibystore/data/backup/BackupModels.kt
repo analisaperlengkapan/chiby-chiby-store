@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.Contextual
 
 /**
- * Root container untuk backup data
+ * Root container for backup data
  */
 @Serializable
 data class BackupData(
@@ -26,18 +26,18 @@ data class BackupMetadata(
 )
 
 /**
- * Container untuk semua entity backup
+ * Container for all backup entities
  */
 @Serializable
 data class BackupEntities(
-    val pengguna: List<Pengguna>,
-    val kategori: List<Kategori>,
-    val gudang: List<Gudang>,
-    val produk: List<Produk>,
-    val pemasok: List<Pemasok>,
-    val penjualan: List<Penjualan>,
-    val itemPenjualan: List<ItemPenjualan>,
-    val pembelian: List<Pembelian>,
-    val itemPembelian: List<ItemPembelian>,
-    val pengeluaran: List<Pengeluaran>
+    val pengguna: List<User>,
+    val kategori: List<Category>,
+    val gudang: List<Warehouse>,
+    val product: List<Product>,
+    val pemasok: List<Supplier>,
+    val penjualan: List<Sale>,
+    val itemPenjualan: List<SaleItem>,
+    val pembelian: List<Purchase>,
+    val itemPembelian: List<PurchaseItem>,
+    val pengeluaran: List<Expense>
 )

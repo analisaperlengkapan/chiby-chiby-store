@@ -61,10 +61,10 @@ class SaleServiceImpl @Inject constructor(
 
         items.forEach { item ->
             val product = productsMap[item.productId]
-                ?: throw Exception("Produk dengan ID ${item.productId} tidak ditemukan")
+                ?: throw Exception("Product dengan ID ${item.productId} tidak ditemukan")
 
             if (product.stockQuantity < item.quantity) {
-                throw Exception("Stok tidak mencukupi untuk produk: ${product.name}. Sisa: ${product.stockQuantity}, Diminta: ${item.quantity}")
+                throw Exception("Stok tidak mencukupi untuk product: ${product.name}. Sisa: ${product.stockQuantity}, Diminta: ${item.quantity}")
             }
         }
 
@@ -114,7 +114,7 @@ class SaleServiceImpl @Inject constructor(
                 val updatedProduct = (updatedProductResult as? Result.Success)?.data
 
                 if (updatedProduct != null && updatedProduct.stockQuantity < 0) {
-                     throw Exception("Stok tidak mencukupi untuk produk: ${updatedProduct.name}. Transaksi dibatalkan.")
+                     throw Exception("Stok tidak mencukupi untuk product: ${updatedProduct.name}. Transaksi dibatalkan.")
                 }
             }
 

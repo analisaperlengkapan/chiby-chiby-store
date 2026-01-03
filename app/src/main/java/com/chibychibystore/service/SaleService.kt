@@ -56,7 +56,7 @@ interface SaleService {
      *
      * **Proses Transaksi:**
      * 1. Validasi data penjualan dan items
-     * 2. Cek ketersediaan stok untuk setiap produk
+     * 2. Cek ketersediaan stok untuk setiap product
      * 3. Kurangi stok inventory secara otomatis
      * 4. Simpan transaksi dan items ke database
      * 5. Return data penjualan lengkap dengan items
@@ -67,11 +67,11 @@ interface SaleService {
      * - Atomic operation: Rollback jika ada kegagalan di tengah proses
      *
      * @param sale Data header penjualan (tanggal, total, metode pembayaran, kasir)
-     * @param items List item penjualan dengan quantity dan harga per produk
+     * @param items List item penjualan dengan quantity dan harga per product
      * @return Result dengan [SaleWithItems] lengkap atau exception
      *
      * @throws IllegalArgumentException jika validasi data gagal
-     * @throws Exception jika stok tidak mencukupi atau produk tidak ditemukan
+     * @throws Exception jika stok tidak mencukupi atau product tidak ditemukan
      *
      * @sample
      * ```kotlin
@@ -82,8 +82,8 @@ interface SaleService {
      *     cashierId = 1
      * )
      * val items = listOf(
-     *     SaleItem(produkId = "prod1", quantity = 2, unitPrice = 5000.0, totalPrice = 10000.0),
-     *     SaleItem(produkId = "prod2", quantity = 1, unitPrice = 5000.0, totalPrice = 5000.0)
+     *     SaleItem(productId = "prod1", quantity = 2, unitPrice = 5000.0, totalPrice = 10000.0),
+     *     SaleItem(productId = "prod2", quantity = 1, unitPrice = 5000.0, totalPrice = 5000.0)
      * )
      * val result = saleService.createSale(sale, items)
      * ```

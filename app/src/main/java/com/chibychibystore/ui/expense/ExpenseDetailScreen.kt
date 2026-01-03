@@ -44,7 +44,7 @@ fun ExpenseDetailScreen(
     Scaffold(
         topBar = {
                 AppTopBar(
-                title = if (uiState.isEditing) "Edit Pengeluaran" else "Detail Pengeluaran",
+                title = if (uiState.isEditing) "Edit Expense" else "Detail Expense",
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
@@ -100,7 +100,7 @@ fun ExpenseDetailScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "Pengeluaran tidak ditemukan",
+                            text = "Expense tidak ditemukan",
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -129,7 +129,7 @@ fun ExpenseDetailScreen(
                                 OutlinedTextField(
                                     value = uiState.editCategory?.displayName ?: "",
                                     onValueChange = { },
-                                    label = { Text("Kategori") },
+                                    label = { Text("Category") },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .menuAnchor(),
@@ -196,14 +196,14 @@ fun ExpenseDetailScreen(
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Text(
-                                        text = "Detail Pengeluaran",
+                                        text = "Detail Expense",
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(bottom = 16.dp)
                                     )
 
                                     DetailRow("Jumlah", formatCurrency(expense.amount))
-                                    DetailRow("Kategori", expense.category.displayName)
+                                    DetailRow("Category", expense.category.displayName)
                                     DetailRow("Tanggal", SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(expense.expenseDate))
                                     DetailRow("Deskripsi", expense.description ?: "Tidak ada deskripsi")
                                 }
@@ -218,8 +218,8 @@ fun ExpenseDetailScreen(
     // Delete confirmation dialog
     if (showDeleteDialog) {
         ConfirmDialog(
-            title = "Hapus Pengeluaran?",
-            message = "Pengeluaran ini akan dihapus. Tindakan ini tidak dapat dibatalkan.",
+            title = "Hapus Expense?",
+            message = "Expense ini akan dihapus. Tindakan ini tidak dapat dibatalkan.",
             confirmText = "Hapus",
             dismissText = "Batal",
             onConfirm = {

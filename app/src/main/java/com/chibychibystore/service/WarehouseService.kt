@@ -35,7 +35,7 @@ interface WarehouseService {
     suspend fun getWarehouses(): Result<List<Warehouse>>
 
     /**
-     * Assign produk ke gudang tertentu
+     * Assign product ke gudang tertentu
      */
     suspend fun assignProductToWarehouse(productId: Long, warehouseId: Long): Result<Unit>
 
@@ -50,12 +50,12 @@ interface WarehouseService {
     ): Result<Unit>
 
     /**
-     * Get stok produk per gudang
+     * Get stok product per gudang
      */
     suspend fun getWarehouseStock(warehouseId: Long): Result<List<Product>>
 
     /**
-     * Get semua produk di semua gudang
+     * Get semua product di semua gudang
      */
     suspend fun getAllWarehouseStock(): Result<Map<Warehouse, List<Product>>>
 

@@ -4,10 +4,10 @@ import com.chibychibystore.data.model.Result
 import com.chibychibystore.constant.Permissions
 import com.chibychibystore.service.UserManagementService
 import com.chibychibystore.service.UserStats
-import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.User
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.error.ChibyChibyException
-import com.chibychibystore.repository.PenggunaRepository
+import com.chibychibystore.repository.UserRepository
 import com.chibychibystore.repository.UserSessionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -18,20 +18,20 @@ import javax.inject.Singleton
 
 @Singleton
 class UserManagementServiceImpl @Inject constructor(
-    private val penggunaRepository: PenggunaRepository,
+    private val userRepository: UserRepository,
     private val userSessionRepository: UserSessionRepository,
     private val authService: AuthService
 ) : UserManagementService {
 
-    override fun getAllUsers(): Flow<List<Pengguna>> =
-        penggunaRepository.getAllPengguna()
+    override fun getAllUsers(): Flow<List<User>> =
+        userRepository.getAllUsers()
 
-    override suspend fun getUserById(userId: Long): Result<Pengguna> {
+    override suspend fun getUserById(userId: Long): Result<User> {
         return try {
             if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat detail user"))
             }
-            penggunaRepository.getPenggunaById(userId)
+            userRepository.getUserById(userId)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getUserById", e))
         }
@@ -42,13 +42,13 @@ class UserManagementServiceImpl @Inject constructor(
             if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat statistik user"))
             }
-            val allUsers = penggunaRepository.getAllPengguna().first()
-            val totalUsers = allUsers.size
-            val activeUsers = allUsers.count { it.isActive }
-            val owners = allUsers.count { it.role == Role.OWNER }
-            val managers = allUsers.count { it.role == Role.MANAGER }
-            val cashiers = allUsers.count { it.role == Role.CASHIER }
-            val warehouseStaff = allUsers.count { it.role == Role.WAREHOUSE }
+
+            val totalUsers = userRepository.getUserCount().getOrNull() ?: 0
+            val activeUsers = userRepository.countActiveUsers().getOrNull() ?: 0
+            val owners = userRepository.countByRole(Role.OWNER).getOrNull() ?: 0
+            val managers = userRepository.countByRole(Role.MANAGER).getOrNull() ?: 0
+            val cashiers = userRepository.countByRole(Role.CASHIER).getOrNull() ?: 0
+            val warehouseStaff = userRepository.countByRole(Role.WAREHOUSE).getOrNull() ?: 0
 
             Result.success(UserStats(
                 totalUsers = totalUsers,
@@ -63,14 +63,14 @@ class UserManagementServiceImpl @Inject constructor(
         }
     }
 
-    override fun getUsersByRole(role: Role): Flow<List<Pengguna>> =
-        penggunaRepository.getPenggunaByRole(role)
+    override fun getUsersByRole(role: Role): Flow<List<User>> =
+        userRepository.getUsersByRole(role)
 
-    override fun searchUsers(query: String): Flow<List<Pengguna>> =
-        penggunaRepository.searchPengguna(query)
+    override fun searchUsers(query: String): Flow<List<User>> =
+        userRepository.searchUsers(query)
 
     override fun canDeleteLastOwner(): Flow<Boolean> {
-        return penggunaRepository.getAllPengguna().map { users ->
+        return userRepository.getAllUsers().map { users ->
             users.count { it.role == Role.OWNER } > 1
         }
     }
@@ -89,7 +89,7 @@ class UserManagementServiceImpl @Inject constructor(
             validateUserData(username, password)
 
             // Check if username already exists
-            val existingUserResult = penggunaRepository.getPenggunaByUsername(username)
+            val existingUserResult = userRepository.getUserByUsername(username)
             if (existingUserResult.isSuccess) {
                 return Result.failure(ChibyChibyException.ValidationError("username", "Username sudah digunakan"))
             }
@@ -99,7 +99,7 @@ class UserManagementServiceImpl @Inject constructor(
                 .digest(password.toByteArray())
                 .joinToString("") { "%02x".format(it) }
 
-            val user = Pengguna(
+            val user = User(
                 username = username,
                 passwordHash = passwordHash,
                 role = role,
@@ -108,7 +108,7 @@ class UserManagementServiceImpl @Inject constructor(
                 updatedAt = java.util.Date()
             )
 
-            return penggunaRepository.createPengguna(user)
+            return userRepository.createUser(user)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal membuat user", e))
         }
@@ -132,13 +132,13 @@ class UserManagementServiceImpl @Inject constructor(
             }
 
             // Get existing user
-            val existingUserResult = penggunaRepository.getPenggunaById(userId)
+            val existingUserResult = userRepository.getUserById(userId)
             val existingUser = existingUserResult.getOrNull()
                 ?: return Result.failure(ChibyChibyException.DatabaseError("User tidak ditemukan"))
 
             // Validate username uniqueness if changed
             if (username != null && username != existingUser.username) {
-                val userWithSameUsernameResult = penggunaRepository.getPenggunaByUsername(username)
+                val userWithSameUsernameResult = userRepository.getUserByUsername(username)
                 if (userWithSameUsernameResult.isSuccess) {
                     return Result.failure(ChibyChibyException.ValidationError("username", "Username sudah digunakan"))
                 }
@@ -151,7 +151,7 @@ class UserManagementServiceImpl @Inject constructor(
                 updatedAt = java.util.Date()
             )
 
-            val updateResult = penggunaRepository.updatePengguna(updatedUser)
+            val updateResult = userRepository.updateUser(updatedUser)
             if (updateResult.isSuccess) {
                 Result.success(Unit)
             } else {
@@ -168,7 +168,7 @@ class UserManagementServiceImpl @Inject constructor(
     override suspend fun deleteUser(userId: Long, deletedBy: Long): Result<Unit> {
         return try {
             // Check if user exists
-            val userResult = penggunaRepository.getPenggunaById(userId)
+            val userResult = userRepository.getUserById(userId)
             if (userResult.isFailure) {
                 return Result.failure(Exception("User tidak ditemukan"))
             }
@@ -186,7 +186,7 @@ class UserManagementServiceImpl @Inject constructor(
             // Optional: prevent deleting another owner/manager if not owner
             // but for now MANAGE_USERS is enough for simplicity as per implementation plan.
 
-            val deleteResult = penggunaRepository.deletePengguna(userId)
+            val deleteResult = userRepository.deleteUser(userId)
             if (deleteResult.isSuccess) {
                 Result.success(Unit)
             } else {
@@ -213,7 +213,7 @@ class UserManagementServiceImpl @Inject constructor(
                 return Result.failure(Exception("Password minimal 6 karakter"))
             }
 
-            val userResult = penggunaRepository.getPenggunaById(userId)
+            val userResult = userRepository.getUserById(userId)
             val user = userResult.getOrNull() ?: return Result.failure(Exception("User tidak ditemukan"))
 
             val passwordHash = MessageDigest.getInstance("SHA-256")
@@ -225,7 +225,7 @@ class UserManagementServiceImpl @Inject constructor(
                 updatedAt = java.util.Date()
             )
 
-            val updateResult = penggunaRepository.updatePengguna(updatedUser)
+            val updateResult = userRepository.updateUser(updatedUser)
             if (updateResult.isSuccess) {
                 Result.success(Unit)
             } else {
@@ -252,11 +252,11 @@ class UserManagementServiceImpl @Inject constructor(
                 return Result.failure(Exception("Tidak dapat menonaktifkan user sendiri"))
             }
 
-            val userResult = penggunaRepository.getPenggunaById(userId)
+            val userResult = userRepository.getUserById(userId)
             val user = userResult.getOrNull() ?: return Result.failure(Exception("User tidak ditemukan"))
 
             val updatedUser = user.copy(isActive = false, updatedAt = java.util.Date())
-            penggunaRepository.updatePengguna(updatedUser)
+            userRepository.updateUser(updatedUser)
 
             Result.success(Unit)
         } catch (e: Exception) {
@@ -271,11 +271,11 @@ class UserManagementServiceImpl @Inject constructor(
                 return Result.failure(Exception("Tidak memiliki izin untuk mengaktifkan user"))
             }
 
-            val userResult = penggunaRepository.getPenggunaById(userId)
+            val userResult = userRepository.getUserById(userId)
             val user = userResult.getOrNull() ?: return Result.failure(Exception("User tidak ditemukan"))
 
             val updatedUser = user.copy(isActive = true, updatedAt = java.util.Date())
-            penggunaRepository.updatePengguna(updatedUser)
+            userRepository.updateUser(updatedUser)
 
             Result.success(Unit)
         } catch (e: Exception) {

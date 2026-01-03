@@ -1,9 +1,9 @@
 package com.chibychibystore.service.impl
 
 import com.chibychibystore.constant.Permissions
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.data.model.Result
-import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.ProductRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.ProductService
 import kotlinx.coroutines.flow.Flow
@@ -12,17 +12,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Implementation dari ProductService menggunakan ProdukRepository
+ * Implementation dari ProductService menggunakan ProductRepository
  *
  * Kelas ini mengimplementasikan interface [ProductService] dengan fokus pada:
- * - Validasi komprehensif untuk data produk
+ * - Validasi komprehensif untuk data product
  * - Business logic untuk inventory management
  * - Reactive streams untuk real-time UI updates
  * - Error handling yang konsisten
  *
  * **Komponen Utama:**
- * - [ProdukRepository]: Interface untuk data access layer
- * - Validation logic: Business rules untuk produk
+ * - [ProductRepository]: Interface untuk data access layer
+ * - Validation logic: Business rules untuk product
  * - Flow transformations: Reactive data streams
  * - Error propagation: Konsisten Result-based error handling
  *
@@ -42,41 +42,41 @@ import javax.inject.Singleton
  * - Kotlin Coroutines untuk async operations
  * - Kotlin Flow untuk reactive streams
  *
- * @property productRepository Repository untuk operasi database produk
+ * @property productRepository Repository untuk operasi database product
  *
  * @constructor Inject dependencies melalui Hilt
- * @param productRepository Instance ProdukRepository yang diinject
+ * @param productRepository Instance ProductRepository yang diinject
  *
  * @author Chiby Chiby Store Development Team
  * @since 1.0.0
  * @see ProductService
- * @see ProdukRepository
- * @see Produk
+ * @see ProductRepository
+ * @see Product
  */
 @Singleton
 class ProductServiceImpl @Inject constructor(
-    private val productRepository: ProdukRepository,
+    private val productRepository: ProductRepository,
     private val authService: AuthService
 ) : ProductService {
 
     /**
-     * Implementasi pembuatan produk baru dengan validasi lengkap
+     * Implementasi pembuatan product baru dengan validasi lengkap
      *
      * **Proses Validasi:**
      * 1. Validasi basic product data (nama, harga, dll)
      * 2. Cek uniqueness barcode jika disediakan
      * 3. Insert ke database melalui repository
-     * 4. Return produk dengan ID yang di-generate
+     * 4. Return product dengan ID yang di-generate
      *
      * **Error Scenarios:**
-     * - ValidationException: Data produk tidak valid
+     * - ValidationException: Data product tidak valid
      * - Exception: Barcode sudah digunakan
      * - Database errors: Connection issues, constraint violations
      *
-     * @param product Data produk baru tanpa ID
-     * @return Result dengan produk yang berhasil dibuat (dengan ID)
+     * @param product Data product baru tanpa ID
+     * @return Result dengan product yang berhasil dibuat (dengan ID)
      */
-    override suspend fun createProduct(product: Produk): Result<Produk> {
+    override suspend fun createProduct(product: Product): Result<Product> {
         return try {
             if (!authService.hasPermission(Permissions.EDIT_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
@@ -87,18 +87,18 @@ class ProductServiceImpl @Inject constructor(
             // Pastikan barcode unik jika ada (GS1 compliance)
             // Pre-check for faster feedback, but handle race condition below
             if (!product.barcode.isNullOrBlank()) {
-                val existingResult = productRepository.getProdukByBarcode(product.barcode)
+                val existingResult = productRepository.getProductByBarcode(product.barcode)
                 if (existingResult is Result.Success && existingResult.data.id != 0L) {
-                     return Result.failure(Exception("Barcode sudah digunakan oleh produk lain"))
+                     return Result.failure(Exception("Barcode sudah digunakan oleh product lain"))
                 }
             }
 
             try {
-                val createResult = productRepository.createProduk(product)
-                val createdProductId = (createResult as? Result.Success)?.data ?: return Result.failure((createResult as? Result.Error)?.exception ?: Exception("Gagal membuat produk"))
+                val createResult = productRepository.createProduct(product)
+                val createdProductId = (createResult as? Result.Success)?.data ?: return Result.failure((createResult as? Result.Error)?.exception ?: Exception("Gagal membuat product"))
 
-                val createdProductResult = productRepository.getProdukById(createdProductId)
-                val createdProduct = (createdProductResult as? Result.Success)?.data ?: return Result.failure((createdProductResult as? Result.Error)?.exception ?: Exception("Gagal mengambil produk yang dibuat"))
+                val createdProductResult = productRepository.getProductById(createdProductId)
+                val createdProduct = (createdProductResult as? Result.Success)?.data ?: return Result.failure((createdProductResult as? Result.Error)?.exception ?: Exception("Gagal mengambil product yang dibuat"))
                 Result.success(createdProduct)
             } catch (e: android.database.sqlite.SQLiteConstraintException) {
                 Result.failure(Exception("Barcode sudah digunakan (Constraint Error)"))
@@ -115,7 +115,7 @@ class ProductServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateProduct(product: Produk): Result<Produk> {
+    override suspend fun updateProduct(product: Product): Result<Product> {
         return try {
             if (!authService.hasPermission(Permissions.EDIT_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
@@ -125,20 +125,20 @@ class ProductServiceImpl @Inject constructor(
 
             // Pastikan barcode unik jika diubah
             if (!product.barcode.isNullOrBlank()) {
-                val existingResult = productRepository.getProdukByBarcode(product.barcode)
+                val existingResult = productRepository.getProductByBarcode(product.barcode)
                 if (existingResult is Result.Success) {
                     val existing = existingResult.data
                     if (existing.id != product.id) {
-                        return Result.failure(Exception("Barcode sudah digunakan oleh produk lain"))
+                        return Result.failure(Exception("Barcode sudah digunakan oleh product lain"))
                     }
                 }
             }
 
-            val updateResult = productRepository.updateProduk(product)
+            val updateResult = productRepository.updateProduct(product)
             if (updateResult is Result.Error) return Result.failure(updateResult.exception)
 
-            val updatedProductResult = productRepository.getProdukById(product.id)
-            val updatedProduct = (updatedProductResult as? Result.Success)?.data ?: return Result.failure((updatedProductResult as? Result.Error)?.exception ?: Exception("Gagal mengambil produk yang diupdate"))
+            val updatedProductResult = productRepository.getProductById(product.id)
+            val updatedProduct = (updatedProductResult as? Result.Success)?.data ?: return Result.failure((updatedProductResult as? Result.Error)?.exception ?: Exception("Gagal mengambil product yang diupdate"))
             Result.success(updatedProduct)
         } catch (e: Exception) {
             Result.failure(e)
@@ -150,8 +150,8 @@ class ProductServiceImpl @Inject constructor(
             if (!authService.hasPermission(Permissions.EDIT_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
             }
-            val idLong = id.toLongOrNull() ?: return Result.failure(Exception("ID Produk tidak valid: $id"))
-            val deleteResult = productRepository.deleteProduk(idLong)
+            val idLong = id.toLongOrNull() ?: return Result.failure(Exception("ID Product tidak valid: $id"))
+            val deleteResult = productRepository.deleteProduct(idLong)
             if (deleteResult is Result.Error) return Result.failure(deleteResult.exception)
             Result.success(Unit)
         } catch (e: Exception) {
@@ -159,16 +159,16 @@ class ProductServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun getProduct(id: String): Result<Produk?> {
+    override suspend fun getProduct(id: String): Result<Product?> {
         return try {
             if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
             }
-            val idLong = id.toLongOrNull() ?: return Result.failure(Exception("ID Produk tidak valid: $id"))
-            val result = productRepository.getProdukById(idLong)
+            val idLong = id.toLongOrNull() ?: return Result.failure(Exception("ID Product tidak valid: $id"))
+            val result = productRepository.getProductById(idLong)
             when (result) {
                 is Result.Success -> Result.success(result.data)
-                is Result.Error -> Result.success(null) // Return null if not found, or propagate error? Interface says Result<Produk?>
+                is Result.Error -> Result.success(null) // Return null if not found, or propagate error? Interface says Result<Product?>
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -179,16 +179,16 @@ class ProductServiceImpl @Inject constructor(
         categoryId: String?,
         warehouseId: String?,
         searchQuery: String?
-    ): Result<List<Produk>> {
+    ): Result<List<Product>> {
         return try {
             if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
             }
             val flow = when {
-                !searchQuery.isNullOrBlank() -> productRepository.searchProduk(searchQuery)
-                categoryId != null -> productRepository.getProdukByCategory(categoryId.toLong())
-                warehouseId != null -> productRepository.getProdukByWarehouse(warehouseId.toLong())
-                else -> productRepository.getAllProduk()
+                !searchQuery.isNullOrBlank() -> productRepository.searchProduct(searchQuery)
+                categoryId != null -> productRepository.getProductByCategory(categoryId.toLong())
+                warehouseId != null -> productRepository.getProductByWarehouse(warehouseId.toLong())
+                else -> productRepository.getAllProduct()
             }
             val products = flow.first()
             Result.success(products)
@@ -197,12 +197,12 @@ class ProductServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun searchProducts(query: String): Result<List<Produk>> {
+    override suspend fun searchProducts(query: String): Result<List<Product>> {
         return try {
             if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
             }
-            val products = productRepository.searchProduk(query).first()
+            val products = productRepository.searchProduct(query).first()
             Result.success(products)
         } catch (e: Exception) {
             Result.failure(e)
@@ -215,16 +215,16 @@ class ProductServiceImpl @Inject constructor(
                 return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
             }
 
-            val idLong = productId.toLongOrNull() ?: return Result.failure(Exception("ID Produk tidak valid: $productId"))
+            val idLong = productId.toLongOrNull() ?: return Result.failure(Exception("ID Product tidak valid: $productId"))
 
             if (newStock < 0) {
                 return Result.failure(Exception("Stok tidak boleh negatif"))
             }
 
             // Ensure product exists
-            val productResult = productRepository.getProdukById(idLong)
+            val productResult = productRepository.getProductById(idLong)
             if (productResult is Result.Error) {
-                return Result.failure(Exception("Produk tidak ditemukan"))
+                return Result.failure(Exception("Product tidak ditemukan"))
             }
 
             // Perform atomic update (Set Absolute Stock)
@@ -236,44 +236,44 @@ class ProductServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun getLowStockProducts(): Result<List<Produk>> {
+    override suspend fun getLowStockProducts(): Result<List<Product>> {
         return try {
             if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
             }
-            val products = productRepository.getLowStockProduk().first()
+            val products = productRepository.getLowStockProduct().first()
             Result.success(products)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    override fun observeProducts(): Flow<List<Produk>> {
-        return productRepository.getAllProduk()
+    override fun observeProducts(): Flow<List<Product>> {
+        return productRepository.getAllProduct()
     }
 
-    override fun observeProductsByCategory(categoryId: String): Flow<List<Produk>> {
-        return productRepository.getProdukByCategory(categoryId.toLong())
+    override fun observeProductsByCategory(categoryId: String): Flow<List<Product>> {
+        return productRepository.getProductByCategory(categoryId.toLong())
     }
 
-    override fun observeProductsByWarehouse(warehouseId: String): Flow<List<Produk>> {
+    override fun observeProductsByWarehouse(warehouseId: String): Flow<List<Product>> {
         val idLong = warehouseId.toLongOrNull() ?: return kotlinx.coroutines.flow.flowOf(emptyList())
-        return productRepository.getProdukByWarehouse(idLong)
+        return productRepository.getProductByWarehouse(idLong)
     }
 
-    override fun observeSearchProducts(query: String): Flow<List<Produk>> {
-        return productRepository.searchProduk(query)
+    override fun observeSearchProducts(query: String): Flow<List<Product>> {
+        return productRepository.searchProduct(query)
     }
 
-    override fun observeLowStockProducts(): Flow<List<Produk>> {
-        return productRepository.getLowStockProduk()
+    override fun observeLowStockProducts(): Flow<List<Product>> {
+        return productRepository.getLowStockProduct()
     }
 
     /**
-     * Validasi data produk berdasarkan business rules retail
+     * Validasi data product berdasarkan business rules retail
      *
      * **Validation Rules:**
-     * - Nama produk tidak boleh kosong/blank dan minimal 2 karakter
+     * - Nama product tidak boleh kosong/blank dan minimal 2 karakter
      * - Harga beli >= 0 (tidak boleh negatif)
      * - Harga jual >= 0 (tidak boleh negatif)
      * - Harga jual >= harga beli (untuk profitabilitas)
@@ -281,7 +281,7 @@ class ProductServiceImpl @Inject constructor(
      * - Minimum stok >= 0 (untak alert system)
      *
      * **Business Logic:**
-     * - Mencegah produk dengan harga jual < harga beli (rugi)
+     * - Mencegah product dengan harga jual < harga beli (rugi)
      * - Memastikan stok selalu dalam range valid
      * - Validasi nama untuk UI display
      *
@@ -289,12 +289,12 @@ class ProductServiceImpl @Inject constructor(
      * - IllegalArgumentException untuk business rule violations
      * - Require() akan throw exception dengan message spesifik
      *
-     * @param product Produk yang akan divalidasi
+     * @param product Product yang akan divalidasi
      * @throws IllegalArgumentException jika ada data yang tidak valid
      */
-    private fun validateProduct(product: Produk) {
-        require(product.name.isNotBlank()) { "Nama produk tidak boleh kosong" }
-        require(product.name.length >= 2) { "Nama produk minimal 2 karakter" }
+    private fun validateProduct(product: Product) {
+        require(product.name.isNotBlank()) { "Nama product tidak boleh kosong" }
+        require(product.name.length >= 2) { "Nama product minimal 2 karakter" }
         require(product.costPrice >= 0) { "Harga beli tidak boleh negatif" }
         require(product.sellingPrice >= 0) { "Harga jual tidak boleh negatif" }
         require(product.stockQuantity >= 0) { "Stok tidak boleh negatif" }

@@ -18,7 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.LoadingIndicator
 import com.chibychibystore.ui.navigation.Screen
@@ -77,7 +77,7 @@ fun InventoryScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Cari produk...") },
+                placeholder = { Text("Cari product...") },
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = "Search")
                 },
@@ -134,7 +134,7 @@ private fun ErrorContent(message: String) {
 @Composable
 private fun InventoryContent(
     state: InventoryUiState.Success,
-    onProductClick: (Produk) -> Unit,
+    onProductClick: (Product) -> Unit,
     onAddProduct: () -> Unit
 ) {
     Column {
@@ -155,7 +155,7 @@ private fun InventoryContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "${state.lowStockProducts.size} produk stok rendah",
+                        text = "${state.lowStockProducts.size} product stok rendah",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -184,13 +184,13 @@ private fun EmptyInventoryState(onAddProduct: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Belum ada produk",
+            text = "Belum ada product",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Tambahkan produk pertama Anda untuk memulai",
+            text = "Tambahkan product pertama Anda untuk memulai",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -198,15 +198,15 @@ private fun EmptyInventoryState(onAddProduct: () -> Unit) {
         Button(onClick = onAddProduct) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Tambah Produk")
+            Text("Tambah Product")
         }
     }
 }
 
 @Composable
 private fun ProductList(
-    products: List<Produk>,
-    onProductClick: (Produk) -> Unit
+    products: List<Product>,
+    onProductClick: (Product) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -227,7 +227,7 @@ private fun ProductList(
 
 @Composable
 private fun ProductListItem(
-    product: Produk,
+    product: Product,
     onClick: () -> Unit
 ) {
     // Hoist the currency formatter to avoid recreation

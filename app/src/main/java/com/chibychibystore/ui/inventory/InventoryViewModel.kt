@@ -2,7 +2,7 @@ package com.chibychibystore.ui.inventory
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.service.ProductService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,9 +27,9 @@ sealed interface InventoryUiState {
     data object Loading : InventoryUiState
 
     data class Success(
-        val products: List<Produk>,
+        val products: List<Product>,
         val searchQuery: String = "",
-        val lowStockProducts: List<Produk> = emptyList()
+        val lowStockProducts: List<Product> = emptyList()
     ) : InventoryUiState
 
     data class Error(

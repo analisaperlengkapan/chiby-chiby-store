@@ -20,16 +20,16 @@ import javax.inject.Singleton
 @Singleton
 class RestoreServiceImpl @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context,
-    private val penggunaRepository: PenggunaRepository,
-    private val kategoriRepository: KategoriRepository,
-    private val gudangRepository: GudangRepository,
-    private val produkRepository: ProdukRepository,
-    private val pemasokRepository: PemasokRepository,
-    private val penjualanRepository: PenjualanRepository,
-    private val itemPenjualanRepository: ItemPenjualanRepository,
-    private val pembelianRepository: PembelianRepository,
-    private val itemPembelianRepository: ItemPembelianRepository,
-    private val pengeluaranRepository: PengeluaranRepository
+    private val userRepository: UserRepository,
+    private val categoryRepository: CategoryRepository,
+    private val warehouseRepository: WarehouseRepository,
+    private val productRepository: ProductRepository,
+    private val supplierRepository: SupplierRepository,
+    private val saleRepository: SaleRepository,
+    private val itemSaleRepository: ItemSaleRepository,
+    private val purchaseRepository: PurchaseRepository,
+    private val itemPurchaseRepository: ItemPurchaseRepository,
+    private val expenseRepository: ExpenseRepository
 ) : RestoreService {
 
     private val json = Json { prettyPrint = true }
@@ -72,9 +72,9 @@ class RestoreServiceImpl @Inject constructor(
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pemasok", progress = 0.7f, currentStepIndex = 7, totalSteps = 12)
             val pemasokRestored = restorePemasok(backupData.data.pemasok)
 
-            // Step 8: Restore produk
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data produk", progress = 0.8f, currentStepIndex = 8, totalSteps = 12)
-            val produkRestored = restoreProduk(backupData.data.produk)
+            // Step 8: Restore product
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data product", progress = 0.8f, currentStepIndex = 8, totalSteps = 12)
+            val productRestored = restoreProduct(backupData.data.product)
 
             // Step 9: Restore penjualan and items
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data penjualan", progress = 0.9f, currentStepIndex = 9, totalSteps = 12)
@@ -95,7 +95,7 @@ class RestoreServiceImpl @Inject constructor(
                 "pengguna" to penggunaRestored,
                 "kategori" to kategoriRestored,
                 "gudang" to gudangRestored,
-                "produk" to produkRestored,
+                "product" to productRestored,
                 "pemasok" to pemasokRestored,
                 "penjualan" to penjualanRestored,
                 "pembelian" to pembelianRestored,
@@ -132,7 +132,7 @@ class RestoreServiceImpl @Inject constructor(
                     "pengguna" to backupData.data.pengguna.size,
                     "kategori" to backupData.data.kategori.size,
                     "gudang" to backupData.data.gudang.size,
-                    "produk" to backupData.data.produk.size,
+                    "product" to backupData.data.product.size,
                     "pemasok" to backupData.data.pemasok.size,
                     "penjualan" to backupData.data.penjualan.size,
                     "itemPenjualan" to backupData.data.itemPenjualan.size,
@@ -156,7 +156,7 @@ class RestoreServiceImpl @Inject constructor(
                 "pengguna" to backupData.data.pengguna.size,
                 "kategori" to backupData.data.kategori.size,
                 "gudang" to backupData.data.gudang.size,
-                "produk" to backupData.data.produk.size,
+                "product" to backupData.data.product.size,
                 "pemasok" to backupData.data.pemasok.size,
                 "penjualan" to backupData.data.penjualan.size,
                 "itemPenjualan" to backupData.data.itemPenjualan.size,
@@ -189,11 +189,11 @@ class RestoreServiceImpl @Inject constructor(
         return json.decodeFromString<BackupData>(decryptedJson)
     }
 
-    private suspend fun restorePengguna(pengguna: List<com.chibychibystore.data.local.entity.Pengguna>): Int {
+    private suspend fun restorePengguna(pengguna: List<com.chibychibystore.data.local.entity.User>): Int {
         var count = 0
         for (user in pengguna) {
             try {
-                penggunaRepository.createPengguna(user)
+                userRepository.createUser(user)
                 count++
             } catch (e: Exception) {
                 // Log error but continue
@@ -202,11 +202,11 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restoreKategori(kategori: List<com.chibychibystore.data.local.entity.Kategori>): Int {
+    private suspend fun restoreKategori(kategori: List<com.chibychibystore.data.local.entity.Category>): Int {
         var count = 0
         for (cat in kategori) {
             try {
-                kategoriRepository.createKategori(cat)
+                categoryRepository.createCategory(cat)
                 count++
             } catch (e: Exception) {
                 // Log error but continue
@@ -215,11 +215,11 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restoreGudang(gudang: List<com.chibychibystore.data.local.entity.Gudang>): Int {
+    private suspend fun restoreGudang(gudang: List<com.chibychibystore.data.local.entity.Warehouse>): Int {
         var count = 0
         for (warehouse in gudang) {
             try {
-                gudangRepository.createGudang(warehouse)
+                warehouseRepository.createWarehouse(warehouse)
                 count++
             } catch (e: Exception) {
                 // Log error but continue
@@ -228,11 +228,11 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restorePemasok(pemasok: List<com.chibychibystore.data.local.entity.Pemasok>): Int {
+    private suspend fun restorePemasok(pemasok: List<com.chibychibystore.data.local.entity.Supplier>): Int {
         var count = 0
         for (supplier in pemasok) {
             try {
-                pemasokRepository.createPemasok(supplier)
+                supplierRepository.createSupplier(supplier)
                 count++
             } catch (e: Exception) {
                 // Log error but continue
@@ -241,11 +241,11 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restoreProduk(produk: List<com.chibychibystore.data.local.entity.Produk>): Int {
+    private suspend fun restoreProduct(product: List<com.chibychibystore.data.local.entity.Product>): Int {
         var count = 0
-        for (product in produk) {
+        for (product in product) {
             try {
-                produkRepository.createProduk(product)
+                productRepository.createProduct(product)
                 count++
             } catch (e: Exception) {
                 // Log error but continue
@@ -254,12 +254,12 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restorePenjualan(penjualan: List<com.chibychibystore.data.local.entity.Penjualan>, items: List<com.chibychibystore.data.local.entity.ItemPenjualan>): Int {
+    private suspend fun restorePenjualan(penjualan: List<com.chibychibystore.data.local.entity.Sale>, items: List<com.chibychibystore.data.local.entity.SaleItem>): Int {
         var count = 0
         for (sale in penjualan) {
             try {
                 val saleItems = items.filter { it.saleId == sale.id }
-                penjualanRepository.createPenjualan(sale, saleItems)
+                saleRepository.createSale(sale, saleItems)
                 count++
             } catch (e: Exception) {
                 // Log error but continue
@@ -269,7 +269,7 @@ class RestoreServiceImpl @Inject constructor(
         // Restore items
         for (item in items) {
             try {
-                itemPenjualanRepository.createItemPenjualan(item)
+                itemSaleRepository.createSaleItem(item)
             } catch (e: Exception) {
                 // Log error but continue
             }
@@ -277,11 +277,11 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restorePembelian(pembelian: List<com.chibychibystore.data.local.entity.Pembelian>, items: List<com.chibychibystore.data.local.entity.ItemPembelian>): Int {
+    private suspend fun restorePembelian(pembelian: List<com.chibychibystore.data.local.entity.Purchase>, items: List<com.chibychibystore.data.local.entity.PurchaseItem>): Int {
         var count = 0
         for (purchase in pembelian) {
             try {
-                pembelianRepository.createPembelian(purchase)
+                purchaseRepository.createPurchase(purchase)
                 count++
             } catch (e: Exception) {
                 // Log error but continue
@@ -291,7 +291,7 @@ class RestoreServiceImpl @Inject constructor(
         // Restore items
         for (item in items) {
             try {
-                itemPembelianRepository.createItemPembelian(item)
+                itemPurchaseRepository.createPurchaseItems(item)
             } catch (e: Exception) {
                 // Log error but continue
             }
@@ -299,11 +299,11 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restorePengeluaran(pengeluaran: List<com.chibychibystore.data.local.entity.Pengeluaran>): Int {
+    private suspend fun restorePengeluaran(pengeluaran: List<com.chibychibystore.data.local.entity.Expense>): Int {
         var count = 0
         for (expense in pengeluaran) {
             try {
-                pengeluaranRepository.insertPengeluaran(expense)
+                expenseRepository.createExpense(expense)
                 count++
             } catch (e: Exception) {
                 // Log error but continue

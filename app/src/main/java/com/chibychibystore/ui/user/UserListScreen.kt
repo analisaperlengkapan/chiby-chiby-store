@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.User
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.ui.components.UserManagementDialogs
 import com.chibychibystore.ui.components.shared.AppTopBar
@@ -37,14 +37,14 @@ fun UserListScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Manajemen Pengguna",
+                title = "Manajemen User",
                 actions = {
                     IconButton(
                         onClick = { viewModel.showCreateUserDialog() }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Tambah Pengguna"
+                            contentDescription = "Tambah User"
                         )
                     }
                 }
@@ -67,7 +67,7 @@ fun UserListScreen(
                 OutlinedTextField(
                     value = uiState.searchQuery,
                     onValueChange = viewModel::onSearchQueryChange,
-                    placeholder = { Text("Cari pengguna...") },
+                    placeholder = { Text("Cari user...") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     modifier = Modifier.weight(1f),
                     singleLine = true
@@ -126,7 +126,7 @@ fun UserListScreen(
                     UserStatCard("Owner", stats.owners.toString(), Modifier.weight(1f))
                     UserStatCard("Mgr", stats.managers.toString(), Modifier.weight(1f))
                     UserStatCard("Kasir", stats.cashiers.toString(), Modifier.weight(1f))
-                    UserStatCard("Gudang", stats.warehouseStaff.toString(), Modifier.weight(1f))
+                    UserStatCard("Warehouse", stats.warehouseStaff.toString(), Modifier.weight(1f))
                 }
             }
 
@@ -143,8 +143,8 @@ fun UserListScreen(
                     uiState.filteredUsers.isEmpty() -> {
                         EmptyState(
                             icon = Icons.Default.Person,
-                            title = "Belum ada pengguna",
-                            message = "Silakan tambah pengguna baru atau ubah filter pencarian"
+                            title = "Belum ada user",
+                            message = "Silakan tambah user baru atau ubah filter pencarian"
                         )
                     }
                     else -> {
@@ -258,7 +258,7 @@ private fun UserStatCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun UserListItem(
-    user: Pengguna,
+    user: User,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,

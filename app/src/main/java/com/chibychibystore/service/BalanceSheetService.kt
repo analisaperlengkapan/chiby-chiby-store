@@ -2,7 +2,7 @@ package com.chibychibystore.service
 
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
-import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.ProductRepository
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import javax.inject.Inject
@@ -14,7 +14,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class BalanceSheetService @Inject constructor(
-    private val productRepository: ProdukRepository,
+    private val productRepository: ProductRepository,
     private val cashManagementService: CashManagementService
 ) {
 
@@ -56,7 +56,7 @@ class BalanceSheetService @Inject constructor(
     suspend fun calculateInventoryValue(): Result<Double> {
         return try {
             // Get all products and calculate total inventory value
-            val products = productRepository.getAllProduk().first()
+            val products = productRepository.getAllProduct().first()
             val inventoryValue = products.sumOf { product -> product.costPrice * product.stockQuantity }
 
             Result.success(inventoryValue)

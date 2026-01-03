@@ -18,7 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.ui.components.shared.AppTopBar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,7 +32,7 @@ fun AddProductScreen(
 
     var editedProduct by remember {
         mutableStateOf(
-            Produk(
+            Product(
                 id = 0,
                 name = "",
                 barcode = null,
@@ -54,7 +54,7 @@ fun AddProductScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Tambah Produk",
+                title = "Tambah Product",
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
@@ -130,8 +130,8 @@ fun AddProductScreen(
 
 @Composable
 private fun AddProductContent(
-    product: Produk,
-    onProductChange: (Produk) -> Unit
+    product: Product,
+    onProductChange: (Product) -> Unit
 ) {
     var editedProduct by remember { mutableStateOf(product) }
 
@@ -164,7 +164,7 @@ private fun AddProductContent(
                 )
 
                 ProductTextField(
-                    label = "Nama Produk",
+                    label = "Nama Product",
                     value = editedProduct.name,
                     onValueChange = { editedProduct = editedProduct.copy(name = it) },
                     isRequired = true

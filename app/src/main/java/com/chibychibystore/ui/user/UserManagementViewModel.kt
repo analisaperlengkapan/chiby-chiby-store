@@ -2,7 +2,7 @@ package com.chibychibystore.ui.user
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.User
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.UserManagementService
@@ -62,8 +62,8 @@ import javax.inject.Inject
  * @property searchQuery The current search text used to filter users by username
  */
 data class UserManagementUiState(
-    val users: List<Pengguna> = emptyList(),
-    val filteredUsers: List<Pengguna> = emptyList(),
+    val users: List<User> = emptyList(),
+    val filteredUsers: List<User> = emptyList(),
     val selectedRole: Role? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -73,7 +73,7 @@ data class UserManagementUiState(
     val showEditUserDialog: Boolean = false,
     val showDeleteUserDialog: Boolean = false,
     val showResetPasswordDialog: Boolean = false,
-    val selectedUser: Pengguna? = null,
+    val selectedUser: User? = null,
     val searchQuery: String = ""
 )
 
@@ -555,7 +555,7 @@ class UserManagementViewModel @Inject constructor(
                 ).onSuccess {
                     _uiState.update {
                         it.copy(
-                            successMessage = "Pengguna berhasil dibuat",
+                            successMessage = "User berhasil dibuat",
                             showCreateUserDialog = false
                         )
                     }
@@ -565,7 +565,7 @@ class UserManagementViewModel @Inject constructor(
                     _createUserFormState.update {
                         it.copy(
                             isSubmitting = false,
-                            errorMessage = error.message ?: "Gagal membuat pengguna"
+                            errorMessage = error.message ?: "Gagal membuat user"
                         )
                     }
                 }
@@ -586,10 +586,10 @@ class UserManagementViewModel @Inject constructor(
      * The selected user is stored in [UserManagementUiState.selectedUser] to support
      * subsequent update/delete/reset flows.
      *
-     * Note: `isActive` is currently hard-coded to true until the `Pengguna` entity
+     * Note: `isActive` is currently hard-coded to true until the `User` entity
      * includes an active flag.
      */
-    fun showEditUserDialog(user: Pengguna) {
+    fun showEditUserDialog(user: User) {
         _uiState.update {
             it.copy(
                 showEditUserDialog = true,
@@ -685,7 +685,7 @@ class UserManagementViewModel @Inject constructor(
                 ).onSuccess {
                     _uiState.update {
                         it.copy(
-                            successMessage = "Pengguna berhasil diperbarui",
+                            successMessage = "User berhasil diperbarui",
                             showEditUserDialog = false
                         )
                     }
@@ -694,7 +694,7 @@ class UserManagementViewModel @Inject constructor(
                     _editUserFormState.update {
                         it.copy(
                             isSubmitting = false,
-                            errorMessage = error.message ?: "Gagal memperbarui pengguna"
+                            errorMessage = error.message ?: "Gagal memperbarui user"
                         )
                     }
                 }
@@ -714,7 +714,7 @@ class UserManagementViewModel @Inject constructor(
      *
      * The selected user is stored in [UserManagementUiState.selectedUser].
      */
-    fun showDeleteUserDialog(user: Pengguna) {
+    fun showDeleteUserDialog(user: User) {
         _uiState.update {
             it.copy(
                 showDeleteUserDialog = true,
@@ -772,7 +772,7 @@ class UserManagementViewModel @Inject constructor(
                 ).onSuccess {
                     _uiState.update {
                         it.copy(
-                            successMessage = "Pengguna berhasil dihapus",
+                            successMessage = "User berhasil dihapus",
                             showDeleteUserDialog = false
                         )
                     }
@@ -781,7 +781,7 @@ class UserManagementViewModel @Inject constructor(
                 }.onFailure { error ->
                     _uiState.update {
                         it.copy(
-                            errorMessage = error.message ?: "Gagal menghapus pengguna",
+                            errorMessage = error.message ?: "Gagal menghapus user",
                             showDeleteUserDialog = false
                         )
                     }
@@ -802,7 +802,7 @@ class UserManagementViewModel @Inject constructor(
     /**
      * Opens the reset-password dialog for a selected user and resets the password form.
      */
-    fun showResetPasswordDialog(user: Pengguna) {
+    fun showResetPasswordDialog(user: User) {
         _uiState.update {
             it.copy(
                 showResetPasswordDialog = true,

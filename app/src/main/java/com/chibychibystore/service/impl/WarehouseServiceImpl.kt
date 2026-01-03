@@ -63,10 +63,10 @@ class WarehouseServiceImpl @Inject constructor(
             if (!authService.hasPermission("MANAGE_WAREHOUSES")) {
                 return Result.failure(Exception("Tidak memiliki izin untuk menghapus gudang"))
             }
-            // Cek apakah gudang masih memiliki produk
+            // Cek apakah gudang masih memiliki product
             val productsInWarehouse = productRepository.getProductByWarehouse(id).first()
             if (productsInWarehouse.isNotEmpty()) {
-                return Result.failure(Exception("Tidak dapat menghapus gudang yang masih memiliki produk"))
+                return Result.failure(Exception("Tidak dapat menghapus gudang yang masih memiliki product"))
             }
 
             val deleteResult = warehouseRepository.deleteWarehouse(id)
@@ -108,7 +108,7 @@ class WarehouseServiceImpl @Inject constructor(
     override suspend fun assignProductToWarehouse(productId: Long, warehouseId: Long): Result<Unit> {
         return try {
             if (!authService.hasPermission("MANAGE_WAREHOUSES")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk mengelola lokasi produk"))
+                return Result.failure(Exception("Tidak memiliki izin untuk mengelola lokasi product"))
             }
             // Validasi bahwa gudang exists
             val warehouseResult = warehouseRepository.getWarehouseById(warehouseId)
@@ -116,14 +116,14 @@ class WarehouseServiceImpl @Inject constructor(
                 return Result.failure(Exception("Gudang tidak ditemukan"))
             }
 
-            // Validasi bahwa produk exists
+            // Validasi bahwa product exists
             val productResult = productRepository.getProductById(productId)
             if (productResult is Result.Error) {
-                 return Result.failure(Exception("Produk tidak ditemukan"))
+                 return Result.failure(Exception("Product tidak ditemukan"))
             }
             val product = (productResult as Result.Success).data
 
-            // Update warehouseId produk
+            // Update warehouseId product
             val updatedProduct = product.copy(warehouseId = warehouseId)
             val updateResult = productRepository.updateProduct(updatedProduct)
             if (updateResult is Result.Error) return Result.failure(updateResult.exception)
@@ -154,13 +154,13 @@ class WarehouseServiceImpl @Inject constructor(
             // Get product
             val productResult = productRepository.getProductById(productId)
              if (productResult is Result.Error) {
-                 return Result.failure(Exception("Produk tidak ditemukan"))
+                 return Result.failure(Exception("Product tidak ditemukan"))
             }
             val product = (productResult as Result.Success).data
 
             // Validate source warehouse
             if (product.warehouseId != fromWarehouseId) {
-                return Result.failure(Exception("Produk tidak berada di gudang asal"))
+                return Result.failure(Exception("Product tidak berada di gudang asal"))
             }
 
             // Validate stock

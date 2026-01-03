@@ -1,6 +1,6 @@
 package com.chibychibystore.service
 
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.data.model.Result
 
 /**
@@ -10,8 +10,8 @@ import com.chibychibystore.data.model.Result
 interface BarcodeService {
 
     /**
-     * Generate barcode untuk produk
-     * @param productId ID produk
+     * Generate barcode untuk product
+     * @param productId ID product
      * @param format Format barcode (EAN_13, CODE_128, QR_CODE, DATA_MATRIX)
      * @param size Ukuran barcode (SMALL, MEDIUM, LARGE, EXTRA_LARGE)
      * @return BarcodeData berisi image data dan metadata
