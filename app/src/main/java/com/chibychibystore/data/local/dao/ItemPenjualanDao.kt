@@ -30,4 +30,17 @@ interface ItemPenjualanDao {
 
     @Query("SELECT productId, SUM(quantity) as quantitySold, SUM(totalPrice) as totalRevenue FROM item_penjualan GROUP BY productId ORDER BY quantitySold DESC LIMIT :limit")
     suspend fun getTopSellingProducts(limit: Int): List<TopProductDto>
+
+    @Query("""
+        SELECT
+            ip.productId,
+            SUM(ip.quantity) as quantitySold,
+            SUM(ip.totalPrice) as totalRevenue
+        FROM item_penjualan ip
+        JOIN penjualan p ON ip.saleId = p.id
+        WHERE p.saleDate BETWEEN :startDate AND :endDate
+        AND p.isRefunded = 0
+        GROUP BY ip.productId
+    """)
+    suspend fun getProductSalesStats(startDate: java.util.Date, endDate: java.util.Date): List<TopProductDto>
 }

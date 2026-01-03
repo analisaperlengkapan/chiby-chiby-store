@@ -110,4 +110,18 @@ class ItemPenjualanRepository @Inject constructor(
             Result.failure(ChibyChibyException.DatabaseError("getTopSellingProducts", e))
         }
     }
+
+    /**
+     * Get aggregated product sales stats within date range
+     */
+    suspend fun getProductSalesStats(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Result<List<TopProductDto>> {
+        return try {
+            val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+            val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+            val result = itemPenjualanDao.getProductSalesStats(start, end)
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getProductSalesStats", e))
+        }
+    }
 }

@@ -76,6 +76,15 @@ class PenjualanRepository @Inject constructor(
     }
 
     /**
+     * Get penjualan in date range with optional filtering
+     */
+    suspend fun getSalesFiltered(startDate: java.time.LocalDate, endDate: java.time.LocalDate, cashierId: Long? = null): List<Penjualan> {
+        val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+        val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+        return penjualanDao.getSalesFiltered(start, end, cashierId)
+    }
+
+    /**
      * Create penjualan baru dengan items
      */
     suspend fun createPenjualan(penjualan: Penjualan, items: List<ItemPenjualan>): Result<PenjualanWithItems> {
@@ -220,6 +229,20 @@ class PenjualanRepository @Inject constructor(
             Result.success(count)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getPenjualanCountByDateRange", e))
+        }
+    }
+
+    /**
+     * Get non-refunded penjualan count by date range
+     */
+    suspend fun getPenjualanCountNonRefunded(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Result<Int> {
+        return try {
+            val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+            val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+            val count = penjualanDao.getPenjualanCountNonRefunded(start, end)
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getPenjualanCountNonRefunded", e))
         }
     }
 
