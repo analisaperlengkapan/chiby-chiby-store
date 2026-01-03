@@ -52,19 +52,21 @@ class SupplierViewModel @Inject constructor(
                 .debounce(300)
                 .distinctUntilChanged()
                 .flatMapLatest { query ->
-                    if (query.isBlank()) {
+                    val flow = if (query.isBlank()) {
                         supplierService.getAllSuppliers()
                     } else {
                         supplierService.searchSuppliers(query)
                     }
+                    flow.catch { e ->
+                        // Emit empty list or handle error locally to prevent outer flow termination
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = e.message ?: "Failed to load suppliers"
+                        )
+                        emit(emptyList())
+                    }
                 }
                 .onStart { _uiState.value = _uiState.value.copy(isLoading = true) }
-                .catch { e ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = e.message ?: "Failed to load suppliers"
-                    )
-                }
                 .collect { suppliers ->
                     _uiState.value = _uiState.value.copy(
                         suppliers = suppliers,

@@ -289,10 +289,8 @@ class ReportingServiceImpl @Inject constructor(
                 val salesFiltered = sales.filter { !it.isRefunded }
                 val total = salesFiltered.sumOf { it.totalAmount }
                 val tx = salesFiltered.size
-                // Only include days that have transactions
-                if (tx > 0) {
-                    trend.add(TrendData(date = day, sales = total, transactions = tx))
-                }
+                // Use default if no sales, but allow 0 sales for trend continuity if needed
+                trend.add(TrendData(date = day, sales = total, transactions = tx))
             }
             Result.success(trend)
         }

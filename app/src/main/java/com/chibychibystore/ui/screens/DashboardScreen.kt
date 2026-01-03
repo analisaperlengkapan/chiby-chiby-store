@@ -54,9 +54,10 @@ import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.ui.viewmodel.DashboardViewModel
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -237,8 +238,11 @@ fun rememberCurrencyFormatter(): (Double) -> String {
 @Composable
 fun rememberDateFormatter(): (Long) -> String {
     val locale = remember { Locale.getDefault() }
-    val formatter = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", locale) }
-    return { timestamp -> formatter.format(Date(timestamp)) }
+    val zoneId = remember { ZoneId.systemDefault() }
+    val formatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", locale) }
+    return { timestamp ->
+        Instant.ofEpochMilli(timestamp).atZone(zoneId).format(formatter)
+    }
 }
 
 @Composable
