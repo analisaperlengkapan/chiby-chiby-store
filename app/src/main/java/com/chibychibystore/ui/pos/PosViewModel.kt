@@ -432,33 +432,33 @@ class PosViewModel @Inject constructor(
      * @see PosUiState.cartItems
      */
     fun addProductToCart(product: Produk, quantity: Int = 1) {
-        val currentState = _uiState.value
+        _uiState.update { currentState ->
+            // Check if product already in cart
+            val existingItem = currentState.cartItems.find { it.product.id == product.id }
 
-        // Check if product already in cart
-        val existingItem = currentState.cartItems.find { it.product.id == product.id }
-
-        // Stock validation
-        val currentQuantity = existingItem?.quantity ?: 0
-        if (!validateStock(product, currentQuantity + quantity)) {
-            return
-        }
-
-        val updatedCartItems = if (existingItem != null) {
-            // Update quantity
-            val newQuantity = existingItem.quantity + quantity
-            currentState.cartItems.map { item ->
-                if (item.product.id == product.id) {
-                    item.updateQuantity(newQuantity)
-                } else {
-                    item
-                }
+            // Stock validation
+            val currentQuantity = existingItem?.quantity ?: 0
+            if (!isStockSufficient(product, currentQuantity + quantity)) {
+                 return@update currentState.copy(error = "Stok tidak mencukupi. Sisa: ${product.stockQuantity}")
             }
-        } else {
-            // Add new item
-            currentState.cartItems + CartItem(product, quantity)
-        }
 
-        updateCartTotals(updatedCartItems)
+            val updatedCartItems = if (existingItem != null) {
+                // Update quantity
+                val newQuantity = existingItem.quantity + quantity
+                currentState.cartItems.map { item ->
+                    if (item.product.id == product.id) {
+                        item.updateQuantity(newQuantity)
+                    } else {
+                        item
+                    }
+                }
+            } else {
+                // Add new item
+                currentState.cartItems + CartItem(product, quantity)
+            }
+
+            calculateNewState(currentState, updatedCartItems)
+        }
     }
 
     /**
@@ -530,25 +530,25 @@ class PosViewModel @Inject constructor(
             return
         }
 
-        val currentState = _uiState.value
-
-        // Stock validation
-        val itemToUpdate = currentState.cartItems.find { it.product.id == productId }
-        if (itemToUpdate != null) {
-            if (!validateStock(itemToUpdate.product, newQuantity)) {
-                return
+        _uiState.update { currentState ->
+            // Stock validation
+            val itemToUpdate = currentState.cartItems.find { it.product.id == productId }
+            if (itemToUpdate != null) {
+                if (!isStockSufficient(itemToUpdate.product, newQuantity)) {
+                    return@update currentState.copy(error = "Stok tidak mencukupi. Sisa: ${itemToUpdate.product.stockQuantity}")
+                }
             }
-        }
 
-        val updatedCartItems = currentState.cartItems.map { item ->
-            if (item.product.id == productId) {
-                item.updateQuantity(newQuantity)
-            } else {
-                item
+            val updatedCartItems = currentState.cartItems.map { item ->
+                if (item.product.id == productId) {
+                    item.updateQuantity(newQuantity)
+                } else {
+                    item
+                }
             }
-        }
 
-        updateCartTotals(updatedCartItems)
+            calculateNewState(currentState, updatedCartItems)
+        }
     }
 
     /**
@@ -602,9 +602,10 @@ class PosViewModel @Inject constructor(
      * @see PosUiState.cartItems
      */
     fun removeCartItem(productId: Long) {
-        val currentState = _uiState.value
-        val updatedCartItems = currentState.cartItems.filter { it.product.id != productId }
-        updateCartTotals(updatedCartItems)
+        _uiState.update { currentState ->
+            val updatedCartItems = currentState.cartItems.filter { it.product.id != productId }
+            calculateNewState(currentState, updatedCartItems)
+        }
     }
 
     /**
@@ -1180,51 +1181,21 @@ class PosViewModel @Inject constructor(
     }
 
     /**
-     * Update cart totals calculation - PRIVATE UTILITY METHOD
-     *
-     * **Calculation Logic:**
-     * 1. **Subtotal**: Sum of all cart item total prices
-     * 2. **Tax**: 10% of subtotal (configurable)
-     * 3. **Discount**: Applied discount amount
-     * 4. **Total**: subtotal + tax - discount (minimum 0.0)
-     *
-     * **Business Rules:**
-     * - Tax rate: 10% (Indonesian standard)
-     * - Total cannot be negative
-     * - Real-time recalculation
-     * - Precision handling untuk currency
-     *
-     * **State Management:**
-     * - Updates all total fields
-     * - Maintains cart items
-     * - Preserves discount value
-     * - Triggers UI refresh
-     *
-     * **Performance Considerations:**
-     * - O(n) cart summation
-     * - Efficient for typical cart sizes
-     * - Minimal state emissions
-     *
-     * @param cartItems Current cart items untuk calculation
-     *
-     * @see PosUiState.subtotal
-     * @see PosUiState.tax
-     * @see PosUiState.total
+     * Helper to calculate new state with updated cart totals.
+     * Use this inside an update { } block to ensure atomicity.
      */
-    private fun updateCartTotals(cartItems: List<CartItem>) {
-        _uiState.update { currentState ->
-            val subtotal = cartItems.sumOf { it.totalPrice }
-            val tax = subtotal * AppConstants.TAX_RATE
-            val discount = currentState.discount
-            val total = subtotal + tax - discount
+    private fun calculateNewState(currentState: PosUiState, updatedCartItems: List<CartItem>): PosUiState {
+        val subtotal = updatedCartItems.sumOf { it.totalPrice }
+        val tax = subtotal * AppConstants.TAX_RATE
+        val discount = currentState.discount
+        val total = subtotal + tax - discount
 
-            currentState.copy(
-                cartItems = cartItems,
-                subtotal = subtotal,
-                tax = tax,
-                total = maxOf(0.0, total)
-            )
-        }
+        return currentState.copy(
+            cartItems = updatedCartItems,
+            subtotal = subtotal,
+            tax = tax,
+            total = maxOf(0.0, total)
+        )
     }
 
     /**
@@ -1441,16 +1412,9 @@ class PosViewModel @Inject constructor(
     }
 
     /**
-     * Helper to validate stock availability
-     * Returns true if stock is sufficient, false otherwise (and updates error state)
+     * Helper to check stock availability (pure function).
      */
-    private fun validateStock(product: Produk, requestedQuantity: Int): Boolean {
-        if (requestedQuantity > product.stockQuantity) {
-            _uiState.update {
-                it.copy(error = "Stok tidak mencukupi. Sisa: ${product.stockQuantity}")
-            }
-            return false
-        }
-        return true
+    private fun isStockSufficient(product: Produk, requestedQuantity: Int): Boolean {
+        return requestedQuantity <= product.stockQuantity
     }
 }
