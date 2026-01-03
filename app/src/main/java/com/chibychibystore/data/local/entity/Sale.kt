@@ -17,14 +17,14 @@ import java.util.Date
     ],
     foreignKeys = [
         ForeignKey(
-            entity = Pengguna::class,
+            entity = User::class,
             parentColumns = ["id"],
             childColumns = ["cashierId"],
             onDelete = ForeignKey.CASCADE
         )
     ]
 )
-data class Penjualan(
+data class Sale(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     @Serializable(with = DateSerializer::class)

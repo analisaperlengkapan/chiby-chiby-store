@@ -4,7 +4,7 @@ import com.chibychibystore.data.local.entity.ExpenseCategory
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.PengeluaranRepository
-import com.chibychibystore.repository.PenjualanRepository
+import com.chibychibystore.repository.SaleRepository
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,7 +15,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class CashManagementService @Inject constructor(
-    private val saleRepository: PenjualanRepository,
+    private val saleRepository: SaleRepository,
     private val expenseRepository: PengeluaranRepository
 ) {
 

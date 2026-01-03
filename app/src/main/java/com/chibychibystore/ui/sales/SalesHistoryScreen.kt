@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.PaymentMethod
+import com.chibychibystore.data.local.entity.Sale
+import com.chibychibystore.data.local.entity.SaleWithItems
 import com.chibychibystore.ui.components.shared.*
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -218,7 +220,7 @@ fun SalesHistoryScreen(
 
 @Composable
 private fun SaleItem(
-    sale: com.chibychibystore.data.local.entity.Penjualan,
+    sale: Sale,
     onClick: () -> Unit,
     dateFormat: SimpleDateFormat,
     currencyFormat: NumberFormat
@@ -279,7 +281,7 @@ private fun SaleItem(
 
 @Composable
 private fun ReceiptDialog(
-    saleWithItems: com.chibychibystore.data.local.entity.PenjualanWithItems,
+    saleWithItems: SaleWithItems,
     isPrinting: Boolean,
     onPrintReceipt: () -> Unit,
     onDismiss: () -> Unit,
@@ -290,14 +292,14 @@ private fun ReceiptDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "Struk Penjualan #${saleWithItems.penjualan.id}",
+                "Struk Penjualan #${saleWithItems.sale.id}",
                 style = MaterialTheme.typography.headlineSmall
             )
         },
         text = {
             Column {
-                Text("Tanggal: ${dateFormat.format(saleWithItems.penjualan.saleDate)}")
-                Text("Metode Pembayaran: ${saleWithItems.penjualan.paymentMethod.name}")
+                Text("Tanggal: ${dateFormat.format(saleWithItems.sale.saleDate)}")
+                Text("Metode Pembayaran: ${saleWithItems.sale.paymentMethod.name}")
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -323,7 +325,7 @@ private fun ReceiptDialog(
                 ) {
                     Text("Total:", fontWeight = FontWeight.Bold)
                     Text(
-                        currencyFormat.format(saleWithItems.penjualan.totalAmount),
+                        currencyFormat.format(saleWithItems.sale.totalAmount),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )

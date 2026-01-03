@@ -4,23 +4,23 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.chibychibystore.data.local.entity.ItemPenjualan
+import com.chibychibystore.data.local.entity.SaleItem
 import com.chibychibystore.data.model.TopProductDto
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface ItemPenjualanDao {
+interface SaleItemDao {
     @Query("SELECT * FROM item_penjualan WHERE saleId = :saleId")
-    fun getItemsBySaleId(saleId: Long): Flow<List<ItemPenjualan>>
+    fun getItemsBySaleId(saleId: Long): Flow<List<SaleItem>>
 
     @Query("SELECT * FROM item_penjualan WHERE productId = :productId ORDER BY id DESC")
-    fun getItemsByProductId(productId: Long): Flow<List<ItemPenjualan>>
+    fun getItemsByProductId(productId: Long): Flow<List<SaleItem>>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertItemPenjualan(item: ItemPenjualan): Long
+    suspend fun insertSaleItem(item: SaleItem): Long
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertItemPenjualanList(items: List<ItemPenjualan>): List<Long>
+    suspend fun insertSaleItemList(items: List<SaleItem>): List<Long>
 
     @Query("DELETE FROM item_penjualan WHERE saleId = :saleId")
     suspend fun deleteItemsBySaleId(saleId: Long)

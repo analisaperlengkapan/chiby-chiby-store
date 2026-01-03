@@ -14,7 +14,7 @@ import java.util.Date
         Index(value = ["name"], unique = true)
     ]
 )
-data class Gudang(
+data class Warehouse(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,

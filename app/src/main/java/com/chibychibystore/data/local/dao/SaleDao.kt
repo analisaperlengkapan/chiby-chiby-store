@@ -5,25 +5,26 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
-import com.chibychibystore.data.local.entity.Penjualan
-import com.chibychibystore.data.local.entity.PenjualanWithItems
+import androidx.room.Update
+import com.chibychibystore.data.local.entity.Sale
+import com.chibychibystore.data.local.entity.SaleWithItems
 import com.chibychibystore.data.local.entity.PaymentMethod
 import kotlinx.coroutines.flow.Flow
 import java.util.Date
 
 @Dao
-interface PenjualanDao {
+interface SaleDao {
     @Query("SELECT * FROM penjualan ORDER BY saleDate DESC")
-    fun getAllPenjualan(): Flow<List<Penjualan>>
+    fun getAllSales(): Flow<List<Sale>>
 
     @Query("SELECT * FROM penjualan WHERE id = :id")
-    suspend fun getPenjualanById(id: Long): Penjualan?
+    suspend fun getSaleById(id: Long): Sale?
 
     @Query("SELECT * FROM penjualan WHERE cashierId = :cashierId ORDER BY saleDate DESC")
-    fun getPenjualanByCashier(cashierId: Long): Flow<List<Penjualan>>
+    fun getSaleByCashier(cashierId: Long): Flow<List<Sale>>
 
     @Query("SELECT * FROM penjualan WHERE paymentMethod = :paymentMethod ORDER BY saleDate DESC")
-    fun getPenjualanByPaymentMethod(paymentMethod: PaymentMethod): Flow<List<Penjualan>>
+    fun getSaleByPaymentMethod(paymentMethod: PaymentMethod): Flow<List<Sale>>
 
     @Query("""
         SELECT * FROM penjualan
@@ -35,10 +36,17 @@ interface PenjualanDao {
         ))
         ORDER BY saleDate DESC
     """)
-    fun observeSalesFiltered(startDate: Date, endDate: Date, query: String?): Flow<List<Penjualan>>
+    fun observeSalesFiltered(startDate: Date, endDate: Date, query: String?): Flow<List<Sale>>
 
     @Query("SELECT * FROM penjualan WHERE CAST(id AS TEXT) LIKE '%' || :query || '%' ORDER BY saleDate DESC")
-    fun searchSales(query: String): Flow<List<Penjualan>>
+    fun searchSales(query: String): Flow<List<Sale>>
+
+    @Query("""
+        SELECT * FROM penjualan
+        WHERE saleDate BETWEEN :startDate AND :endDate
+        ORDER BY saleDate DESC
+    """)
+    fun getSalesByDateRange(startDate: Date, endDate: Date): Flow<List<Sale>>
 
     @Query("""
         SELECT * FROM penjualan
@@ -51,36 +59,36 @@ interface PenjualanDao {
         ))
         ORDER BY saleDate DESC
     """)
-    suspend fun getSalesFiltered(startDate: Date, endDate: Date, cashierId: Long?, query: String?): List<Penjualan>
+    suspend fun getSalesFiltered(startDate: Date, endDate: Date, cashierId: Long?, query: String?): List<Sale>
 
     @Query("SELECT * FROM penjualan ORDER BY saleDate DESC LIMIT :limit")
-    fun getRecentPenjualan(limit: Int): Flow<List<Penjualan>>
+    fun getRecentSales(limit: Int): Flow<List<Sale>>
 
     @Transaction
     @Query("SELECT * FROM penjualan WHERE id = :id")
-    suspend fun getPenjualanWithItems(id: Long): PenjualanWithItems?
+    suspend fun getSaleWithItems(id: Long): SaleWithItems?
 
     @Transaction
     @Query("SELECT * FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate ORDER BY saleDate DESC")
-    fun getPenjualanWithItemsByDateRange(startDate: Date, endDate: Date): Flow<List<PenjualanWithItems>>
+    fun getSaleWithItemsByDateRange(startDate: Date, endDate: Date): Flow<List<SaleWithItems>>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertPenjualan(penjualan: Penjualan): Long
+    suspend fun insertSale(sale: Sale): Long
 
-    @androidx.room.Update
-    suspend fun updatePenjualan(penjualan: Penjualan)
+    @Update
+    suspend fun updateSale(sale: Sale)
 
     @Query("DELETE FROM penjualan WHERE id = :id")
-    suspend fun deletePenjualanById(id: Long)
+    suspend fun deleteSaleById(id: Long)
 
     @Query("SELECT COUNT(*) FROM penjualan")
-    suspend fun getPenjualanCount(): Int
+    suspend fun getSaleCount(): Int
 
     @Query("SELECT COUNT(*) FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate")
-    suspend fun getPenjualanCountByDateRange(startDate: Date, endDate: Date): Int
+    suspend fun getSaleCountByDateRange(startDate: Date, endDate: Date): Int
 
     @Query("SELECT COUNT(*) FROM penjualan WHERE isRefunded = 0 AND saleDate BETWEEN :startDate AND :endDate")
-    suspend fun getPenjualanCountNonRefunded(startDate: Date, endDate: Date): Int
+    suspend fun getSaleCountNonRefunded(startDate: Date, endDate: Date): Int
 
     @Query("SELECT SUM(totalAmount) FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate")
     suspend fun getTotalSalesAmount(startDate: Date, endDate: Date): Double?

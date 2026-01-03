@@ -5,32 +5,32 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.chibychibystore.data.local.entity.Kategori
+import com.chibychibystore.data.local.entity.Category
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface KategoriDao {
+interface CategoryDao {
     @Query("SELECT * FROM kategori ORDER BY name ASC")
-    fun getAllKategori(): Flow<List<Kategori>>
+    fun getAllCategories(): Flow<List<Category>>
 
     @Query("SELECT * FROM kategori WHERE id = :id")
-    suspend fun getKategoriById(id: Long): Kategori?
+    suspend fun getCategoryById(id: Long): Category?
 
     @Query("SELECT * FROM kategori WHERE name = :name")
-    suspend fun getKategoriByName(name: String): Kategori?
+    suspend fun getCategoryByName(name: String): Category?
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertKategori(kategori: Kategori): Long
+    suspend fun insertCategory(category: Category): Long
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertKategoriList(kategoriList: List<Kategori>): List<Long>
+    suspend fun insertCategoryList(categoryList: List<Category>): List<Long>
 
     @Update
-    suspend fun updateKategori(kategori: Kategori)
+    suspend fun updateCategory(category: Category)
 
     @Query("DELETE FROM kategori WHERE id = :id")
-    suspend fun deleteKategoriById(id: Long)
+    suspend fun deleteCategoryById(id: Long)
 
     @Query("SELECT COUNT(*) FROM kategori")
-    suspend fun getKategoriCount(): Int
+    suspend fun getCategoryCount(): Int
 }
