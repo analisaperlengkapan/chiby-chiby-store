@@ -101,7 +101,8 @@ interface SaleService {
     suspend fun getSales(
         startDate: String? = null,
         endDate: String? = null,
-        cashierId: Long? = null
+        cashierId: Long? = null,
+        query: String? = null
     ): Result<List<Penjualan>>
 
     /**
@@ -155,9 +156,9 @@ interface SaleService {
     fun observeSalesWithItems(): Flow<List<PenjualanWithItems>>
 
     /**
-     * Observable untuk penjualan by date range
+     * Observable untuk penjualan by date range dengan optional query
      */
-    fun observeSalesByDateRange(startDate: String, endDate: String): Flow<List<Penjualan>>
+    fun observeSalesFiltered(startDate: String, endDate: String, query: String? = null): Flow<List<Penjualan>>
 
     /**
      * Print receipt untuk transaksi penjualan

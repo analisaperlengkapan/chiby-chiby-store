@@ -25,8 +25,17 @@ interface PenjualanDao {
     @Query("SELECT * FROM penjualan WHERE paymentMethod = :paymentMethod ORDER BY saleDate DESC")
     fun getPenjualanByPaymentMethod(paymentMethod: PaymentMethod): Flow<List<Penjualan>>
 
-    @Query("SELECT * FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate ORDER BY saleDate DESC")
-    fun getPenjualanByDateRange(startDate: Date, endDate: Date): Flow<List<Penjualan>>
+    @Query("""
+        SELECT * FROM penjualan
+        WHERE saleDate BETWEEN :startDate AND :endDate
+        AND (:query IS NULL OR (
+            CAST(id AS TEXT) LIKE '%' || :query || '%' OR
+            paymentMethod LIKE '%' || :query || '%' OR
+            CAST(totalAmount AS TEXT) LIKE '%' || :query || '%'
+        ))
+        ORDER BY saleDate DESC
+    """)
+    fun observeSalesFiltered(startDate: Date, endDate: Date, query: String?): Flow<List<Penjualan>>
 
     @Query("SELECT * FROM penjualan WHERE CAST(id AS TEXT) LIKE '%' || :query || '%' ORDER BY saleDate DESC")
     fun searchSales(query: String): Flow<List<Penjualan>>
@@ -35,9 +44,14 @@ interface PenjualanDao {
         SELECT * FROM penjualan
         WHERE saleDate BETWEEN :startDate AND :endDate
         AND (:cashierId IS NULL OR cashierId = :cashierId)
+        AND (:query IS NULL OR (
+            CAST(id AS TEXT) LIKE '%' || :query || '%' OR
+            paymentMethod LIKE '%' || :query || '%' OR
+            CAST(totalAmount AS TEXT) LIKE '%' || :query || '%'
+        ))
         ORDER BY saleDate DESC
     """)
-    suspend fun getSalesFiltered(startDate: Date, endDate: Date, cashierId: Long?): List<Penjualan>
+    suspend fun getSalesFiltered(startDate: Date, endDate: Date, cashierId: Long?, query: String?): List<Penjualan>
 
     @Query("SELECT * FROM penjualan ORDER BY saleDate DESC LIMIT :limit")
     fun getRecentPenjualan(limit: Int): Flow<List<Penjualan>>

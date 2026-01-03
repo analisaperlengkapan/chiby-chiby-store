@@ -139,7 +139,8 @@ class SaleServiceImpl @Inject constructor(
     override suspend fun getSales(
         startDate: String?,
         endDate: String?,
-        cashierId: Long?
+        cashierId: Long?,
+        query: String?
     ): Result<List<Penjualan>> {
          return try {
              if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
@@ -152,7 +153,7 @@ class SaleServiceImpl @Inject constructor(
              val end = if (endDate != null) LocalDate.parse(endDate) else LocalDate.now()
              val start = if (startDate != null) LocalDate.parse(startDate) else end.minusDays(30)
 
-             val sales = penjualanRepository.getSalesFiltered(start, end, cashierId)
+             val sales = penjualanRepository.getSalesFiltered(start, end, cashierId, query)
              Result.success(sales)
         } catch (e: Exception) {
             Result.failure(e)
@@ -269,6 +270,12 @@ class SaleServiceImpl @Inject constructor(
 
     override fun observeSales(): Flow<List<Penjualan>> {
         return penjualanRepository.getAllPenjualan()
+    }
+
+    override fun observeSalesFiltered(startDate: String, endDate: String, query: String?): Flow<List<Penjualan>> {
+        val end = LocalDate.parse(endDate)
+        val start = LocalDate.parse(startDate)
+        return penjualanRepository.observeSalesFiltered(start, end, query)
     }
 
     override fun observeSale(id: Long): Flow<PenjualanWithItems?> {
