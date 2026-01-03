@@ -11,11 +11,11 @@ import com.chibychibystore.service.SalesSummary
 import com.chibychibystore.service.TopProduct
 import com.chibychibystore.service.ProductSalesData
 import com.chibychibystore.service.LowStockProduct
-import com.chibychibystore.repository.ItemPenjualanRepository
-import com.chibychibystore.repository.PenjualanRepository
+import com.chibychibystore.repository.SaleItemRepository
+import com.chibychibystore.repository.SaleRepository
 import com.chibychibystore.repository.PembelianRepository
 import com.chibychibystore.repository.PengeluaranRepository
-import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.ProductRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import java.time.LocalDate
@@ -24,9 +24,9 @@ import javax.inject.Singleton
 
 @Singleton
 class ReportingServiceImpl @Inject constructor(
-    private val penjualanRepository: PenjualanRepository,
-    private val itemPenjualanRepository: ItemPenjualanRepository,
-    private val produkRepository: ProdukRepository,
+    private val saleRepository: SaleRepository,
+    private val saleItemRepository: SaleItemRepository,
+    private val productRepository: ProductRepository,
     private val pengeluaranRepository: PengeluaranRepository,
     private val pembelianRepository: PembelianRepository,
     private val balanceSheetService: BalanceSheetService,
@@ -40,8 +40,8 @@ class ReportingServiceImpl @Inject constructor(
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
         } else {
             // Optimized to use DB aggregation for totalAmount (Cash Receipts)
-            val totalSales = penjualanRepository.getTotalCashReceipts(date, date).getOrNull() ?: 0.0
-            val totalTransactions = penjualanRepository.getPenjualanCountByDateRange(date, date).getOrNull() ?: 0
+            val totalSales = saleRepository.getTotalCashReceipts(date, date).getOrNull() ?: 0.0
+            val totalTransactions = saleRepository.getSaleCountByDateRange(date, date).getOrNull() ?: 0
             val avg = if (totalTransactions > 0) totalSales / totalTransactions else 0.0
             Result.success(DailySalesReport(date, totalSales, totalTransactions, avg, emptyList()))
         }
@@ -64,7 +64,7 @@ class ReportingServiceImpl @Inject constructor(
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan keuangan"))
         } else {
             // Use Revenue (Net Sales) for financial reporting, not Gross Cash Receipts
-            val totalRevenue = penjualanRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
+            val totalRevenue = saleRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
             val totalExpenses = pengeluaranRepository.getTotalExpenseAmount(startDate, endDate).getOrNull() ?: 0.0
             // Cost of Goods Sold is currently 0.0 placeholder in original code, or derived from purchases?
             // Original code had totalCost = 0.0. Leaving as is but noting it uses Revenue now.
@@ -82,11 +82,11 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission(Permissions.VIEW_INVENTORY_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan inventory"))
         } else {
-            val totalProducts = produkRepository.getProdukCount().getOrNull() ?: 0
-            val totalValue = produkRepository.getTotalInventoryValue().getOrNull() ?: 0.0
+            val totalProducts = productRepository.getProductCount().getOrNull() ?: 0
+            val totalValue = productRepository.getTotalInventoryValue().getOrNull() ?: 0.0
 
-            val lowStockCount = produkRepository.countLowStock().getOrNull() ?: 0
-            val outOfStockCount = produkRepository.countOutOfStock().getOrNull() ?: 0
+            val lowStockCount = productRepository.countLowStock().getOrNull() ?: 0
+            val outOfStockCount = productRepository.countOutOfStock().getOrNull() ?: 0
 
             Result.success(InventoryReport(
                 totalProducts = totalProducts,
@@ -104,11 +104,11 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission(Permissions.VIEW_INVENTORY_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat data produk terlaris"))
         } else {
-            val topProductsDto = itemPenjualanRepository.getTopSellingProducts(limit).getOrNull() ?: emptyList()
+            val topProductsDto = saleItemRepository.getTopSellingProducts(limit).getOrNull() ?: emptyList()
 
             // Hydrate with product names (N+1 problem if naive, but batch fetch is better)
             val productIds = topProductsDto.map { it.productId }
-            val productsMap = produkRepository.getProdukByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+            val productsMap = productRepository.getProductByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
 
             val result = topProductsDto.map { dto ->
                 ProductSalesData(
@@ -128,7 +128,7 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission(Permissions.VIEW_INVENTORY_REPORTS)) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan stok rendah"))
         } else {
-            val lowStockProducts = produkRepository.getLowStockProduk().first()
+            val lowStockProducts = productRepository.getLowStockProduct().first()
             val result = lowStockProducts.map {
                 LowStockProduct(
                     productId = it.id,
@@ -152,10 +152,10 @@ class ReportingServiceImpl @Inject constructor(
             Result.failure(Exception("Tidak memiliki izin untuk melihat data penjualan kotor"))
         } else {
             // Optimized using DB aggregation
-            val totalSales = penjualanRepository.getTotalCashReceipts(startDate, endDate).getOrNull() ?: 0.0
+            val totalSales = saleRepository.getTotalCashReceipts(startDate, endDate).getOrNull() ?: 0.0
 
             // Optimized count using DB query
-            val totalTransactions = penjualanRepository.getPenjualanCountNonRefunded(startDate, endDate).getOrNull() ?: 0
+            val totalTransactions = saleRepository.getSaleCountNonRefunded(startDate, endDate).getOrNull() ?: 0
 
             val avg = if (totalTransactions > 0) totalSales / totalTransactions else 0.0
             Result.success(GrossSalesReport(totalSales, totalTransactions, avg))
@@ -169,7 +169,7 @@ class ReportingServiceImpl @Inject constructor(
             Result.failure(Exception("Tidak memiliki izin untuk melihat margin keuntungan"))
         } else {
             // For profit calculations, use Revenue (Net Sales excluding tax)
-            val revenue = penjualanRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
+            val revenue = saleRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
 
             // Cost of goods sold is derived from purchases in the period (pembelian)
             val purchases = pembelianRepository.getPurchasesInDateRange(startDate, endDate)
@@ -212,12 +212,12 @@ class ReportingServiceImpl @Inject constructor(
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan per produk"))
         } else {
             // Optimized using single SQL query aggregation
-            val statsResult = itemPenjualanRepository.getProductSalesStats(startDate, endDate)
+            val statsResult = saleItemRepository.getProductSalesStats(startDate, endDate)
             val salesStats = statsResult.getOrNull() ?: emptyList()
 
             // Bulk fetch product details to avoid N+1
             val productIds = salesStats.map { it.productId }
-            val productsMap = produkRepository.getProdukByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+            val productsMap = productRepository.getProductByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
 
             val result = salesStats.map { stat ->
                 val prod = productsMap[stat.productId]
@@ -245,14 +245,14 @@ class ReportingServiceImpl @Inject constructor(
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan per kategori"))
         } else {
             val byCategory = mutableMapOf<Long, Triple<Int, Double, Double>>()
-            val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
+            val sales = saleRepository.getSalesInDateRange(startDate, endDate)
             // Exclude refunded sales
             val salesFiltered = sales.filter { !it.isRefunded }
 
             salesFiltered.forEach { sale ->
-                val items = itemPenjualanRepository.getItemsBySaleId(sale.id).first()
+                val items = saleItemRepository.getItemsBySaleId(sale.id).first()
                 items.forEach { item ->
-                    val prod = produkRepository.getProduk(item.productId)
+                    val prod = productRepository.getProduct(item.productId)
                     val catId = prod?.categoryId ?: -1L
                     val cost = (prod?.costPrice ?: 0.0) * item.quantity
                     val cur = byCategory[catId] ?: Triple(0, 0.0, 0.0)
@@ -284,7 +284,7 @@ class ReportingServiceImpl @Inject constructor(
             val trend = mutableListOf<TrendData>()
             for (i in 0..days) {
                 val day = startDate.plusDays(i.toLong())
-                val sales = penjualanRepository.getSalesInDateRange(day, day)
+                val sales = saleRepository.getSalesInDateRange(day, day)
                 // Exclude refunded sales
                 val salesFiltered = sales.filter { !it.isRefunded }
                 val total = salesFiltered.sumOf { it.totalAmount }
@@ -304,15 +304,15 @@ class ReportingServiceImpl @Inject constructor(
         } else {
             val start = date.withDayOfMonth(1)
             val end = date
-            val sales = penjualanRepository.getSalesInDateRange(start, end)
+            val sales = saleRepository.getSalesInDateRange(start, end)
             // Exclude refunded sales
             val salesFiltered = sales.filter { !it.isRefunded }
             val revenue = salesFiltered.sumOf { it.totalAmount }
             var cogs = 0.0
             salesFiltered.forEach { sale ->
-                val items = itemPenjualanRepository.getItemsBySaleId(sale.id).first()
+                val items = saleItemRepository.getItemsBySaleId(sale.id).first()
                 items.forEach { item ->
-                    val prod = produkRepository.getProduk(item.productId)
+                    val prod = productRepository.getProduct(item.productId)
                     cogs += (prod?.costPrice ?: 0.0) * item.quantity
                 }
             }

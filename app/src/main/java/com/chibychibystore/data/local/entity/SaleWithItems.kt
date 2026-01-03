@@ -3,12 +3,12 @@ package com.chibychibystore.data.local.entity
 import androidx.room.Embedded
 import androidx.room.Relation
 
-data class PenjualanWithItems(
+data class SaleWithItems(
     @Embedded
-    val penjualan: Penjualan,
+    val sale: Sale,
     @Relation(
         parentColumn = "id",
         entityColumn = "saleId"
     )
-    val items: List<ItemPenjualan>
+    val items: List<SaleItem>
 )

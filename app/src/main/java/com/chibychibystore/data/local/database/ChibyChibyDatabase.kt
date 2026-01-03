@@ -3,40 +3,40 @@ package com.chibychibystore.data.local.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.chibychibystore.data.local.dao.GudangDao
+import com.chibychibystore.data.local.dao.WarehouseDao
 import com.chibychibystore.data.local.dao.ItemPembelianDao
-import com.chibychibystore.data.local.dao.ItemPenjualanDao
-import com.chibychibystore.data.local.dao.KategoriDao
+import com.chibychibystore.data.local.dao.SaleItemDao
+import com.chibychibystore.data.local.dao.CategoryDao
 import com.chibychibystore.data.local.dao.PemasokDao
 import com.chibychibystore.data.local.dao.PembelianDao
 import com.chibychibystore.data.local.dao.PengeluaranDao
-import com.chibychibystore.data.local.dao.PenjualanDao
-import com.chibychibystore.data.local.dao.PenggunaDao
-import com.chibychibystore.data.local.dao.ProdukDao
+import com.chibychibystore.data.local.dao.SaleDao
+import com.chibychibystore.data.local.dao.UserDao
+import com.chibychibystore.data.local.dao.ProductDao
 import com.chibychibystore.data.local.dao.UserSessionDao
 import com.chibychibystore.data.local.entity.UserSession
-import com.chibychibystore.data.local.entity.Gudang
+import com.chibychibystore.data.local.entity.Warehouse
 import com.chibychibystore.data.local.entity.ItemPembelian
-import com.chibychibystore.data.local.entity.ItemPenjualan
-import com.chibychibystore.data.local.entity.Kategori
+import com.chibychibystore.data.local.entity.SaleItem
+import com.chibychibystore.data.local.entity.Category
 import com.chibychibystore.data.local.entity.Pemasok
 import com.chibychibystore.data.local.entity.Pembelian
 import com.chibychibystore.data.local.entity.Pengeluaran
-import com.chibychibystore.data.local.entity.Penjualan
-import com.chibychibystore.data.local.entity.Pengguna
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Sale
+import com.chibychibystore.data.local.entity.User
+import com.chibychibystore.data.local.entity.Product
 
 @Database(
     entities = [
-        Pengguna::class,
-        Kategori::class,
-        Gudang::class,
-        Produk::class,
+        User::class,
+        Category::class,
+        Warehouse::class,
+        Product::class,
         Pemasok::class,
         Pembelian::class,
         ItemPembelian::class,
-        Penjualan::class,
-        ItemPenjualan::class,
+        Sale::class,
+        SaleItem::class,
         Pengeluaran::class,
         UserSession::class
     ],
@@ -45,15 +45,15 @@ import com.chibychibystore.data.local.entity.Produk
 )
 @TypeConverters(Converters::class)
 abstract class ChibyChibyDatabase : RoomDatabase() {
-    abstract fun penggunaDao(): PenggunaDao
-    abstract fun kategoriDao(): KategoriDao
-    abstract fun gudangDao(): GudangDao
-    abstract fun produkDao(): ProdukDao
+    abstract fun userDao(): UserDao
+    abstract fun categoryDao(): CategoryDao
+    abstract fun warehouseDao(): WarehouseDao
+    abstract fun productDao(): ProductDao
     abstract fun pemasokDao(): PemasokDao
     abstract fun pembelianDao(): PembelianDao
     abstract fun itemPembelianDao(): ItemPembelianDao
-    abstract fun penjualanDao(): PenjualanDao
-    abstract fun itemPenjualanDao(): ItemPenjualanDao
+    abstract fun saleDao(): SaleDao
+    abstract fun saleItemDao(): SaleItemDao
     abstract fun pengeluaranDao(): PengeluaranDao
     abstract fun userSessionDao(): UserSessionDao
 }

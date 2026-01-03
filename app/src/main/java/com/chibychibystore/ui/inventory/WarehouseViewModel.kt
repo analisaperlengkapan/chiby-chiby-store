@@ -2,8 +2,8 @@ package com.chibychibystore.ui.inventory
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.Gudang
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Warehouse
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.service.WarehouseService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,14 +23,14 @@ import javax.inject.Inject
  * UI State untuk Warehouse Screen
  */
 data class WarehouseUiState(
-    val warehouses: List<Gudang> = emptyList(),
-    val selectedWarehouse: Gudang? = null,
-    val products: List<Produk> = emptyList(),
+    val warehouses: List<Warehouse> = emptyList(),
+    val selectedWarehouse: Warehouse? = null,
+    val products: List<Product> = emptyList(),
     val isLoading: Boolean = false,
     val isTransferring: Boolean = false,
     val error: String? = null,
     val successMessage: String? = null,
-    val allWarehouseStock: Map<Gudang, List<Produk>> = emptyMap() // Keep for now if used by views, though redundant with reactive selection
+    val allWarehouseStock: Map<Warehouse, List<Product>> = emptyMap() // Keep for now if used by views, though redundant with reactive selection
 )
 
 /**
@@ -97,7 +97,7 @@ class WarehouseViewModel @Inject constructor(
     /**
      * Pilih gudang untuk melihat stok
      */
-    fun selectWarehouse(warehouse: Gudang) {
+    fun selectWarehouse(warehouse: Warehouse) {
         _selectedWarehouseId.update { warehouse.id }
         clearMessages()
     }
@@ -159,7 +159,7 @@ class WarehouseViewModel @Inject constructor(
             _isLoading.update { true }
             clearMessages()
             try {
-                val warehouse = Gudang(
+                val warehouse = Warehouse(
                     id = 0,
                     name = name,
                     location = location,
@@ -189,7 +189,7 @@ class WarehouseViewModel @Inject constructor(
             _isLoading.update { true }
             clearMessages()
             try {
-                val warehouse = Gudang(
+                val warehouse = Warehouse(
                     id = warehouseId,
                     name = name,
                     location = location,
@@ -237,11 +237,11 @@ class WarehouseViewModel @Inject constructor(
     }
 
     // Legacy accessors (can be removed if not used by view directly, but safe to keep)
-    fun getWarehouseById(warehouseId: Long): Gudang? {
+    fun getWarehouseById(warehouseId: Long): Warehouse? {
         return uiState.value.warehouses.find { it.id == warehouseId }
     }
 
-    fun getProductById(productId: Long): Produk? {
+    fun getProductById(productId: Long): Product? {
         return uiState.value.products.find { it.id == productId }
     }
 }

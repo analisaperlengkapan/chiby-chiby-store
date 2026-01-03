@@ -5,32 +5,32 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.chibychibystore.data.local.entity.Gudang
+import com.chibychibystore.data.local.entity.Warehouse
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface GudangDao {
+interface WarehouseDao {
     @Query("SELECT * FROM gudang ORDER BY name ASC")
-    fun getAllGudang(): Flow<List<Gudang>>
+    fun getAllWarehouses(): Flow<List<Warehouse>>
 
     @Query("SELECT * FROM gudang WHERE id = :id")
-    suspend fun getGudangById(id: Long): Gudang?
+    suspend fun getWarehouseById(id: Long): Warehouse?
 
     @Query("SELECT * FROM gudang WHERE name = :name")
-    suspend fun getGudangByName(name: String): Gudang?
+    suspend fun getWarehouseByName(name: String): Warehouse?
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertGudang(gudang: Gudang): Long
+    suspend fun insertWarehouse(warehouse: Warehouse): Long
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertGudangList(gudangList: List<Gudang>): List<Long>
+    suspend fun insertWarehouseList(warehouseList: List<Warehouse>): List<Long>
 
     @Update
-    suspend fun updateGudang(gudang: Gudang)
+    suspend fun updateWarehouse(warehouse: Warehouse)
 
     @Query("DELETE FROM gudang WHERE id = :id")
-    suspend fun deleteGudangById(id: Long)
+    suspend fun deleteWarehouseById(id: Long)
 
     @Query("SELECT COUNT(*) FROM gudang")
-    suspend fun getGudangCount(): Int
+    suspend fun getWarehouseCount(): Int
 }

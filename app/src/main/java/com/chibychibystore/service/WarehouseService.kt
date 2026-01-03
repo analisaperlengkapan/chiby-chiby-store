@@ -1,7 +1,7 @@
 package com.chibychibystore.service
 
-import com.chibychibystore.data.local.entity.Gudang
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Warehouse
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.data.model.Result
 import kotlinx.coroutines.flow.Flow
 
@@ -12,12 +12,12 @@ interface WarehouseService {
     /**
      * Membuat gudang baru
      */
-    suspend fun createWarehouse(warehouse: Gudang): Result<Gudang>
+    suspend fun createWarehouse(warehouse: Warehouse): Result<Warehouse>
 
     /**
      * Update gudang existing
      */
-    suspend fun updateWarehouse(warehouse: Gudang): Result<Gudang>
+    suspend fun updateWarehouse(warehouse: Warehouse): Result<Warehouse>
 
     /**
      * Hapus gudang
@@ -27,12 +27,12 @@ interface WarehouseService {
     /**
      * Get gudang by ID
      */
-    suspend fun getWarehouse(id: Long): Result<Gudang?>
+    suspend fun getWarehouse(id: Long): Result<Warehouse?>
 
     /**
      * Get semua gudang
      */
-    suspend fun getWarehouses(): Result<List<Gudang>>
+    suspend fun getWarehouses(): Result<List<Warehouse>>
 
     /**
      * Assign produk ke gudang tertentu
@@ -52,20 +52,20 @@ interface WarehouseService {
     /**
      * Get stok produk per gudang
      */
-    suspend fun getWarehouseStock(warehouseId: Long): Result<List<Produk>>
+    suspend fun getWarehouseStock(warehouseId: Long): Result<List<Product>>
 
     /**
      * Get semua produk di semua gudang
      */
-    suspend fun getAllWarehouseStock(): Result<Map<Gudang, List<Produk>>>
+    suspend fun getAllWarehouseStock(): Result<Map<Warehouse, List<Product>>>
 
     /**
      * Observable untuk semua gudang
      */
-    fun observeWarehouses(): Flow<List<Gudang>>
+    fun observeWarehouses(): Flow<List<Warehouse>>
 
     /**
      * Observable untuk stok gudang tertentu
      */
-    fun observeWarehouseStock(warehouseId: Long): Flow<List<Produk>>
+    fun observeWarehouseStock(warehouseId: Long): Flow<List<Product>>
 }

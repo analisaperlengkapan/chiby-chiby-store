@@ -45,16 +45,16 @@ object DatabaseModule {
     }
 
     @Provides
-    fun providePenggunaDao(database: ChibyChibyDatabase) = database.penggunaDao()
+    fun provideUserDao(database: ChibyChibyDatabase) = database.userDao()
 
     @Provides
-    fun provideKategoriDao(database: ChibyChibyDatabase) = database.kategoriDao()
+    fun provideCategoryDao(database: ChibyChibyDatabase) = database.categoryDao()
 
     @Provides
-    fun provideGudangDao(database: ChibyChibyDatabase) = database.gudangDao()
+    fun provideWarehouseDao(database: ChibyChibyDatabase) = database.warehouseDao()
 
     @Provides
-    fun provideProdukDao(database: ChibyChibyDatabase) = database.produkDao()
+    fun provideProductDao(database: ChibyChibyDatabase) = database.productDao()
 
     @Provides
     fun providePemasokDao(database: ChibyChibyDatabase) = database.pemasokDao()
@@ -66,10 +66,10 @@ object DatabaseModule {
     fun provideItemPembelianDao(database: ChibyChibyDatabase) = database.itemPembelianDao()
 
     @Provides
-    fun providePenjualanDao(database: ChibyChibyDatabase) = database.penjualanDao()
+    fun provideSaleDao(database: ChibyChibyDatabase) = database.saleDao()
 
     @Provides
-    fun provideItemPenjualanDao(database: ChibyChibyDatabase) = database.itemPenjualanDao()
+    fun provideSaleItemDao(database: ChibyChibyDatabase) = database.saleItemDao()
 
     @Provides
     fun providePengeluaranDao(database: ChibyChibyDatabase) = database.pengeluaranDao()
