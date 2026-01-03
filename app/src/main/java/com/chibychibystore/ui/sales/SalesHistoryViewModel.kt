@@ -325,14 +325,14 @@ class SalesHistoryViewModel @Inject constructor(
                 val currentState = _uiState.value
                 val result = saleService.getSales(
                     startDate = currentState.startDate?.let { dateFormat.format(it) },
-                    endDate = currentState.endDate?.let { dateFormat.format(it) }
+                    endDate = currentState.endDate?.let { dateFormat.format(it) },
+                    query = currentState.searchQuery.takeIf { it.isNotBlank() }
                 )
 
                 result.onSuccess { sales ->
-                    val filteredSales = applySearchFilter(sales)
                     _uiState.update {
                         it.copy(
-                            sales = filteredSales,
+                            sales = sales,
                             isLoading = false
                         )
                     }
@@ -413,8 +413,9 @@ class SalesHistoryViewModel @Inject constructor(
             val currentState = _uiState.value
             val startDateStr = currentState.startDate?.let { dateFormat.format(it) } ?: "1900-01-01"
             val endDateStr = currentState.endDate?.let { dateFormat.format(it) } ?: "2100-12-31"
+            val query = currentState.searchQuery.takeIf { it.isNotBlank() }
 
-            saleService.observeSalesByDateRange(startDateStr, endDateStr)
+            saleService.observeSalesFiltered(startDateStr, endDateStr, query)
                 .catch { e ->
                     _uiState.update {
                         it.copy(
@@ -423,8 +424,7 @@ class SalesHistoryViewModel @Inject constructor(
                     }
                 }
                 .collectLatest { sales ->
-                    val filteredSales = applySearchFilter(sales)
-                    _uiState.update { it.copy(sales = filteredSales) }
+                    _uiState.update { it.copy(sales = sales) }
                 }
         }
     }
@@ -482,8 +482,7 @@ class SalesHistoryViewModel @Inject constructor(
      */
     fun updateSearchQuery(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
-        val filteredSales = applySearchFilter(_uiState.value.sales)
-        _uiState.update { it.copy(sales = filteredSales) }
+        loadSales()
     }
 
     /**
@@ -1078,14 +1077,4 @@ class SalesHistoryViewModel @Inject constructor(
      * @see observeSales
      * @see SalesHistoryUiState.searchQuery
      */
-    private fun applySearchFilter(sales: List<Penjualan>): List<Penjualan> {
-        val query = _uiState.value.searchQuery
-        if (query.isBlank()) return sales
-
-        return sales.filter { sale ->
-            sale.id.toString().contains(query, ignoreCase = true) ||
-            sale.paymentMethod.name.contains(query, ignoreCase = true) ||
-            sale.totalAmount.toString().contains(query, ignoreCase = true)
-        }
-    }
 }

@@ -78,10 +78,19 @@ class PenjualanRepository @Inject constructor(
     /**
      * Get penjualan in date range with optional filtering
      */
-    suspend fun getSalesFiltered(startDate: java.time.LocalDate, endDate: java.time.LocalDate, cashierId: Long? = null): List<Penjualan> {
+    suspend fun getSalesFiltered(startDate: java.time.LocalDate, endDate: java.time.LocalDate, cashierId: Long? = null, query: String? = null): List<Penjualan> {
         val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
         val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
-        return penjualanDao.getSalesFiltered(start, end, cashierId)
+        return penjualanDao.getSalesFiltered(start, end, cashierId, query)
+    }
+
+    /**
+     * Observe sales in date range with optional query
+     */
+    fun observeSalesFiltered(startDate: java.time.LocalDate, endDate: java.time.LocalDate, query: String? = null): Flow<List<Penjualan>> {
+        val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+        val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+        return penjualanDao.observeSalesFiltered(start, end, query)
     }
 
     /**
@@ -276,7 +285,7 @@ class PenjualanRepository @Inject constructor(
      * Search penjualan by query
      */
     fun searchPenjualan(query: String): Flow<List<Penjualan>> {
-        return penjualanDao.getAllPenjualan()
+        return penjualanDao.searchSales(query)
     }
 
     /**
