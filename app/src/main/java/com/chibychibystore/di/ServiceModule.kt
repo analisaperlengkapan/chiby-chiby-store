@@ -93,6 +93,12 @@ abstract class ServiceModule {
         printerServiceImpl: PrinterServiceImpl
     ): PrinterService
 
+    @Binds
+    @Singleton
+    abstract fun bindSupplierService(
+        supplierServiceImpl: SupplierServiceImpl
+    ): SupplierService
+
 
     companion object {
         @Provides
