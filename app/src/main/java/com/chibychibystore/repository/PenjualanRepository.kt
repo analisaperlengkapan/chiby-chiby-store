@@ -276,7 +276,7 @@ class PenjualanRepository @Inject constructor(
      * Search penjualan by query
      */
     fun searchPenjualan(query: String): Flow<List<Penjualan>> {
-        return penjualanDao.getAllPenjualan()
+        return penjualanDao.searchSales(query)
     }
 
     /**

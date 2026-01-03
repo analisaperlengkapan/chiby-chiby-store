@@ -28,6 +28,9 @@ interface PenjualanDao {
     @Query("SELECT * FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate ORDER BY saleDate DESC")
     fun getPenjualanByDateRange(startDate: Date, endDate: Date): Flow<List<Penjualan>>
 
+    @Query("SELECT * FROM penjualan WHERE CAST(id AS TEXT) LIKE '%' || :query || '%' ORDER BY saleDate DESC")
+    fun searchSales(query: String): Flow<List<Penjualan>>
+
     @Query("""
         SELECT * FROM penjualan
         WHERE saleDate BETWEEN :startDate AND :endDate

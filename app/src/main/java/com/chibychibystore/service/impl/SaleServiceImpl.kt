@@ -14,6 +14,7 @@ import com.chibychibystore.service.SaleService
 import com.chibychibystore.service.printer.PrinterService
 import com.chibychibystore.service.printer.ReceiptItem
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -94,14 +95,18 @@ class SaleServiceImpl @Inject constructor(
             val saleId = (saleIdResult as? Result.Success)?.data
                 ?: throw (saleIdResult as? Result.Error)?.exception ?: Exception("Gagal membuat data penjualan")
 
-            // 4. Save Items & Update Stock
-            val savedItems = mutableListOf<ItemPenjualan>()
+            // 4. Save Items (Batch Insert Optimization)
+            val itemsWithSaleId = items.map { it.copy(saleId = saleId) }
+            val insertItemsResult = itemPenjualanRepository.insertItemPenjualanBatch(itemsWithSaleId)
 
+            if (insertItemsResult is Result.Error) {
+                throw insertItemsResult.exception
+            }
+
+            // 5. Update Stock (Atomically for each item)
+            // Note: We still iterate here because 'adjustStock' is the safest atomic operation we have
+            // and we are already inside a transaction.
             for (item in items) {
-                val itemWithSaleId = item.copy(saleId = saleId) // Corrected property name: saleId
-                itemPenjualanRepository.createItemPenjualan(itemWithSaleId)
-                savedItems.add(itemWithSaleId)
-
                 // Update Stock (Subtract)
                 val stockResult = produkRepository.adjustStock(item.productId, -item.quantity)
                 if (stockResult is Result.Error) {
@@ -110,6 +115,7 @@ class SaleServiceImpl @Inject constructor(
 
                 // Verify stock consistency (Post-update check)
                 // This ensures that even with race conditions, we never end up with negative stock
+                // (Optimistic locking pattern fallback)
                 val updatedProductResult = produkRepository.getProdukById(item.productId)
                 val updatedProduct = (updatedProductResult as? Result.Success)?.data
 
@@ -118,10 +124,10 @@ class SaleServiceImpl @Inject constructor(
                 }
             }
 
-            // 5. Return complete object
+            // 6. Return complete object
             PenjualanWithItems(
                 penjualan = saleToSave.copy(id = saleId),
-                items = savedItems
+                items = itemsWithSaleId
             )
         }
     }
@@ -154,7 +160,13 @@ class SaleServiceImpl @Inject constructor(
     }
 
     override suspend fun searchSales(query: String): Result<List<Penjualan>> {
-        return Result.success(emptyList())
+        return try {
+            // Delegate to repository flow and collect first emission
+            val sales = penjualanRepository.searchPenjualan(query).first()
+            Result.success(sales)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun updateSale(id: Long, sale: Penjualan): Result<Penjualan> {
