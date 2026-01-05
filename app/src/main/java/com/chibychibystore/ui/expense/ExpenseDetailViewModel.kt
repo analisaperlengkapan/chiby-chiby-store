@@ -9,6 +9,7 @@ import com.chibychibystore.data.model.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -42,26 +43,32 @@ class ExpenseDetailViewModel @Inject constructor(
      */
     fun loadExpense(expenseId: Long) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
                 val result = expenseService.getPengeluaran(expenseId)
                 result.onSuccess { data ->
-                    _uiState.value = _uiState.value.copy(
-                        expense = data,
-                        isLoading = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            expense = data,
+                            isLoading = false
+                        )
+                    }
                 }.onFailure { e ->
-                    _uiState.value = _uiState.value.copy(
-                        error = e.message ?: "Gagal memuat expense",
+                    _uiState.update {
+                        it.copy(
+                            error = e.message ?: "Gagal memuat expense",
+                            isLoading = false
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        error = e.message ?: "Terjadi kesalahan",
                         isLoading = false
                     )
                 }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Terjadi kesalahan",
-                    isLoading = false
-                )
             }
         }
     }
@@ -70,27 +77,30 @@ class ExpenseDetailViewModel @Inject constructor(
      * Toggle edit mode
      */
     fun toggleEditMode() {
-        val currentState = _uiState.value
-        val expense = currentState.expense
+        _uiState.update { currentState ->
+            val expense = currentState.expense
 
-        if (currentState.isEditing) {
-            // Exit edit mode
-            _uiState.value = currentState.copy(
-                isEditing = false,
-                editAmount = "",
-                editCategory = null,
-                editDescription = "",
-                isEditFormValid = false
-            )
-        } else if (expense != null) {
-            // Enter edit mode
-            _uiState.value = currentState.copy(
-                isEditing = true,
-                editAmount = expense.amount.toString(),
-                editCategory = expense.category,
-                editDescription = expense.description ?: "",
-                isEditFormValid = true
-            )
+            if (currentState.isEditing) {
+                // Exit edit mode
+                currentState.copy(
+                    isEditing = false,
+                    editAmount = "",
+                    editCategory = null,
+                    editDescription = "",
+                    isEditFormValid = false
+                )
+            } else if (expense != null) {
+                // Enter edit mode
+                currentState.copy(
+                    isEditing = true,
+                    editAmount = expense.amount.toString(),
+                    editCategory = expense.category,
+                    editDescription = expense.description ?: "",
+                    isEditFormValid = true
+                )
+            } else {
+                currentState
+            }
         }
     }
 
@@ -98,7 +108,7 @@ class ExpenseDetailViewModel @Inject constructor(
      * Update edit amount
      */
     fun updateEditAmount(amount: String) {
-        _uiState.value = _uiState.value.copy(editAmount = amount)
+        _uiState.update { it.copy(editAmount = amount) }
         validateEditForm()
     }
 
@@ -106,7 +116,7 @@ class ExpenseDetailViewModel @Inject constructor(
      * Update edit category
      */
     fun updateEditCategory(category: KategoriPengeluaran) {
-        _uiState.value = _uiState.value.copy(editCategory = category)
+        _uiState.update { it.copy(editCategory = category) }
         validateEditForm()
     }
 
@@ -114,7 +124,7 @@ class ExpenseDetailViewModel @Inject constructor(
      * Update edit description
      */
     fun updateEditDescription(description: String) {
-        _uiState.value = _uiState.value.copy(editDescription = description)
+        _uiState.update { it.copy(editDescription = description) }
         validateEditForm()
     }
 
@@ -122,34 +132,61 @@ class ExpenseDetailViewModel @Inject constructor(
      * Validate edit form
      */
     private fun validateEditForm() {
-        val state = _uiState.value
-        val isValid = state.editAmount.isNotBlank() &&
-                     state.editAmount.toDoubleOrNull() != null &&
-                     state.editAmount.toDouble() > 0 &&
-                     state.editCategory != null
+        _uiState.update { state ->
+            val isValid = state.editAmount.isNotBlank() &&
+                    state.editAmount.toDoubleOrNull() != null &&
+                    state.editAmount.toDouble() > 0 &&
+                    state.editCategory != null
 
-        _uiState.value = _uiState.value.copy(isEditFormValid = isValid)
+            state.copy(isEditFormValid = isValid)
+        }
     }
 
     /**
      * Save edited expense
      */
     fun saveExpense(onSuccess: () -> Unit) {
-        if (!_uiState.value.isEditFormValid || _uiState.value.expense == null) return
+        val currentState = _uiState.value
+        val expense = currentState.expense
+        if (!currentState.isEditFormValid || expense == null) return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
-                // Note: Update functionality would be implemented in ExpenseService
-                // For now, just simulate success
-                onSuccess()
-                _uiState.value = _uiState.value.copy(isLoading = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Gagal menyimpan perubahan",
-                    isLoading = false
+                val updatedExpense = expense.copy(
+                    amount = currentState.editAmount.toDouble(),
+                    category = currentState.editCategory!!,
+                    description = currentState.editDescription
                 )
+
+                val result = expenseService.updatePengeluaran(updatedExpense)
+
+                result.onSuccess {
+                    // Update UI with new data
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            expense = updatedExpense,
+                            isEditing = false
+                        )
+                    }
+                    onSuccess()
+                }.onFailure { e ->
+                    _uiState.update {
+                        it.copy(
+                            error = e.message ?: "Gagal menyimpan perubahan",
+                            isLoading = false
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        error = e.message ?: "Gagal menyimpan perubahan",
+                        isLoading = false
+                    )
+                }
             }
         }
     }
@@ -161,23 +198,27 @@ class ExpenseDetailViewModel @Inject constructor(
         val expense = _uiState.value.expense ?: return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
                 val result = expenseService.deletePengeluaran(expense.id)
                 result.onSuccess {
                     onSuccess()
                 }.onFailure { e ->
-                    _uiState.value = _uiState.value.copy(
+                    _uiState.update {
+                        it.copy(
+                            error = e.message ?: "Gagal menghapus expense",
+                            isLoading = false
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
                         error = e.message ?: "Gagal menghapus expense",
                         isLoading = false
                     )
                 }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Gagal menghapus expense",
-                    isLoading = false
-                )
             }
         }
     }
@@ -186,6 +227,6 @@ class ExpenseDetailViewModel @Inject constructor(
      * Clear error
      */
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _uiState.update { it.copy(error = null) }
     }
 }
