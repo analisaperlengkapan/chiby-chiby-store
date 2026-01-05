@@ -33,10 +33,10 @@ class BackupServiceIntegrationTest : BaseTest() {
         backupService = BackupServiceImpl(
             context,
             PenggunaRepository(db.penggunaDao()),
-            KategoriRepository(db.kategoriDao()),
+            KategoriRepository(db.kategoriDao(), db.produkDao()),
             GudangRepository(db.gudangDao()),
             ProdukRepository(db.produkDao()),
-            PemasokRepository(db.pemasokDao()),
+            PemasokRepository(db.pemasokDao(), db.pembelianDao()),
             PenjualanRepository(db.penjualanDao(), db.itemPenjualanDao()),
             ItemPenjualanRepository(db.itemPenjualanDao()),
             PembelianRepository(db.pembelianDao()),

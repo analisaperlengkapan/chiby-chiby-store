@@ -176,7 +176,7 @@ private fun ProductSelectionSection(
                         .heightIn(max = 200.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(products) { product ->
+                    items(products, key = { it.id }) { product ->
                         ProductListItem(
                             product = product,
                             isSelected = product.id == selectedProduct?.id,

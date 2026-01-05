@@ -45,15 +45,18 @@ class CashManagementService @Inject constructor(
             val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
             val salesRevenue = sales.sumOf { it.totalAmount }
 
-            // Get operating expenses (cash outflows)
-            val operatingExpenses = pengeluaranRepository.getPengeluaransByCategoriesAndDateRange(
-                start, end, KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES.toList()
-            ).sumOf { it.amount }
+            // Get approved expenses grouped by category to avoid in-memory filtering
+            val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
 
-            // Get inventory purchases (COGS - cash outflows for inventory)
-            val inventoryPurchases = pengeluaranRepository.getPengeluaransByCategoriesAndDateRange(
-                start, end, KategoriPengeluaran.COGS_CATEGORIES.toList()
-            ).sumOf { it.amount }
+            // Calculate operating expenses
+            val operatingExpenses = approvedExpenses
+                .filterKeys { it in KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES }
+                .values.sum()
+
+            // Calculate inventory purchases (COGS)
+            val inventoryPurchases = approvedExpenses
+                .filterKeys { it in KategoriPengeluaran.COGS_CATEGORIES }
+                .values.sum()
 
             val operatingCashFlow = salesRevenue - operatingExpenses - inventoryPurchases
             Result.success(operatingCashFlow)
@@ -70,10 +73,13 @@ class CashManagementService @Inject constructor(
             val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
 
+            // Get approved expenses grouped by category to avoid in-memory filtering
+            val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
+
             // Equipment purchases and store improvements (Investing activities)
-            val equipmentExpenses = pengeluaranRepository.getPengeluaransByCategoriesAndDateRange(
-                start, end, KategoriPengeluaran.INVESTING_CATEGORIES.toList()
-            ).sumOf { it.amount }
+            val equipmentExpenses = approvedExpenses
+                .filterKeys { it in KategoriPengeluaran.INVESTING_CATEGORIES }
+                .values.sum()
 
             val investingCashFlow = -equipmentExpenses
             Result.success(investingCashFlow)
@@ -87,7 +93,19 @@ class CashManagementService @Inject constructor(
      */
     suspend fun calculateFinancingCashFlow(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
-            val financingCashFlow = 0.0
+            val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+            val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+
+            // Get approved expenses grouped by category to avoid in-memory filtering
+            val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
+
+            // Financing expenses (loan repayments, dividends)
+            val financingExpenses = approvedExpenses
+                .filterKeys { it in KategoriPengeluaran.FINANCING_CATEGORIES }
+                .values.sum()
+
+            // Cash outflows are negative
+            val financingCashFlow = -financingExpenses
             Result.success(financingCashFlow)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung financing cash flow", e))

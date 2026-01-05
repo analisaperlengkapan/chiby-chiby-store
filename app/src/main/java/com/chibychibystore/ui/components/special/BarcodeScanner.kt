@@ -1,5 +1,14 @@
 package com.chibychibystore.ui.components.special
 
+import android.util.Log
+import androidx.annotation.OptIn
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,30 +20,56 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import com.chibychibystore.BuildConfig
+import com.chibychibystore.R
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.BinaryBitmap
+import com.google.zxing.DecodeHintType
+import com.google.zxing.LuminanceSource
+import com.google.zxing.MultiFormatReader
+import com.google.zxing.PlanarYUVLuminanceSource
+import com.google.zxing.common.HybridBinarizer
+import java.util.concurrent.Executors
 
 @Composable
 fun BarcodeScanner(
     onBarcodeDetected: (String) -> Unit,
     modifier: Modifier = Modifier,
-    isScanning: Boolean = true
+    isScanning: Boolean = true,
+    isProcessing: Boolean = false,
+    instructionText: String = stringResource(id = R.string.barcode_scan_instructions)
 ) {
-    var isProcessing by remember { mutableStateOf(false) }
     val primaryColor = MaterialTheme.colorScheme.primary
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+    val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
+
+    val currentIsScanning by rememberUpdatedState(isScanning)
+    val currentOnBarcodeDetected by rememberUpdatedState(onBarcodeDetected)
+
+    DisposableEffect(Unit) {
+        onDispose {
+            analysisExecutor.shutdown()
+        }
+    }
 
     Card(
         modifier = modifier.fillMaxSize(),
@@ -46,7 +81,70 @@ fun BarcodeScanner(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            // Camera preview placeholder (would be replaced with actual camera view)
+            // Camera Preview
+            AndroidView(
+                factory = { ctx ->
+                    val previewView = PreviewView(ctx)
+                    val executor = ContextCompat.getMainExecutor(ctx)
+                    val mainExecutor = ContextCompat.getMainExecutor(ctx)
+
+                    cameraProviderFuture.addListener({
+                        try {
+                            // Check permission before proceeding
+                            val hasPermission = ContextCompat.checkSelfPermission(
+                                ctx,
+                                android.Manifest.permission.CAMERA
+                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+                            if (hasPermission) {
+                                val cameraProvider = cameraProviderFuture.get()
+                                val preview = Preview.Builder().build().also {
+                                    it.setSurfaceProvider(previewView.surfaceProvider)
+                                }
+
+                                val imageAnalysis = ImageAnalysis.Builder()
+                                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                    .build()
+                                    .also {
+                                        it.setAnalyzer(
+                                            analysisExecutor,
+                                            BarcodeAnalyzer { barcode ->
+                                                mainExecutor.execute {
+                                                    if (currentIsScanning) {
+                                                        currentOnBarcodeDetected(barcode)
+                                                    }
+                                                }
+                                            }
+                                        )
+                                    }
+
+                                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+                                try {
+                                    cameraProvider.unbindAll()
+                                    cameraProvider.bindToLifecycle(
+                                        lifecycleOwner,
+                                        cameraSelector,
+                                        preview,
+                                        imageAnalysis
+                                    )
+                                } catch (e: Exception) {
+                                    Log.e("BarcodeScanner", "Camera binding failed", e)
+                                }
+                            } else {
+                                Log.w("BarcodeScanner", "Camera permission missing")
+                            }
+                        } catch (e: Exception) {
+                             Log.e("BarcodeScanner", "Camera provider init failed", e)
+                        }
+                    }, executor)
+
+                    previewView
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // Scanner Overlay
             Canvas(
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -66,14 +164,14 @@ fun BarcodeScanner(
                 // Clear the scanning area
                 drawRect(
                     color = Color.Transparent,
-                    topLeft = androidx.compose.ui.geometry.Offset(rectLeft, rectTop),
+                    topLeft = Offset(rectLeft, rectTop),
                     size = Size(rectSize, rectSize)
                 )
 
                 // Draw scanning rectangle border
                 drawRect(
                     color = primaryColor,
-                    topLeft = androidx.compose.ui.geometry.Offset(rectLeft, rectTop),
+                    topLeft = Offset(rectLeft, rectTop),
                     size = Size(rectSize, rectSize),
                     style = Stroke(width = 3f)
                 )
@@ -85,63 +183,63 @@ fun BarcodeScanner(
                 // Top-left corner
                 drawLine(
                     color = primaryColor,
-                    start = androidx.compose.ui.geometry.Offset(rectLeft, rectTop + cornerLength),
-                    end = androidx.compose.ui.geometry.Offset(rectLeft, rectTop),
+                    start = Offset(rectLeft, rectTop + cornerLength),
+                    end = Offset(rectLeft, rectTop),
                     strokeWidth = cornerWidth
                 )
                 drawLine(
                     color = primaryColor,
-                    start = androidx.compose.ui.geometry.Offset(rectLeft, rectTop),
-                    end = androidx.compose.ui.geometry.Offset(rectLeft + cornerLength, rectTop),
+                    start = Offset(rectLeft, rectTop),
+                    end = Offset(rectLeft + cornerLength, rectTop),
                     strokeWidth = cornerWidth
                 )
 
                 // Top-right corner
                 drawLine(
                     color = primaryColor,
-                    start = androidx.compose.ui.geometry.Offset(rectLeft + rectSize - cornerLength, rectTop),
-                    end = androidx.compose.ui.geometry.Offset(rectLeft + rectSize, rectTop),
+                    start = Offset(rectLeft + rectSize - cornerLength, rectTop),
+                    end = Offset(rectLeft + rectSize, rectTop),
                     strokeWidth = cornerWidth
                 )
                 drawLine(
                     color = primaryColor,
-                    start = androidx.compose.ui.geometry.Offset(rectLeft + rectSize, rectTop),
-                    end = androidx.compose.ui.geometry.Offset(rectLeft + rectSize, rectTop + cornerLength),
+                    start = Offset(rectLeft + rectSize, rectTop),
+                    end = Offset(rectLeft + rectSize, rectTop + cornerLength),
                     strokeWidth = cornerWidth
                 )
 
                 // Bottom-left corner
                 drawLine(
                     color = primaryColor,
-                    start = androidx.compose.ui.geometry.Offset(rectLeft, rectTop + rectSize - cornerLength),
-                    end = androidx.compose.ui.geometry.Offset(rectLeft, rectTop + rectSize),
+                    start = Offset(rectLeft, rectTop + rectSize - cornerLength),
+                    end = Offset(rectLeft, rectTop + rectSize),
                     strokeWidth = cornerWidth
                 )
                 drawLine(
                     color = primaryColor,
-                    start = androidx.compose.ui.geometry.Offset(rectLeft, rectTop + rectSize),
-                    end = androidx.compose.ui.geometry.Offset(rectLeft + cornerLength, rectTop + rectSize),
+                    start = Offset(rectLeft, rectTop + rectSize),
+                    end = Offset(rectLeft + cornerLength, rectTop + rectSize),
                     strokeWidth = cornerWidth
                 )
 
                 // Bottom-right corner
                 drawLine(
                     color = primaryColor,
-                    start = androidx.compose.ui.geometry.Offset(rectLeft + rectSize - cornerLength, rectTop + rectSize),
-                    end = androidx.compose.ui.geometry.Offset(rectLeft + rectSize, rectTop + rectSize),
+                    start = Offset(rectLeft + rectSize - cornerLength, rectTop + rectSize),
+                    end = Offset(rectLeft + rectSize, rectTop + rectSize),
                     strokeWidth = cornerWidth
                 )
                 drawLine(
                     color = primaryColor,
-                    start = androidx.compose.ui.geometry.Offset(rectLeft + rectSize, rectTop + rectSize - cornerLength),
-                    end = androidx.compose.ui.geometry.Offset(rectLeft + rectSize, rectTop + rectSize),
+                    start = Offset(rectLeft + rectSize, rectTop + rectSize - cornerLength),
+                    end = Offset(rectLeft + rectSize, rectTop + rectSize),
                     strokeWidth = cornerWidth
                 )
             }
 
-            if (isScanning) {
+            if (isScanning && instructionText.isNotBlank()) {
                 Text(
-                    text = "Arahkan kamera ke barcode",
+                    text = instructionText,
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White,
                     textAlign = TextAlign.Center,
@@ -149,15 +247,15 @@ fun BarcodeScanner(
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 32.dp)
                 )
+            }
 
-                // Helpful debug: allow simulation of barcode detection in preview/dev builds
-                if (BuildConfig.DEBUG) {
-                    androidx.compose.material3.Button(
-                        onClick = { onBarcodeDetected("SIMULATED_BARCODE") },
-                        modifier = Modifier.align(Alignment.Center)
-                    ) {
-                        Text(text = "Simulate Scan")
-                    }
+            // Helpful debug: allow simulation of barcode detection in preview/dev builds
+            if (isScanning && BuildConfig.DEBUG) {
+                androidx.compose.material3.Button(
+                    onClick = { onBarcodeDetected("SIMULATED_BARCODE") },
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    Text(text = "Simulate Scan")
                 }
             }
 
@@ -170,6 +268,79 @@ fun BarcodeScanner(
                     color = MaterialTheme.colorScheme.primary
                 )
             }
+        }
+    }
+}
+// ... BarcodeAnalyzer (same as before, unchange)
+private class BarcodeAnalyzer(
+    private val onBarcodeDetected: (String) -> Unit
+) : ImageAnalysis.Analyzer {
+
+    private val reader = MultiFormatReader().apply {
+        val map = mapOf(
+            DecodeHintType.POSSIBLE_FORMATS to listOf(
+                BarcodeFormat.QR_CODE,
+                BarcodeFormat.EAN_13,
+                BarcodeFormat.EAN_8,
+                BarcodeFormat.UPC_A,
+                BarcodeFormat.UPC_E,
+                BarcodeFormat.CODE_128,
+                BarcodeFormat.CODE_39
+            )
+        )
+        setHints(map)
+    }
+
+    @OptIn(ExperimentalGetImage::class)
+    override fun analyze(image: ImageProxy) {
+        val mediaImage = image.image
+        if (mediaImage != null) {
+            val buffer = image.planes[0].buffer
+            val data = ByteArray(buffer.remaining())
+            buffer.get(data)
+
+            val height = image.height
+            val width = image.width
+            val stride = image.planes[0].rowStride
+
+            // Create a luminance source from the image data
+            // Note: CameraX standard is YUV_420_888, the first plane is Y (luminance)
+            val source = PlanarYUVLuminanceSource(
+                data,
+                stride,
+                height,
+                0,
+                0,
+                width,
+                height,
+                false
+            )
+
+            // Handle rotation
+            val rotationDegrees = image.imageInfo.rotationDegrees
+            var rotatedSource: LuminanceSource = source
+
+            // To convert from CW rotation needed (rotationDegrees) to CCW operations:
+            // 90 CW = 270 CCW (3 rotations)
+            // Formula: (4 - (degrees / 90)) % 4
+            val rotations = (4 - (rotationDegrees / 90)) % 4
+            repeat(rotations) {
+                rotatedSource = rotatedSource.rotateCounterClockwise()
+            }
+
+            val binaryBitmap = BinaryBitmap(HybridBinarizer(rotatedSource))
+
+            try {
+                val result = reader.decodeWithState(binaryBitmap)
+                onBarcodeDetected(result.text)
+            } catch (e: Exception) {
+                // NotFoundException is common, ignore
+            } finally {
+                reader.reset()
+                image.close()
+            }
+        } else {
+            image.close()
         }
     }
 }

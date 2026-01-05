@@ -35,6 +35,23 @@ class ItemPembelianRepository @Inject constructor(
         itemPembelianDao.getAllPurchaseItems()
 
     /**
+     * Create multiple item pembelian
+     */
+    suspend fun createItemPembelianList(items: List<ItemPembelian>): Result<List<ItemPembelian>> {
+        return try {
+            if (items.isEmpty()) return Result.success(emptyList())
+
+            items.forEach { validateItemPembelian(it) }
+
+            val ids = itemPembelianDao.insertItemPembelianList(items)
+            val createdItems = items.zip(ids).map { (item, id) -> item.copy(id = id) }
+            Result.success(createdItems)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("createItemPembelianList", e))
+        }
+    }
+
+    /**
      * Create item pembelian baru
      */
     suspend fun createItemPembelian(item: ItemPembelian): Result<ItemPembelian> {

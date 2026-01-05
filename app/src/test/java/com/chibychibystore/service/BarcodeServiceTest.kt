@@ -3,16 +3,22 @@ package com.chibychibystore.service
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.ProdukRepository
-import kotlinx.coroutines.runBlocking
+import com.chibychibystore.service.impl.BarcodeServiceImpl
+import com.chibychibystore.error.ChibyChibyException
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
-import com.chibychibystore.error.ChibyChibyException
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class BarcodeServiceTest {
 
     @Mock
@@ -20,10 +26,12 @@ class BarcodeServiceTest {
 
     private lateinit var barcodeService: BarcodeService
 
+    private val testDispatcher = StandardTestDispatcher()
+
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        barcodeService = BarcodeServiceImpl(produkRepository)
+        barcodeService = BarcodeServiceImpl(produkRepository, testDispatcher)
     }
 
     @Test
@@ -42,7 +50,7 @@ class BarcodeServiceTest {
     }
 
     @Test
-    fun `generateBarcode returns success for valid product`() = runBlocking {
+    fun `generateBarcode returns success for valid product`() = runTest(testDispatcher) {
         val productId = 1L
         val product = Produk(
             id = productId,
@@ -58,12 +66,17 @@ class BarcodeServiceTest {
 
         val result = barcodeService.generateBarcode(productId, BarcodeFormat.EAN_13, LabelSize.MEDIUM)
 
-        // Note: Actual image generation depends on Android Bitmap/Canvas which might not work in pure unit test without Robolectric.
-        // But the logic flow should be correct.
+        assertTrue("Expected success but got failure: ${result.exceptionOrNull()}", result.isSuccess)
+        val barcodeData = result.getOrNull()
+        assertNotNull("Barcode data should not be null", barcodeData)
+        assertNotNull("Image data should not be null", barcodeData?.imageData)
+        assertTrue("Image data should not be empty", barcodeData?.imageData?.isNotEmpty() == true)
+        assertEquals(BarcodeFormat.EAN_13, barcodeData?.format)
+        assertEquals(LabelSize.MEDIUM, barcodeData?.size)
     }
 
     @Test
-    fun `generateBarcode fails when product not found`() = runBlocking {
+    fun `generateBarcode fails when product not found`() = runTest(testDispatcher) {
         val productId = 99L
         `when`(produkRepository.getProdukById(productId)).thenReturn(Result.failure(Exception("Product not found")))
 
@@ -73,7 +86,7 @@ class BarcodeServiceTest {
     }
 
     @Test
-    fun `generateBarcode fails when product has no barcode`() = runBlocking {
+    fun `generateBarcode fails when product has no barcode`() = runTest(testDispatcher) {
         val productId = 2L
         val product = Produk(
             id = productId,

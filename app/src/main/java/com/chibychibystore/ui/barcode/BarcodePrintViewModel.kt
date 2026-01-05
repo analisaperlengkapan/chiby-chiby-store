@@ -6,8 +6,9 @@ import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.service.ProductService
 import com.chibychibystore.service.printer.PrinterService
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -26,6 +27,17 @@ data class BarcodePrintUiState(
 )
 
 /**
+ * Helper data class to group user inputs for combine
+ */
+private data class UserInputs(
+    val selectedProduct: Produk?,
+    val searchQuery: String,
+    val selectedSize: LabelSize,
+    val quantity: Int,
+    val isPrinting: Boolean
+)
+
+/**
  * ViewModel untuk Barcode Print Screen
  * Mengelola pemilihan product dan pencetakan label barcode
  */
@@ -35,132 +47,121 @@ class BarcodePrintViewModel @Inject constructor(
     private val printerService: PrinterService
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(BarcodePrintUiState())
-    val uiState: StateFlow<BarcodePrintUiState> = _uiState
+    private val _searchQuery = MutableStateFlow("")
+    private val _selectedProduct = MutableStateFlow<Produk?>(null)
+    private val _selectedSize = MutableStateFlow(LabelSize.MEDIUM)
+    private val _quantity = MutableStateFlow(1)
+    private val _isPrinting = MutableStateFlow(false)
+    private val _error = MutableStateFlow<String?>(null)
+    private val _isLoadingProducts = MutableStateFlow(false)
 
-    init {
-        loadProducts()
-    }
-
-    /**
-     * Load semua product untuk pemilihan
-     */
-    private fun loadProducts() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoadingProducts = true, error = null)
-
-            try {
-                // In a real app we might want to paginate or search, but for now getting all is simpler for the UI
-                // However, ProductService returns Result<List<Produk>> via getProduks()
-                val result = productService.getProduks() 
-                result.onSuccess { products ->
-                    _uiState.value = _uiState.value.copy(
-                        products = products,
-                        isLoadingProducts = false
-                    )
-                }.onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoadingProducts = false,
-                        error = exception.message ?: "Gagal memuat product"
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoadingProducts = false,
-                    error = "Terjadi kesalahan: ${e.message}"
-                )
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    private val _productsFlow = _searchQuery
+        .debounce(300L)
+        .flatMapLatest { query ->
+            _isLoadingProducts.value = true
+            if (query.isBlank()) {
+                productService.observeProduks()
+            } else {
+                productService.observeSearchProduks(query)
             }
         }
+        .onEach { _isLoadingProducts.value = false }
+        .catch {
+            _isLoadingProducts.value = false
+            _error.value = "Gagal memuat product: ${it.message}"
+            emit(emptyList())
+        }
+
+    // Combine user inputs first to avoid exceeding combine argument limit (max 5)
+    private val _userInputs = combine(
+        _selectedProduct,
+        _searchQuery,
+        _selectedSize,
+        _quantity,
+        _isPrinting
+    ) { selectedProduct, searchQuery, selectedSize, quantity, isPrinting ->
+        UserInputs(selectedProduct, searchQuery, selectedSize, quantity, isPrinting)
     }
+
+    val uiState: StateFlow<BarcodePrintUiState> = combine(
+        _productsFlow,
+        _userInputs,
+        _isLoadingProducts,
+        _error
+    ) { products, userInputs, isLoadingProducts, error ->
+        BarcodePrintUiState(
+            products = products,
+            selectedProduct = userInputs.selectedProduct,
+            searchQuery = userInputs.searchQuery,
+            selectedSize = userInputs.selectedSize,
+            quantity = userInputs.quantity,
+            isLoadingProducts = isLoadingProducts,
+            isPrinting = userInputs.isPrinting,
+            error = error
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = BarcodePrintUiState(isLoadingProducts = true)
+    )
 
     /**
      * Update search query dan filter product
      */
     fun updateSearchQuery(query: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = query)
-        filterProducts(query)
-    }
-
-    /**
-     * Filter product berdasarkan search query
-     */
-    private fun filterProducts(query: String) {
-        val allProducts = _uiState.value.products
-        // Filtering happens on the list we have in memory (simplified)
-        // Ideally we should reload from DB with search query if list is large
-        // But here we rely on the implementation where uiState holds all products or filtered products?
-        // Wait, if I filter `products`, I lose the original list if I don't keep a separate `allProducts`.
-        // The previous implementation was modifying `products` in place, which is buggy for clearing search.
-        // I will just RELOAD from service with search if needed, or better, 
-        // since `getProduks` supports search, let's use that.
-        
-        viewModelScope.launch {
-            val result = productService.getProduks(searchQuery = query)
-            result.onSuccess { products ->
-                 _uiState.value = _uiState.value.copy(products = products)
-            }
-        }
+        _searchQuery.value = query
     }
 
     /**
      * Pilih product untuk dicetak labelnya
      */
     fun selectProduct(product: Produk) {
-        _uiState.value = _uiState.value.copy(selectedProduct = product)
+        _selectedProduct.value = product
     }
 
     /**
      * Pilih ukuran label
      */
     fun selectLabelSize(size: LabelSize) {
-        _uiState.value = _uiState.value.copy(selectedSize = size)
+        _selectedSize.value = size
     }
 
     /**
      * Update jumlah label yang akan dicetak
      */
     fun updateQuantity(quantity: Int) {
-        _uiState.value = _uiState.value.copy(quantity = quantity.coerceIn(1, 99))
+        _quantity.value = quantity.coerceIn(1, 99)
     }
 
     /**
      * Cetak label barcode
      */
     fun printLabels() {
-        // Need to adapt Product -> Produk for printerService if it uses Product
-        // Assuming PrinterService is also updated or using common types.
-        // If PrinterService uses Product, we might need a mapping or update PrinterService.
-        // Let's assume PrinterService uses Produk now or we need to check.
-        // For now, I'll pass it as is, if it fails compilation, I'll fix PrinterService.
-        
-        val product = _uiState.value.selectedProduct ?: return
-        val quantity = _uiState.value.quantity
+        val product = _selectedProduct.value ?: return
+        val quantity = _quantity.value
+        val size = _selectedSize.value
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isPrinting = true, error = null)
+            _isPrinting.value = true
+            _error.value = null
 
             try {
-                // Warning: printerService.printBarcodeLabels likely expects different type if it wasn't updated.
-                // But I should try to use it with Produk.
                 val result = printerService.printBarcodeLabels(
                     product = product,
-                    labelSize = _uiState.value.selectedSize,
+                    labelSize = size,
                     quantity = quantity
                 )
 
                 result.onSuccess {
-                    _uiState.value = _uiState.value.copy(isPrinting = false)
+                    _isPrinting.value = false
                 }.onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isPrinting = false,
-                        error = exception.message ?: "Gagal mencetak label"
-                    )
+                    _isPrinting.value = false
+                    _error.value = exception.message ?: "Gagal mencetak label"
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isPrinting = false,
-                    error = "Terjadi kesalahan: ${e.message}"
-                )
+                _isPrinting.value = false
+                _error.value = "Terjadi kesalahan: ${e.message}"
             }
         }
     }
@@ -169,14 +170,18 @@ class BarcodePrintViewModel @Inject constructor(
      * Clear error message
      */
     fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
+        _error.value = null
     }
 
     /**
      * Reset state
      */
     fun resetState() {
-        _uiState.value = BarcodePrintUiState()
-        loadProducts()
+        _selectedProduct.value = null
+        _searchQuery.value = ""
+        _selectedSize.value = LabelSize.MEDIUM
+        _quantity.value = 1
+        _error.value = null
+        // Products will reload automatically due to search query change
     }
 }

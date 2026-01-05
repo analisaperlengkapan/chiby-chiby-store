@@ -3,13 +3,11 @@ package com.chibychibystore.ui.barcode
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
@@ -19,19 +17,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chibychibystore.R
 import com.chibychibystore.ui.components.shared.AppTopBar
-import com.google.zxing.Result
-import com.journeyapps.barcodescanner.BarcodeCallback
-import com.journeyapps.barcodescanner.BarcodeResult
-import com.journeyapps.barcodescanner.DecoratedBarcodeView
+import com.chibychibystore.ui.components.special.BarcodeScanner
 
 /**
  * Barcode Scanner Screen
- * Menggunakan ZXing library untuk scan barcode melalui kamera
+ * Menggunakan CameraX (via BarcodeScanner component) untuk scan barcode
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +35,6 @@ fun BarcodeScannerScreen(
     viewModel: BarcodeScannerViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val uiState by viewModel.uiState.collectAsState()
 
     // Camera permission launcher
@@ -90,22 +83,24 @@ fun BarcodeScannerScreen(
                 }
 
                 uiState.isScanning -> {
-                    // Camera scanner view
-                    BarcodeScannerView(
-                        onBarcodeScanned = { barcode ->
-                            viewModel.onBarcodeDetected(barcode)
-                            onBarcodeScanned(barcode)
-                        },
-                        onError = { error ->
-                            viewModel.onScanError(error)
-                        }
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Camera scanner view
+                        BarcodeScanner(
+                            onBarcodeDetected = { barcode ->
+                                viewModel.onBarcodeDetected(barcode)
+                                onBarcodeScanned(barcode)
+                            },
+                            isScanning = true,
+                            isProcessing = false, // Handled by ScannerOverlay
+                            instructionText = "" // Handled by ScannerOverlay
+                        )
 
-                    // Overlay with instructions
-                    ScannerOverlay(
-                        lastScanned = uiState.lastScannedBarcode,
-                        isProcessing = uiState.isProcessing
-                    )
+                        // Overlay with instructions
+                        ScannerOverlay(
+                            lastScanned = uiState.lastScannedBarcode,
+                            isProcessing = uiState.isProcessing
+                        )
+                    }
                 }
 
                 else -> {
@@ -242,68 +237,6 @@ private fun ScannerOverlay(
             }
         }
     }
-}
-
-@Composable
-private fun BarcodeScannerView(
-    onBarcodeScanned: (String) -> Unit,
-    onError: (String) -> Unit
-) {
-    val context = LocalContext.current
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-
-    // Remember the DecoratedBarcodeView so we don't recreate it on recomposition
-    val barcodeView = remember {
-        DecoratedBarcodeView(context).apply {
-            // Configure barcode view
-            cameraSettings.isAutoFocusEnabled = true
-            cameraSettings.isBarcodeSceneModeEnabled = true
-            cameraSettings.isMeteringEnabled = true
-            setStatusText("")
-
-            // Set callback immediately during initialization
-            decodeContinuous(object : BarcodeCallback {
-                override fun barcodeResult(result: BarcodeResult?) {
-                    result?.let {
-                        val barcode = it.text
-                        if (!barcode.isNullOrBlank()) {
-                            Log.d("BarcodeScanner", "Scanned barcode: $barcode")
-                            onBarcodeScanned(barcode)
-                        }
-                    }
-                }
-
-                override fun possibleResultPoints(resultPoints: MutableList<com.google.zxing.ResultPoint>?) {
-                    // Optional: Handle possible result points
-                }
-            })
-        }
-    }
-
-    // Manage lifecycle
-    DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            when (event) {
-                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> barcodeView.resume()
-                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> barcodeView.pause()
-                else -> {}
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            barcodeView.pause()
-        }
-    }
-
-    AndroidView(
-        factory = {
-            barcodeView
-        },
-        modifier = Modifier.fillMaxSize()
-        // No update block needed for the view itself as config is static and callback is set in init
-    )
 }
 
 @Composable
