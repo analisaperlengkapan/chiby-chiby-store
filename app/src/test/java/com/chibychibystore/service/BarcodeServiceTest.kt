@@ -5,7 +5,8 @@ import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.service.impl.BarcodeServiceImpl
 import com.chibychibystore.error.ChibyChibyException
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
@@ -25,10 +26,12 @@ class BarcodeServiceTest {
 
     private lateinit var barcodeService: BarcodeService
 
+    private val testDispatcher = StandardTestDispatcher()
+
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        barcodeService = BarcodeServiceImpl(produkRepository)
+        barcodeService = BarcodeServiceImpl(produkRepository, testDispatcher)
     }
 
     @Test
@@ -47,7 +50,7 @@ class BarcodeServiceTest {
     }
 
     @Test
-    fun `generateBarcode returns success for valid product`() = runBlocking {
+    fun `generateBarcode returns success for valid product`() = runTest(testDispatcher) {
         val productId = 1L
         val product = Produk(
             id = productId,
@@ -73,7 +76,7 @@ class BarcodeServiceTest {
     }
 
     @Test
-    fun `generateBarcode fails when product not found`() = runBlocking {
+    fun `generateBarcode fails when product not found`() = runTest(testDispatcher) {
         val productId = 99L
         `when`(produkRepository.getProdukById(productId)).thenReturn(Result.failure(Exception("Product not found")))
 
@@ -83,7 +86,7 @@ class BarcodeServiceTest {
     }
 
     @Test
-    fun `generateBarcode fails when product has no barcode`() = runBlocking {
+    fun `generateBarcode fails when product has no barcode`() = runTest(testDispatcher) {
         val productId = 2L
         val product = Produk(
             id = productId,

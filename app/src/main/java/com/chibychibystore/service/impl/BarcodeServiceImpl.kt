@@ -11,6 +11,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.di.IoDispatcher
 import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.ProdukRepository
 import com.google.zxing.EncodeHintType
@@ -18,7 +19,7 @@ import com.google.zxing.MultiFormatWriter
 import com.google.zxing.WriterException
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
@@ -29,7 +30,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class BarcodeServiceImpl @Inject constructor(
-    private val productRepository: ProdukRepository
+    private val productRepository: ProdukRepository,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : BarcodeService {
 
     private val writer = MultiFormatWriter()
@@ -39,7 +41,7 @@ class BarcodeServiceImpl @Inject constructor(
         productId: Long,
         format: BarcodeFormat,
         size: LabelSize
-    ): Result<BarcodeData> = withContext(Dispatchers.IO) {
+    ): Result<BarcodeData> = withContext(ioDispatcher) {
         try {
             // Get product data
             val productResult = productRepository.getProdukById(productId)
