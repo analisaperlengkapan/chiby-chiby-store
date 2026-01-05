@@ -214,8 +214,10 @@ class RestoreServiceImpl @Inject constructor(
         var count = 0
         for (user in users) {
             try {
-                userRepository.createPengguna(user)
-                count++
+                val result = userRepository.createPengguna(user)
+                if (result is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
             } catch (e: Exception) {
                 // Log error but continue
             }
@@ -227,8 +229,10 @@ class RestoreServiceImpl @Inject constructor(
         var count = 0
         for (cat in categories) {
             try {
-                categoryRepository.createKategori(cat)
-                count++
+                val result = categoryRepository.createKategori(cat)
+                if (result is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
             } catch (e: Exception) {
                 // Log error but continue
             }
@@ -240,8 +244,10 @@ class RestoreServiceImpl @Inject constructor(
         var count = 0
         for (warehouse in warehouses) {
             try {
-                warehouseRepository.createGudang(warehouse)
-                count++
+                val result = warehouseRepository.createGudang(warehouse)
+                if (result is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
             } catch (e: Exception) {
                 // Log error but continue
             }
@@ -253,8 +259,10 @@ class RestoreServiceImpl @Inject constructor(
         var count = 0
         for (supplier in suppliers) {
             try {
-                supplierRepository.createPemasok(supplier)
-                count++
+                val result = supplierRepository.createPemasok(supplier)
+                if (result is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
             } catch (e: Exception) {
                 // Log error but continue
             }
@@ -266,8 +274,10 @@ class RestoreServiceImpl @Inject constructor(
         var count = 0
         for (product in products) {
             try {
-                productRepository.createProduk(product)
-                count++
+                val result = productRepository.createProduk(product)
+                if (result is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
             } catch (e: Exception) {
                 // Log error but continue
             }
@@ -280,8 +290,10 @@ class RestoreServiceImpl @Inject constructor(
         for (sale in sales) {
             try {
                 val saleItems = items.filter { it.saleId == sale.id }
-                saleRepository.createPenjualan(sale, saleItems)
-                count++
+                val result = saleRepository.createPenjualan(sale, saleItems)
+                if (result is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
             } catch (e: Exception) {
                 // Log error but continue
             }
@@ -329,8 +341,10 @@ class RestoreServiceImpl @Inject constructor(
         var count = 0
         for (expense in expenses) {
             try {
-                expenseRepository.createPengeluaran(expense)
-                count++
+                val result = expenseRepository.createPengeluaran(expense)
+                if (result is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
             } catch (e: Exception) {
                 // Log error but continue
             }
