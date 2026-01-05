@@ -315,15 +315,11 @@ class RestoreServiceImpl @Inject constructor(
                 
                 if (result is com.chibychibystore.data.model.Result.Success) {
                     val createdPurchaseId = result.data.id
-                    // Restore items with new purchase ID if needed, but backup usually preserves IDs if compatible
-                    // Assuming we keep original IDs or map them.
-                    // For now simplicity: Insert items. 
-                    // Note: If IDs are auto-generated, we might lose strict linkage unless we map old IDs to new IDs.
-                    // For a restore, ideally we force IDs if possible, or we follow dependency order.
                     
                     purchaseItems.forEach { item ->
                         try {
-                           purchaseItemRepository.createItemPembelian(item)
+                           val newItem = item.copy(purchaseId = createdPurchaseId, id = 0)
+                           purchaseItemRepository.createItemPembelian(newItem)
                         } catch (e: Exception) {
                             // Log error
                         }
