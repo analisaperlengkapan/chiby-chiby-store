@@ -8,8 +8,11 @@ import com.chibychibystore.service.RestoreProgress
 import androidx.security.crypto.MasterKey
 import com.chibychibystore.data.backup.BackupData
 import com.chibychibystore.repository.*
+import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.Serializable
 import java.io.File
@@ -33,6 +36,7 @@ import com.chibychibystore.service.BackupValidationResult
 @Singleton
 class RestoreServiceImpl @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context,
+    private val database: ChibyChibyDatabase,
     private val userRepository: PenggunaRepository,
     private val categoryRepository: KategoriRepository,
     private val warehouseRepository: GudangRepository,
@@ -50,7 +54,7 @@ class RestoreServiceImpl @Inject constructor(
     private val _restoreProgress = MutableStateFlow(RestoreProgress())
     override fun observeRestoreProgress(): StateFlow<RestoreProgress> = _restoreProgress
 
-    override suspend fun restoreFromBackup(backupPath: String): com.chibychibystore.data.model.Result<RestoreResult> {
+    override suspend fun restoreFromBackup(backupPath: String, clearExistingData: Boolean): com.chibychibystore.data.model.Result<RestoreResult> {
         return try {
             _restoreProgress.value = RestoreProgress(isInProgress = true, totalSteps = 12)
 
@@ -65,9 +69,13 @@ class RestoreServiceImpl @Inject constructor(
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Membaca data backup", progress = 0.2f, currentStepIndex = 2, totalSteps = 12)
             val backupData = loadBackupData(backupPath)
 
-            // Step 3: Clear existing data (optional - could be configurable)
+            // Step 3: Clear existing data
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Menghapus data lama", progress = 0.3f, currentStepIndex = 3, totalSteps = 12)
-            // Note: In a real implementation, you might want to make this optional
+            if (clearExistingData) {
+                withContext(Dispatchers.IO) {
+                    database.clearAllTables()
+                }
+            }
 
             // Step 4: Restore users
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pengguna", progress = 0.4f, currentStepIndex = 4, totalSteps = 12)
