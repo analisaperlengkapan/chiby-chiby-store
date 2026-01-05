@@ -17,7 +17,7 @@ interface ItemPembelianDao {
     fun getItemsByProductId(productId: Long): Flow<List<ItemPembelian>>
 
     @Query("SELECT * FROM item_pembelian")
-    suspend fun getAllItemPembelian(): List<ItemPembelian>
+    fun getAllPurchaseItems(): Flow<List<ItemPembelian>>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertItemPembelian(item: ItemPembelian): Long

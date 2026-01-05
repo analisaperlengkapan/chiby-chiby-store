@@ -29,6 +29,12 @@ class ItemPenjualanRepository @Inject constructor(
         itemPenjualanDao.getItemsByProdukId(productId)
 
     /**
+     * Get all sale items
+     */
+    fun getAllSaleItems(): Flow<List<ItemPenjualan>> =
+        itemPenjualanDao.getAllSaleItems()
+
+    /**
      * Get top selling products
      */
     suspend fun getTopSellingProduks(limit: Int): Result<List<com.chibychibystore.data.model.ProdukTerpopulerDto>> {

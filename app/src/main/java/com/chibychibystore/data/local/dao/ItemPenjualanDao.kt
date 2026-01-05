@@ -16,6 +16,9 @@ interface ItemPenjualanDao {
     @Query("SELECT * FROM item_penjualan WHERE productId = :productId ORDER BY id DESC")
     fun getItemsByProdukId(productId: Long): Flow<List<ItemPenjualan>>
 
+    @Query("SELECT * FROM item_penjualan")
+    fun getAllSaleItems(): Flow<List<ItemPenjualan>>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertItemPenjualan(item: ItemPenjualan): Long
 

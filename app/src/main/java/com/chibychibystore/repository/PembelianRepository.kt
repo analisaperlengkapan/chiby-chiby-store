@@ -21,9 +21,9 @@ class PembelianRepository @Inject constructor(
 ) {
 
     /**
-     * Get semua pembelian
+     * Get all purchases
      */
-    fun getAllPembelian(): Flow<List<Pembelian>> = pembelianDao.getAllPembelian()
+    fun getAllPurchases(): Flow<List<Pembelian>> = pembelianDao.getAllPurchases()
 
     /**
      * Get purchases in date range
