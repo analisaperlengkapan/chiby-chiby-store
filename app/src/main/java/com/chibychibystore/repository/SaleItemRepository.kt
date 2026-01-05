@@ -17,6 +17,8 @@ class SaleItemRepository @Inject constructor(
     private val saleItemDao: SaleItemDao
 ) {
 
+    fun getAllSaleItems(): Flow<List<SaleItem>> = saleItemDao.getAllSaleItems()
+
     /**
      * Get items by sale ID
      */

@@ -290,15 +290,4 @@ class SaleRepository @Inject constructor(
         return saleDao.searchSales(query)
     }
 
-    /**
-     * Update penjualan
-     */
-    suspend fun updateSale(sale: Sale): Result<Unit> {
-        return try {
-            saleDao.updateSale(sale)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("updateSale", e))
-        }
-    }
 }

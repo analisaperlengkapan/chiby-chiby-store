@@ -195,7 +195,7 @@ private fun EmptyState(icon: androidx.compose.ui.graphics.vector.ImageVector, ti
 
 @Composable
 private fun SaleItem(
-    sale: com.chibychibystore.data.local.entity.Penjualan,
+    sale: com.chibychibystore.data.local.entity.Sale,
     onClick: () -> Unit,
     dateFormat: SimpleDateFormat,
     currencyFormat: NumberFormat
@@ -265,7 +265,7 @@ private fun SaleItem(
 
 @Composable
 private fun ReceiptDialog(
-    saleWithItems: com.chibychibystore.data.local.entity.PenjualanWithItems,
+    saleWithItems: com.chibychibystore.data.local.entity.SaleWithItems,
     isPrinting: Boolean,
     onPrintReceipt: () -> Unit,
     onDismiss: () -> Unit,
@@ -274,11 +274,11 @@ private fun ReceiptDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Struk Penjualan #${saleWithItems.penjualan.id}") },
+        title = { Text("Struk Penjualan #${saleWithItems.sale.id}") },
         text = {
             Column {
-                Text("Tanggal: ${dateFormat.format(saleWithItems.penjualan.saleDate)}")
-                Text("Metode: ${saleWithItems.penjualan.paymentMethod.name}")
+                Text("Tanggal: ${dateFormat.format(saleWithItems.sale.saleDate)}")
+                Text("Metode: ${saleWithItems.sale.paymentMethod.name}")
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalDivider()
                 LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
@@ -300,7 +300,7 @@ private fun ReceiptDialog(
                 ) {
                     Text("Total", fontWeight = FontWeight.Bold)
                     Text(
-                        currencyFormat.format(saleWithItems.penjualan.totalAmount),
+                        currencyFormat.format(saleWithItems.sale.totalAmount),
                         fontWeight = FontWeight.Bold,
                         color = ChibyPinkPrimary
                     )

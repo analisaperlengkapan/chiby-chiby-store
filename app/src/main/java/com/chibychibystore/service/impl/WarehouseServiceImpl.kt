@@ -29,7 +29,7 @@ class WarehouseServiceImpl @Inject constructor(
             }
             // Validasi input handled by repository
             val idResult = warehouseRepository.createWarehouse(warehouse)
-            if (idResult is Result.Error) return Result.failure(idResult.exception)
+            if (idResult is Result.Failure) return Result.failure(idResult.exception)
 
             // Assuming createWarehouse returns Result<Long>
             val id = (idResult as Result.Success).data
@@ -51,7 +51,7 @@ class WarehouseServiceImpl @Inject constructor(
                 return Result.failure(Exception("Tidak memiliki izin untuk mengupdate gudang"))
             }
             val updateResult = warehouseRepository.updateWarehouse(warehouse)
-            if (updateResult is Result.Error) return Result.failure(updateResult.exception)
+            if (updateResult is Result.Failure) return Result.failure(updateResult.exception)
             Result.success(warehouse)
         } catch (e: Exception) {
             Result.failure(e)
@@ -70,7 +70,7 @@ class WarehouseServiceImpl @Inject constructor(
             }
 
             val deleteResult = warehouseRepository.deleteWarehouse(id)
-            if (deleteResult is Result.Error) return Result.failure(deleteResult.exception)
+            if (deleteResult is Result.Failure) return Result.failure(deleteResult.exception)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -112,13 +112,13 @@ class WarehouseServiceImpl @Inject constructor(
             }
             // Validasi bahwa gudang exists
             val warehouseResult = warehouseRepository.getWarehouseById(warehouseId)
-            if (warehouseResult is Result.Error) {
+            if (warehouseResult is Result.Failure) {
                 return Result.failure(Exception("Gudang tidak ditemukan"))
             }
 
             // Validasi bahwa product exists
             val productResult = productRepository.getProductById(productId)
-            if (productResult is Result.Error) {
+            if (productResult is Result.Failure) {
                  return Result.failure(Exception("Product tidak ditemukan"))
             }
             val product = (productResult as Result.Success).data
@@ -126,7 +126,7 @@ class WarehouseServiceImpl @Inject constructor(
             // Update warehouseId product
             val updatedProduct = product.copy(warehouseId = warehouseId)
             val updateResult = productRepository.updateProduct(updatedProduct)
-            if (updateResult is Result.Error) return Result.failure(updateResult.exception)
+            if (updateResult is Result.Failure) return Result.failure(updateResult.exception)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -153,7 +153,7 @@ class WarehouseServiceImpl @Inject constructor(
 
             // Get product
             val productResult = productRepository.getProductById(productId)
-             if (productResult is Result.Error) {
+             if (productResult is Result.Failure) {
                  return Result.failure(Exception("Product tidak ditemukan"))
             }
             val product = (productResult as Result.Success).data
@@ -172,7 +172,7 @@ class WarehouseServiceImpl @Inject constructor(
                 // Move entire stock (change warehouse)
                 val updatedProduct = product.copy(warehouseId = toWarehouseId)
                 val updateResult = productRepository.updateProduct(updatedProduct)
-                if (updateResult is Result.Error) return Result.failure(updateResult.exception)
+                if (updateResult is Result.Failure) return Result.failure(updateResult.exception)
             } else {
                 // Partial transfer logic not fully supported due to unique barcode constraint
                  return Result.failure(Exception("Transfer stok sebagian belum didukung karena batasan barcode unik. Silakan transfer seluruh stok."))

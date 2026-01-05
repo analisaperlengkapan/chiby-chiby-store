@@ -1,7 +1,7 @@
 package com.chibychibystore.service.printer
 
-import com.chibychibystore.data.local.entity.ItemPenjualan
-import com.chibychibystore.data.local.entity.PenjualanWithItems
+import com.chibychibystore.data.local.entity.SaleItem
+import com.chibychibystore.data.local.entity.SaleWithItems
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -18,7 +18,7 @@ object ReceiptFormatter {
      * Format sale data untuk receipt printing
      */
     fun formatSaleForReceipt(
-        saleWithItems: PenjualanWithItems,
+        saleWithItems: SaleWithItems,
         storeName: String = "Chiby Chiby Store",
         storeAddress: String = "Jl. Example No. 123, Jakarta",
         cashierName: String = "Kasir"
@@ -43,14 +43,14 @@ object ReceiptFormatter {
         return ReceiptData(
             storeName = storeName,
             storeAddress = storeAddress,
-            saleId = saleWithItems.penjualan.id,
-            saleDate = dateFormat.format(saleWithItems.penjualan.saleDate),
+            saleId = saleWithItems.sale.id,
+            saleDate = dateFormat.format(saleWithItems.sale.saleDate),
             items = items,
             subtotal = subtotal,
             tax = tax,
             discount = discount,
             total = total,
-            paymentMethod = saleWithItems.penjualan.paymentMethod.name,
+            paymentMethod = saleWithItems.sale.paymentMethod.name,
             cashierName = cashierName
         )
     }

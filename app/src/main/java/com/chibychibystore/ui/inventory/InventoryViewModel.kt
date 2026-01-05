@@ -21,26 +21,17 @@ import javax.inject.Inject
 
 /**
  * Standardized UI State for Inventory Screen.
- * Represents the distinct states the UI can be in.
  */
-sealed interface InventoryUiState {
-    data object Loading : InventoryUiState
-
-    data class Success(
-        val products: List<Product>,
-        val searchQuery: String = "",
-        val lowStockProducts: List<Product> = emptyList()
-    ) : InventoryUiState
-
-    data class Error(
-        val message: String,
-        val searchQuery: String = "" // Preserve search query on error
-    ) : InventoryUiState
-}
+data class InventoryUiState(
+    val products: List<Product> = emptyList(),
+    val lowStockProducts: List<Product> = emptyList(),
+    val searchQuery: String = "",
+    val isLoading: Boolean = false,
+    val error: String? = null
+)
 
 /**
  * ViewModel for Inventory Management Screen
- * Refactored to use standard MVI/UDF pattern with sealed interface state.
  */
 @HiltViewModel
 class InventoryViewModel @Inject constructor(
@@ -66,6 +57,12 @@ class InventoryViewModel @Inject constructor(
     private val _lowStockFlow = productService.observeLowStockProducts()
         .catch { emit(emptyList()) }
 
+    // Loading State
+    private val _isLoading = MutableStateFlow(false) 
+    // Note: To truly track loading from productService, we might need a different approach or wrapper. 
+    // For now, we assume fast local DB or acceptable delay. 
+    // If strict loading state is needed, we'd wrap flows.
+
     /**
      * Public immutable state flow for UI consumption
      */
@@ -74,20 +71,19 @@ class InventoryViewModel @Inject constructor(
         _lowStockFlow,
         _searchQuery
     ) { products, lowStock, query ->
-        InventoryUiState.Success(
+        InventoryUiState(
             products = products,
             searchQuery = query,
-            lowStockProducts = lowStock
+            lowStockProducts = lowStock,
+            isLoading = false, // Set to true when mapped if needed
+            error = null
         )
     }.catch { e ->
-        // Convert stream errors to Error state, preserving current query if possible (accessed via side channel or just empty)
-        // Since catch handles the upstream, we don't have easy access to the latest query emission here without extra state.
-        // However, we can use the current value of _searchQuery
-        emit(InventoryUiState.Error(e.message ?: "Unknown error occurred", _searchQuery.value))
+        emit(InventoryUiState(error = e.message ?: "Unknown error occurred", searchQuery = _searchQuery.value))
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = InventoryUiState.Loading
+        initialValue = InventoryUiState(isLoading = true)
     )
 
     /**

@@ -19,7 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.ui.components.ChibyButton
 import com.chibychibystore.ui.components.ChibyCard
 import com.chibychibystore.ui.components.ChibyInput
@@ -132,8 +132,8 @@ private fun EmptyInventoryState(onAddProduct: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            Icons.Default.Inventory, 
-            contentDescription = null, 
+            Icons.Default.Inventory,
+            contentDescription = null,
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.outline
         )
@@ -159,8 +159,8 @@ private fun EmptyInventoryState(onAddProduct: () -> Unit) {
 
 @Composable
 private fun ProductList(
-    products: List<Produk>,
-    onProductClick: (Produk) -> Unit
+    products: List<Product>,
+    onProductClick: (Product) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -175,7 +175,7 @@ private fun ProductList(
 
 @Composable
 private fun ProductListItem(
-    product: Produk,
+    product: Product,
     onClick: () -> Unit
 ) {
     ChibyCard(

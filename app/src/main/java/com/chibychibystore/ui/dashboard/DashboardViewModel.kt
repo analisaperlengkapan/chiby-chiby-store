@@ -451,7 +451,7 @@ class DashboardViewModel @Inject constructor(
                 // Parallel execution for dashboard metrics
                 val todaySalesDeferred = async { saleService.getTotalSalesByDateRange(today, today) }
                 val transactionCountDeferred = async { saleService.getSalesCountByDateRange(today, today) }
-                val lowStockDeferred = async { productRepository.getLowStockProduct().first() }
+                val lowStockDeferred = async { productRepository.getLowStockProducts().first() }
                 val recentSalesDeferred = async { saleService.getRecentSales(10) }
                 val salesTrendDeferred = async { reportingService.getSalesTrend(sevenDaysAgo, todayDate) }
 

@@ -56,7 +56,7 @@ class SaleServiceImpl @Inject constructor(
         // Validate stock availability
         val productIds = items.map { it.productId }.distinct()
         val productsResult = productRepository.getProductByIds(productIds)
-        if (productsResult is Result.Error) throw productsResult.exception
+        if (productsResult is Result.Failure) throw productsResult.exception
         val productsMap = (productsResult as Result.Success).data.associateBy { it.id }
 
         items.forEach { item ->
@@ -99,13 +99,13 @@ class SaleServiceImpl @Inject constructor(
             // So I can call `saleRepository.createSale` and then update stock.
 
             val result = saleRepository.createSale(saleToSave, items)
-            val saleWithItems = (result as? Result.Success)?.data ?: throw (result as? Result.Error)?.exception ?: Exception("Gagal membuat data penjualan")
+            val saleWithItems = (result as? Result.Success)?.data ?: throw (result as? Result.Failure)?.exception ?: Exception("Gagal membuat data penjualan")
 
             // 5. Update Stock (Atomically for each item)
             for (item in items) {
                 // Update Stock (Subtract)
                 val stockResult = productRepository.adjustStock(item.productId, -item.quantity)
-                if (stockResult is Result.Error) {
+                if (stockResult is Result.Failure) {
                     throw stockResult.exception
                 }
 
@@ -189,14 +189,14 @@ class SaleServiceImpl @Inject constructor(
             val updatedSale = saleWithItems.sale.copy(isRefunded = true)
             val updateResult = saleRepository.updateSale(updatedSale)
 
-            if (updateResult is Result.Error) {
+            if (updateResult is Result.Failure) {
                 throw updateResult.exception
             }
 
             // Restore stock
             saleWithItems.items.forEach { item ->
                 val stockResult = productRepository.adjustStock(item.productId, item.quantity)
-                if (stockResult is Result.Error) {
+                if (stockResult is Result.Failure) {
                     throw stockResult.exception
                 }
             }

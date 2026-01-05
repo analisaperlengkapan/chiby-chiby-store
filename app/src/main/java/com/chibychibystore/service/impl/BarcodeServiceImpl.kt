@@ -3,6 +3,9 @@ package com.chibychibystore.service.impl
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import com.chibychibystore.service.BarcodeService
+import com.chibychibystore.service.BarcodeFormat
+import com.chibychibystore.service.LabelSize
+import com.chibychibystore.service.BarcodeData
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface

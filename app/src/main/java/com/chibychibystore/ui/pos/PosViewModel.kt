@@ -2,7 +2,7 @@ package com.chibychibystore.ui.pos
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.ItemSale
+import com.chibychibystore.data.local.entity.SaleItem
 import com.chibychibystore.data.local.entity.Sale
 import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.service.AuthService
@@ -57,7 +57,7 @@ import javax.inject.Inject
  *
  * **Integration Points:**
  * - UI: Display dalam cart list dengan quantity controls
- * - SaleService: Converted ke ItemSale untuk database storage
+ * - SaleService: Converted ke SaleItem untuk database storage
  * - Receipt printing: Used untuk generate receipt items
  *
  * @property product Product yang dipilih customer (immutable reference)
@@ -74,7 +74,7 @@ import javax.inject.Inject
  * @author Chiby Chiby Store Development Team
  * @since 1.0.0
  * @see Product
- * @see ItemSale
+ * @see SaleItem
  * @see PosViewModel
  */
 data class CartItem(
@@ -868,7 +868,7 @@ class PosViewModel @Inject constructor(
             try {
                 // Create sale items from cart
                 val saleItems = currentState.cartItems.map { cartItem ->
-                    ItemSale(
+                    SaleItem(
                         saleId = 0, // Will be set by repository
                         productId = cartItem.product.id,
                         quantity = cartItem.quantity,
@@ -893,7 +893,7 @@ class PosViewModel @Inject constructor(
                             PosUiState(
                                 successMessage = "Pembayaran berhasil diproses",
                                 paymentMethod = currentState.paymentMethod,
-                                completedSaleId = saleWithItems.penjualan.id,
+                                completedSaleId = saleWithItems.sale.id,
                                 showReceiptDialog = true
                             )
                         }

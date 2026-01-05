@@ -5,16 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.ExpenseCategory
 import com.chibychibystore.data.local.entity.Expense
 import com.chibychibystore.service.ExpenseService
-import com.chibychibystore.data.model.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
-import java.util.*
+import java.time.ZoneId
+import java.util.Date
 import javax.inject.Inject
 
 /**
@@ -39,109 +39,105 @@ class ExpenseViewModel @Inject constructor(
     private val expenseService: ExpenseService
 ) : ViewModel() {
 
-    // Filter States
-    private val _startDate = MutableStateFlow<Date?>(Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000)) // Default 30 days
-    private val _endDate = MutableStateFlow<Date?>(Date())
-    private val _selectedCategory = MutableStateFlow<ExpenseCategory?>(null)
-    private val _refreshTrigger = MutableStateFlow(0) // Trigger for manual reload
+    private val _uiState = MutableStateFlow(ExpenseUiState(isLoading = true))
+    val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
 
-    // UI Feedback States
-    private val _isLoading = MutableStateFlow(false)
-    private val _error = MutableStateFlow<String?>(null)
+    init {
+        loadExpenses()
+    }
 
-    // Data Loading Pipeline
-    @kotlinx.coroutines.ExperimentalCoroutinesApi
-    private val _expensesDataFlow = kotlinx.coroutines.flow.combine(
-        _startDate,
-        _endDate,
-        _selectedCategory,
-        _refreshTrigger
-    ) { start, end, category, _ ->
-        Triple(start, end, category)
-    }.kotlinx.coroutines.flow.flatMapLatest { (start, end, category) ->
-        _isLoading.value = true
-        _error.value = null
-
-        kotlinx.coroutines.flow.flow {
+    /**
+     * Load expenses based on current filters
+     */
+    fun loadExpenses() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            
             try {
-                // Convert to LocalDate for service
-                val startLocalDate = start?.let { java.time.Instant.ofEpochMilli(it.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate() }
-                val endLocalDate = end?.let { java.time.Instant.ofEpochMilli(it.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate() }
+                val currentState = _uiState.value
+                
+                // Convert Date to LocalDate for service
+                val startLocalDate: LocalDate? = currentState.startDate?.let { 
+                    Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate() 
+                }
+                val endLocalDate: LocalDate? = currentState.endDate?.let { 
+                    Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate() 
+                }
 
                 val result = expenseService.getExpenses(
                     startLocalDate,
                     endLocalDate,
-                    category?.name
+                    currentState.selectedCategory?.name
                 )
 
-                val list = when (result) {
-                    is com.chibychibystore.data.model.Result.Success -> result.data
+                when (result) {
+                    is com.chibychibystore.data.model.Result.Success -> {
+                        val expenses = result.data
+                        _uiState.update { 
+                            it.copy(
+                                expenses = expenses,
+                                totalExpenses = expenses.sumOf { expense -> expense.amount },
+                                isLoading = false,
+                                error = null
+                            )
+                        }
+                    }
                     is com.chibychibystore.data.model.Result.Failure -> {
-                        _error.value = result.exception.message
-                        emptyList()
+                        _uiState.update { 
+                            it.copy(
+                                isLoading = false,
+                                error = result.exception.message ?: "Gagal memuat data"
+                            )
+                        }
                     }
                 }
-                emit(list)
             } catch (e: Exception) {
-                _error.value = e.message ?: "Terjadi kesalahan"
-                emit(emptyList())
-            } finally {
-                _isLoading.value = false
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false,
+                        error = e.message ?: "Terjadi kesalahan"
+                    )
+                }
             }
         }
     }
-
-    val uiState: StateFlow<ExpenseUiState> = kotlinx.coroutines.flow.combine(
-        _expensesDataFlow,
-        _startDate,
-        _endDate,
-        _selectedCategory,
-        _isLoading,
-        _error
-    ) { expenses, start, end, category, loading, errorMsg ->
-        ExpenseUiState(
-            expenses = expenses,
-            startDate = start,
-            endDate = end,
-            selectedCategory = category,
-            isLoading = loading,
-            error = errorMsg,
-            totalExpenses = expenses.sumOf { it.amount }
-        )
-    }.kotlinx.coroutines.flow.stateIn(
-        scope = viewModelScope,
-        started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
-        initialValue = ExpenseUiState(isLoading = true)
-    )
 
     /**
      * Set filter tanggal mulai
      */
     fun setStartDate(date: Date?) {
-        _startDate.update { date }
+        _uiState.update { it.copy(startDate = date) }
+        loadExpenses()
     }
 
     /**
      * Set filter tanggal akhir
      */
     fun setEndDate(date: Date?) {
-        _endDate.update { date }
+        _uiState.update { it.copy(endDate = date) }
+        loadExpenses()
     }
 
     /**
      * Set filter kategori
      */
     fun setCategoryFilter(category: ExpenseCategory?) {
-        _selectedCategory.update { category }
+        _uiState.update { it.copy(selectedCategory = category) }
+        loadExpenses()
     }
 
     /**
      * Set semua filter sekaligus
      */
     fun setFilters(startDate: Date?, endDate: Date?, category: ExpenseCategory?) {
-        _startDate.update { startDate }
-        _endDate.update { endDate }
-        _selectedCategory.update { category }
+        _uiState.update { 
+            it.copy(
+                startDate = startDate,
+                endDate = endDate,
+                selectedCategory = category
+            )
+        }
+        loadExpenses()
     }
 
     /**
@@ -149,19 +145,27 @@ class ExpenseViewModel @Inject constructor(
      */
     fun deleteExpense(expenseId: Long) {
         viewModelScope.launch {
-            _isLoading.update { true }
+            _uiState.update { it.copy(isLoading = true) }
             try {
                 expenseService.deleteExpense(expenseId)
                     .onSuccess {
-                        _refreshTrigger.update { it + 1 }
+                        loadExpenses() // Reload after delete
                     }
                     .onFailure { exception ->
-                        _error.update { exception.message ?: "Gagal menghapus expense" }
+                        _uiState.update { 
+                            it.copy(
+                                isLoading = false,
+                                error = exception.message ?: "Gagal menghapus expense"
+                            )
+                        }
                     }
             } catch (e: Exception) {
-                _error.update { e.message ?: "Gagal menghapus expense" }
-            } finally {
-                _isLoading.update { false }
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false,
+                        error = e.message ?: "Gagal menghapus expense"
+                    )
+                }
             }
         }
     }
@@ -170,15 +174,20 @@ class ExpenseViewModel @Inject constructor(
      * Reset filter
      */
     fun resetFilters() {
-        _startDate.update { null }
-        _endDate.update { null }
-        _selectedCategory.update { null }
+        _uiState.update { 
+            it.copy(
+                startDate = null,
+                endDate = null,
+                selectedCategory = null
+            )
+        }
+        loadExpenses()
     }
 
     /**
      * Clear error
      */
     fun clearError() {
-        _error.update { null }
+        _uiState.update { it.copy(error = null) }
     }
 }

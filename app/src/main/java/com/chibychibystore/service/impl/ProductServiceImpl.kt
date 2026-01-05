@@ -95,10 +95,10 @@ class ProductServiceImpl @Inject constructor(
 
             try {
                 val createResult = productRepository.createProduct(product)
-                val createdProductId = (createResult as? Result.Success)?.data ?: return Result.failure((createResult as? Result.Error)?.exception ?: Exception("Gagal membuat product"))
+                val createdProductId = (createResult as? Result.Success)?.data ?: return Result.failure((createResult as? Result.Failure)?.exception ?: Exception("Gagal membuat product"))
 
                 val createdProductResult = productRepository.getProductById(createdProductId)
-                val createdProduct = (createdProductResult as? Result.Success)?.data ?: return Result.failure((createdProductResult as? Result.Error)?.exception ?: Exception("Gagal mengambil product yang dibuat"))
+                val createdProduct = (createdProductResult as? Result.Success)?.data ?: return Result.failure((createdProductResult as? Result.Failure)?.exception ?: Exception("Gagal mengambil product yang dibuat"))
                 Result.success(createdProduct)
             } catch (e: android.database.sqlite.SQLiteConstraintException) {
                 Result.failure(Exception("Barcode sudah digunakan (Constraint Error)"))
@@ -135,10 +135,10 @@ class ProductServiceImpl @Inject constructor(
             }
 
             val updateResult = productRepository.updateProduct(product)
-            if (updateResult is Result.Error) return Result.failure(updateResult.exception)
+            if (updateResult is Result.Failure) return Result.failure(updateResult.exception)
 
             val updatedProductResult = productRepository.getProductById(product.id)
-            val updatedProduct = (updatedProductResult as? Result.Success)?.data ?: return Result.failure((updatedProductResult as? Result.Error)?.exception ?: Exception("Gagal mengambil product yang diupdate"))
+            val updatedProduct = (updatedProductResult as? Result.Success)?.data ?: return Result.failure((updatedProductResult as? Result.Failure)?.exception ?: Exception("Gagal mengambil product yang diupdate"))
             Result.success(updatedProduct)
         } catch (e: Exception) {
             Result.failure(e)
@@ -152,7 +152,7 @@ class ProductServiceImpl @Inject constructor(
             }
             val idLong = id.toLongOrNull() ?: return Result.failure(Exception("ID Product tidak valid: $id"))
             val deleteResult = productRepository.deleteProduct(idLong)
-            if (deleteResult is Result.Error) return Result.failure(deleteResult.exception)
+            if (deleteResult is Result.Failure) return Result.failure(deleteResult.exception)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -168,7 +168,7 @@ class ProductServiceImpl @Inject constructor(
             val result = productRepository.getProductById(idLong)
             when (result) {
                 is Result.Success -> Result.success(result.data)
-                is Result.Error -> Result.success(null) // Return null if not found, or propagate error? Interface says Result<Product?>
+                is Result.Failure -> Result.success(null) // Return null if not found, or propagate error? Interface says Result<Product?>
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -185,10 +185,10 @@ class ProductServiceImpl @Inject constructor(
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
             }
             val flow = when {
-                !searchQuery.isNullOrBlank() -> productRepository.searchProduct(searchQuery)
+                !searchQuery.isNullOrBlank() -> productRepository.searchProducts(searchQuery)
                 categoryId != null -> productRepository.getProductByCategory(categoryId.toLong())
                 warehouseId != null -> productRepository.getProductByWarehouse(warehouseId.toLong())
-                else -> productRepository.getAllProduct()
+                else -> productRepository.getAllProducts()
             }
             val products = flow.first()
             Result.success(products)
@@ -202,7 +202,7 @@ class ProductServiceImpl @Inject constructor(
             if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
             }
-            val products = productRepository.searchProduct(query).first()
+            val products = productRepository.searchProducts(query).first()
             Result.success(products)
         } catch (e: Exception) {
             Result.failure(e)
@@ -223,13 +223,13 @@ class ProductServiceImpl @Inject constructor(
 
             // Ensure product exists
             val productResult = productRepository.getProductById(idLong)
-            if (productResult is Result.Error) {
+            if (productResult is Result.Failure) {
                 return Result.failure(Exception("Product tidak ditemukan"))
             }
 
             // Perform atomic update (Set Absolute Stock)
             val stockUpdateResult = productRepository.setStock(idLong, newStock)
-            if (stockUpdateResult is Result.Error) return Result.failure(stockUpdateResult.exception)
+            if (stockUpdateResult is Result.Failure) return Result.failure(stockUpdateResult.exception)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -241,7 +241,7 @@ class ProductServiceImpl @Inject constructor(
             if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
             }
-            val products = productRepository.getLowStockProduct().first()
+            val products = productRepository.getLowStockProducts().first()
             Result.success(products)
         } catch (e: Exception) {
             Result.failure(e)
@@ -249,7 +249,7 @@ class ProductServiceImpl @Inject constructor(
     }
 
     override fun observeProducts(): Flow<List<Product>> {
-        return productRepository.getAllProduct()
+        return productRepository.getAllProducts()
     }
 
     override fun observeProductsByCategory(categoryId: String): Flow<List<Product>> {
@@ -262,11 +262,11 @@ class ProductServiceImpl @Inject constructor(
     }
 
     override fun observeSearchProducts(query: String): Flow<List<Product>> {
-        return productRepository.searchProduct(query)
+        return productRepository.searchProducts(query)
     }
 
     override fun observeLowStockProducts(): Flow<List<Product>> {
-        return productRepository.getLowStockProduct()
+        return productRepository.getLowStockProducts()
     }
 
     /**

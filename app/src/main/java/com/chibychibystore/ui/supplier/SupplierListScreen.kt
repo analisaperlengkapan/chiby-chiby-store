@@ -143,9 +143,9 @@ fun SupplierItem(
                         text = supplier.name,
                         style = MaterialTheme.typography.titleMedium
                     )
-                    if (!supplier.phone.isNullOrBlank()) {
+                    if (!supplier.contact.isNullOrBlank()) {
                         Text(
-                            text = supplier.phone,
+                            text = supplier.contact,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -180,8 +180,8 @@ fun SupplierDialog(
 ) {
     var name by remember { mutableStateOf(supplier?.name ?: "") }
     var address by remember { mutableStateOf(supplier?.address ?: "") }
-    var phone by remember { mutableStateOf(supplier?.phone ?: "") }
-    var email by remember { mutableStateOf(supplier?.email ?: "") }
+    var phone by remember { mutableStateOf(supplier?.contact ?: "") }
+    var email by remember { mutableStateOf("") }
     var isNameError by remember { mutableStateOf(false) }
 
     AlertDialog(

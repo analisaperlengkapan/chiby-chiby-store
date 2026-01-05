@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SaleItemDao {
+    @Query("SELECT * FROM item_penjualan")
+    fun getAllSaleItems(): kotlinx.coroutines.flow.Flow<List<SaleItem>>
+
     @Query("SELECT * FROM item_penjualan WHERE saleId = :saleId")
     fun getItemsBySaleId(saleId: Long): Flow<List<SaleItem>>
 

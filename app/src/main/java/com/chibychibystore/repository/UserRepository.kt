@@ -51,7 +51,7 @@ class UserRepository @Inject constructor(
             validateUserData(user)
             val existingUser = userDao.getUserByUsername(user.username)
             if (existingUser != null) {
-                return Result.failure(ChibyChibyException.ValidationError("Username ${user.username} already exists"))
+                return Result.failure(ChibyChibyException.ValidationError("username", "Username ${user.username} already exists"))
             }
             val id = userDao.insertUser(user)
             Result.success(id)
@@ -68,7 +68,7 @@ class UserRepository @Inject constructor(
 
             val userWithSameUsername = userDao.getUserByUsername(user.username)
             if (userWithSameUsername != null && userWithSameUsername.id != user.id) {
-                return Result.failure(ChibyChibyException.ValidationError("Username ${user.username} already taken"))
+                return Result.failure(ChibyChibyException.ValidationError("username", "Username ${user.username} already taken"))
             }
 
             userDao.updateUser(user)
@@ -87,7 +87,7 @@ class UserRepository @Inject constructor(
                 val users = userDao.getAllUsers().first()
                 val ownerCount = users.count { it.role == Role.OWNER }
                 if (ownerCount <= 1) {
-                    return Result.failure(ChibyChibyException.ValidationError("Cannot delete the last Owner account"))
+                    return Result.failure(ChibyChibyException.ValidationError("role", "Cannot delete the last Owner account"))
                 }
             }
 
@@ -127,10 +127,10 @@ class UserRepository @Inject constructor(
 
     private fun validateUserData(user: User) {
         if (user.username.isBlank()) {
-            throw ChibyChibyException.ValidationError("Username cannot be empty")
+            throw ChibyChibyException.ValidationError("username", "Username cannot be empty")
         }
         if (user.username.length < 3) {
-            throw ChibyChibyException.ValidationError("Username must be at least 3 characters")
+            throw ChibyChibyException.ValidationError("username", "Username must be at least 3 characters")
         }
     }
 }

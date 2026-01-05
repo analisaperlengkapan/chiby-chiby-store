@@ -8,6 +8,7 @@ import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.ExpenseRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
@@ -63,19 +64,20 @@ class ExpenseServiceImpl @Inject constructor(
             val startDateObj = Date.from(start.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val endDateObj = Date.from(end.atStartOfDay(ZoneId.systemDefault()).plusDays(1).minusNanos(1).toInstant()) // End of day
 
-            val expenses = if (category != null) {
+            val expenses = expenseRepository.getExpensesByDateRange(startDateObj, endDateObj).first()
+            
+            val filteredExpenses = if (category != null) {
                 try {
                     val catEnum = ExpenseCategory.valueOf(category)
-                    expenseRepository.getExpensesByDateRangeAndCategory(startDateObj, endDateObj, catEnum)
+                    expenses.filter { it.category == catEnum }
                 } catch (e: Exception) {
-                    // Invalid category, fallback to all (or empty?) - assuming ignoring invalid category
-                     expenseRepository.getExpensesByDateRangeList(startDateObj, endDateObj)
+                    expenses
                 }
             } else {
-                expenseRepository.getExpensesByDateRangeList(startDateObj, endDateObj)
+                expenses
             }
 
-            Result.success(expenses)
+            Result.success(filteredExpenses)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getExpenses", e))
         }
@@ -87,7 +89,7 @@ class ExpenseServiceImpl @Inject constructor(
             val startDateObj = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val endDateObj = Date.from(endDate.atStartOfDay(ZoneId.systemDefault()).plusDays(1).minusNanos(1).toInstant())
 
-            val total = expenseRepository.getTotalExpenseAmount(startDateObj, endDateObj).getOrNull() ?: 0.0
+            val total = expenseRepository.getTotalExpense(startDateObj, endDateObj).getOrNull() ?: 0.0
             Result.success(total)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getTotalExpenses", e))

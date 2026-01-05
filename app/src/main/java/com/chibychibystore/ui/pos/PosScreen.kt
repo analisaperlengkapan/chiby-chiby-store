@@ -19,7 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.ui.theme.Success
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.ui.components.ChibyButton
 import com.chibychibystore.ui.components.ChibyCard
 import com.chibychibystore.ui.components.ChibyInput
@@ -173,9 +173,9 @@ fun PosScreen(
 
 @Composable
 private fun ProductSearchPanel(
-    searchResults: List<Produk>,
+    searchResults: List<Product>,
     isSearching: Boolean,
-    onProductClick: (Produk) -> Unit,
+    onProductClick: (Product) -> Unit,
     formatCurrency: (Double) -> String
 ) {
     if (isSearching) {

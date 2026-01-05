@@ -248,7 +248,7 @@ class UserManagementViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(UserManagementUiState())
-    val uiState: StateFlow<UserManagementUiState> = _uiState
+
 
     private val _createUserFormState = MutableStateFlow(CreateUserFormState())
     val createUserFormState: StateFlow<CreateUserFormState> = _createUserFormState

@@ -37,5 +37,8 @@ interface ExpenseDao {
     suspend fun getTotalExpense(startDate: Date, endDate: Date): Double?
 
     @Query("SELECT category, SUM(amount) as total FROM pengeluaran WHERE expenseDate BETWEEN :startDate AND :endDate GROUP BY category")
-    suspend fun getExpenseSummaryByCategory(startDate: Date, endDate: Date): Map<ExpenseCategory, Double>
+    suspend fun getExpenseSummaryByCategory(startDate: Date, endDate: Date): Map<@androidx.room.MapColumn(columnName = "category") ExpenseCategory, @androidx.room.MapColumn(columnName = "total") Double>
+
+    @Query("UPDATE pengeluaran SET approvedBy = :approverId WHERE id = :id")
+    suspend fun approveExpense(id: Long, approverId: Long)
 }

@@ -1,6 +1,7 @@
 package com.chibychibystore.service
 
 import com.chibychibystore.data.local.entity.Supplier
+import com.chibychibystore.data.model.Result
 import kotlinx.coroutines.flow.Flow
 
 interface SupplierService {

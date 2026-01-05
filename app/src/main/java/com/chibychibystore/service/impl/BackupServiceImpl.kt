@@ -35,9 +35,9 @@ class BackupServiceImpl @Inject constructor(
     private val productRepository: ProductRepository,
     private val supplierRepository: SupplierRepository,
     private val saleRepository: SaleRepository,
-    private val itemSaleRepository: ItemSaleRepository,
+    private val saleItemRepository: SaleItemRepository,
     private val purchaseRepository: PurchaseRepository,
-    private val itemPurchaseRepository: ItemPurchaseRepository,
+    private val purchaseItemRepository: PurchaseItemRepository,
     private val expenseRepository: ExpenseRepository
 ) : BackupService {
 
@@ -67,34 +67,34 @@ class BackupServiceImpl @Inject constructor(
             val pemasok = supplierRepository.getAllSuppliers().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data penjualan", progress = 0.6f, currentStepIndex = 6, totalSteps = 10)
-            val penjualan = saleRepository.getAllSales().firstOrNull() ?: emptyList()
+            val sales = saleRepository.getAllSales().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item penjualan", progress = 0.7f, currentStepIndex = 7, totalSteps = 10)
-            val itemPenjualan = emptyList<com.chibychibystore.data.local.entity.ItemPenjualan>()
+            val saleItems = saleItemRepository.getAllSaleItems().firstOrNull() ?: emptyList()
 
             // Note: Need to fix pembelian repository reference
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pembelian", progress = 0.8f, currentStepIndex = 8, totalSteps = 10)
-            val pembelian = purchaseRepository.getAllPurchases().firstOrNull() ?: emptyList()
+            val purchases = purchaseRepository.getAllPurchases().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item pembelian", progress = 0.9f, currentStepIndex = 9, totalSteps = 10)
-            val itemPembelian = emptyList<com.chibychibystore.data.local.entity.ItemPembelian>()
+            val purchaseItems = purchaseItemRepository.getAllPurchaseItems().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengeluaran", progress = 1.0f, currentStepIndex = 10, totalSteps = 10)
-            val pengeluaran = expenseRepository.getAllExpenses().firstOrNull() ?: emptyList()
+            val expenses = expenseRepository.getAllExpenses().firstOrNull() ?: emptyList()
 
             // Step 2: Create backup data structure
             val createdAt = System.currentTimeMillis()
             val entities = BackupEntities(
-                pengguna = pengguna,
-                kategori = kategori,
-                gudang = gudang,
-                product = product,
-                pemasok = pemasok,
-                penjualan = penjualan,
-                itemPenjualan = itemPenjualan,
-                pembelian = pembelian,
-                itemPembelian = itemPembelian,
-                pengeluaran = pengeluaran
+                users = pengguna,
+                categories = kategori,
+                warehouses = gudang,
+                products = product,
+                suppliers = pemasok,
+                sales = sales,
+                saleItems = saleItems,
+                purchases = purchases,
+                purchaseItems = purchaseItems,
+                expenses = expenses
             )
 
             val backupData = BackupData(
@@ -200,16 +200,16 @@ class BackupServiceImpl @Inject constructor(
             val backupData = json.decodeFromString<BackupData>(decryptedJson)
 
             val recordCounts = mapOf(
-                "pengguna" to backupData.data.pengguna.size,
-                "kategori" to backupData.data.kategori.size,
-                "gudang" to backupData.data.gudang.size,
-                "product" to backupData.data.product.size,
-                "pemasok" to backupData.data.pemasok.size,
-                "penjualan" to backupData.data.penjualan.size,
-                "itemPenjualan" to backupData.data.itemPenjualan.size,
-                "pembelian" to backupData.data.pembelian.size,
-                "itemPembelian" to backupData.data.itemPembelian.size,
-                "pengeluaran" to backupData.data.pengeluaran.size
+                "users" to backupData.data.users.size,
+                "categories" to backupData.data.categories.size,
+                "warehouses" to backupData.data.warehouses.size,
+                "products" to backupData.data.products.size,
+                "suppliers" to backupData.data.suppliers.size,
+                "sales" to backupData.data.sales.size,
+                "saleItems" to backupData.data.saleItems.size,
+                "purchases" to backupData.data.purchases.size,
+                "purchaseItems" to backupData.data.purchaseItems.size,
+                "expenses" to backupData.data.expenses.size
             )
 
 

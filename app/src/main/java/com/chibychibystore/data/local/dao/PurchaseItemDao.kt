@@ -16,6 +16,9 @@ interface PurchaseItemDao {
     @Query("SELECT * FROM item_pembelian")
     suspend fun getAllPurchaseItems(): List<PurchaseItem>
 
+    @Query("SELECT * FROM item_pembelian")
+    fun observeAllPurchaseItems(): Flow<List<PurchaseItem>>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPurchaseItem(item: PurchaseItem): Long
 

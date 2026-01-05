@@ -76,4 +76,13 @@ class ExpenseRepository @Inject constructor(
             Result.failure(ChibyChibyException.DatabaseError("getTotalExpense", e))
         }
     }
+
+    suspend fun approveExpense(id: Long, approverId: Long): Result<Unit> {
+        return try {
+            expenseDao.approveExpense(id, approverId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("approveExpense", e))
+        }
+    }
 }
