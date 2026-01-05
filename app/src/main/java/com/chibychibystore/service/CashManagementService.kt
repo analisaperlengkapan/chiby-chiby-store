@@ -46,14 +46,14 @@ class CashManagementService @Inject constructor(
             val salesRevenue = sales.sumOf { it.totalAmount }
 
             // Get operating expenses (cash outflows)
-            val operatingExpenses = pengeluaranRepository.getPengeluaransByDateRangeList(start, end)
-                .filter { it.category in KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES }
-                .sumOf { it.amount }
+            val operatingExpenses = pengeluaranRepository.getPengeluaransByCategoriesAndDateRange(
+                start, end, KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES.toList()
+            ).sumOf { it.amount }
 
             // Get inventory purchases (COGS - cash outflows for inventory)
-            val inventoryPurchases = pengeluaranRepository.getPengeluaransByDateRangeList(start, end)
-                .filter { it.category in KategoriPengeluaran.COGS_CATEGORIES }
-                .sumOf { it.amount }
+            val inventoryPurchases = pengeluaranRepository.getPengeluaransByCategoriesAndDateRange(
+                start, end, KategoriPengeluaran.COGS_CATEGORIES.toList()
+            ).sumOf { it.amount }
 
             val operatingCashFlow = salesRevenue - operatingExpenses - inventoryPurchases
             Result.success(operatingCashFlow)
@@ -71,9 +71,9 @@ class CashManagementService @Inject constructor(
             val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
 
             // Equipment purchases and store improvements (Investing activities)
-            val equipmentExpenses = pengeluaranRepository.getPengeluaransByDateRangeList(start, end)
-                .filter { it.category in KategoriPengeluaran.INVESTING_CATEGORIES }
-                .sumOf { it.amount }
+            val equipmentExpenses = pengeluaranRepository.getPengeluaransByCategoriesAndDateRange(
+                start, end, KategoriPengeluaran.INVESTING_CATEGORIES.toList()
+            ).sumOf { it.amount }
 
             val investingCashFlow = -equipmentExpenses
             Result.success(investingCashFlow)
