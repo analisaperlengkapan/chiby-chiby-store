@@ -51,7 +51,7 @@ fun WarehouseDetailScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = selectedWarehouse?.name ?: "Detail Gudang",
+                title = selectedWarehouse?.name ?: "Detail Warehouse",
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
@@ -70,7 +70,7 @@ fun WarehouseDetailScreen(
                         val warehouse = selectedWarehouse ?: return@IconButton
                         navController.navigate(Screen.WarehouseEdit.createRoute(warehouse.id.toString()))
                     }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit Gudang")
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Warehouse")
                     }
                 }
             )
@@ -250,7 +250,7 @@ private fun WarehouseInfoHeader(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "$productCount produk",
+                    text = "$productCount product",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -380,7 +380,7 @@ private fun WarehouseNotFoundState(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Gudang tidak ditemukan",
+            text = "Warehouse tidak ditemukan",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Medium
         )
@@ -388,7 +388,7 @@ private fun WarehouseNotFoundState(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Gudang yang Anda cari tidak tersedia atau telah dihapus",
+            text = "Warehouse yang Anda cari tidak tersedia atau telah dihapus",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -428,7 +428,7 @@ private fun WarehouseEmptyProductsState() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Belum ada produk",
+            text = "Belum ada product",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Medium
         )
@@ -436,7 +436,7 @@ private fun WarehouseEmptyProductsState() {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Gudang ini belum memiliki produk. Tambahkan produk dari menu Inventory.",
+            text = "Warehouse ini belum memiliki product. Tambahkan product dari menu Inventory.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center

@@ -16,270 +16,151 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material.icons.filled.PointOfSale
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.DrawerState
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.chibychibystore.data.local.entity.Penjualan
+import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.service.DataTren
 import com.chibychibystore.ui.components.ChibyCard
-import com.chibychibystore.ui.components.ChibyScaffold
-import com.chibychibystore.ui.components.shared.AppDrawer
-import com.chibychibystore.ui.components.shared.BottomNavItem
-import com.chibychibystore.ui.components.shared.BottomNavBar
+import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.LoadingIndicator
 import com.chibychibystore.ui.components.special.ChartData
 import com.chibychibystore.ui.components.special.ChartView
 import com.chibychibystore.ui.navigation.Screen
-import com.chibychibystore.ui.theme.ChibyPinkPrimary
-import com.chibychibystore.ui.theme.ChibyPinkLight
-import com.chibychibystore.ui.theme.ChibyYellowSecondary
-import com.chibychibystore.ui.theme.Error
-import kotlinx.coroutines.launch
 import java.text.NumberFormat
-import java.util.Date
+import java.text.SimpleDateFormat
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    drawerState: DrawerState,
+    navController: NavController,
+    drawerState: androidx.compose.material3.DrawerState,
     currentRoute: String,
     onNavigateToRoute: (String) -> Unit,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
-    
-    val formatCurrency = rememberCurrencyFormatter()
-    val formatDate = rememberDateFormatter()
-    
-    val bottomNavItems = listOf(
-        BottomNavItem("Dashboard", Icons.Default.Dashboard, Screen.Dashboard.route),
-        BottomNavItem("Inventory", Icons.Default.Inventory, Screen.Inventory.route),
-        BottomNavItem("Sales", Icons.Default.PointOfSale, Screen.SalesHistory.route),
-        BottomNavItem("Reports", Icons.Default.Analytics, Screen.Reports.route),
-        BottomNavItem("Settings", Icons.Default.Settings, Screen.Settings.route)
-    )
 
-    AppDrawer(
-        drawerState = drawerState,
-        currentRoute = currentRoute,
-        onNavigateToRoute = onNavigateToRoute,
-        onCloseDrawer = { scope.launch { drawerState.close() } }
-    ) {
-        ChibyScaffold(
-            title = "Dashboard",
-            bottomBar = {
-                BottomNavBar(
-                    items = bottomNavItems,
-                    currentRoute = currentRoute,
-                    onItemClick = onNavigateToRoute
-                )
-            },
-            onNavigateUp = null // Drawer handles navigation
-        ) { paddingValues ->
+    Scaffold(
+        topBar = {
+            AppTopBar(
+                title = "Dashboard",
+                navigationIcon = Icons.Default.Menu,
+                onNavigationClick = { scope.launch { drawerState.open() } },
+                actions = {}
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
             if (uiState.isLoading) {
-                LoadingIndicator(
-                    message = "Memuat data dashboard...",
-                    modifier = Modifier.padding(paddingValues)
-                )
+                LoadingIndicator()
             } else {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Hero Section: Today's Sales
+                    // KPI Section
                     item {
-                        ChibyCard(
-                            containerColor = ChibyPinkLight,
-                            elevation = 0,
-                            onClick = { onNavigateToRoute(Screen.SalesHistory.route) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "Total Penjualan Hari Ini",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = ChibyPinkPrimary
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = formatCurrency(uiState.todaySales),
-                                    style = MaterialTheme.typography.displayMedium,
-                                    color = ChibyPinkPrimary
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier
-                                        .background(ChibyPinkPrimary.copy(alpha = 0.1f), MaterialTheme.shapes.small)
-                                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.ShowChart,
-                                        contentDescription = null,
-                                        tint = ChibyPinkPrimary,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = " ${uiState.todayTransactionCount} Transaksi",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = ChibyPinkPrimary
-                                    )
-                                }
-                            }
+                            KpiCard(
+                                title = "Penjualan Hari Ini",
+                                value = formatCurrency(uiState.todaySales),
+                                icon = Icons.Default.Analytics,
+                                modifier = Modifier.weight(1f)
+                            )
+                            KpiCard(
+                                title = "Transaksi",
+                                value = uiState.todayTransactionCount.toString(),
+                                icon = Icons.Default.Dashboard, // Using Dashboard/Receipt icon substitute
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
 
-                    // Alerts Section
+                    // Low Stock Alerts
                     if (uiState.lowStockItems.isNotEmpty()) {
                         item {
-                            ChibyCard(
-                                containerColor = Error.copy(alpha = 0.1f),
-                                elevation = 0,
-                                onClick = { onNavigateToRoute(Screen.Inventory.route) }
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(
-                                        Icons.Default.Warning,
-                                        contentDescription = "Warning",
-                                        tint = Error,
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                    Spacer(modifier = Modifier.size(16.dp))
-                                    Column {
-                                        Text(
-                                            text = "Stok Menipis",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Error
-                                        )
-                                        Text(
-                                            text = "${uiState.lowStockItems.size} produk perlu restock segera.",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = Error
-                                        )
-                                    }
+                            LowStockCard(
+                                items = uiState.lowStockItems,
+                                onItemClick = { produk ->
+                                    navController.navigate(Screen.ProductDetail.createRoute(produk.id.toString()))
                                 }
-                            }
+                            )
                         }
                     }
 
-                    // Chart Section
+                    // Sales Trend
                     item {
-                        ChibyCard {
-                            Text(
-                                text = "Trend Penjualan (7 Hari)",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
-                            // Placeholder data for chart (should rely on real data if available in VM)
-                            ChartView(
-                                title = "",
-                                data = listOf(
-                                    ChartData("Sen", 120000f, ChibyPinkPrimary),
-                                    ChartData("Sel", 150000f, ChibyPinkPrimary),
-                                    ChartData("Rab", 180000f, ChibyPinkPrimary),
-                                    ChartData("Kam", 140000f, ChibyPinkPrimary),
-                                    ChartData("Jum", 200000f, ChibyPinkPrimary),
-                                    ChartData("Sab", 220000f, ChibyPinkPrimary),
-                                    ChartData("Min", uiState.todaySales.toFloat(), ChibyPinkPrimary)
+                        val chartData = remember(uiState.salesTrend) {
+                            uiState.salesTrend.map { trend ->
+                                ChartData(
+                                    label = trend.tanggal.dayOfWeek.name.take(3),
+                                    value = trend.penjualan.toFloat(),
+                                    date = trend.tanggal
                                 )
-                            )
-                        }
-                    }
-
-                    // Recent Transactions List
-                    if (uiState.recentTransactions.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Transaksi Terbaru",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
+                            }
                         }
                         
-                        items(uiState.recentTransactions.take(5)) { transaction ->
-                            val paymentIcon = if (transaction.paymentMethod.name == "CASH") 
-                                Icons.Default.PointOfSale else Icons.Default.Analytics
-                                
-                            ChibyCard(
-                                modifier = Modifier.padding(bottom = 8.dp),
-                                onClick = { onNavigateToRoute(Screen.SalesHistory.route) },
-                                elevation = 1
+                        ChibyCard {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(bottom = 8.dp)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = paymentIcon,
-                                            contentDescription = null,
-                                            tint = ChibyPinkPrimary,
-                                            modifier = Modifier.padding(end = 16.dp)
-                                        )
-                                        Column {
-                                            Text(
-                                                text = formatCurrency(transaction.totalAmount),
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                text = formatDate(transaction.saleDate.time),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-                                    
-                                    Box(
-                                        modifier = Modifier
-                                            .background(
-                                                ChibyYellowSecondary.copy(alpha = 0.2f),
-                                                MaterialTheme.shapes.extraSmall
-                                            )
-                                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
-                                        Text(
-                                            text = transaction.paymentMethod.name,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = ChibyYellowSecondary,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
+                               Icon(Icons.Default.Analytics, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                               Text("Tren Penjualan (7 Hari)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             }
+                            ChartView(
+                                data = chartData,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                            )
                         }
+                    }
+
+                    // Recent Transactions
+                    item {
+                        RecentTransactionsCard(
+                            transactions = uiState.recentTransactions,
+                            onItemClick = { penjualan ->
+                                // Navigate to Sales Detail if available, or just list
+                                // for now we can navigate to history or do nothing/show toast
+                            }
+                        )
+                    }
+                    
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
@@ -288,15 +169,147 @@ fun DashboardScreen(
 }
 
 @Composable
-fun rememberCurrencyFormatter(): (Double) -> String {
-    val locale = remember { Locale.Builder().setLanguage("id").setRegion("ID").build() }
-    val formatter = remember { NumberFormat.getCurrencyInstance(locale) }
-    return { amount -> formatter.format(amount) }
+fun KpiCard(
+    title: String,
+    value: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier
+) {
+    ChibyCard(modifier = modifier) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(32.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 @Composable
-fun rememberDateFormatter(): (Long) -> String {
-    val locale = remember { Locale.getDefault() }
-    val formatter = remember { java.text.SimpleDateFormat("dd MMM, HH:mm", locale) }
-    return { timestamp -> formatter.format(Date(timestamp)) }
+fun LowStockCard(
+    items: List<Produk>,
+    onItemClick: (Produk) -> Unit
+) {
+    ChibyCard(
+        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 8.dp)
+            ) {
+               Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+               Text("Stok Menipis", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            
+            items.take(5).forEach { produk ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = produk.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Stok: ${produk.stockQuantity} (Min: ${produk.minStock})",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RecentTransactionsCard(
+    transactions: List<Penjualan>,
+    onItemClick: (Penjualan) -> Unit
+) {
+    ChibyCard {
+        val dateFormatter = remember { SimpleDateFormat("dd/MM HH:mm", Locale("id", "ID")) }
+        
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 8.dp)
+            ) {
+               Icon(Icons.Default.Dashboard, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+               Text("Transaksi Terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+
+            if (transactions.isEmpty()) {
+                Text(
+                    text = "Belum ada transaksi",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(8.dp)
+                )
+            } else {
+                transactions.take(5).forEach { penjualan ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "#${penjualan.id}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = dateFormatter.format(penjualan.saleDate),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = formatCurrency(penjualan.totalAmount),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = penjualan.paymentMethod.name,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatCurrency(amount: Double): String {
+    val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+    return format.format(amount)
 }

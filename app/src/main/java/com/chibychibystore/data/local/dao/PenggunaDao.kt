@@ -5,13 +5,13 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
+import com.chibychibystore.data.local.entity.Pengguna
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PenggunaDao {
-    @Query("SELECT * FROM pengguna")
+    @Query("SELECT * FROM pengguna ORDER BY username ASC")
     fun getAllPengguna(): Flow<List<Pengguna>>
 
     @Query("SELECT * FROM pengguna WHERE id = :id")
@@ -20,8 +20,11 @@ interface PenggunaDao {
     @Query("SELECT * FROM pengguna WHERE username = :username")
     suspend fun getPenggunaByUsername(username: String): Pengguna?
 
-    @Query("SELECT * FROM pengguna WHERE role = :role")
+    @Query("SELECT * FROM pengguna WHERE role = :role ORDER BY username ASC")
     fun getPenggunaByRole(role: Role): Flow<List<Pengguna>>
+
+    @Query("SELECT * FROM pengguna WHERE username LIKE '%' || :query || '%' ORDER BY username ASC")
+    fun searchPengguna(query: String): Flow<List<Pengguna>>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPengguna(pengguna: Pengguna): Long
@@ -37,4 +40,10 @@ interface PenggunaDao {
 
     @Query("SELECT COUNT(*) FROM pengguna")
     suspend fun getPenggunaCount(): Int
+
+    @Query("SELECT COUNT(*) FROM pengguna WHERE isActive = 1")
+    suspend fun countActiveUsers(): Int
+
+    @Query("SELECT COUNT(*) FROM pengguna WHERE role = :role")
+    suspend fun countByRole(role: Role): Int
 }

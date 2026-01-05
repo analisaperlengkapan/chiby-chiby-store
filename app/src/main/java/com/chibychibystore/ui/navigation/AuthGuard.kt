@@ -14,10 +14,10 @@ import javax.inject.Inject
 @Composable
 fun AuthGuard(
     authService: AuthService,
-    onLoginSuccess: () -> Unit,
+    onLoginSuccess: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
-    val currentUser by authService.observeCurrentUser().collectAsState<Pengguna?, Pengguna?>(initial = null)
+    val currentUser by authService.observeCurrentUser().collectAsState(initial = null)
 
     if (currentUser == null) {
         // User not authenticated, show login screen
@@ -27,4 +27,3 @@ fun AuthGuard(
         content()
     }
 }
-

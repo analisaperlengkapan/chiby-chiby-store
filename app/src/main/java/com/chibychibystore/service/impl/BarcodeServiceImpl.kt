@@ -1,7 +1,11 @@
-package com.chibychibystore.service
+package com.chibychibystore.service.impl
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import com.chibychibystore.service.BarcodeService
+import com.chibychibystore.service.BarcodeFormat
+import com.chibychibystore.service.LabelSize
+import com.chibychibystore.service.BarcodeData
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -25,7 +29,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class BarcodeServiceImpl @Inject constructor(
-    private val produkRepository: ProdukRepository
+    private val productRepository: ProdukRepository
 ) : BarcodeService {
 
     private val writer = MultiFormatWriter()
@@ -38,9 +42,9 @@ class BarcodeServiceImpl @Inject constructor(
     ): Result<BarcodeData> = withContext(Dispatchers.IO) {
         try {
             // Get product data
-            val productResult = produkRepository.getProdukById(productId)
+            val productResult = productRepository.getProdukById(productId)
             val product = productResult.getOrNull() ?: return@withContext Result.failure(
-                ChibyChibyException.DatabaseError("Product dengan ID $productId tidak ditemukan")
+                ChibyChibyException.DatabaseError("Produk dengan ID $productId tidak ditemukan")
             )
 
             // Validate barcode format for product
@@ -214,7 +218,7 @@ class BarcodeServiceImpl @Inject constructor(
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
 
-        // Product name (truncate if too long)
+        // Produk name (truncate if too long)
         val displayName = if (product.name.length > 20) {
             product.name.substring(0, 17) + "..."
         } else {

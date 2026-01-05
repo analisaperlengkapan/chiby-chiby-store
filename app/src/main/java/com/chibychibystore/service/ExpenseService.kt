@@ -6,63 +6,20 @@ import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
 /**
- * Interface untuk Expense Service
- * 
- * Service ini menangani manajemen pengeluaran bisnis:
- * - CRUD operations untuk pengeluaran
- * - Kategorisasi pengeluaran
- * - Laporan pengeluaran
- * - Approval workflow
+ * Interface untuk Pengeluaran Service
  */
 interface ExpenseService {
-    
-    /**
-     * Membuat pengeluaran baru
-     */
-    suspend fun createExpense(expense: Pengeluaran): Result<Pengeluaran>
-    
-    /**
-     * Update pengeluaran existing
-     */
-    suspend fun updateExpense(expense: Pengeluaran): Result<Pengeluaran>
-    
-    /**
-     * Menghapus pengeluaran
-     */
-    suspend fun deleteExpense(id: Long): Result<Unit>
-    
-    /**
-     * Mendapatkan pengeluaran berdasarkan ID
-     */
-    suspend fun getExpense(id: Long): Result<Pengeluaran?>
-    
-    /**
-     * Mendapatkan semua pengeluaran dengan filter
-     * @param category Filter berdasarkan nama kategori (opsional)
-     */
-    suspend fun getExpenses(
+    suspend fun createPengeluaran(pengeluaran: Pengeluaran): Result<Pengeluaran>
+    suspend fun updatePengeluaran(pengeluaran: Pengeluaran): Result<Pengeluaran>
+    suspend fun deletePengeluaran(id: Long): Result<Unit>
+    suspend fun getPengeluaran(id: Long): Result<Pengeluaran?>
+    suspend fun getPengeluarans(
         startDate: LocalDate? = null,
         endDate: LocalDate? = null,
-        category: String? = null
+        kategori: String? = null
     ): Result<List<Pengeluaran>>
-    
-    /**
-     * Mendapatkan total pengeluaran dalam periode
-     */
-    suspend fun getTotalExpenses(startDate: LocalDate, endDate: LocalDate): Result<Double>
-    
-    /**
-     * Approve pengeluaran (untuk manager/owner)
-     */
-    suspend fun approveExpense(id: Long, approverId: Long): Result<Unit>
-    
-    /**
-     * Observable untuk pengeluaran
-     */
-    fun observeExpenses(): Flow<List<Pengeluaran>>
-    
-    /**
-     * Observable untuk pengeluaran berdasarkan kategori
-     */
-    fun observeExpensesByCategory(category: String): Flow<List<Pengeluaran>>
+    suspend fun getTotalPengeluarans(startDate: LocalDate, endDate: LocalDate): Result<Double>
+    suspend fun approvePengeluaran(id: Long, approverId: Long): Result<Unit>
+    fun observePengeluarans(): Flow<List<Pengeluaran>>
+    fun observePengeluaransPerKategori(kategori: String): Flow<List<Pengeluaran>>
 }

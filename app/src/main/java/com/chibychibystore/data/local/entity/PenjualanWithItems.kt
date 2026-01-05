@@ -5,7 +5,7 @@ import androidx.room.Relation
 
 data class PenjualanWithItems(
     @Embedded
-    val penjualan: Penjualan,
+    val sale: Penjualan,
     @Relation(
         parentColumn = "id",
         entityColumn = "saleId"

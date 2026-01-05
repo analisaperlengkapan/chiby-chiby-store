@@ -2,18 +2,23 @@ package com.chibychibystore.ui.expense
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.service.ExpenseService
 import com.chibychibystore.data.model.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.*
 import javax.inject.Inject
 
@@ -24,7 +29,7 @@ data class ExpenseUiState(
     val expenses: List<Pengeluaran> = emptyList(),
     val startDate: Date? = null,
     val endDate: Date? = null,
-    val selectedCategory: ExpenseCategory? = null,
+    val selectedCategory: KategoriPengeluaran? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
     val totalExpenses: Double = 0.0
@@ -32,148 +37,163 @@ data class ExpenseUiState(
 
 /**
  * ViewModel untuk Expense Management
- * Mengelola daftar pengeluaran dengan filter tanggal dan kategori
+ * Mengelola daftar expense dengan filter tanggal dan kategori
  */
 @HiltViewModel
 class ExpenseViewModel @Inject constructor(
     private val expenseService: ExpenseService
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ExpenseUiState())
-    val uiState: StateFlow<ExpenseUiState> = _uiState
+    // Filter States
+    private val _startDate = MutableStateFlow<Date?>(Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000))
+    private val _endDate = MutableStateFlow<Date?>(Date())
+    private val _selectedCategory = MutableStateFlow<KategoriPengeluaran?>(null)
+    private val _refreshTrigger = MutableStateFlow(0)
 
-    init {
-        loadExpenses()
-    }
+    // UI Feedback States
+    private val _isLoading = MutableStateFlow(false)
+    private val _error = MutableStateFlow<String?>(null)
 
-    /**
-     * Load pengeluaran dengan filter
-     */
-    fun loadExpenses() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+    // Data Loading Pipeline
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val _expensesDataFlow = combine(
+        _startDate,
+        _endDate,
+        _selectedCategory,
+        _refreshTrigger
+    ) { start, end, category, _ ->
+        Triple(start, end, category)
+    }.flatMapLatest { (start, end, category) ->
+        _isLoading.value = true
+        _error.value = null
 
+        flow<List<Pengeluaran>> {
             try {
-                val currentState = _uiState.value
-                val startDate = currentState.startDate ?: Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000) // 30 hari lalu
-                val endDate = currentState.endDate ?: Date()
-                val category = currentState.selectedCategory
+                val startLocalDate = start?.let { java.time.Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate() }
+                val endLocalDate = end?.let { java.time.Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate() }
 
-                // Convert to LocalDate for service
-                val startLocalDate = java.time.Instant.ofEpochMilli(startDate.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-                val endLocalDate = java.time.Instant.ofEpochMilli(endDate.time).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-
-                // Pass category name to service for optimized filtering
-                val result = expenseService.getExpenses(
+                val result = expenseService.getPengeluarans(
                     startLocalDate,
                     endLocalDate,
                     category?.name
                 )
 
-                val expensesList = when (result) {
-                    is com.chibychibystore.data.model.Result.Success -> result.data
-                    is com.chibychibystore.data.model.Result.Failure -> emptyList()
+                val list = when (result) {
+                    is Result.Success -> result.data
+                    is Result.Failure -> {
+                        _error.value = result.exception.message
+                        emptyList()
+                    }
                 }
-
-                // Calculate total
-                val total = expensesList.sumOf { it.amount }
-
-                _uiState.update {
-                    it.copy(
-                        expenses = expensesList,
-                        totalExpenses = total,
-                        isLoading = false
-                    )
-                }
+                emit(list)
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        error = e.message ?: "Terjadi kesalahan",
-                        isLoading = false
-                    )
-                }
+                _error.value = e.message
+                emit(emptyList())
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
-    /**
-     * Set filter tanggal mulai
-     */
-    fun setStartDate(date: Date?) {
-        _uiState.update { it.copy(startDate = date) }
-        loadExpenses()
+    // Combined UI State using array-based combine for 6+ flows
+    val uiState: StateFlow<ExpenseUiState> = combine(
+        _expensesDataFlow,
+        _startDate,
+        _endDate,
+        _selectedCategory,
+        _isLoading,
+        _error
+    ) { values: Array<*> ->
+        @Suppress("UNCHECKED_CAST")
+        val expenses = values[0] as List<Pengeluaran>
+        val start = values[1] as Date?
+        val end = values[2] as Date?
+        val category = values[3] as KategoriPengeluaran?
+        val loading = values[4] as Boolean
+        val errorMsg = values[5] as String?
+
+        ExpenseUiState(
+            expenses = expenses,
+            startDate = start,
+            endDate = end,
+            selectedCategory = category,
+            isLoading = loading,
+            error = errorMsg,
+            totalExpenses = expenses.sumOf { it.amount }
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ExpenseUiState(isLoading = true)
+    )
+
+    // User Actions
+
+    fun setDateRange(start: Date?, end: Date?) {
+        _startDate.value = start
+        _endDate.value = end
     }
 
-    /**
-     * Set filter tanggal akhir
-     */
-    fun setEndDate(date: Date?) {
-        _uiState.update { it.copy(endDate = date) }
-        loadExpenses()
+    fun setCategory(category: KategoriPengeluaran?) {
+        _selectedCategory.value = category
     }
 
-    /**
-     * Set filter kategori
-     */
-    fun setCategoryFilter(category: ExpenseCategory?) {
-        _uiState.update { it.copy(selectedCategory = category) }
-        loadExpenses()
+    fun refresh() {
+        _refreshTrigger.value = _refreshTrigger.value + 1
     }
 
-    /**
-     * Set semua filter sekaligus
-     */
-    fun setFilters(startDate: Date?, endDate: Date?, category: ExpenseCategory?) {
-        _uiState.update {
-            it.copy(
-                startDate = startDate,
-                endDate = endDate,
-                selectedCategory = category
-            )
-        }
-        loadExpenses()
-    }
-
-    /**
-     * Hapus pengeluaran
-     */
-    fun deleteExpense(expenseId: Long) {
+    fun createExpense(
+        date: Date,
+        category: KategoriPengeluaran,
+        amount: Double,
+        description: String?,
+        createdBy: Long
+    ) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-
+            _isLoading.value = true
+            _error.value = null
             try {
-                // Note: Delete functionality would be implemented in ExpenseService
-                // For now, just reload the list
-                loadExpenses()
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        error = e.message ?: "Gagal menghapus pengeluaran",
-                        isLoading = false
-                    )
+                val pengeluaran = Pengeluaran(
+                    expenseDate = date,
+                    category = category,
+                    amount = amount,
+                    description = description,
+                    createdBy = createdBy
+                )
+                val result = expenseService.createPengeluaran(pengeluaran)
+                result.onSuccess {
+                    refresh()
+                }.onFailure { e ->
+                    _error.value = e.message
                 }
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
-    /**
-     * Reset filter
-     */
-    fun resetFilters() {
-        _uiState.update {
-            it.copy(
-                startDate = null,
-                endDate = null,
-                selectedCategory = null
-            )
+    fun deleteExpense(id: Long) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val result = expenseService.deletePengeluaran(id)
+                result.onSuccess {
+                    refresh()
+                }.onFailure { e ->
+                    _error.value = e.message
+                }
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
+            }
         }
-        loadExpenses()
     }
 
-    /**
-     * Clear error
-     */
     fun clearError() {
-        _uiState.update { it.copy(error = null) }
+        _error.value = null
     }
 }

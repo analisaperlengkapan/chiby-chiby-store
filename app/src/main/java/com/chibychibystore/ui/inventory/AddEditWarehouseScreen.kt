@@ -43,7 +43,7 @@ fun AddWarehouseScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Tambah Gudang",
+                title = "Tambah Warehouse",
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
@@ -141,7 +141,7 @@ fun EditWarehouseScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Edit Gudang",
+                title = "Edit Warehouse",
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
@@ -227,7 +227,7 @@ private fun WarehouseForm(
         OutlinedTextField(
             value = name,
             onValueChange = onNameChange,
-            label = { Text("Nama Gudang") },
+            label = { Text("Nama Warehouse") },
             placeholder = { Text("Masukkan nama gudang") },
             isError = nameError != null,
             supportingText = nameError?.let { { Text(it) } },
@@ -239,7 +239,7 @@ private fun WarehouseForm(
         OutlinedTextField(
             value = location,
             onValueChange = onLocationChange,
-            label = { Text("Lokasi Gudang") },
+            label = { Text("Lokasi Warehouse") },
             placeholder = { Text("Masukkan lokasi gudang") },
             isError = locationError != null,
             supportingText = locationError?.let { { Text(it) } },
@@ -251,7 +251,7 @@ private fun WarehouseForm(
         OutlinedTextField(
             value = capacity,
             onValueChange = onCapacityChange,
-            label = { Text("Kapasitas Gudang") },
+            label = { Text("Kapasitas Warehouse") },
             placeholder = { Text("Masukkan kapasitas (opsional)") },
             isError = capacityError != null,
             supportingText = {
@@ -277,7 +277,7 @@ private fun WarehouseForm(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "Informasi Gudang",
+                    text = "Informasi Warehouse",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.ui.components.shared.*
-import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.local.entity.Pengeluaran
 
 import com.chibychibystore.ui.navigation.Screen
@@ -39,15 +39,15 @@ fun ExpenseListScreen(
     viewModel: ExpenseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showFilterDialog by remember { mutableStateOf(false) } // State for filter dialog
+    var showFilterDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Manajemen Pengeluaran",
+                title = "Manajemen Expense",
                 actions = {
                     IconButton(onClick = { navController.navigate(Screen.ExpenseAdd.route) }) {
-                        Icon(Icons.Default.Add, contentDescription = "Tambah Pengeluaran")
+                        Icon(Icons.Default.Add, contentDescription = "Tambah Expense")
                     }
                 }
             )
@@ -72,7 +72,7 @@ fun ExpenseListScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Filter Pengeluaran",
+                            text = "Filter Expense",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -86,9 +86,9 @@ fun ExpenseListScreen(
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (uiState.startDate != null && uiState.endDate != null) {
-                val dateRangeFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("id", "ID")) }
+                                val dateRangeFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("id", "ID")) }
                                 Text(
-                    text = "${dateRangeFormatter.format(uiState.startDate!!)} - ${dateRangeFormatter.format(uiState.endDate!!)}",
+                                    text = "${dateRangeFormatter.format(uiState.startDate!!)} - ${dateRangeFormatter.format(uiState.endDate!!)}",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -108,8 +108,8 @@ fun ExpenseListScreen(
                             }
                         }
                     } else {
-                         Spacer(modifier = Modifier.height(4.dp))
-                         Text(
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
                             text = "Menampilkan data 30 hari terakhir",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -124,25 +124,25 @@ fun ExpenseListScreen(
                     LoadingIndicator()
                 }
                 uiState.error != null -> {
-                    androidx.compose.material3.Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = androidx.compose.material3.CardDefaults.cardColors(
-                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
-                        contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
-                    ),
-                    shape = androidx.compose.material3.MaterialTheme.shapes.medium
-                ) {
-                    Box(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp),
-                        contentAlignment = Alignment.CenterStart
+                            .padding(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        ),
+                        shape = MaterialTheme.shapes.medium
                     ) {
-                        androidx.compose.material3.Text(text = uiState.error ?: "")
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Text(text = uiState.error ?: "")
+                        }
                     }
-                }
                 }
                 uiState.expenses.isEmpty() -> {
                     Column(
@@ -153,13 +153,13 @@ fun ExpenseListScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "Belum ada pengeluaran",
+                            text = "Belum ada expense",
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Tambah pengeluaran pertama Anda",
+                            text = "Tambah expense pertama Anda",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -198,7 +198,8 @@ fun ExpenseListScreen(
             currentEndDate = uiState.endDate,
             currentCategory = uiState.selectedCategory,
             onApply = { startDate, endDate, category ->
-                viewModel.setFilters(startDate, endDate, category)
+                viewModel.setDateRange(startDate, endDate)
+                viewModel.setCategory(category)
                 showFilterDialog = false
             },
             onDismiss = { showFilterDialog = false }
@@ -270,8 +271,8 @@ private fun formatCurrency(amount: Double): String {
 fun ExpenseFilterDialog(
     currentStartDate: Date?,
     currentEndDate: Date?,
-    currentCategory: ExpenseCategory?,
-    onApply: (Date?, Date?, ExpenseCategory?) -> Unit,
+    currentCategory: KategoriPengeluaran?,
+    onApply: (Date?, Date?, KategoriPengeluaran?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var startDate by remember { mutableStateOf(currentStartDate) }
@@ -294,7 +295,7 @@ fun ExpenseFilterDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Filter Pengeluaran") },
+        title = { Text("Filter Expense") },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -328,7 +329,7 @@ fun ExpenseFilterDialog(
 
                 // Category Section
                 Column {
-                    Text("Kategori", style = MaterialTheme.typography.labelLarge)
+                    Text("Category", style = MaterialTheme.typography.labelLarge)
                     Spacer(modifier = Modifier.height(8.dp))
 
                     var expanded by remember { mutableStateOf(false) }
@@ -337,7 +338,7 @@ fun ExpenseFilterDialog(
                         onExpandedChange = { expanded = it }
                     ) {
                         OutlinedTextField(
-                            value = selectedCategory?.displayName ?: "Semua Kategori",
+                            value = selectedCategory?.displayName ?: "Semua Category",
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -348,14 +349,13 @@ fun ExpenseFilterDialog(
                             onDismissRequest = { expanded = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Semua Kategori") },
+                                text = { Text("Semua Category") },
                                 onClick = {
                                     selectedCategory = null
                                     expanded = false
                                 }
                             )
-                            val categories = remember { ExpenseCategory.values() }
-                            categories.forEach { category ->
+                            KategoriPengeluaran.values().forEach { category ->
                                 DropdownMenuItem(
                                     text = { Text(category.displayName) },
                                     onClick = {

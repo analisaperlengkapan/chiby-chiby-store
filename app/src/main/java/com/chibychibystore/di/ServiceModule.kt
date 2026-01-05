@@ -2,6 +2,7 @@ package com.chibychibystore.di
 
 import com.chibychibystore.repository.*
 import com.chibychibystore.service.*
+import com.chibychibystore.service.impl.*
 import com.chibychibystore.service.printer.PrinterService
 import com.chibychibystore.service.printer.PrinterServiceImpl
 import dagger.Binds
@@ -26,18 +27,6 @@ abstract class ServiceModule {
     abstract fun bindUserManagementService(
         userManagementServiceImpl: UserManagementServiceImpl
     ): UserManagementService
-
-
-
-
-
-
-
-
-
-
-
-
 
     @Binds
     @Singleton
@@ -72,8 +61,9 @@ abstract class ServiceModule {
     @Binds
     @Singleton
     abstract fun bindExpenseService(
-        expenseServiceImpl: com.chibychibystore.service.ExpenseServiceImpl
+        expenseServiceImpl: ExpenseServiceImpl
     ): ExpenseService
+
     @Binds
     @Singleton
     abstract fun bindBackupService(
@@ -92,22 +82,13 @@ abstract class ServiceModule {
         printerServiceImpl: PrinterServiceImpl
     ): PrinterService
 
+    @Binds
+    @Singleton
+    abstract fun bindSupplierService(
+        supplierServiceImpl: SupplierServiceImpl
+    ): SupplierService
 
     companion object {
-        @Provides
-        @Singleton
-        fun provideAuthUseCases(
-            login: com.chibychibystore.usecase.LoginUseCase,
-            logout: com.chibychibystore.usecase.LogoutUseCase,
-            changePassword: com.chibychibystore.usecase.ChangePasswordUseCase,
-            getCurrentUser: com.chibychibystore.usecase.GetCurrentUserUseCase,
-            checkPermission: com.chibychibystore.usecase.CheckPermissionUseCase
-        ): com.chibychibystore.usecase.AuthUseCases {
-            return com.chibychibystore.usecase.AuthUseCases(
-                login, logout, changePassword, getCurrentUser, checkPermission
-            )
-        }
-
         @Provides
         @Singleton
         fun provideBluetoothAdapter(): android.bluetooth.BluetoothAdapter? {

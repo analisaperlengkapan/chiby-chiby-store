@@ -1,11 +1,13 @@
 package com.chibychibystore.service
 
-import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.PengeluaranRepository
 import com.chibychibystore.repository.PenjualanRepository
 import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,8 +17,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class CashManagementService @Inject constructor(
-    private val saleRepository: PenjualanRepository,
-    private val expenseRepository: PengeluaranRepository
+    private val penjualanRepository: PenjualanRepository,
+    private val pengeluaranRepository: PengeluaranRepository
 ) {
 
     /**
@@ -36,18 +38,21 @@ class CashManagementService @Inject constructor(
      */
     suspend fun calculateOperatingCashFlow(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
+            val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+            val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+
             // Get sales revenue (cash inflows from operations)
-            val sales = saleRepository.getSalesInDateRange(startDate, endDate)
+            val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
             val salesRevenue = sales.sumOf { it.totalAmount }
 
             // Get operating expenses (cash outflows)
-            val operatingExpenses = expenseRepository.getExpensesInDateRange(startDate, endDate)
-                .filter { it.category in ExpenseCategory.OPERATING_EXPENSE_CATEGORIES }
+            val operatingExpenses = pengeluaranRepository.getPengeluaransByDateRangeList(start, end)
+                .filter { it.category in KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES }
                 .sumOf { it.amount }
 
             // Get inventory purchases (COGS - cash outflows for inventory)
-            val inventoryPurchases = expenseRepository.getExpensesInDateRange(startDate, endDate)
-                .filter { it.category in ExpenseCategory.COGS_CATEGORIES }
+            val inventoryPurchases = pengeluaranRepository.getPengeluaransByDateRangeList(start, end)
+                .filter { it.category in KategoriPengeluaran.COGS_CATEGORIES }
                 .sumOf { it.amount }
 
             val operatingCashFlow = salesRevenue - operatingExpenses - inventoryPurchases
@@ -59,18 +64,18 @@ class CashManagementService @Inject constructor(
 
     /**
      * Hitung investing cash flow
-     * Investing cash flow = - (Equipment purchases + Store improvements)
-     * Untuk retail sederhana, ini terutama pembelian equipment dan improvements
      */
     suspend fun calculateInvestingCashFlow(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
+            val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+            val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+
             // Equipment purchases and store improvements
-            val equipmentExpenses = expenseRepository.getExpensesInDateRange(startDate, endDate)
-                .filter { it.category == ExpenseCategory.SUPPLIES_MAINTENANCE ||
-                         it.category == ExpenseCategory.DEPRECIATION }
+            val equipmentExpenses = pengeluaranRepository.getPengeluaransByDateRangeList(start, end)
+                .filter { it.category == KategoriPengeluaran.SUPPLIES_MAINTENANCE ||
+                         it.category == KategoriPengeluaran.DEPRECIATION }
                 .sumOf { it.amount }
 
-            // Investing cash flow is negative (cash outflows)
             val investingCashFlow = -equipmentExpenses
             Result.success(investingCashFlow)
         } catch (e: Exception) {
@@ -80,13 +85,9 @@ class CashManagementService @Inject constructor(
 
     /**
      * Hitung financing cash flow
-     * Financing cash flow = Owner investments - Owner withdrawals
-     * Untuk retail sederhana, ini terutama modal owner
      */
     suspend fun calculateFinancingCashFlow(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
-            // For now, financing cash flow is 0 as we don't track owner investments/withdrawals
-            // This can be extended later when we add owner equity tracking
             val financingCashFlow = 0.0
             Result.success(financingCashFlow)
         } catch (e: Exception) {
@@ -96,7 +97,6 @@ class CashManagementService @Inject constructor(
 
     /**
      * Hitung net cash flow
-     * Net cash flow = Operating + Investing + Financing cash flows
      */
     suspend fun calculateNetCashFlow(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
@@ -137,12 +137,9 @@ class CashManagementService @Inject constructor(
 
     /**
      * Get current cash position
-     * Ini adalah placeholder - dalam implementasi nyata, ini akan track cash balance
      */
     suspend fun getCurrentCashPosition(): Result<Double> {
         return try {
-            // Placeholder: in real implementation, this would track actual cash balance
-            // For now, return 0 as we don't have cash tracking yet
             Result.success(0.0)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal mendapatkan posisi kas", e))

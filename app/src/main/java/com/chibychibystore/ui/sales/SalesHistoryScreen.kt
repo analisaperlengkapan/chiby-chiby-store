@@ -16,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.PaymentMethod
+import com.chibychibystore.data.local.entity.Penjualan
+import com.chibychibystore.data.local.entity.PenjualanWithItems
 import com.chibychibystore.ui.components.*
 import com.chibychibystore.ui.components.shared.LoadingIndicator
 import com.chibychibystore.ui.theme.ChibyPinkPrimary
@@ -53,7 +55,7 @@ fun SalesHistoryScreen(
                     .padding(16.dp),
                 elevation = 2
             ) {
-                Column {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         "Filter",
                         style = MaterialTheme.typography.titleMedium,
@@ -74,7 +76,7 @@ fun SalesHistoryScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-// Date Filters
+                    // Date Filters
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -108,7 +110,7 @@ fun SalesHistoryScreen(
                            modifier = Modifier.padding(16.dp),
                            containerColor = MaterialTheme.colorScheme.errorContainer
                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(text = uiState.error ?: "", color = MaterialTheme.colorScheme.error)
                                 TextButton(onClick = { viewModel.loadSales() }) { Text("Coba Lagi") }
                             }
@@ -195,7 +197,7 @@ private fun EmptyState(icon: androidx.compose.ui.graphics.vector.ImageVector, ti
 
 @Composable
 private fun SaleItem(
-    sale: com.chibychibystore.data.local.entity.Penjualan,
+    sale: Penjualan,
     onClick: () -> Unit,
     dateFormat: SimpleDateFormat,
     currencyFormat: NumberFormat
@@ -205,59 +207,61 @@ private fun SaleItem(
         onClick = onClick,
         elevation = 2
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "Penjualan #${sale.id}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        dateFormat.format(sale.saleDate),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 Text(
-                    "Penjualan #${sale.id}",
+                    currencyFormat.format(sale.totalAmount),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    dateFormat.format(sale.saleDate),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontWeight = FontWeight.Bold,
+                    color = ChibyPinkPrimary
                 )
             }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                currencyFormat.format(sale.totalAmount),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = ChibyPinkPrimary
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-        Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                     Icon(Icons.Default.Payment, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                     Spacer(modifier = Modifier.width(4.dp))
+                     Text(
+                        "${sale.paymentMethod.name}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                 Icon(Icons.Default.Payment, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                 Spacer(modifier = Modifier.width(4.dp))
-                 Text(
-                    "${sale.paymentMethod.name}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Lihat Struk", style = MaterialTheme.typography.labelMedium, color = ChibyPinkPrimary)
-                Icon(
-                    Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = ChibyPinkPrimary,
-                    modifier = Modifier.size(16.dp)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Lihat Struk", style = MaterialTheme.typography.labelMedium, color = ChibyPinkPrimary)
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = ChibyPinkPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
     }
@@ -265,7 +269,7 @@ private fun SaleItem(
 
 @Composable
 private fun ReceiptDialog(
-    saleWithItems: com.chibychibystore.data.local.entity.PenjualanWithItems,
+    saleWithItems: PenjualanWithItems,
     isPrinting: Boolean,
     onPrintReceipt: () -> Unit,
     onDismiss: () -> Unit,
@@ -274,20 +278,22 @@ private fun ReceiptDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Struk Penjualan #${saleWithItems.penjualan.id}") },
+        title = { Text("Struk Penjualan #${saleWithItems.sale.id}") },
         text = {
             Column {
-                Text("Tanggal: ${dateFormat.format(saleWithItems.penjualan.saleDate)}")
-                Text("Metode: ${saleWithItems.penjualan.paymentMethod.name}")
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider()
+                Text("Tanggal: ${dateFormat.format(saleWithItems.sale.saleDate)}")
+                Text("Metode: ${saleWithItems.sale.paymentMethod.name}")
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Produk:", fontWeight = FontWeight.Bold)
+                
                 LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
                     items(saleWithItems.items) { item ->
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("${item.quantity}x Item", style = MaterialTheme.typography.bodySmall)
+                            Text("${item.quantity}x Item ID ${item.productId}", style = MaterialTheme.typography.bodySmall)
                             Text(currencyFormat.format(item.totalPrice), style = MaterialTheme.typography.bodySmall)
                         }
                     }
@@ -300,7 +306,7 @@ private fun ReceiptDialog(
                 ) {
                     Text("Total", fontWeight = FontWeight.Bold)
                     Text(
-                        currencyFormat.format(saleWithItems.penjualan.totalAmount),
+                        currencyFormat.format(saleWithItems.sale.totalAmount),
                         fontWeight = FontWeight.Bold,
                         color = ChibyPinkPrimary
                     )

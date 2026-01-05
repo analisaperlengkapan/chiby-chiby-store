@@ -14,31 +14,36 @@ import java.util.Date
     indices = [
         Index(value = ["purchaseDate"]),
         Index(value = ["supplierId"]),
-        Index(value = ["createdBy"])
+        Index(value = ["receivedBy"]),
+        Index(value = ["invoiceNumber"], unique = true)
     ],
     foreignKeys = [
         ForeignKey(
             entity = Pemasok::class,
             parentColumns = ["id"],
             childColumns = ["supplierId"],
-            onDelete = ForeignKey.CASCADE
+            onDelete = ForeignKey.RESTRICT
         ),
         ForeignKey(
             entity = Pengguna::class,
             parentColumns = ["id"],
-            childColumns = ["createdBy"],
-            onDelete = ForeignKey.CASCADE
+            childColumns = ["receivedBy"],
+            onDelete = ForeignKey.SET_NULL
         )
     ]
 )
 data class Pembelian(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    @Serializable(with = DateSerializer::class)
+    val purchaseDate: Date = Date(),
     val supplierId: Long,
-    @Serializable(with = DateSerializer::class)
-    val purchaseDate: Date,
+    val invoiceNumber: String,
     val totalAmount: Double,
-    val createdBy: Long,
+    val notes: String? = null,
+    val receivedBy: Long? = null,
     @Serializable(with = DateSerializer::class)
-    val createdAt: Date = Date()
+    val createdAt: Date = Date(),
+    @Serializable(with = DateSerializer::class)
+    val updatedAt: Date = Date()
 )

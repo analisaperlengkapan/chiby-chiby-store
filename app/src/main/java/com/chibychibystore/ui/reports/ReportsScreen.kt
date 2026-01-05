@@ -121,16 +121,16 @@ fun ReportsScreen(
                 // Report Content
                 Box(modifier = Modifier.weight(1f)) {
                     when (uiState.selectedReportType) {
-                        ReportType.GROSS_SALES -> GrossSalesReportScreen(uiState.reportData as? GrossSalesReport)
-                        ReportType.PROFIT_MARGIN -> ProfitMarginReportScreen(uiState.reportData as? ProfitMarginReport)
-                        ReportType.NET_PROFIT -> NetProfitReportScreen(uiState.reportData as? NetProfitReport)
-                        ReportType.SALES_BY_PRODUCT -> SalesByProductReportScreen(uiState.reportData as? List<ProductSales>)
-                        ReportType.SALES_BY_CATEGORY -> SalesByCategoryReportScreen(uiState.reportData as? List<CategorySales>)
-                        ReportType.SALES_TREND -> SalesTrendReportScreen(uiState.reportData as? List<TrendData>)
-                        ReportType.INCOME_STATEMENT -> IncomeStatementReportScreen(uiState.reportData as? IncomeStatement)
-                        ReportType.CASH_FLOW -> CashFlowReportScreen(uiState.reportData as? CashFlow)
-                        ReportType.EXPENSE_REPORT -> ExpenseReportScreen(uiState.reportData as? ExpenseReport)
-                        ReportType.BALANCE_SHEET -> BalanceSheetReportScreen(uiState.reportData as? BalanceSheet)
+                        ReportType.GROSS_SALES -> GrossSalesReportScreen(uiState.reportData as? LaporanPenjualanKotor)
+                        ReportType.PROFIT_MARGIN -> ProfitMarginReportScreen(uiState.reportData as? LaporanMarginLaba)
+                        ReportType.NET_PROFIT -> NetProfitReportScreen(uiState.reportData as? LaporanLabaBersih)
+                        ReportType.SALES_BY_PRODUCT -> SalesByProductReportScreen(uiState.reportData as? List<PenjualanProduk>)
+                        ReportType.SALES_BY_CATEGORY -> SalesByCategoryReportScreen(uiState.reportData as? List<PenjualanKategori>)
+                        ReportType.SALES_TREND -> SalesTrendReportScreen(uiState.reportData as? List<DataTren>)
+                        ReportType.INCOME_STATEMENT -> IncomeStatementReportScreen(uiState.reportData as? LaporanLabaRugi)
+                        ReportType.CASH_FLOW -> CashFlowReportScreen(uiState.reportData as? ArusKas)
+                        ReportType.EXPENSE_REPORT -> ExpenseReportScreen(uiState.reportData as? LaporanPengeluaran)
+                        ReportType.BALANCE_SHEET -> BalanceSheetReportScreen(uiState.reportData as? NeracaSaldo)
                     }
                 }
             }
@@ -293,76 +293,76 @@ private fun DateRangeFilter(
 // Report display components
 
 @Composable
-private fun GrossSalesReportScreen(data: GrossSalesReport?) {
+private fun GrossSalesReportScreen(data: LaporanPenjualanKotor?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         MetricCard(
             title = "Total Penjualan",
-            value = "Rp ${"%,.0f".format(data.totalSales)}",
-            subtitle = "${data.totalTransactions} transaksi"
+            value = "Rp ${"%,.0f".format(data.totalPenjualan)}",
+            subtitle = "${data.totalTransaksi} transaksi"
         )
         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Rata-rata per Transaksi",
-            value = "Rp ${"%,.0f".format(data.averageTransaction)}"
+            value = "Rp ${"%,.0f".format(data.rataRataTransaksi)}"
         )
     }
 }
 
 @Composable
-private fun ProfitMarginReportScreen(data: ProfitMarginReport?) {
+private fun ProfitMarginReportScreen(data: LaporanMarginLaba?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         MetricCard(
             title = "Total Pendapatan",
-            value = "Rp ${"%,.0f".format(data.totalRevenue)}"
+            value = "Rp ${"%,.0f".format(data.totalPendapatan)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Total Biaya",
-            value = "Rp ${"%,.0f".format(data.totalCost)}"
+            value = "Rp ${"%,.0f".format(data.totalBiaya)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Laba Kotor",
-            value = "Rp ${"%,.0f".format(data.grossProfit)}"
+            value = "Rp ${"%,.0f".format(data.labaKotor)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Margin Keuntungan",
-            value = "${"%.1f".format(data.profitMargin)}%"
+            value = "${"%.1f".format(data.marginLaba)}%"
         )
     }
 }
 
 @Composable
-private fun NetProfitReportScreen(data: NetProfitReport?) {
+private fun NetProfitReportScreen(data: LaporanLabaBersih?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         MetricCard(
             title = "Laba Kotor",
-            value = "Rp ${"%,.0f".format(data.grossProfit)}"
+            value = "Rp ${"%,.0f".format(data.labaKotor)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Total Pengeluaran",
-            value = "Rp ${"%,.0f".format(data.totalExpenses)}"
+            value = "Rp ${"%,.0f".format(data.totalPengeluaran)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Laba Bersih",
-            value = "Rp ${"%,.0f".format(data.netProfit)}",
-            subtitle = "${"%.1f".format(data.profitMargin)}% margin"
+            value = "Rp ${"%,.0f".format(data.labaBersih)}",
+            subtitle = "${"%.1f".format(data.marginLaba)}% margin"
         )
     }
 }
 
 @Composable
-private fun SalesByProductReportScreen(data: List<ProductSales>?) {
+private fun SalesByProductReportScreen(data: List<PenjualanProduk>?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         if (data.isNotEmpty()) {
-            val chartData = data.take(10).map { it.productName to it.totalRevenue.toFloat() }
+            val chartData = data.take(10).map { it.namaProduk to it.totalPendapatan.toFloat() }
             BarChart(
                 data = chartData,
                 title = "Penjualan per Produk (Top 10)"
@@ -374,11 +374,11 @@ private fun SalesByProductReportScreen(data: List<ProductSales>?) {
 }
 
 @Composable
-private fun SalesByCategoryReportScreen(data: List<CategorySales>?) {
+private fun SalesByCategoryReportScreen(data: List<PenjualanKategori>?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         if (data.isNotEmpty()) {
-            val chartData = data.map { it.categoryName to it.totalRevenue.toFloat() }
+            val chartData = data.map { it.namaKategori to it.totalPendapatan.toFloat() }
             BarChart(
                 data = chartData,
                 title = "Penjualan per Kategori"
@@ -390,11 +390,11 @@ private fun SalesByCategoryReportScreen(data: List<CategorySales>?) {
 }
 
 @Composable
-private fun SalesTrendReportScreen(data: List<TrendData>?) {
+private fun SalesTrendReportScreen(data: List<DataTren>?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         if (data.isNotEmpty()) {
-            val chartData = data.map { it.date.toString() to it.sales.toFloat() }
+            val chartData = data.map { it.tanggal.toString() to it.penjualan.toFloat() }
             LineChart(
                 data = chartData,
                 title = "Trend Penjualan Harian"
@@ -406,78 +406,78 @@ private fun SalesTrendReportScreen(data: List<TrendData>?) {
 }
 
 @Composable
-private fun IncomeStatementReportScreen(data: IncomeStatement?) {
+private fun IncomeStatementReportScreen(data: LaporanLabaRugi?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         MetricCard(
             title = "Pendapatan",
-            value = "Rp ${"%,.0f".format(data.revenue)}"
+            value = "Rp ${"%,.0f".format(data.pendapatan)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Harga Pokok Penjualan",
-            value = "Rp ${"%,.0f".format(data.costOfGoodsSold)}"
+            value = "Rp ${"%,.0f".format(data.hargaPokokPenjualan)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Laba Kotor",
-            value = "Rp ${"%,.0f".format(data.grossProfit)}"
+            value = "Rp ${"%,.0f".format(data.labaKotor)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Beban Operasional",
-            value = "Rp ${"%,.0f".format(data.operatingExpenses)}"
+            value = "Rp ${"%,.0f".format(data.bebanOperasional)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Laba Bersih",
-            value = "Rp ${"%,.0f".format(data.netIncome)}"
+            value = "Rp ${"%,.0f".format(data.labaBersih)}"
         )
     }
 }
 
 @Composable
-private fun CashFlowReportScreen(data: CashFlow?) {
+private fun CashFlowReportScreen(data: ArusKas?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         MetricCard(
             title = "Arus Kas Operasional",
-            value = "Rp ${"%,.0f".format(data.operatingCashFlow)}"
+            value = "Rp ${"%,.0f".format(data.arusKasOperasional)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Arus Kas Investasi",
-            value = "Rp ${"%,.0f".format(data.investingCashFlow)}"
+            value = "Rp ${"%,.0f".format(data.arusKasInvestasi)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Arus Kas Pendanaan",
-            value = "Rp ${"%,.0f".format(data.financingCashFlow)}"
+            value = "Rp ${"%,.0f".format(data.arusKasPendanaan)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Arus Kas Bersih",
-            value = "Rp ${"%,.0f".format(data.netCashFlow)}"
+            value = "Rp ${"%,.0f".format(data.arusKasBersih)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Saldo Akhir",
-            value = "Rp ${"%,.0f".format(data.endingCash)}"
+            value = "Rp ${"%,.0f".format(data.saldoAkhir)}"
         )
     }
 }
 
 @Composable
-private fun ExpenseReportScreen(data: ExpenseReport?) {
+private fun ExpenseReportScreen(data: LaporanPengeluaran?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         MetricCard(
             title = "Total Pengeluaran",
-            value = "Rp ${"%,.0f".format(data.totalExpenses)}"
+            value = "Rp ${"%,.0f".format(data.totalPengeluaran)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
-        if (data.expensesByCategory.isNotEmpty()) {
-            val chartData = data.expensesByCategory.map {
+        if (data.pengeluaranPerKategori.isNotEmpty()) {
+            val chartData = data.pengeluaranPerKategori.map {
                 val name = if (it.key is Enum<*>) (it.key as Enum<*>).name else it.key.toString()
                 name to it.value.toFloat()
             }
@@ -490,27 +490,28 @@ private fun ExpenseReportScreen(data: ExpenseReport?) {
 }
 
 @Composable
-private fun BalanceSheetReportScreen(data: BalanceSheet?) {
+private fun BalanceSheetReportScreen(data: NeracaSaldo?) {
     if (data == null) return
     Column(modifier = Modifier.padding(16.dp)) {
         MetricCard(
             title = "Total Aset",
-            value = "Rp ${"%,.0f".format(data.assets)}"
+            value = "Rp ${"%,.0f".format(data.aset)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Total Liabilitas",
-            value = "Rp ${"%,.0f".format(data.liabilities)}"
+            value = "Rp ${"%,.0f".format(data.liabilitas)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Ekuitas",
-            value = "Rp ${"%,.0f".format(data.equity)}"
+            value = "Rp ${"%,.0f".format(data.ekuitas)}"
         )
          Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Nilai Inventaris",
-            value = "Rp ${"%,.0f".format(data.inventoryValue)}"
+            value = "Rp ${"%,.0f".format(data.nilaiPersediaan)}"
         )
     }
 }
+

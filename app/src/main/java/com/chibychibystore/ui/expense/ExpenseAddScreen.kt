@@ -19,7 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.ui.components.DatePickerDialog
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -37,7 +37,7 @@ fun ExpenseAddScreen(
     Scaffold(
         topBar = {
                 AppTopBar(
-                title = "Tambah Pengeluaran",
+                title = "Tambah Expense",
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() }
             )
@@ -87,7 +87,7 @@ fun ExpenseAddScreen(
                             keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
                         ),
                         supportingText = {
-                            Text("Masukkan jumlah pengeluaran")
+                            Text("Masukkan jumlah expense")
                         }
                     )
 
@@ -100,7 +100,7 @@ fun ExpenseAddScreen(
                         OutlinedTextField(
                             value = uiState.selectedCategory?.displayName ?: "",
                             onValueChange = { },
-                            label = { Text("Kategori") },
+                            label = { Text("Category") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .menuAnchor(),
@@ -114,7 +114,7 @@ fun ExpenseAddScreen(
                             expanded = categoryExpanded,
                             onDismissRequest = { categoryExpanded = false }
                         ) {
-                            ExpenseCategory.values().forEach { category ->
+                            KategoriPengeluaran.values().forEach { category ->
                                 DropdownMenuItem(
                                     text = { Text(category.displayName) },
                                     onClick = {
@@ -132,7 +132,7 @@ fun ExpenseAddScreen(
                             SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)
                         } ?: "",
                         onValueChange = { },
-                        label = { Text("Tanggal Pengeluaran") },
+                        label = { Text("Tanggal Expense") },
                         modifier = Modifier.fillMaxWidth(),
                         readOnly = true,
                         trailingIcon = {
@@ -141,7 +141,7 @@ fun ExpenseAddScreen(
                             }
                         },
                         supportingText = {
-                            Text("Pilih tanggal pengeluaran")
+                            Text("Pilih tanggal expense")
                         }
                     )
 
@@ -154,7 +154,7 @@ fun ExpenseAddScreen(
                         minLines = 3,
                         maxLines = 5,
                         supportingText = {
-                            Text("Jelaskan detail pengeluaran (opsional)")
+                            Text("Jelaskan detail expense (opsional)")
                         }
                     )
 
@@ -170,7 +170,7 @@ fun ExpenseAddScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = uiState.isFormValid
                     ) {
-                        Text("Simpan Pengeluaran")
+                        Text("Simpan Expense")
                     }
                 }
             }

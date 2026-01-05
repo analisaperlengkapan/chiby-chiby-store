@@ -79,10 +79,10 @@ class DataSeedingService @Inject constructor(
 
     private suspend fun seedCategories() {
         val defaultCategories = listOf(
-            Kategori(id = 0, name = "Makanan", description = "Produk makanan"),
-            Kategori(id = 0, name = "Minuman", description = "Produk minuman"),
-            Kategori(id = 0, name = "Pakaian", description = "Produk pakaian"),
-            Kategori(id = 0, name = "Elektronik", description = "Produk elektronik")
+            Kategori(id = 0, name = "Makanan", description = "Product makanan"),
+            Kategori(id = 0, name = "Minuman", description = "Product minuman"),
+            Kategori(id = 0, name = "Pakaian", description = "Product pakaian"),
+            Kategori(id = 0, name = "Elektronik", description = "Product elektronik")
         )
 
         defaultCategories.forEach { category ->
@@ -170,7 +170,7 @@ class DataSeedingService @Inject constructor(
             Pengeluaran(
                 id = 0,
                 expenseDate = java.util.Date(),
-                category = ExpenseCategory.RENT_LEASE,
+                category = KategoriPengeluaran.RENT_LEASE,
                 amount = 5000000.0, // Rp 5 juta sewa bulanan
                 description = "Sewa toko bulan ini",
                 approvedBy = 1, // Owner
@@ -179,8 +179,8 @@ class DataSeedingService @Inject constructor(
             Pengeluaran(
                 id = 0,
                 expenseDate = java.util.Date(),
-                category = ExpenseCategory.UTILITIES,
-                amount = 800000.0, // Rp 800 ribu listrik
+                category = KategoriPengeluaran.UTILITIES,
+                amount = 80000.0, // Rp 800 ribu listrik
                 description = "Tagihan listrik bulan ini",
                 approvedBy = 1,
                 createdBy = 1
@@ -188,7 +188,7 @@ class DataSeedingService @Inject constructor(
             Pengeluaran(
                 id = 0,
                 expenseDate = java.util.Date(),
-                category = ExpenseCategory.SALARIES_WAGES,
+                category = KategoriPengeluaran.SALARIES_WAGES,
                 amount = 3000000.0, // Rp 3 juta gaji karyawan
                 description = "Gaji karyawan bulan ini",
                 approvedBy = 1,
@@ -197,7 +197,7 @@ class DataSeedingService @Inject constructor(
             Pengeluaran(
                 id = 0,
                 expenseDate = java.util.Date(),
-                category = ExpenseCategory.SUPPLIES_MAINTENANCE,
+                category = KategoriPengeluaran.SUPPLIES_MAINTENANCE,
                 amount = 500000.0, // Rp 500 ribu supplies
                 description = "Pembelian supplies toko",
                 approvedBy = 1,
@@ -206,7 +206,7 @@ class DataSeedingService @Inject constructor(
             Pengeluaran(
                 id = 0,
                 expenseDate = java.util.Date(),
-                category = ExpenseCategory.INVENTORY_PURCHASES,
+                category = KategoriPengeluaran.INVENTORY_PURCHASES,
                 amount = 2000000.0, // Rp 2 juta pembelian inventory
                 description = "Pembelian inventory dari supplier",
                 approvedBy = 1,
@@ -215,7 +215,7 @@ class DataSeedingService @Inject constructor(
         )
 
         defaultExpenses.forEach { expense ->
-            pengeluaranRepository.insertPengeluaran(expense)
+            pengeluaranRepository.createPengeluaran(expense)
         }
     }
 }

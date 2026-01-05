@@ -54,7 +54,7 @@ fun AddProductScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Tambah Produk",
+                title = "Tambah Product",
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
@@ -164,7 +164,7 @@ private fun AddProductContent(
                 )
 
                 ProductTextField(
-                    label = "Nama Produk",
+                    label = "Nama Product",
                     value = editedProduct.name,
                     onValueChange = { editedProduct = editedProduct.copy(name = it) },
                     isRequired = true

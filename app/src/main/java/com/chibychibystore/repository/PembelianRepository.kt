@@ -5,6 +5,10 @@ import com.chibychibystore.data.local.entity.Pembelian
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import java.util.Date
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,10 +28,10 @@ class PembelianRepository @Inject constructor(
     /**
      * Get purchases in date range
      */
-    suspend fun getPurchasesInDateRange(startDate: java.time.LocalDate, endDate: java.time.LocalDate): List<Pembelian> {
-        val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
-        val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
-        return pembelianDao.getPurchasesInDateRange(start, end)
+    suspend fun getPurchasesInDateRange(startDate: LocalDate, endDate: LocalDate): List<Pembelian> {
+        val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+        val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+        return pembelianDao.getPembelianByRentangTanggal(start, end).first()
     }
 
     /**
@@ -51,7 +55,6 @@ class PembelianRepository @Inject constructor(
      */
     suspend fun createPembelian(pembelian: Pembelian): Result<Pembelian> {
         return try {
-            // Validasi data
             validatePembelian(pembelian)
 
             val id = pembelianDao.insertPembelian(pembelian)

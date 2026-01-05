@@ -25,6 +25,11 @@ interface UserManagementService {
     fun getUsersByRole(role: Role): Flow<List<Pengguna>>
 
     /**
+     * Search users
+     */
+    fun searchUsers(query: String): Flow<List<Pengguna>>
+
+    /**
      * Create new user
      */
     suspend fun createUser(

@@ -63,7 +63,7 @@ interface PrinterService {
     suspend fun printTestReceipt(): Result<Unit>
 
     /**
-     * Print barcode labels untuk produk
+     * Print barcode labels untuk product
      */
     suspend fun printBarcodeLabels(
         product: com.chibychibystore.data.local.entity.Produk,

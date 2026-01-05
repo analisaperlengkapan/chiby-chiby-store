@@ -9,8 +9,8 @@ import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.repository.GudangRepository
 import com.chibychibystore.repository.KategoriRepository
 import com.chibychibystore.repository.ProdukRepository
-import com.chibychibystore.service.ProductServiceImpl
-import com.chibychibystore.service.WarehouseServiceImpl
+import com.chibychibystore.service.impl.ProductServiceImpl
+import com.chibychibystore.service.impl.WarehouseServiceImpl
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.runBlocking

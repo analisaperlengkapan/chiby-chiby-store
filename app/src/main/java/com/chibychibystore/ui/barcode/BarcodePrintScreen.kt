@@ -31,7 +31,7 @@ enum class LabelSize(val displayName: String, val width: Int, val height: Int) {
 
 /**
  * Barcode Print Screen
- * Mengelola pencetakan label barcode untuk produk
+ * Mengelola pencetakan label barcode untuk product
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +57,7 @@ fun BarcodePrintScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Product Selection
+            // Produk Selection
             ProductSelectionSection(
                 products = uiState.products,
                 selectedProduct = uiState.selectedProduct,
@@ -135,7 +135,7 @@ private fun ProductSelectionSection(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Selected Product Display
+            // Selected Produk Display
             selectedProduct?.let { product ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -162,13 +162,13 @@ private fun ProductSelectionSection(
                             )
                         }
                         IconButton(onClick = { onProductSelected(product) }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Ubah produk")
+                            Icon(Icons.Default.Edit, contentDescription = "Ubah product")
                         }
                     }
                 }
             }
 
-            // Product List
+            // Produk List
             if (products.isNotEmpty()) {
                 LazyColumn(
                     modifier = Modifier
@@ -402,7 +402,7 @@ private fun LabelPreviewSection(
                     modifier = Modifier.padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Product Name
+                    // Produk Name
                     Text(
                         text = product.name,
                         style = MaterialTheme.typography.bodyMedium,

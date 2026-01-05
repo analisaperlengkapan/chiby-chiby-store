@@ -88,34 +88,3 @@ data class RestoreProgress(
     val totalSteps: Int = 0,
     val currentStepIndex: Int = 0
 )
-
-/**
- * Data class untuk hasil validasi backup
- */
-data class BackupValidationResult(
-    val isValid: Boolean,
-    val version: String?,
-    val createdAt: Long?,
-    val recordCounts: Map<String, Int>?,
-    val errors: List<String> = emptyList()
-)
-
-/**
- * Data class untuk hasil restore
- */
-data class RestoreResult(
-    val success: Boolean,
-    val recordsRestored: Map<String, Int>,
-    val errors: List<String> = emptyList(),
-    val warnings: List<String> = emptyList()
-)
-
-/**
- * Data class untuk preview backup
- */
-data class BackupPreview(
-    val version: String,
-    val createdAt: Long,
-    val recordCounts: Map<String, Int>,
-    val sizeBytes: Long
-)

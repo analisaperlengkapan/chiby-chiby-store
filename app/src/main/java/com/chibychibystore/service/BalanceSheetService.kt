@@ -14,7 +14,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class BalanceSheetService @Inject constructor(
-    private val productRepository: ProdukRepository,
+    private val produkRepository: ProdukRepository,
     private val cashManagementService: CashManagementService
 ) {
 
@@ -29,19 +29,14 @@ class BalanceSheetService @Inject constructor(
 
     /**
      * Hitung total assets
-     * Assets = Cash + Inventory Value + Other assets
      */
     suspend fun calculateTotalAssets(asOfDate: LocalDate): Result<Double> {
         return try {
-            // Get inventory value (cost basis)
             val inventoryValueResult = calculateInventoryValue()
             val inventoryValue = inventoryValueResult.getOrNull() ?: 0.0
 
-            // Get cash position
             val cashBalance = cashManagementService.getCurrentCashPosition().getOrNull() ?: 0.0
 
-            // For retail business, main assets are inventory and cash
-            // Other assets (equipment, etc.) not tracked yet
             val totalAssets = cashBalance + inventoryValue
 
             Result.success(totalAssets)
@@ -55,8 +50,7 @@ class BalanceSheetService @Inject constructor(
      */
     suspend fun calculateInventoryValue(): Result<Double> {
         return try {
-            // Get all products and calculate total inventory value
-            val products = productRepository.getAllProduk().first()
+            val products = produkRepository.getAllProduk().first()
             val inventoryValue = products.sumOf { product -> product.costPrice * product.stockQuantity }
 
             Result.success(inventoryValue)
@@ -67,18 +61,10 @@ class BalanceSheetService @Inject constructor(
 
     /**
      * Hitung total liabilities
-     * Liabilities = Accounts payable + Other liabilities
-     * Untuk retail sederhana, ini terutama hutang supplier
      */
     suspend fun calculateTotalLiabilities(asOfDate: LocalDate): Result<Double> {
         return try {
-            // For now, liabilities are not tracked
-            // In real implementation, this would include:
-            // - Accounts payable (supplier debts)
-            // - Bank loans
-            // - Other short/long term liabilities
             val totalLiabilities = 0.0
-
             Result.success(totalLiabilities)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung total liabilities", e))
@@ -87,7 +73,6 @@ class BalanceSheetService @Inject constructor(
 
     /**
      * Hitung equity (owner's equity)
-     * Equity = Assets - Liabilities = Retained earnings + Owner investments
      */
     suspend fun calculateEquity(asOfDate: LocalDate): Result<Double> {
         return try {
@@ -127,7 +112,6 @@ class BalanceSheetService @Inject constructor(
 
     /**
      * Hitung debt-to-equity ratio
-     * Formula: Total Liabilities / Total Equity
      */
     suspend fun calculateDebtToEquityRatio(asOfDate: LocalDate): Result<Double> {
         return try {
@@ -143,8 +127,6 @@ class BalanceSheetService @Inject constructor(
 
     /**
      * Hitung current ratio (liquidity ratio)
-     * Formula: Current Assets / Current Liabilities
-     * Untuk retail: (Cash + Inventory) / Current Liabilities
      */
     suspend fun calculateCurrentRatio(asOfDate: LocalDate): Result<Double> {
         return try {

@@ -1,13 +1,12 @@
 package com.chibychibystore.repository
 
 import com.chibychibystore.data.local.dao.PengeluaranDao
-import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.toList
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
@@ -25,7 +24,7 @@ class PengeluaranRepository @Inject constructor(
     /**
      * Get semua pengeluaran
      */
-    fun getAllPengeluaran(): Flow<List<Pengeluaran>> = pengeluaranDao.getAllPengeluaran()
+    fun getAllPengeluarans(): Flow<List<Pengeluaran>> = pengeluaranDao.getAllPengeluarans()
 
     /**
      * Get pengeluaran by ID
@@ -46,65 +45,43 @@ class PengeluaranRepository @Inject constructor(
     /**
      * Get pengeluaran by kategori
      */
-    fun getPengeluaranByCategory(category: ExpenseCategory): Flow<List<Pengeluaran>> =
-        pengeluaranDao.getPengeluaranByCategory(category)
+    fun getPengeluaransByKategori(category: KategoriPengeluaran): Flow<List<Pengeluaran>> =
+        pengeluaranDao.getPengeluaransByKategori(category)
 
     /**
-     * Get pengeluaran by user
+     * Get pengeluaran dalam rentang tanggal (Flow)
      */
-    fun getPengeluaranByUser(userId: Long): Flow<List<Pengeluaran>> =
-        pengeluaranDao.getPengeluaranByUser(userId)
-
-    /**
-     * Get pengeluaran yang disetujui oleh user tertentu
-     */
-    fun getPengeluaranApprovedBy(userId: Long): Flow<List<Pengeluaran>> =
-        pengeluaranDao.getPengeluaranApprovedBy(userId)
-
-    /**
-     * Get pengeluaran dalam rentang tanggal
-     */
-    suspend fun getExpensesInDateRange(startDate: LocalDate, endDate: LocalDate): List<Pengeluaran> {
-        val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
-        val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
-        return pengeluaranDao.getPengeluaranByDateRange(start, end).first()
+    fun getPengeluaransByDateRange(startDate: Date, endDate: Date): Flow<List<Pengeluaran>> {
+        return pengeluaranDao.getPengeluaransByDateRange(startDate, endDate)
     }
 
     /**
-     * Overload: Get pengeluaran dalam rentang tanggal menggunakan java.util.Date
+     * Get pengeluaran dalam rentang tanggal (List)
      */
-    suspend fun getExpensesInDateRange(startDate: Date, endDate: Date): List<Pengeluaran> {
-        return pengeluaranDao.getPengeluaranByDateRange(startDate, endDate).first()
+    suspend fun getPengeluaransByDateRangeList(startDate: Date, endDate: Date): List<Pengeluaran> {
+        return pengeluaranDao.getPengeluaransByDateRangeList(startDate, endDate)
     }
 
     /**
-     * Get pengeluaran yang belum disetujui
+     * Get pengeluaran dalam rentang tanggal dan kategori (List)
      */
-    fun getUnapprovedPengeluaran(): Flow<List<Pengeluaran>> =
-        pengeluaranDao.getUnapprovedPengeluaran()
+    suspend fun getPengeluaransByDateRangeAndKategori(startDate: Date, endDate: Date, category: KategoriPengeluaran): List<Pengeluaran> {
+        return pengeluaranDao.getPengeluaransByDateRangeAndKategori(startDate, endDate, category)
+    }
 
     /**
-     * Insert pengeluaran baru
+     * Create pengeluaran baru
      */
-    suspend fun insertPengeluaran(pengeluaran: Pengeluaran): Result<Long> {
+    suspend fun createPengeluaran(pengeluaran: Pengeluaran): Result<Long> {
         return try {
-            // Validasi data
             if (pengeluaran.amount <= 0) {
                 return Result.failure(ChibyChibyException.ValidationError("amount", "Jumlah pengeluaran harus lebih dari 0"))
             }
 
-            // Jika jumlah > threshold, perlu approval
-            val needsApproval = pengeluaran.amount > 1000000 // Rp 1 juta threshold
-            val pengeluaranToInsert = if (needsApproval && pengeluaran.approvedBy == null) {
-                pengeluaran.copy(approvedBy = null) // Explicitly set to null for unapproved
-            } else {
-                pengeluaran
-            }
-
-            val id = pengeluaranDao.insertPengeluaran(pengeluaranToInsert)
+            val id = pengeluaranDao.insertPengeluaran(pengeluaran)
             Result.success(id)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("insertPengeluaran", e))
+            Result.failure(ChibyChibyException.DatabaseError("createPengeluaran", e))
         }
     }
 
@@ -113,7 +90,6 @@ class PengeluaranRepository @Inject constructor(
      */
     suspend fun updatePengeluaran(pengeluaran: Pengeluaran): Result<Unit> {
         return try {
-            // Validasi data
             if (pengeluaran.amount <= 0) {
                 return Result.failure(ChibyChibyException.ValidationError("amount", "Jumlah pengeluaran harus lebih dari 0"))
             }
@@ -130,13 +106,7 @@ class PengeluaranRepository @Inject constructor(
      */
     suspend fun approvePengeluaran(id: Long, approvedBy: Long): Result<Unit> {
         return try {
-            val pengeluaran = pengeluaranDao.getPengeluaranById(id)
-            if (pengeluaran == null) {
-                return Result.failure(ChibyChibyException.DatabaseError("Pengeluaran tidak ditemukan"))
-            }
-
-            val updatedPengeluaran = pengeluaran.copy(approvedBy = approvedBy)
-            pengeluaranDao.updatePengeluaran(updatedPengeluaran)
+            pengeluaranDao.approvePengeluaran(id, approvedBy)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("approvePengeluaran", e))
@@ -156,28 +126,14 @@ class PengeluaranRepository @Inject constructor(
     }
 
     /**
-     * Get jumlah pengeluaran
-     */
-    suspend fun getPengeluaranCount(): Result<Int> {
-        return try {
-            val count = pengeluaranDao.getPengeluaranCount()
-            Result.success(count)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getPengeluaranCount", e))
-        }
-    }
-
-    /**
      * Get total pengeluaran dalam rentang tanggal
      */
-    suspend fun getTotalExpenseAmount(startDate: LocalDate, endDate: LocalDate): Result<Double> {
+    suspend fun getTotalPengeluaranAmount(startDate: Date, endDate: Date): Result<Double> {
         return try {
-            val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
-            val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
-            val total = pengeluaranDao.getTotalExpenseAmount(start, end) ?: 0.0
+            val total = pengeluaranDao.getTotalPengeluaranAmount(startDate, endDate) ?: 0.0
             Result.success(total)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getTotalExpenseAmount", e))
+            Result.failure(ChibyChibyException.DatabaseError("getTotalPengeluaranAmount", e))
         }
     }
 }

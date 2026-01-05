@@ -27,9 +27,10 @@ import com.chibychibystore.ui.components.ChibyScaffold
 import com.chibychibystore.ui.components.shared.LoadingIndicator
 import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.ui.theme.ChibyPinkPrimary
-import com.chibychibystore.ui.theme.ChibyYellowSecondary
 import com.chibychibystore.ui.theme.Error
 import com.chibychibystore.ui.theme.Success
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +39,17 @@ fun InventoryScreen(
     viewModel: InventoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show Snackbar on Error
+    LaunchedEffect(uiState) {
+        if (uiState.error != null) {
+            snackbarHostState.showSnackbar(
+                message = uiState.error!!,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
 
     ChibyScaffold(
         title = "Inventory",
@@ -84,36 +96,23 @@ fun InventoryScreen(
                         text = "⚠️ ${uiState.lowStockProducts.size} produk stok rendah",
                         style = MaterialTheme.typography.labelLarge,
                         color = Error,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(12.dp)
                     )
                 }
             }
 
-            // Content
+            // Content Handling
             when {
                 uiState.isLoading -> LoadingIndicator("Memuat inventory...")
-                uiState.error != null -> {
-                    ChibyCard(
-                        modifier = Modifier.padding(16.dp),
-                        containerColor = Error.copy(alpha = 0.1f)
-                    ) {
-                        Text(
-                            text = uiState.error ?: "",
-                            color = Error,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
                 uiState.products.isEmpty() -> {
-                    EmptyInventoryState(
-                        onAddProduct = { navController.navigate(Screen.ProductAdd.route) }
-                    )
+                    EmptyInventoryState(onAddProduct = { navController.navigate(Screen.ProductAdd.route) })
                 }
                 else -> {
                     ProductList(
                         products = uiState.products,
-                        onProductClick = { product ->
-                            navController.navigate(Screen.ProductDetail.createRoute(product.id.toString()))
+                        onProductClick = { produk ->
+                            navController.navigate(Screen.ProductDetail.createRoute(produk.id.toString()))
                         }
                     )
                 }
@@ -132,8 +131,8 @@ private fun EmptyInventoryState(onAddProduct: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            Icons.Default.Inventory, 
-            contentDescription = null, 
+            Icons.Default.Inventory,
+            contentDescription = null,
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.outline
         )
@@ -178,82 +177,91 @@ private fun ProductListItem(
     product: Produk,
     onClick: () -> Unit
 ) {
+    val priceFormatted = remember(product.sellingPrice) {
+        val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
+        format.format(product.sellingPrice)
+    }
+
     ChibyCard(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
         elevation = 2
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = product.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                if (product.barcode != null) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = product.barcode,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = product.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (!product.barcode.isNullOrBlank()) {
+                        Text(
+                            text = product.barcode ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                val isLowStock = product.stockQuantity <= product.minStock
+                val statusColor = if (isLowStock) Error else Success
+                val statusText = if (isLowStock) "Stok Rendah" else "Stok Aman"
+
+                Surface(
+                    color = statusColor.copy(alpha = 0.1f),
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        text = statusText,
+                        color = statusColor,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }
 
-            val isLowStock = product.stockQuantity <= product.minStock
-            val statusColor = if (isLowStock) Error else Success
-            val statusText = if (isLowStock) "Low Stock" else "In Stock"
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            Surface(
-                color = statusColor.copy(alpha = 0.1f),
-                shape = MaterialTheme.shapes.small
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = statusText,
-                    color = statusColor,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            }
-        }
+                Column {
+                    Text(
+                        text = "Harga Jual",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = priceFormatted,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = ChibyPinkPrimary
+                    )
+                }
 
-        Spacer(modifier = Modifier.height(12.dp))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "Harga Jual",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Rp ${product.sellingPrice}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = ChibyPinkPrimary
-                )
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "Stok",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "${product.stockQuantity} Unit",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium
-                )
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Stok",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "${product.stockQuantity} Unit",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }

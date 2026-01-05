@@ -25,7 +25,7 @@ object ReceiptFormatter {
     ): ReceiptData {
         val items = saleWithItems.items.map { item ->
             ReceiptItem(
-                name = "Produk #${item.productId}",
+                name = "Product #${item.productId}",
                 quantity = item.quantity,
                 unitPrice = item.unitPrice,
                 totalPrice = item.totalPrice
@@ -43,14 +43,14 @@ object ReceiptFormatter {
         return ReceiptData(
             storeName = storeName,
             storeAddress = storeAddress,
-            saleId = saleWithItems.penjualan.id,
-            saleDate = dateFormat.format(saleWithItems.penjualan.saleDate),
+            saleId = saleWithItems.sale.id,
+            saleDate = dateFormat.format(saleWithItems.sale.saleDate),
             items = items,
             subtotal = subtotal,
             tax = tax,
             discount = discount,
             total = total,
-            paymentMethod = saleWithItems.penjualan.paymentMethod.name,
+            paymentMethod = saleWithItems.sale.paymentMethod.name,
             cashierName = cashierName
         )
     }

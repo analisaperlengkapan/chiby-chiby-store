@@ -9,6 +9,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
@@ -45,17 +46,17 @@ class ReportsViewModel @Inject constructor(
     }
 
     fun selectReportType(reportType: ReportType) {
-        _uiState.value = _uiState.value.copy(selectedReportType = reportType)
+        _uiState.update { it.copy(selectedReportType = reportType) }
         loadReport()
     }
 
     fun setStartDate(date: LocalDate) {
-        _uiState.value = _uiState.value.copy(startDate = date)
+        _uiState.update { it.copy(startDate = date) }
         loadReport()
     }
 
     fun setEndDate(date: LocalDate) {
-        _uiState.value = _uiState.value.copy(endDate = date)
+        _uiState.update { it.copy(endDate = date) }
         loadReport()
     }
 
@@ -64,11 +65,13 @@ class ReportsViewModel @Inject constructor(
         val startDate = currentState.startDate ?: return
         val endDate = currentState.endDate ?: return
 
-        _uiState.value = currentState.copy(
-            isExporting = true,
-            error = null,
-            exportSuccess = null
-        )
+        _uiState.update {
+            it.copy(
+                isExporting = true,
+                error = null,
+                exportSuccess = null
+            )
+        }
 
         viewModelScope.launch {
             try {
@@ -90,107 +93,117 @@ class ReportsViewModel @Inject constructor(
 
                 when (result) {
                     is Result.Success -> {
-                        _uiState.value = currentState.copy(
-                            isExporting = false,
-                            exportSuccess = result.data
-                        )
+                        _uiState.update {
+                            it.copy(
+                                isExporting = false,
+                                exportSuccess = result.data
+                            )
+                        }
                     }
                     is Result.Failure -> {
-                        _uiState.value = currentState.copy(
-                            error = "Gagal export PDF: ${result.exception.message}",
-                            isExporting = false
-                        )
+                        _uiState.update {
+                            it.copy(
+                                error = "Gagal export PDF: ${result.exception.message}",
+                                isExporting = false
+                            )
+                        }
                     }
                 }
             } catch (e: Exception) {
-                _uiState.value = currentState.copy(
-                    error = "Gagal export PDF: ${e.message}",
-                    isExporting = false
-                )
+                _uiState.update {
+                    it.copy(
+                        error = "Gagal export PDF: ${e.message}",
+                        isExporting = false
+                    )
+                }
             }
         }
     }
 
     fun clearExportSuccess() {
-        _uiState.value = _uiState.value.copy(exportSuccess = null)
+        _uiState.update { it.copy(exportSuccess = null) }
     }
 
     private fun loadReport() {
+        // Capture state before launching coroutine if needed, or inside
+        // Here we just need the dates
         val currentState = _uiState.value
         val startDate = currentState.startDate ?: return
         val endDate = currentState.endDate ?: return
 
-        _uiState.value = currentState.copy(isLoading = true, error = null)
+        _uiState.update { it.copy(isLoading = true, error = null) }
 
         viewModelScope.launch {
             try {
                 when (currentState.selectedReportType) {
                     ReportType.GROSS_SALES -> {
                         when (val res = reportingService.getGrossSales(startDate, endDate)) {
-                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
-                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                            is Result.Success -> _uiState.update { it.copy(reportData = res.data, isLoading = false) }
+                            is Result.Failure -> _uiState.update { it.copy(error = res.exception.message, isLoading = false) }
                         }
                     }
                     ReportType.PROFIT_MARGIN -> {
                         when (val res = reportingService.getProfitMargin(startDate, endDate)) {
-                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
-                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                            is Result.Success -> _uiState.update { it.copy(reportData = res.data, isLoading = false) }
+                            is Result.Failure -> _uiState.update { it.copy(error = res.exception.message, isLoading = false) }
                         }
                     }
                     ReportType.NET_PROFIT -> {
                         when (val res = reportingService.getNetProfit(startDate, endDate)) {
-                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
-                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                            is Result.Success -> _uiState.update { it.copy(reportData = res.data, isLoading = false) }
+                            is Result.Failure -> _uiState.update { it.copy(error = res.exception.message, isLoading = false) }
                         }
                     }
                     ReportType.SALES_BY_PRODUCT -> {
                         when (val res = reportingService.getSalesByProduct(startDate, endDate)) {
-                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
-                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                            is Result.Success -> _uiState.update { it.copy(reportData = res.data, isLoading = false) }
+                            is Result.Failure -> _uiState.update { it.copy(error = res.exception.message, isLoading = false) }
                         }
                     }
                     ReportType.SALES_BY_CATEGORY -> {
                         when (val res = reportingService.getSalesByCategory(startDate, endDate)) {
-                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
-                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                            is Result.Success -> _uiState.update { it.copy(reportData = res.data, isLoading = false) }
+                            is Result.Failure -> _uiState.update { it.copy(error = res.exception.message, isLoading = false) }
                         }
                     }
                     ReportType.SALES_TREND -> {
                         when (val res = reportingService.getSalesTrend(startDate, endDate)) {
-                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
-                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                            is Result.Success -> _uiState.update { it.copy(reportData = res.data, isLoading = false) }
+                            is Result.Failure -> _uiState.update { it.copy(error = res.exception.message, isLoading = false) }
                         }
                     }
                     ReportType.INCOME_STATEMENT -> {
                         when (val res = reportingService.getIncomeStatement(endDate)) {
-                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
-                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                            is Result.Success -> _uiState.update { it.copy(reportData = res.data, isLoading = false) }
+                            is Result.Failure -> _uiState.update { it.copy(error = res.exception.message, isLoading = false) }
                         }
                     }
                     ReportType.CASH_FLOW -> {
                         when (val res = reportingService.getCashFlow(startDate, endDate)) {
-                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
-                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                            is Result.Success -> _uiState.update { it.copy(reportData = res.data, isLoading = false) }
+                            is Result.Failure -> _uiState.update { it.copy(error = res.exception.message, isLoading = false) }
                         }
                     }
                     ReportType.EXPENSE_REPORT -> {
                         when (val res = reportingService.getExpenseReport(startDate, endDate)) {
-                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
-                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                            is Result.Success -> _uiState.update { it.copy(reportData = res.data, isLoading = false) }
+                            is Result.Failure -> _uiState.update { it.copy(error = res.exception.message, isLoading = false) }
                         }
                     }
                     ReportType.BALANCE_SHEET -> {
                         when (val res = reportingService.getBalanceSheet(endDate)) {
-                            is Result.Success -> _uiState.value = currentState.copy(reportData = res.data, isLoading = false)
-                            is Result.Failure -> _uiState.value = currentState.copy(error = res.exception.message, isLoading = false)
+                            is Result.Success -> _uiState.update { it.copy(reportData = res.data, isLoading = false) }
+                            is Result.Failure -> _uiState.update { it.copy(error = res.exception.message, isLoading = false) }
                         }
                     }
                 }
             } catch (e: Exception) {
-                _uiState.value = currentState.copy(
-                    error = "Gagal memuat laporan: ${e.message}",
-                    isLoading = false
-                )
+                _uiState.update {
+                    it.copy(
+                        error = "Gagal memuat laporan: ${e.message}",
+                        isLoading = false
+                    )
+                }
             }
         }
     }

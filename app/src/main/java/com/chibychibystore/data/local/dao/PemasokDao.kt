@@ -16,14 +16,11 @@ interface PemasokDao {
     @Query("SELECT * FROM pemasok WHERE id = :id")
     suspend fun getPemasokById(id: Long): Pemasok?
 
-    @Query("SELECT * FROM pemasok WHERE name LIKE '%' || :query || '%' ORDER BY name ASC")
+    @Query("SELECT * FROM pemasok WHERE name LIKE '%' || :query || '%'")
     fun searchPemasok(query: String): Flow<List<Pemasok>>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPemasok(pemasok: Pemasok): Long
-
-    @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertPemasokList(pemasokList: List<Pemasok>): List<Long>
 
     @Update
     suspend fun updatePemasok(pemasok: Pemasok)

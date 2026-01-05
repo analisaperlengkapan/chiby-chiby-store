@@ -2,7 +2,7 @@ package com.chibychibystore.ui.expense
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.service.ExpenseService
 import com.chibychibystore.data.model.Result
@@ -21,13 +21,13 @@ data class ExpenseDetailUiState(
     val error: String? = null,
     val isEditing: Boolean = false,
     val editAmount: String = "",
-    val editCategory: ExpenseCategory? = null,
+    val editCategory: KategoriPengeluaran? = null,
     val editDescription: String = "",
     val isEditFormValid: Boolean = false
 )
 
 /**
- * ViewModel untuk detail pengeluaran
+ * ViewModel untuk detail expense
  */
 @HiltViewModel
 class ExpenseDetailViewModel @Inject constructor(
@@ -38,26 +38,24 @@ class ExpenseDetailViewModel @Inject constructor(
     val uiState: StateFlow<ExpenseDetailUiState> = _uiState
 
     /**
-     * Load pengeluaran berdasarkan ID
+     * Load expense berdasarkan ID
      */
     fun loadExpense(expenseId: Long) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             try {
-                when (val result = expenseService.getExpense(expenseId)) {
-                    is com.chibychibystore.data.model.Result.Success -> {
-                        _uiState.value = _uiState.value.copy(
-                            expense = result.data,
-                            isLoading = false
-                        )
-                    }
-                    is com.chibychibystore.data.model.Result.Failure -> {
-                        _uiState.value = _uiState.value.copy(
-                            error = result.exception.message ?: "Gagal memuat pengeluaran",
-                            isLoading = false
-                        )
-                    }
+                val result = expenseService.getPengeluaran(expenseId)
+                result.onSuccess { data ->
+                    _uiState.value = _uiState.value.copy(
+                        expense = data,
+                        isLoading = false
+                    )
+                }.onFailure { e ->
+                    _uiState.value = _uiState.value.copy(
+                        error = e.message ?: "Gagal memuat expense",
+                        isLoading = false
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -107,7 +105,7 @@ class ExpenseDetailViewModel @Inject constructor(
     /**
      * Update edit category
      */
-    fun updateEditCategory(category: ExpenseCategory) {
+    fun updateEditCategory(category: KategoriPengeluaran) {
         _uiState.value = _uiState.value.copy(editCategory = category)
         validateEditForm()
     }
@@ -166,12 +164,18 @@ class ExpenseDetailViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             try {
-                // Note: Delete functionality would be implemented in ExpenseService
-                // For now, just simulate success
-                onSuccess()
+                val result = expenseService.deletePengeluaran(expense.id)
+                result.onSuccess {
+                    onSuccess()
+                }.onFailure { e ->
+                    _uiState.value = _uiState.value.copy(
+                        error = e.message ?: "Gagal menghapus expense",
+                        isLoading = false
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Gagal menghapus pengeluaran",
+                    error = e.message ?: "Gagal menghapus expense",
                     isLoading = false
                 )
             }

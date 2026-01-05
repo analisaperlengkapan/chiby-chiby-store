@@ -9,14 +9,14 @@ import kotlinx.serialization.Serializable
 import java.util.Date
 
 /**
- * Enum untuk kategori pengeluaran retail
+ * Enum untuk kategori pengeluaran
  */
 @Serializable
-enum class ExpenseCategory(val displayName: String) {
-    // Cost of Goods Sold
+enum class KategoriPengeluaran(val displayName: String) {
+    // Harga Pokok Penjualan
     INVENTORY_PURCHASES("Pembelian Inventory"),
 
-    // Operating Expenses
+    // Beban Operasional
     RENT_LEASE("Sewa & Sewa Guna Usaha"),
     UTILITIES("Utilitas"),
     SALARIES_WAGES("Gaji & Upah"),
@@ -28,11 +28,11 @@ enum class ExpenseCategory(val displayName: String) {
     MISCELLANEOUS("Lain-lain");
 
     companion object {
-        fun fromDisplayName(displayName: String): ExpenseCategory? {
+        fun fromDisplayName(displayName: String): KategoriPengeluaran? {
             return values().find { it.displayName == displayName }
         }
 
-        // Group categories for reporting
+        // Grup kategori untuk pelaporan
         val COGS_CATEGORIES = setOf(INVENTORY_PURCHASES)
         val OPERATING_EXPENSE_CATEGORIES = values().toSet() - COGS_CATEGORIES
     }
@@ -67,7 +67,7 @@ data class Pengeluaran(
     val id: Long = 0,
     @Serializable(with = DateSerializer::class)
     val expenseDate: Date,
-    val category: ExpenseCategory,
+    val category: KategoriPengeluaran,
     val amount: Double,
     val description: String? = null,
     val approvedBy: Long? = null,

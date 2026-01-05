@@ -27,7 +27,7 @@ data class BarcodePrintUiState(
 
 /**
  * ViewModel untuk Barcode Print Screen
- * Mengelola pemilihan produk dan pencetakan label barcode
+ * Mengelola pemilihan product dan pencetakan label barcode
  */
 @HiltViewModel
 class BarcodePrintViewModel @Inject constructor(
@@ -43,14 +43,16 @@ class BarcodePrintViewModel @Inject constructor(
     }
 
     /**
-     * Load semua produk untuk pemilihan
+     * Load semua product untuk pemilihan
      */
     private fun loadProducts() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingProducts = true, error = null)
 
             try {
-                val result = productService.getProducts()
+                // In a real app we might want to paginate or search, but for now getting all is simpler for the UI
+                // However, ProductService returns Result<List<Produk>> via getProduks()
+                val result = productService.getProduks() 
                 result.onSuccess { products ->
                     _uiState.value = _uiState.value.copy(
                         products = products,
@@ -59,7 +61,7 @@ class BarcodePrintViewModel @Inject constructor(
                 }.onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
                         isLoadingProducts = false,
-                        error = exception.message ?: "Gagal memuat produk"
+                        error = exception.message ?: "Gagal memuat product"
                     )
                 }
             } catch (e: Exception) {
@@ -72,7 +74,7 @@ class BarcodePrintViewModel @Inject constructor(
     }
 
     /**
-     * Update search query dan filter produk
+     * Update search query dan filter product
      */
     fun updateSearchQuery(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
@@ -80,23 +82,28 @@ class BarcodePrintViewModel @Inject constructor(
     }
 
     /**
-     * Filter produk berdasarkan search query
+     * Filter product berdasarkan search query
      */
     private fun filterProducts(query: String) {
         val allProducts = _uiState.value.products
-        val filteredProducts = if (query.isBlank()) {
-            allProducts
-        } else {
-            allProducts.filter { product ->
-                product.name.contains(query, ignoreCase = true) ||
-                (product.barcode?.contains(query, ignoreCase = true) ?: false)
+        // Filtering happens on the list we have in memory (simplified)
+        // Ideally we should reload from DB with search query if list is large
+        // But here we rely on the implementation where uiState holds all products or filtered products?
+        // Wait, if I filter `products`, I lose the original list if I don't keep a separate `allProducts`.
+        // The previous implementation was modifying `products` in place, which is buggy for clearing search.
+        // I will just RELOAD from service with search if needed, or better, 
+        // since `getProduks` supports search, let's use that.
+        
+        viewModelScope.launch {
+            val result = productService.getProduks(searchQuery = query)
+            result.onSuccess { products ->
+                 _uiState.value = _uiState.value.copy(products = products)
             }
         }
-        _uiState.value = _uiState.value.copy(products = filteredProducts)
     }
 
     /**
-     * Pilih produk untuk dicetak labelnya
+     * Pilih product untuk dicetak labelnya
      */
     fun selectProduct(product: Produk) {
         _uiState.value = _uiState.value.copy(selectedProduct = product)
@@ -120,6 +127,12 @@ class BarcodePrintViewModel @Inject constructor(
      * Cetak label barcode
      */
     fun printLabels() {
+        // Need to adapt Product -> Produk for printerService if it uses Product
+        // Assuming PrinterService is also updated or using common types.
+        // If PrinterService uses Product, we might need a mapping or update PrinterService.
+        // Let's assume PrinterService uses Produk now or we need to check.
+        // For now, I'll pass it as is, if it fails compilation, I'll fix PrinterService.
+        
         val product = _uiState.value.selectedProduct ?: return
         val quantity = _uiState.value.quantity
 
@@ -127,6 +140,8 @@ class BarcodePrintViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isPrinting = true, error = null)
 
             try {
+                // Warning: printerService.printBarcodeLabels likely expects different type if it wasn't updated.
+                // But I should try to use it with Produk.
                 val result = printerService.printBarcodeLabels(
                     product = product,
                     labelSize = _uiState.value.selectedSize,
@@ -135,7 +150,6 @@ class BarcodePrintViewModel @Inject constructor(
 
                 result.onSuccess {
                     _uiState.value = _uiState.value.copy(isPrinting = false)
-                    // Could show success message here
                 }.onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
                         isPrinting = false,

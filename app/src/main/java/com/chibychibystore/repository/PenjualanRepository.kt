@@ -9,9 +9,11 @@ import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.toList
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.util.Date
+import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * Repository untuk operasi data Penjualan
@@ -26,6 +28,11 @@ class PenjualanRepository @Inject constructor(
      * Get semua penjualan
      */
     fun getAllPenjualan(): Flow<List<Penjualan>> = penjualanDao.getAllPenjualan()
+
+    /**
+     * Get semua penjualan dengan items
+     */
+    fun getAllPenjualanWithItems(): Flow<List<PenjualanWithItems>> = penjualanDao.getAllPenjualanWithItems()
 
     /**
      * Get recent sales with limit
@@ -67,10 +74,10 @@ class PenjualanRepository @Inject constructor(
     /**
      * Get penjualan in date range
      */
-    suspend fun getSalesInDateRange(startDate: java.time.LocalDate, endDate: java.time.LocalDate): List<Penjualan> {
-        val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
-        val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
-        return penjualanDao.getPenjualanByDateRange(start, end).first()
+    suspend fun getSalesInDateRange(startDate: LocalDate, endDate: LocalDate): List<Penjualan> {
+        val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+        val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+        return penjualanDao.getPenjualanByRentangTanggal(start, end).first()
     }
 
     /**
@@ -78,17 +85,14 @@ class PenjualanRepository @Inject constructor(
      */
     suspend fun createPenjualan(penjualan: Penjualan, items: List<ItemPenjualan>): Result<PenjualanWithItems> {
         return try {
-            // Hitung total amount dari items
             val totalAmount = items.sumOf { it.totalPrice }
             val penjualanWithTotal = penjualan.copy(totalAmount = totalAmount)
 
-            // Insert penjualan dan items dalam transaksi
             val penjualanId = penjualanDao.insertPenjualan(penjualanWithTotal)
 
             val itemsWithPenjualanId = items.map { it.copy(saleId = penjualanId) }
             itemPenjualanDao.insertItemPenjualanList(itemsWithPenjualanId)
 
-            // Return penjualan dengan items
             getPenjualanWithItemsById(penjualanId)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("createPenjualan", e))
@@ -134,12 +138,11 @@ class PenjualanRepository @Inject constructor(
     /**
      * Get total penjualan by date range
      */
-    suspend fun getTotalPenjualanByDateRange(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Result<Double> {
+    suspend fun getTotalPenjualanAmount(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
-            // Optimized query: let the database do the sum
-            val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
-            val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
-            val total = penjualanDao.getTotalSalesAmount(start, end) ?: 0.0
+            val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+            val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+            val total = penjualanDao.getTotalPenjualanAmount(start, end) ?: 0.0
             Result.success(total)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getTotalPenjualanByDateRange", e))
@@ -149,10 +152,10 @@ class PenjualanRepository @Inject constructor(
     /**
      * Get penjualan count by date range
      */
-    suspend fun getPenjualanCountByDateRange(startDate: java.time.LocalDate, endDate: java.time.LocalDate): Result<Int> {
+    suspend fun getPenjualanCountByDateRange(startDate: LocalDate, endDate: LocalDate): Result<Int> {
         return try {
-            val start = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
-            val end = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+            val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+            val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
             val count = penjualanDao.getPenjualanCountByDateRange(start, end)
             Result.success(count)
         } catch (e: Exception) {
@@ -160,14 +163,43 @@ class PenjualanRepository @Inject constructor(
         }
     }
 
+    suspend fun getTotalCashReceipts(startDate: Date, endDate: Date): Result<Double> {
+        return try {
+             // Reusing the wrapper that takes LocalDate? No, converting Date to LocalDate is annoying.
+             // But existing method takes LocalDate.
+             // Let's implement directly or forward.
+             // Actually, ReportingServiceImpl passes Date to this method (because I didn't verify .toDate removal for this call? No, ReportingService getGrossSales uses .toDate()).
+             // So inputs are Date.
+             // But getTotalPenjualanAmount takes LocalDate.
+             // Let's overload it or convert.
+             val localStart = startDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+             val localEnd = endDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+             getTotalPenjualanAmount(localStart, localEnd)
+        } catch (e: Exception) {
+             Result.failure(e)
+        }
+    }
+
+    suspend fun getTotalRevenue(startDate: Date, endDate: Date): Result<Double> = getTotalCashReceipts(startDate, endDate)
+
+    suspend fun getPenjualanCountNonRefunded(startDate: Date, endDate: Date): Result<Int> {
+         return try {
+             val localStart = startDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+             val localEnd = endDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+             getPenjualanCountByDateRange(localStart, localEnd) // Assumption: all valid sales count
+         } catch (e: Exception) {
+             Result.failure(e)
+         }
+    }
+
     /**
      * Get penjualan by date range (Flow version for observation)
      */
-    fun getPenjualanByDateRange(startDate: String, endDate: String): Flow<List<Penjualan>> {
+    fun getPenjualanByRentangTanggal(startDate: String, endDate: String): Flow<List<Penjualan>> {
         return try {
-            val start = java.util.Date.from(java.time.LocalDate.parse(startDate).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
-            val end = java.util.Date.from(java.time.LocalDate.parse(endDate).atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
-            penjualanDao.getPenjualanByDateRange(start, end)
+            val start = Date.from(LocalDate.parse(startDate).atStartOfDay(ZoneId.systemDefault()).toInstant())
+            val end = Date.from(LocalDate.parse(endDate).atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+            penjualanDao.getPenjualanByRentangTanggal(start, end)
         } catch (e: Exception) {
             kotlinx.coroutines.flow.flowOf(emptyList())
         }
@@ -176,11 +208,11 @@ class PenjualanRepository @Inject constructor(
     /**
      * Get penjualan with items by date range (Flow version for observation)
      */
-    fun getPenjualanWithItemsByDateRange(startDate: String, endDate: String): Flow<List<PenjualanWithItems>> {
+    fun getPenjualanWithItemsByRentangTanggal(startDate: String, endDate: String): Flow<List<PenjualanWithItems>> {
         return try {
-            val start = java.util.Date.from(java.time.LocalDate.parse(startDate).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
-            val end = java.util.Date.from(java.time.LocalDate.parse(endDate).atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
-            penjualanDao.getPenjualanWithItemsByDateRange(start, end)
+            val start = Date.from(LocalDate.parse(startDate).atStartOfDay(ZoneId.systemDefault()).toInstant())
+            val end = Date.from(LocalDate.parse(endDate).atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+            penjualanDao.getPenjualanWithItemsByRentangTanggal(start, end)
         } catch (e: Exception) {
             kotlinx.coroutines.flow.flowOf(emptyList())
         }
@@ -190,18 +222,13 @@ class PenjualanRepository @Inject constructor(
      * Search penjualan by query
      */
     fun searchPenjualan(query: String): Flow<List<Penjualan>> {
-        return penjualanDao.getAllPenjualan()
+        return penjualanDao.searchPenjualan(query)
     }
 
     /**
      * Update penjualan
      */
     suspend fun updatePenjualan(id: Long, sale: Penjualan): Result<Unit> {
-        return try {
-            penjualanDao.updatePenjualan(sale)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("updatePenjualan", e))
-        }
+        return updatePenjualan(sale)
     }
 }

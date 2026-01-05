@@ -19,22 +19,42 @@ class ItemPenjualanRepository @Inject constructor(
     /**
      * Get items by sale ID
      */
-    fun getItemsBySaleId(saleId: Long): Flow<List<ItemPenjualan>> =
-        itemPenjualanDao.getItemsBySaleId(saleId)
+    fun getItemsByPenjualanId(saleId: Long): Flow<List<ItemPenjualan>> =
+        itemPenjualanDao.getItemsByPenjualanId(saleId)
 
     /**
      * Get items by product ID
      */
-    fun getItemsByProductId(productId: Long): Flow<List<ItemPenjualan>> =
-        itemPenjualanDao.getItemsByProductId(productId)
+    fun getItemsByProdukId(productId: Long): Flow<List<ItemPenjualan>> =
+        itemPenjualanDao.getItemsByProdukId(productId)
 
+    /**
+     * Get top selling products
+     */
+    suspend fun getTopSellingProduks(limit: Int): Result<List<com.chibychibystore.data.model.ProdukTerpopulerDto>> {
+        return try {
+             Result.success(itemPenjualanDao.getProdukTerpopuler(limit))
+        } catch (e: Exception) {
+             Result.failure(e)
+        }
+    }
+
+    /**
+     * Get product sales stats by date range
+     */
+    suspend fun getProdukPenjualansStats(startDate: java.util.Date, endDate: java.util.Date): Result<List<com.chibychibystore.data.model.ProdukTerpopulerDto>> {
+        return try {
+             Result.success(itemPenjualanDao.getProdukPenjualanStats(startDate, endDate))
+        } catch (e: Exception) {
+             Result.failure(e)
+        }
+    }
 
     /**
      * Create item penjualan baru
      */
     suspend fun createItemPenjualan(item: ItemPenjualan): Result<ItemPenjualan> {
         return try {
-            // Validasi data
             if (item.quantity <= 0) {
                 return Result.failure(ChibyChibyException.ValidationError("quantity", "Quantity harus lebih dari 0"))
             }
@@ -53,17 +73,15 @@ class ItemPenjualanRepository @Inject constructor(
         }
     }
 
-
-
     /**
      * Delete items by sale ID
      */
-    suspend fun deleteItemsBySaleId(saleId: Long): Result<Unit> {
+    suspend fun deleteItemsByPenjualanId(saleId: Long): Result<Unit> {
         return try {
-            itemPenjualanDao.deleteItemsBySaleId(saleId)
+            itemPenjualanDao.deleteItemsByPenjualanId(saleId)
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("deleteItemsBySaleId", e))
+            Result.failure(ChibyChibyException.DatabaseError("deleteItemsByPenjualanId", e))
         }
     }
 
@@ -80,21 +98,16 @@ class ItemPenjualanRepository @Inject constructor(
     }
 
     /**
-     * Compatibility wrapper for legacy code/tests that expect single insert returning id
+     * Compatibility wrapper
      */
     suspend fun insertItemPenjualan(item: ItemPenjualan): Long {
         return itemPenjualanDao.insertItemPenjualan(item)
     }
 
     /**
-     * Compatibility wrapper for DAO delete by penjualanId
+     * Compatibility wrapper
      */
     suspend fun deleteItemPenjualanByPenjualanId(penjualanId: Long): Result<Unit> {
-        return try {
-            itemPenjualanDao.deleteItemsBySaleId(penjualanId)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("deleteItemPenjualanByPenjualanId", e))
-        }
+        return deleteItemsByPenjualanId(penjualanId)
     }
 }

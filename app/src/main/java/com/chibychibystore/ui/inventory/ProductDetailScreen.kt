@@ -98,8 +98,8 @@ fun ProductDetailScreen(
     // Delete confirmation dialog
     if (showDeleteDialog) {
         ConfirmDialog(
-            title = "Hapus Produk?",
-            message = "Produk ${uiState.product?.name} akan dihapus. Tindakan ini tidak dapat dibatalkan.",
+            title = "Hapus Product?",
+            message = "Product ${uiState.product?.name} akan dihapus. Tindakan ini tidak dapat dibatalkan.",
             confirmText = "Hapus",
             dismissText = "Batal",
             onConfirm = {
@@ -137,7 +137,7 @@ private fun ProductDetailTopBar(
     onDeleteClick: () -> Unit
 ) {
     AppTopBar(
-        title = if (uiState.isEditing) "Edit Produk" else "Detail Produk",
+        title = if (uiState.isEditing) "Edit Product" else "Detail Product",
         navigationIcon = Icons.Filled.ArrowBack,
         onNavigationClick = onBackClick,
         actions = {
@@ -197,7 +197,7 @@ private fun ProductDetailContent(
                 )
 
                 ProductTextField(
-                    label = "Nama Produk",
+                    label = "Nama Product",
                     value = editedProduct.name,
                     onValueChange = { editedProduct = editedProduct.copy(name = it) },
                     enabled = isEditing,

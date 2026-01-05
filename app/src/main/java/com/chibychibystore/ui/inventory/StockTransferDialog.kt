@@ -107,7 +107,7 @@ fun StockTransferDialog(
 
                 // Target warehouse selection
                 Text(
-                    text = "Pilih Gudang Tujuan",
+                    text = "Pilih Warehouse Tujuan",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
                 )

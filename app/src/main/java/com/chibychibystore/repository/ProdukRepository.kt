@@ -38,12 +38,24 @@ class ProdukRepository @Inject constructor(
     }
 
     /**
-     * Compatibility wrapper for legacy code / tests that expect a nullable Produk return
+     * Get produk by list of IDs
+     */
+    suspend fun getProdukByIds(ids: List<Long>): Result<List<Produk>> {
+        return try {
+            val products = produkDao.getProdukByIds(ids)
+            Result.success(products)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getProdukByIds", e))
+        }
+    }
+
+    /**
+     * Compatibility wrapper
      */
     suspend fun getProduk(id: Long): Produk? {
         return try {
             val res = getProdukById(id)
-            res.getOrNull()
+            if (res is Result.Success) res.data else null
         } catch (e: Exception) {
             null
         }
@@ -68,12 +80,12 @@ class ProdukRepository @Inject constructor(
     /**
      * Get produk by category
      */
-    fun getProdukByCategory(categoryId: Long): Flow<List<Produk>> = produkDao.getProdukByCategory(categoryId)
+    fun getProdukByKategori(categoryId: Long): Flow<List<Produk>> = produkDao.getProdukByKategori(categoryId)
 
     /**
      * Get produk by warehouse
      */
-    fun getProdukByWarehouse(warehouseId: Long): Flow<List<Produk>> = produkDao.getProdukByWarehouse(warehouseId)
+    fun getProdukByGudang(warehouseId: Long): Flow<List<Produk>> = produkDao.getProdukByGudang(warehouseId)
 
     /**
      * Search produk
@@ -95,7 +107,6 @@ class ProdukRepository @Inject constructor(
      */
     suspend fun createProduk(produk: Produk): Result<Long> {
         return try {
-            // Check if barcode already exists (if provided)
             if (!produk.barcode.isNullOrBlank()) {
                 val existingProduk = produkDao.getProdukByBarcode(produk.barcode)
                 if (existingProduk != null) {
@@ -116,11 +127,9 @@ class ProdukRepository @Inject constructor(
      */
     suspend fun updateProduk(produk: Produk): Result<Unit> {
         return try {
-            // Check if produk exists
             val existingProduk = produkDao.getProdukById(produk.id)
                 ?: return Result.failure(ChibyChibyException.DatabaseError("Produk tidak ditemukan"))
 
-            // Check barcode uniqueness (exclude current produk)
             if (!produk.barcode.isNullOrBlank()) {
                 val produkWithSameBarcode = produkDao.getProdukByBarcode(produk.barcode)
                 if (produkWithSameBarcode != null && produkWithSameBarcode.id != produk.id) {
@@ -137,35 +146,38 @@ class ProdukRepository @Inject constructor(
     }
 
     /**
-     * Update stock quantity
+     * Adjust stock quantity
+     */
+    suspend fun adjustStock(id: Long, delta: Int): Result<Unit> {
+        return try {
+            val produk = produkDao.getProdukById(id)
+                ?: return Result.failure(ChibyChibyException.DatabaseError("Produk tidak ditemukan"))
+            
+            produkDao.adjustStock(id, delta)
+            Result.success(Unit)
+
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("adjustStock", e))
+        }
+    }
+
+    /**
+     * Compatibility wrapper: Set stock quantity
      */
     suspend fun updateStock(id: Long, quantity: Int): Result<Unit> {
         return try {
-            // Check if produk exists
-            val produk = produkDao.getProdukById(id)
-                ?: return Result.failure(ChibyChibyException.DatabaseError("Produk tidak ditemukan"))
-
-            // Validate quantity (optional: db will likely constrain non-negative if set, but we removed service check? No, Service check is stricter)
-            // Keeping basic repo check for safety if desired, or removing if Service guarantees it.
-            // Requirement was to remove validation from repo.
-            // Let's rely on Service or Database constraints.
-            
-            produkDao.updateStock(id, quantity)
+            produkDao.setStock(id, quantity)
             Result.success(Unit)
-
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("updateStock", e))
         }
     }
 
-    // ... deleteProduk, getProdukCount, getTotalStock ...
-    
     /**
      * Delete produk
      */
     suspend fun deleteProduk(id: Long): Result<Unit> {
         return try {
-            // Check if produk exists
             val produk = produkDao.getProdukById(id)
                 ?: return Result.failure(ChibyChibyException.DatabaseError("Produk tidak ditemukan"))
 
@@ -198,6 +210,32 @@ class ProdukRepository @Inject constructor(
             Result.success(total)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getTotalStock", e))
+        }
+    }
+    suspend fun getTotalInventoryValue(): Result<Double> {
+        return try {
+            val total = produkDao.getTotalInventoryValue() ?: 0.0
+            Result.success(total)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getTotalInventoryValue", e))
+        }
+    }
+
+    suspend fun countLowStock(): Result<Int> {
+        return try {
+            val count = produkDao.countLowStock()
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("countLowStock", e))
+        }
+    }
+
+    suspend fun countOutOfStock(): Result<Int> {
+        return try {
+            val count = produkDao.countOutOfStock()
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("countOutOfStock", e))
         }
     }
 }

@@ -4,16 +4,20 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.chibychibystore.data.local.entity.ItemPembelian
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ItemPembelianDao {
     @Query("SELECT * FROM item_pembelian WHERE purchaseId = :purchaseId")
-    fun getItemsByPurchaseId(purchaseId: Long): Flow<List<ItemPembelian>>
+    fun getItemsByPembelianId(purchaseId: Long): Flow<List<ItemPembelian>>
 
-    @Query("SELECT * FROM item_pembelian WHERE productId = :productId ORDER BY id DESC")
+    @Query("SELECT * FROM item_pembelian WHERE productId = :productId")
     fun getItemsByProductId(productId: Long): Flow<List<ItemPembelian>>
+
+    @Query("SELECT * FROM item_pembelian")
+    suspend fun getAllItemPembelian(): List<ItemPembelian>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertItemPembelian(item: ItemPembelian): Long
@@ -21,9 +25,12 @@ interface ItemPembelianDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertItemPembelianList(items: List<ItemPembelian>): List<Long>
 
-    @Query("DELETE FROM item_pembelian WHERE purchaseId = :purchaseId")
-    suspend fun deleteItemsByPurchaseId(purchaseId: Long)
+    @Update
+    suspend fun updateItemPembelian(item: ItemPembelian)
 
-    @Query("SELECT COUNT(*) FROM item_pembelian WHERE purchaseId = :purchaseId")
-    suspend fun getItemCountByPurchaseId(purchaseId: Long): Int
+    @Query("DELETE FROM item_pembelian WHERE id = :id")
+    suspend fun deleteItemPembelianById(id: Long)
+
+    @Query("DELETE FROM item_pembelian WHERE purchaseId = :purchaseId")
+    suspend fun deleteItemsByPembelianId(purchaseId: Long)
 }

@@ -20,7 +20,7 @@ class ItemPembelianRepository @Inject constructor(
      * Get items by pembelian ID
      */
     fun getItemsByPurchaseId(purchaseId: Long): Flow<List<ItemPembelian>> =
-        itemPembelianDao.getItemsByPurchaseId(purchaseId)
+        itemPembelianDao.getItemsByPembelianId(purchaseId)
 
     /**
      * Get items by product ID
@@ -51,7 +51,7 @@ class ItemPembelianRepository @Inject constructor(
      */
     suspend fun deleteItemsByPurchaseId(purchaseId: Long): Result<Unit> {
         return try {
-            itemPembelianDao.deleteItemsByPurchaseId(purchaseId)
+            itemPembelianDao.deleteItemsByPembelianId(purchaseId)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("deleteItemsByPurchaseId", e))

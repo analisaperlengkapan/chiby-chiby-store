@@ -27,7 +27,7 @@ data class ProductDetailUiState(
 
 /**
  * ViewModel untuk Product Detail Screen
- * Mengelola create/edit/delete produk
+ * Mengelola create/edit/delete product
  */
 @HiltViewModel
 class ProductDetailViewModel @Inject constructor(
@@ -50,14 +50,14 @@ class ProductDetailViewModel @Inject constructor(
     }
 
     /**
-     * Load produk berdasarkan ID
+     * Load product berdasarkan ID
      */
     fun loadProduct(productId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             try {
-                val result = productService.getProduct(productId)
+                val result = productService.getProduk(productId)
                 result.onSuccess { product ->
                     _uiState.value = _uiState.value.copy(
                         product = product,
@@ -67,7 +67,7 @@ class ProductDetailViewModel @Inject constructor(
                 }.onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = exception.message ?: "Gagal memuat produk"
+                        error = exception.message ?: "Gagal memuat product"
                     )
                 }
             } catch (e: Exception) {
@@ -80,7 +80,7 @@ class ProductDetailViewModel @Inject constructor(
     }
 
     /**
-     * Simpan produk (create atau update)
+     * Simpan product (create atau update)
      */
     fun saveProduct(product: Produk) {
         viewModelScope.launch {
@@ -89,10 +89,10 @@ class ProductDetailViewModel @Inject constructor(
             try {
                 val result = if (productId != null) {
                     // Update existing product
-                    productService.updateProduct(product)
+                    productService.updateProduk(product)
                 } else {
                     // Create new product
-                    productService.createProduct(product)
+                    productService.createProduk(product)
                 }
 
                 result.onSuccess { savedProduct ->
@@ -100,12 +100,12 @@ class ProductDetailViewModel @Inject constructor(
                         product = savedProduct,
                         isSaving = false,
                         isEditing = false,
-                        successMessage = if (productId != null) "Produk berhasil diperbarui" else "Produk berhasil dibuat"
+                        successMessage = if (productId != null) "Product berhasil diperbarui" else "Product berhasil dibuat"
                     )
                 }.onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
                         isSaving = false,
-                        error = exception.message ?: "Gagal menyimpan produk"
+                        error = exception.message ?: "Gagal menyimpan product"
                     )
                 }
             } catch (e: Exception) {
@@ -118,7 +118,7 @@ class ProductDetailViewModel @Inject constructor(
     }
 
     /**
-     * Update stok produk
+     * Update stok product
      */
     fun updateStock(quantity: Int) {
         val currentProduct = _uiState.value.product ?: return
@@ -151,7 +151,7 @@ class ProductDetailViewModel @Inject constructor(
     }
 
     /**
-     * Hapus produk
+     * Hapus product
      */
     fun deleteProduct() {
         val currentProduct = _uiState.value.product ?: return
@@ -160,16 +160,16 @@ class ProductDetailViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isSaving = true, error = null, successMessage = null)
 
             try {
-                val result = productService.deleteProduct(currentProduct.id.toString())
+                val result = productService.deleteProduk(currentProduct.id.toString())
                 result.onSuccess {
                     _uiState.value = _uiState.value.copy(
                         isSaving = false,
-                        successMessage = "Produk berhasil dihapus"
+                        successMessage = "Product berhasil dihapus"
                     )
                 }.onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
                         isSaving = false,
-                        error = exception.message ?: "Gagal menghapus produk"
+                        error = exception.message ?: "Gagal menghapus product"
                     )
                 }
             } catch (e: Exception) {
@@ -231,10 +231,10 @@ class ProductDetailViewModel @Inject constructor(
      */
     fun validateProduct(product: Produk): String? {
         if (product.name.isBlank()) {
-            return "Nama produk tidak boleh kosong"
+            return "Nama product tidak boleh kosong"
         }
         if (product.barcode.isNullOrBlank()) {
-            return "Barcode produk tidak boleh kosong"
+            return "Barcode product tidak boleh kosong"
         }
         if (product.costPrice <= 0) {
             return "Harga beli harus lebih dari 0"

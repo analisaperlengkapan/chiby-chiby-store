@@ -31,9 +31,9 @@ fun AppDrawer(
 ) {
     val drawerItems = listOf(
         DrawerNavItem("Point of Sale", Icons.Default.PointOfSale, Screen.Pos.route),
-        DrawerNavItem("Manajemen Gudang", Icons.Default.Warehouse, Screen.WarehouseList.route),
-        DrawerNavItem("Manajemen Pengeluaran", Icons.Default.AccountBalanceWallet, Screen.ExpenseList.route),
-        DrawerNavItem("Manajemen Pengguna", Icons.Default.Group, Screen.UserList.route),
+        DrawerNavItem("Manajemen Warehouse", Icons.Default.Warehouse, Screen.WarehouseList.route),
+        DrawerNavItem("Manajemen Expense", Icons.Default.AccountBalanceWallet, Screen.ExpenseList.route),
+        DrawerNavItem("Manajemen User", Icons.Default.Group, Screen.UserList.route),
         DrawerNavItem("Barcode Scanner", Icons.Default.QrCodeScanner, Screen.BarcodeScanner.route),
         DrawerNavItem("Cetak Label Barcode", Icons.Default.Print, Screen.BarcodePrint.route),
         DrawerNavItem("Backup & Restore", Icons.Default.Backup, "backup")

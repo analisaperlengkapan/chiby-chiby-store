@@ -21,54 +21,57 @@ class PenggunaRepository @Inject constructor(
     /**
      * Get semua pengguna
      */
-    fun getAllPengguna(): Flow<List<Pengguna>> = penggunaDao.getAllPengguna()
+    fun getAllUsers(): Flow<List<Pengguna>> = penggunaDao.getAllPengguna()
 
     /**
      * Get pengguna by ID
      */
-    suspend fun getPenggunaById(id: Long): Result<Pengguna> {
+    suspend fun getUserById(id: Long): Result<Pengguna> {
         return try {
             val user = penggunaDao.getPenggunaById(id)
             if (user != null) {
                 Result.success(user)
             } else {
-                Result.failure(ChibyChibyException.DatabaseError("User dengan ID $id tidak ditemukan"))
+                Result.failure(ChibyChibyException.DatabaseError("Pengguna dengan ID $id tidak ditemukan"))
             }
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getPenggunaById", e))
+            Result.failure(ChibyChibyException.DatabaseError("getUserById", e))
         }
     }
 
     /**
      * Get pengguna by username
      */
-    suspend fun getPenggunaByUsername(username: String): Result<Pengguna> {
+    suspend fun getUserByUsername(username: String): Result<Pengguna> {
         return try {
             val user = penggunaDao.getPenggunaByUsername(username)
             if (user != null) {
                 Result.success(user)
             } else {
-                Result.failure(ChibyChibyException.DatabaseError("User dengan username $username tidak ditemukan"))
+                Result.failure(ChibyChibyException.DatabaseError("Pengguna dengan username $username tidak ditemukan"))
             }
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getPenggunaByUsername", e))
+            Result.failure(ChibyChibyException.DatabaseError("getUserByUsername", e))
         }
     }
 
     /**
      * Get pengguna by role
      */
-    fun getPenggunaByRole(role: Role): Flow<List<Pengguna>> = penggunaDao.getPenggunaByRole(role)
+    fun getUsersByRole(role: Role): Flow<List<Pengguna>> = penggunaDao.getPenggunaByRole(role)
+
+    /**
+     * Search pengguna
+     */
+    fun searchUsers(query: String): Flow<List<Pengguna>> = penggunaDao.searchPengguna(query)
 
     /**
      * Create pengguna baru
      */
     suspend fun createPengguna(pengguna: Pengguna): Result<Long> {
         return try {
-            // Validasi input
             validatePenggunaData(pengguna)
 
-            // Check if username already exists
             val existingUser = penggunaDao.getPenggunaByUsername(pengguna.username)
             if (existingUser != null) {
                 return Result.failure(ChibyChibyException.ValidationError("username", "Username sudah digunakan"))
@@ -80,23 +83,20 @@ class PenggunaRepository @Inject constructor(
         } catch (e: ChibyChibyException) {
             Result.failure(e)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("createPengguna", e))
+            Result.failure(ChibyChibyException.DatabaseError("createUser", e))
         }
     }
 
     /**
      * Update pengguna
      */
-    suspend fun updatePengguna(pengguna: Pengguna): Result<Unit> {
+    suspend fun updateUser(pengguna: Pengguna): Result<Unit> {
         return try {
-            // Validasi input
             validatePenggunaData(pengguna)
 
-            // Check if user exists
             penggunaDao.getPenggunaById(pengguna.id)
-                ?: return Result.failure(ChibyChibyException.DatabaseError("User tidak ditemukan"))
+                ?: return Result.failure(ChibyChibyException.DatabaseError("Pengguna tidak ditemukan"))
 
-            // Check username uniqueness (exclude current user)
             val userWithSameUsername = penggunaDao.getPenggunaByUsername(pengguna.username)
             if (userWithSameUsername != null && userWithSameUsername.id != pengguna.id) {
                 return Result.failure(ChibyChibyException.ValidationError("username", "Username sudah digunakan"))
@@ -108,20 +108,18 @@ class PenggunaRepository @Inject constructor(
         } catch (e: ChibyChibyException) {
             Result.failure(e)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("updatePengguna", e))
+            Result.failure(ChibyChibyException.DatabaseError("updateUser", e))
         }
     }
 
     /**
      * Delete pengguna
      */
-    suspend fun deletePengguna(id: Long): Result<Unit> {
+    suspend fun deleteUser(id: Long): Result<Unit> {
         return try {
-            // Check if user exists
             val user = penggunaDao.getPenggunaById(id)
-                ?: return Result.failure(ChibyChibyException.DatabaseError("User tidak ditemukan"))
+                ?: return Result.failure(ChibyChibyException.DatabaseError("Pengguna tidak ditemukan"))
 
-            // Business rule: tidak boleh menghapus owner terakhir
             if (user.role == Role.OWNER) {
                 val users = penggunaDao.getAllPengguna().first()
                 val ownerCount = users.count { it.role == Role.OWNER }
@@ -136,19 +134,43 @@ class PenggunaRepository @Inject constructor(
         } catch (e: ChibyChibyException) {
             Result.failure(e)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("deletePengguna", e))
+            Result.failure(ChibyChibyException.DatabaseError("deleteUser", e))
         }
     }
 
     /**
      * Get jumlah total pengguna
      */
-    suspend fun getPenggunaCount(): Result<Int> {
+    suspend fun getUserCount(): Result<Int> {
         return try {
             val count = penggunaDao.getPenggunaCount()
             Result.success(count)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getPenggunaCount", e))
+            Result.failure(ChibyChibyException.DatabaseError("getUserCount", e))
+        }
+    }
+
+    /**
+     * Count active users
+     */
+    suspend fun countActiveUsers(): Result<Int> {
+        return try {
+            val count = penggunaDao.countActiveUsers()
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("countActiveUsers", e))
+        }
+    }
+
+    /**
+     * Count users by role
+     */
+    suspend fun countByRole(role: Role): Result<Int> {
+        return try {
+            val count = penggunaDao.countByRole(role)
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("countByRole", e))
         }
     }
 

@@ -2,7 +2,8 @@ package com.chibychibystore.ui.expense
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
+import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.service.ExpenseService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +17,7 @@ import javax.inject.Inject
  */
 data class ExpenseAddUiState(
     val amount: String = "",
-    val selectedCategory: ExpenseCategory? = null,
+    val selectedCategory: KategoriPengeluaran? = null,
     val expenseDate: Date? = Date(),
     val description: String = "",
     val isLoading: Boolean = false,
@@ -25,7 +26,7 @@ data class ExpenseAddUiState(
 )
 
 /**
- * ViewModel untuk menambah pengeluaran baru
+ * ViewModel untuk menambah expense baru
  */
 @HiltViewModel
 class ExpenseAddViewModel @Inject constructor(
@@ -40,7 +41,7 @@ class ExpenseAddViewModel @Inject constructor(
     }
 
     /**
-     * Update jumlah pengeluaran
+     * Update jumlah expense
      */
     fun updateAmount(amount: String) {
         _uiState.value = _uiState.value.copy(amount = amount)
@@ -48,15 +49,15 @@ class ExpenseAddViewModel @Inject constructor(
     }
 
     /**
-     * Update kategori pengeluaran
+     * Update kategori expense
      */
-    fun updateCategory(category: ExpenseCategory) {
+    fun updateCategory(category: KategoriPengeluaran) {
         _uiState.value = _uiState.value.copy(selectedCategory = category)
         validateForm()
     }
 
     /**
-     * Update tanggal pengeluaran
+     * Update tanggal expense
      */
     fun updateDate(date: Date) {
         _uiState.value = _uiState.value.copy(expenseDate = date)
@@ -64,7 +65,7 @@ class ExpenseAddViewModel @Inject constructor(
     }
 
     /**
-     * Update deskripsi pengeluaran
+     * Update deskripsi expense
      */
     fun updateDescription(description: String) {
         _uiState.value = _uiState.value.copy(description = description)
@@ -86,7 +87,7 @@ class ExpenseAddViewModel @Inject constructor(
     }
 
     /**
-     * Simpan pengeluaran
+     * Simpan expense
      */
     fun saveExpense(onSuccess: () -> Unit) {
         if (!_uiState.value.isFormValid) return
@@ -98,16 +99,16 @@ class ExpenseAddViewModel @Inject constructor(
                 val state = _uiState.value
                 val amount = state.amount.toDoubleOrNull() ?: 0.0
                 val expenseDate = state.expenseDate ?: run {
-                    _uiState.value = _uiState.value.copy(error = "Tanggal pengeluaran tidak valid", isLoading = false)
+                    _uiState.value = _uiState.value.copy(error = "Tanggal expense tidak valid", isLoading = false)
                     return@launch
                 }
                 val category = state.selectedCategory ?: run {
-                    _uiState.value = _uiState.value.copy(error = "Kategori harus dipilih", isLoading = false)
+                    _uiState.value = _uiState.value.copy(error = "Category harus dipilih", isLoading = false)
                     return@launch
                 }
 
-                val pengeluaran = com.chibychibystore.data.local.entity.Pengeluaran(
-                    expenseDate = java.util.Date.from(expenseDate.toInstant()),
+                val pengeluaran = Pengeluaran(
+                    expenseDate = expenseDate,
                     category = category,
                     amount = amount,
                     description = state.description.takeIf { it.isNotBlank() },
@@ -115,13 +116,13 @@ class ExpenseAddViewModel @Inject constructor(
                     createdBy = 0L // createdBy will be set by service/auth layer if needed
                 )
 
-                val result = expenseService.createExpense(pengeluaran)
+                val result = expenseService.createPengeluaran(pengeluaran)
 
-                if (result.isSuccess) {
+                result.onSuccess { 
                     onSuccess()
-                } else {
+                }.onFailure { e ->
                     _uiState.value = _uiState.value.copy(
-                        error = result.exceptionOrNull()?.message ?: "Gagal menyimpan pengeluaran",
+                        error = e.message ?: "Gagal menyimpan expense",
                         isLoading = false
                     )
                 }
