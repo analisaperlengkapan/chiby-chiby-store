@@ -49,6 +49,17 @@ class CashManagementServiceTest {
         createdAt = java.util.Date()
     )
 
+    private val testInvestingExpense = Pengeluaran(
+        id = 2,
+        expenseDate = java.util.Date(),
+        category = KategoriPengeluaran.EQUIPMENT,
+        amount = 20000.0,
+        description = "Test equipment",
+        approvedBy = 1,
+        createdBy = 1,
+        createdAt = java.util.Date()
+    )
+
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
@@ -127,7 +138,7 @@ class CashManagementServiceTest {
         val startDate = LocalDate.now().minusDays(30)
         val endDate = LocalDate.now()
         val financingExpense = Pengeluaran(
-            id = 2,
+            id = 3,
             expenseDate = java.util.Date(),
             category = KategoriPengeluaran.LOAN_REPAYMENT,
             amount = 10000.0,
@@ -135,10 +146,16 @@ class CashManagementServiceTest {
             createdBy = 1
         )
         val sales = listOf(testSale)
-        val expenses = listOf(testExpense, financingExpense)
+        val expenses = listOf(testExpense, testInvestingExpense, financingExpense)
+        val approvedExpenseMap = mapOf(
+            KategoriPengeluaran.UTILITIES to 50000.0,
+            KategoriPengeluaran.EQUIPMENT to 20000.0,
+            KategoriPengeluaran.LOAN_REPAYMENT to 10000.0
+        )
 
         `when`(saleRepository.getSalesInDateRange(startDate, endDate)).thenReturn(sales)
         `when`(expenseRepository.getPengeluaransByDateRangeList(ArgumentMatchers.any(Date::class.java), ArgumentMatchers.any(Date::class.java))).thenReturn(expenses)
+        `when`(expenseRepository.getApprovedRingkasanPengeluaranPerKategori(ArgumentMatchers.any(Date::class.java), ArgumentMatchers.any(Date::class.java))).thenReturn(approvedExpenseMap)
 
         // When
         val result = cashManagementService.getCashFlowSummary(startDate, endDate)
@@ -147,10 +164,10 @@ class CashManagementServiceTest {
         assertTrue(result is Result.Success)
         val summary = (result as Result.Success).data
         assertEquals(50000.0, summary.operatingCashFlow, 0.01)
-        assertEquals(0.0, summary.investingCashFlow, 0.01)
+        assertEquals(-20000.0, summary.investingCashFlow, 0.01)
         assertEquals(-10000.0, summary.financingCashFlow, 0.01)
-        // Net = Operating + Investing + Financing = 50000 + 0 - 10000 = 40000
-        assertEquals(40000.0, summary.netCashFlow, 0.01)
+        // Net = Operating + Investing + Financing = 50000 - 20000 - 10000 = 20000
+        assertEquals(20000.0, summary.netCashFlow, 0.01)
     }
 
     @Test

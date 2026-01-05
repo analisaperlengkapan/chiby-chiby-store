@@ -47,6 +47,13 @@ interface PengeluaranDao {
         endDate: Date
     ): Map<@MapColumn(columnName = "category") KategoriPengeluaran, @MapColumn(columnName = "total") Double>
 
+    @Query("SELECT * FROM pengeluaran WHERE category IN (:categories) AND expenseDate BETWEEN :startDate AND :endDate ORDER BY expenseDate DESC")
+    suspend fun getPengeluaransByCategoriesAndDateRange(
+        categories: List<KategoriPengeluaran>,
+        startDate: Date,
+        endDate: Date
+    ): List<Pengeluaran>
+
     @Query("SELECT SUM(amount) FROM pengeluaran WHERE expenseDate <= :date AND approvedBy IS NULL")
     suspend fun getUnapprovedPengeluaranTotalBeforeDate(date: Date): Double?
 

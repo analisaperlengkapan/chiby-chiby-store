@@ -76,9 +76,9 @@ class CashManagementService @Inject constructor(
             // Get approved expenses grouped by category to avoid in-memory filtering
             val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
 
-            // Equipment purchases and store improvements
+            // Equipment purchases and store improvements (Investing activities)
             val equipmentExpenses = approvedExpenses
-                .filterKeys { it == KategoriPengeluaran.SUPPLIES_MAINTENANCE || it == KategoriPengeluaran.DEPRECIATION }
+                .filterKeys { it in KategoriPengeluaran.INVESTING_CATEGORIES }
                 .values.sum()
 
             val investingCashFlow = -equipmentExpenses
@@ -96,10 +96,13 @@ class CashManagementService @Inject constructor(
             val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
 
+            // Get approved expenses grouped by category to avoid in-memory filtering
+            val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
+
             // Financing expenses (loan repayments, dividends)
-            val financingExpenses = pengeluaranRepository.getPengeluaransByDateRangeList(start, end)
-                .filter { it.category in KategoriPengeluaran.FINANCING_CATEGORIES }
-                .sumOf { it.amount }
+            val financingExpenses = approvedExpenses
+                .filterKeys { it in KategoriPengeluaran.FINANCING_CATEGORIES }
+                .values.sum()
 
             // Cash outflows are negative
             val financingCashFlow = -financingExpenses
