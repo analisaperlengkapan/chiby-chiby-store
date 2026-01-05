@@ -71,11 +71,7 @@ class BalanceSheetService @Inject constructor(
             val date = Date.from(asOfDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
 
             // Liabilities = Unapproved expenses (Accounts Payable)
-            val allExpenses = pengeluaranRepository.getAllPengeluarans().first()
-
-            val totalLiabilities = allExpenses
-                .filter { it.expenseDate <= date && it.approvedBy == null }
-                .sumOf { it.amount }
+            val totalLiabilities = pengeluaranRepository.getUnapprovedPengeluaranTotalBeforeDate(date)
 
             Result.success(totalLiabilities)
         } catch (e: Exception) {
