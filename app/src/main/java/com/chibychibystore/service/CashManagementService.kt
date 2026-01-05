@@ -88,7 +88,16 @@ class CashManagementService @Inject constructor(
      */
     suspend fun calculateFinancingCashFlow(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
-            val financingCashFlow = 0.0
+            val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+            val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+
+            // Financing expenses (loan repayments, dividends)
+            val financingExpenses = pengeluaranRepository.getPengeluaransByDateRangeList(start, end)
+                .filter { it.category in KategoriPengeluaran.FINANCING_CATEGORIES }
+                .sumOf { it.amount }
+
+            // Cash outflows are negative
+            val financingCashFlow = -financingExpenses
             Result.success(financingCashFlow)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung financing cash flow", e))
