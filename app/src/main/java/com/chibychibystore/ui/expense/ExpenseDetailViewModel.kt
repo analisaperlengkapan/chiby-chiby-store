@@ -135,16 +135,36 @@ class ExpenseDetailViewModel @Inject constructor(
      * Save edited expense
      */
     fun saveExpense(onSuccess: () -> Unit) {
-        if (!_uiState.value.isEditFormValid || _uiState.value.expense == null) return
+        val currentState = _uiState.value
+        val expense = currentState.expense
+        if (!currentState.isEditFormValid || expense == null) return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = currentState.copy(isLoading = true, error = null)
 
             try {
-                // Note: Update functionality would be implemented in ExpenseService
-                // For now, just simulate success
-                onSuccess()
-                _uiState.value = _uiState.value.copy(isLoading = false)
+                val updatedExpense = expense.copy(
+                    amount = currentState.editAmount.toDouble(),
+                    category = currentState.editCategory!!,
+                    description = currentState.editDescription
+                )
+
+                val result = expenseService.updatePengeluaran(updatedExpense)
+
+                result.onSuccess {
+                    // Update UI with new data
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        expense = updatedExpense,
+                        isEditing = false
+                    )
+                    onSuccess()
+                }.onFailure { e ->
+                    _uiState.value = _uiState.value.copy(
+                        error = e.message ?: "Gagal menyimpan perubahan",
+                        isLoading = false
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     error = e.message ?: "Gagal menyimpan perubahan",
