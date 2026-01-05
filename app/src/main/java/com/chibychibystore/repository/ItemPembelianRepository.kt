@@ -29,10 +29,10 @@ class ItemPembelianRepository @Inject constructor(
         itemPembelianDao.getItemsByProductId(productId)
 
     /**
-     * Get all item pembelian
+     * Get all purchase items
      */
-    fun getAllItemPembelian(): Flow<List<ItemPembelian>> =
-        itemPembelianDao.getAllItemPembelian()
+    fun getAllPurchaseItems(): Flow<List<ItemPembelian>> =
+        itemPembelianDao.getAllPurchaseItems()
 
     /**
      * Create item pembelian baru

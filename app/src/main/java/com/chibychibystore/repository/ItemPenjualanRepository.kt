@@ -29,10 +29,10 @@ class ItemPenjualanRepository @Inject constructor(
         itemPenjualanDao.getItemsByProdukId(productId)
 
     /**
-     * Get all item penjualan
+     * Get all sale items
      */
-    fun getAllItemPenjualan(): Flow<List<ItemPenjualan>> =
-        itemPenjualanDao.getAllItemPenjualan()
+    fun getAllSaleItems(): Flow<List<ItemPenjualan>> =
+        itemPenjualanDao.getAllSaleItems()
 
     /**
      * Get top selling products

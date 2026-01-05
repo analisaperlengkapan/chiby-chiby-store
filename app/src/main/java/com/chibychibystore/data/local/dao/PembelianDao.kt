@@ -14,7 +14,7 @@ import java.util.Date
 @Dao
 interface PembelianDao {
     @Query("SELECT * FROM pembelian ORDER BY purchaseDate DESC")
-    fun getAllPembelian(): Flow<List<Pembelian>>
+    fun getAllPurchases(): Flow<List<Pembelian>>
 
     @Query("SELECT * FROM pembelian WHERE id = :id")
     suspend fun getPembelianById(id: Long): Pembelian?

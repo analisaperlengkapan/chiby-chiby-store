@@ -52,48 +52,48 @@ class BackupServiceImpl @Inject constructor(
 
             // Step 1: Gather all data
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengguna", progress = 0.1f, currentStepIndex = 1, totalSteps = 10)
-            val pengguna = userRepository.getAllUsers().firstOrNull() ?: emptyList()
+            val users = userRepository.getAllUsers().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data kategori", progress = 0.2f, currentStepIndex = 2, totalSteps = 10)
-            val kategori = categoryRepository.getAllKategori().firstOrNull() ?: emptyList()
+            val categories = categoryRepository.getAllKategori().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data gudang", progress = 0.3f, currentStepIndex = 3, totalSteps = 10)
-            val gudang = warehouseRepository.getAllGudang().firstOrNull() ?: emptyList()
+            val warehouses = warehouseRepository.getAllGudang().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data product", progress = 0.4f, currentStepIndex = 4, totalSteps = 10)
-            val product = productRepository.getAllProduk().firstOrNull() ?: emptyList()
+            val products = productRepository.getAllProduk().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pemasok", progress = 0.5f, currentStepIndex = 5, totalSteps = 10)
-            val pemasok = supplierRepository.getAllPemasok().firstOrNull() ?: emptyList()
+            val suppliers = supplierRepository.getAllPemasok().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data penjualan", progress = 0.6f, currentStepIndex = 6, totalSteps = 10)
-            val penjualan = saleRepository.getAllPenjualan().firstOrNull() ?: emptyList()
+            val sales = saleRepository.getAllPenjualan().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item penjualan", progress = 0.7f, currentStepIndex = 7, totalSteps = 10)
-            val itemPenjualan = itemPenjualanRepository.getAllItemPenjualan().firstOrNull() ?: emptyList()
+            val saleItems = itemPenjualanRepository.getAllSaleItems().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pembelian", progress = 0.8f, currentStepIndex = 8, totalSteps = 10)
-            val pembelian = purchaseRepository.getAllPembelian().firstOrNull() ?: emptyList()
+            val purchases = purchaseRepository.getAllPurchases().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item pembelian", progress = 0.9f, currentStepIndex = 9, totalSteps = 10)
-            val itemPembelian = itemPembelianRepository.getAllItemPembelian().firstOrNull() ?: emptyList()
+            val purchaseItems = itemPembelianRepository.getAllPurchaseItems().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengeluaran", progress = 1.0f, currentStepIndex = 10, totalSteps = 10)
-            val pengeluaran = expenseRepository.getAllPengeluarans().firstOrNull() ?: emptyList()
+            val expenses = expenseRepository.getAllPengeluarans().firstOrNull() ?: emptyList()
 
             // Step 2: Create backup data structure
             val createdAt = System.currentTimeMillis()
             val entities = BackupEntities(
-                users = pengguna,
-                categories = kategori,
-                warehouses = gudang,
-                products = product,
-                suppliers = pemasok,
-                sales = penjualan,
-                saleItems = itemPenjualan,
-                purchases = pembelian,
-                purchaseItems = itemPembelian,
-                expenses = pengeluaran
+                users = users,
+                categories = categories,
+                warehouses = warehouses,
+                products = products,
+                suppliers = suppliers,
+                sales = sales,
+                saleItems = saleItems,
+                purchases = purchases,
+                purchaseItems = purchaseItems,
+                expenses = expenses
             )
 
             val backupData = BackupData(
