@@ -1,5 +1,7 @@
 package com.chibychibystore.repository
 
+import androidx.room.withTransaction
+import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.local.dao.PurchaseDao
 import com.chibychibystore.data.local.dao.PurchaseItemDao
 import com.chibychibystore.data.local.entity.Purchase
@@ -15,7 +17,8 @@ import javax.inject.Singleton
 @Singleton
 class PurchaseRepository @Inject constructor(
     private val purchaseDao: PurchaseDao,
-    private val purchaseItemDao: PurchaseItemDao
+    private val purchaseItemDao: PurchaseItemDao,
+    private val database: ChibyChibyDatabase
 ) {
     fun getAllPurchases(): Flow<List<Purchase>> = purchaseDao.getAllPurchases()
 
@@ -45,9 +48,12 @@ class PurchaseRepository @Inject constructor(
 
     suspend fun createPurchase(purchase: Purchase, items: List<PurchaseItem>): Result<Long> {
         return try {
-            val purchaseId = purchaseDao.insertPurchase(purchase)
-            val itemsWithId = items.map { it.copy(purchaseId = purchaseId) }
-            purchaseItemDao.insertPurchaseItems(itemsWithId)
+            val purchaseId = database.withTransaction {
+                val id = purchaseDao.insertPurchase(purchase)
+                val itemsWithId = items.map { it.copy(purchaseId = id) }
+                purchaseItemDao.insertPurchaseItems(itemsWithId)
+                id
+            }
             Result.success(purchaseId)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("createPurchase", e))
