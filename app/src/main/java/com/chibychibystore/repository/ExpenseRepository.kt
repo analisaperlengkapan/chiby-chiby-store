@@ -22,32 +22,18 @@ class ExpenseRepository @Inject constructor(
             if (expense != null) {
                 Result.success(expense)
             } else {
-                Result.failure(ChibyChibyException.DatabaseError("Expense not found"))
+                Result.failure(ChibyChibyException.DatabaseError("Expense with ID $id not found"))
             }
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getExpenseById", e))
         }
     }
 
-    fun getExpensesByCategory(category: ExpenseCategory): Flow<List<Expense>> = expenseDao.getExpensesByCategory(category)
+    fun getExpensesByDateRange(startDate: Date, endDate: Date): Flow<List<Expense>> =
+        expenseDao.getExpensesByDateRange(startDate, endDate)
 
-    fun getExpensesByDateRange(startDate: Date, endDate: Date): Flow<List<Expense>> = expenseDao.getExpensesByDateRange(startDate, endDate)
-
-    suspend fun getExpensesByDateRangeList(startDate: Date, endDate: Date): List<Expense> {
-        return try {
-            expenseDao.getExpensesByDateRangeList(startDate, endDate)
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    suspend fun getExpensesByDateRangeAndCategory(startDate: Date, endDate: Date, category: ExpenseCategory): List<Expense> {
-        return try {
-            expenseDao.getExpensesByDateRangeAndCategory(startDate, endDate, category)
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
+    fun getExpensesByCategory(category: ExpenseCategory): Flow<List<Expense>> =
+        expenseDao.getExpensesByCategory(category)
 
     suspend fun createExpense(expense: Expense): Result<Long> {
         return try {
@@ -60,6 +46,9 @@ class ExpenseRepository @Inject constructor(
 
     suspend fun updateExpense(expense: Expense): Result<Unit> {
         return try {
+            expenseDao.getExpenseById(expense.id)
+                ?: return Result.failure(ChibyChibyException.DatabaseError("Expense not found"))
+
             expenseDao.updateExpense(expense)
             Result.success(Unit)
         } catch (e: Exception) {
@@ -69,6 +58,9 @@ class ExpenseRepository @Inject constructor(
 
     suspend fun deleteExpense(id: Long): Result<Unit> {
         return try {
+            expenseDao.getExpenseById(id)
+                ?: return Result.failure(ChibyChibyException.DatabaseError("Expense not found"))
+
             expenseDao.deleteExpenseById(id)
             Result.success(Unit)
         } catch (e: Exception) {
@@ -76,25 +68,12 @@ class ExpenseRepository @Inject constructor(
         }
     }
 
-    suspend fun getTotalExpenseAmount(startDate: Date, endDate: Date): Result<Double> {
+    suspend fun getTotalExpense(startDate: Date, endDate: Date): Result<Double> {
         return try {
-            val total = expenseDao.getTotalExpenseAmount(startDate, endDate) ?: 0.0
+            val total = expenseDao.getTotalExpense(startDate, endDate) ?: 0.0
             Result.success(total)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getTotalExpenseAmount", e))
-        }
-    }
-
-    suspend fun approveExpense(id: Long, approverId: Long): Result<Unit> {
-        return try {
-            val expense = expenseDao.getExpenseById(id)
-                ?: return Result.failure(ChibyChibyException.DatabaseError("Expense not found"))
-
-            val updatedExpense = expense.copy(approvedBy = approverId)
-            expenseDao.updateExpense(updatedExpense)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("approveExpense", e))
+            Result.failure(ChibyChibyException.DatabaseError("getTotalExpense", e))
         }
     }
 }

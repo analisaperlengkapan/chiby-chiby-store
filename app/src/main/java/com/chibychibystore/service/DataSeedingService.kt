@@ -9,12 +9,12 @@ import javax.inject.Singleton
 
 @Singleton
 class DataSeedingService @Inject constructor(
-    private val penggunaRepository: PenggunaRepository,
-    private val kategoriRepository: KategoriRepository,
-    private val gudangRepository: GudangRepository,
+    private val userRepository: UserRepository,
+    private val categoryRepository: CategoryRepository,
+    private val warehouseRepository: WarehouseRepository,
     private val productRepository: ProductRepository,
-    private val pemasokRepository: PemasokRepository,
-    private val pengeluaranRepository: PengeluaranRepository
+    private val supplierRepository: SupplierRepository,
+    private val expenseRepository: ExpenseRepository
 ) {
 
     suspend fun seedInitialData() = withContext(Dispatchers.IO) {
@@ -39,25 +39,25 @@ class DataSeedingService @Inject constructor(
 
     private suspend fun seedUsers() {
         val defaultUsers = listOf(
-            Pengguna(
+            User(
                 id = 0,
                 username = "owner",
                 passwordHash = hashPassword("owner123"),
                 role = Role.OWNER
             ),
-            Pengguna(
+            User(
                 id = 0,
                 username = "manager",
                 passwordHash = hashPassword("manager123"),
                 role = Role.MANAGER
             ),
-            Pengguna(
+            User(
                 id = 0,
                 username = "cashier",
                 passwordHash = hashPassword("cashier123"),
                 role = Role.CASHIER
             ),
-            Pengguna(
+            User(
                 id = 0,
                 username = "warehouse",
                 passwordHash = hashPassword("warehouse123"),
@@ -66,7 +66,7 @@ class DataSeedingService @Inject constructor(
         )
 
         defaultUsers.forEach { user ->
-            penggunaRepository.createPengguna(user)
+            userRepository.createUser(user)
         }
     }
 
@@ -79,36 +79,36 @@ class DataSeedingService @Inject constructor(
 
     private suspend fun seedCategories() {
         val defaultCategories = listOf(
-            Kategori(id = 0, name = "Makanan", description = "Product makanan"),
-            Kategori(id = 0, name = "Minuman", description = "Product minuman"),
-            Kategori(id = 0, name = "Pakaian", description = "Product pakaian"),
-            Kategori(id = 0, name = "Elektronik", description = "Product elektronik")
+            Category(id = 0, name = "Makanan", description = "Product makanan"),
+            Category(id = 0, name = "Minuman", description = "Product minuman"),
+            Category(id = 0, name = "Pakaian", description = "Product pakaian"),
+            Category(id = 0, name = "Elektronik", description = "Product elektronik")
         )
 
         defaultCategories.forEach { category ->
-            kategoriRepository.createKategori(category)
+            categoryRepository.createCategory(category)
         }
     }
 
     private suspend fun seedWarehouses() {
         val defaultWarehouses = listOf(
-            Gudang(id = 0, name = "Gudang Utama", location = "Jakarta"),
-            Gudang(id = 0, name = "Gudang Cabang", location = "Bandung")
+            Warehouse(id = 0, name = "Gudang Utama", location = "Jakarta"),
+            Warehouse(id = 0, name = "Gudang Cabang", location = "Bandung")
         )
 
         defaultWarehouses.forEach { warehouse ->
-            gudangRepository.createGudang(warehouse)
+            warehouseRepository.createWarehouse(warehouse)
         }
     }
 
     private suspend fun seedSuppliers() {
         val defaultSuppliers = listOf(
-            Pemasok(id = 0, name = "PT Supplier A", contact = "021-123456", address = "Jl. Supplier A"),
-            Pemasok(id = 0, name = "CV Supplier B", contact = "021-654321", address = "Jl. Supplier B")
+            Supplier(id = 0, name = "PT Supplier A", contact = "021-123456", address = "Jl. Supplier A"),
+            Supplier(id = 0, name = "CV Supplier B", contact = "021-654321", address = "Jl. Supplier B")
         )
 
         defaultSuppliers.forEach { supplier ->
-            pemasokRepository.createPemasok(supplier)
+            supplierRepository.createSupplier(supplier)
         }
     }
 
@@ -167,7 +167,7 @@ class DataSeedingService @Inject constructor(
 
     private suspend fun seedExpenses() {
         val defaultExpenses = listOf(
-            Pengeluaran(
+            Expense(
                 id = 0,
                 expenseDate = java.util.Date(),
                 category = ExpenseCategory.RENT_LEASE,
@@ -176,7 +176,7 @@ class DataSeedingService @Inject constructor(
                 approvedBy = 1, // Owner
                 createdBy = 1
             ),
-            Pengeluaran(
+            Expense(
                 id = 0,
                 expenseDate = java.util.Date(),
                 category = ExpenseCategory.UTILITIES,
@@ -185,7 +185,7 @@ class DataSeedingService @Inject constructor(
                 approvedBy = 1,
                 createdBy = 1
             ),
-            Pengeluaran(
+            Expense(
                 id = 0,
                 expenseDate = java.util.Date(),
                 category = ExpenseCategory.SALARIES_WAGES,
@@ -194,7 +194,7 @@ class DataSeedingService @Inject constructor(
                 approvedBy = 1,
                 createdBy = 1
             ),
-            Pengeluaran(
+            Expense(
                 id = 0,
                 expenseDate = java.util.Date(),
                 category = ExpenseCategory.SUPPLIES_MAINTENANCE,
@@ -203,7 +203,7 @@ class DataSeedingService @Inject constructor(
                 approvedBy = 1,
                 createdBy = 1
             ),
-            Pengeluaran(
+            Expense(
                 id = 0,
                 expenseDate = java.util.Date(),
                 category = ExpenseCategory.INVENTORY_PURCHASES,
@@ -215,7 +215,7 @@ class DataSeedingService @Inject constructor(
         )
 
         defaultExpenses.forEach { expense ->
-            pengeluaranRepository.insertPengeluaran(expense)
+            expenseRepository.createExpense(expense)
         }
     }
 }

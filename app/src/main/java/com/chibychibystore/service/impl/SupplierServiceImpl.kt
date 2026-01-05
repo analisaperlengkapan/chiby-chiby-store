@@ -1,7 +1,7 @@
 package com.chibychibystore.service.impl
 
 import com.chibychibystore.constant.Permissions
-import com.chibychibystore.data.local.entity.Pemasok
+import com.chibychibystore.data.local.entity.Supplier
 import com.chibychibystore.repository.SupplierRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.SupplierService
@@ -15,17 +15,16 @@ class SupplierServiceImpl @Inject constructor(
     private val authService: AuthService
 ) : SupplierService {
 
-    override fun getAllSuppliers(): Flow<List<Pemasok>> {
+    override fun getAllSuppliers(): Flow<List<Supplier>> {
         return supplierRepository.getAllSuppliers()
     }
 
-    override fun searchSuppliers(query: String): Flow<List<Pemasok>> {
+    override fun searchSuppliers(query: String): Flow<List<Supplier>> {
         return supplierRepository.searchSuppliers(query)
     }
 
-    override suspend fun getSupplierById(id: Long): Result<Pemasok> {
+    override suspend fun getSupplierById(id: Long): Result<Supplier> {
         return supplierRepository.getSupplierById(id)
-            .mapCatching { it ?: throw Exception("Supplier not found") }
     }
 
     override suspend fun createSupplier(name: String, address: String?, phone: String?, email: String?): Result<Long> {
@@ -36,12 +35,12 @@ class SupplierServiceImpl @Inject constructor(
             return Result.failure(Exception("Nama pemasok tidak boleh kosong"))
         }
 
-        val supplier = Pemasok(
+        val supplier = Supplier(
             name = name,
             address = address,
-            phone = phone,
-            email = email
+            contact = phone // Mapping phone to contact
         )
+
         return supplierRepository.createSupplier(supplier)
     }
 
@@ -54,12 +53,11 @@ class SupplierServiceImpl @Inject constructor(
         }
 
         return supplierRepository.getSupplierById(id).mapCatching { existing ->
-            val supplier = existing?.copy(
+            val supplier = existing.copy(
                 name = name,
                 address = address,
-                phone = phone,
-                email = email
-            ) ?: throw Exception("Supplier not found")
+                contact = phone
+            )
             supplierRepository.updateSupplier(supplier).getOrThrow()
         }
     }

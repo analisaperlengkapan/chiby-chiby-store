@@ -5,46 +5,46 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface ProdukDao {
+interface ProductDao {
     @Query("SELECT * FROM produk ORDER BY name ASC")
-    fun getAllProduk(): Flow<List<Produk>>
+    fun getAllProducts(): Flow<List<Product>>
 
     @Query("SELECT * FROM produk WHERE id = :id")
-    suspend fun getProdukById(id: Long): Produk?
+    suspend fun getProductById(id: Long): Product?
 
     @Query("SELECT * FROM produk WHERE id IN (:ids)")
-    suspend fun getProdukByIds(ids: List<Long>): List<Produk>
+    suspend fun getProductByIds(ids: List<Long>): List<Product>
 
     @Query("SELECT * FROM produk WHERE barcode = :barcode")
-    suspend fun getProdukByBarcode(barcode: String): Produk?
+    suspend fun getProductByBarcode(barcode: String): Product?
 
     @Query("SELECT * FROM produk WHERE categoryId = :categoryId ORDER BY name ASC")
-    fun getProdukByCategory(categoryId: Long): Flow<List<Produk>>
+    fun getProductByCategory(categoryId: Long): Flow<List<Product>>
 
     @Query("SELECT * FROM produk WHERE warehouseId = :warehouseId ORDER BY name ASC")
-    fun getProdukByWarehouse(warehouseId: Long): Flow<List<Produk>>
+    fun getProductByWarehouse(warehouseId: Long): Flow<List<Product>>
 
     @Query("SELECT * FROM produk WHERE name LIKE '%' || :query || '%' OR barcode LIKE '%' || :query || '%' ORDER BY name ASC")
-    fun searchProduk(query: String): Flow<List<Produk>>
+    fun searchProducts(query: String): Flow<List<Product>>
 
     @Query("SELECT * FROM produk WHERE stockQuantity <= minStock AND stockQuantity > 0 ORDER BY stockQuantity ASC")
-    fun getLowStockProduk(): Flow<List<Produk>>
+    fun getLowStockProducts(): Flow<List<Product>>
 
     @Query("SELECT * FROM produk WHERE stockQuantity = 0 ORDER BY name ASC")
-    fun getOutOfStockProduk(): Flow<List<Produk>>
+    fun getOutOfStockProducts(): Flow<List<Product>>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertProduk(produk: Produk): Long
+    suspend fun insertProduct(product: Product): Long
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertProdukList(produkList: List<Produk>): List<Long>
+    suspend fun insertProductList(productList: List<Product>): List<Long>
 
     @Update
-    suspend fun updateProduk(produk: Produk)
+    suspend fun updateProduct(product: Product)
 
     /**
      * Adjust stock by adding/subtracting quantity (Delta)
@@ -59,10 +59,10 @@ interface ProdukDao {
     suspend fun setStock(id: Long, quantity: Int)
 
     @Query("DELETE FROM produk WHERE id = :id")
-    suspend fun deleteProdukById(id: Long)
+    suspend fun deleteProductById(id: Long)
 
     @Query("SELECT COUNT(*) FROM produk")
-    suspend fun getProdukCount(): Int
+    suspend fun getProductCount(): Int
 
     @Query("SELECT SUM(stockQuantity) FROM produk")
     suspend fun getTotalStock(): Int?

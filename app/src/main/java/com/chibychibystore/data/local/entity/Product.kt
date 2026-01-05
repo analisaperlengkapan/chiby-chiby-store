@@ -10,35 +10,40 @@ import java.util.Date
 
 @Serializable
 @Entity(
-    tableName = "pembelian",
+    tableName = "produk",
     indices = [
-        Index(value = ["purchaseDate"]),
-        Index(value = ["supplierId"]),
-        Index(value = ["createdBy"])
+        Index(value = ["barcode"], unique = true),
+        Index(value = ["categoryId"]),
+        Index(value = ["warehouseId"])
     ],
     foreignKeys = [
         ForeignKey(
-            entity = Pemasok::class,
+            entity = Category::class,
             parentColumns = ["id"],
-            childColumns = ["supplierId"],
+            childColumns = ["categoryId"],
             onDelete = ForeignKey.CASCADE
         ),
         ForeignKey(
-            entity = Pengguna::class,
+            entity = Warehouse::class,
             parentColumns = ["id"],
-            childColumns = ["createdBy"],
+            childColumns = ["warehouseId"],
             onDelete = ForeignKey.CASCADE
         )
     ]
 )
-data class Pembelian(
+data class Product(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val supplierId: Long,
+    val name: String,
+    val barcode: String? = null,
+    val categoryId: Long,
+    val costPrice: Double,
+    val sellingPrice: Double,
+    val stockQuantity: Int = 0,
+    val warehouseId: Long,
+    val minStock: Int = 0,
     @Serializable(with = DateSerializer::class)
-    val purchaseDate: Date,
-    val totalAmount: Double,
-    val createdBy: Long,
+    val createdAt: Date = Date(),
     @Serializable(with = DateSerializer::class)
-    val createdAt: Date = Date()
+    val updatedAt: Date = Date()
 )

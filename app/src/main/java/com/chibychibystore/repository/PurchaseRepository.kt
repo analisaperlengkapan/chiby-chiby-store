@@ -1,7 +1,9 @@
 package com.chibychibystore.repository
 
 import com.chibychibystore.data.local.dao.PurchaseDao
+import com.chibychibystore.data.local.dao.PurchaseItemDao
 import com.chibychibystore.data.local.entity.Purchase
+import com.chibychibystore.data.local.entity.PurchaseItem
 import com.chibychibystore.data.local.entity.PurchaseWithItems
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
@@ -12,7 +14,8 @@ import javax.inject.Singleton
 
 @Singleton
 class PurchaseRepository @Inject constructor(
-    private val purchaseDao: PurchaseDao
+    private val purchaseDao: PurchaseDao,
+    private val purchaseItemDao: PurchaseItemDao
 ) {
     fun getAllPurchases(): Flow<List<Purchase>> = purchaseDao.getAllPurchases()
 
@@ -22,72 +25,54 @@ class PurchaseRepository @Inject constructor(
             if (purchase != null) {
                 Result.success(purchase)
             } else {
-                Result.failure(ChibyChibyException.DatabaseError("Purchase not found"))
+                Result.failure(ChibyChibyException.DatabaseError("Purchase with ID $id not found"))
             }
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getPurchaseById", e))
         }
     }
 
-    suspend fun getPurchaseWithItems(id: Long): Result<PurchaseWithItems> {
+    fun getPurchasesBySupplier(supplierId: Long): Flow<List<Purchase>> =
+        purchaseDao.getPurchasesBySupplier(supplierId)
+
+    fun getPurchasesByDateRange(startDate: Date, endDate: Date): Flow<List<Purchase>> =
+        purchaseDao.getPurchasesByDateRange(startDate, endDate)
+
+    fun getPurchaseWithItems(id: Long): Flow<PurchaseWithItems> =
+        purchaseDao.getPurchaseWithItems(id)
+
+    suspend fun getAllPurchaseItems(): List<PurchaseItem> = purchaseItemDao.getAllPurchaseItems()
+
+    suspend fun createPurchase(purchase: Purchase, items: List<PurchaseItem>): Result<Long> {
         return try {
-            val purchaseWithItems = purchaseDao.getPurchaseWithItems(id)
-            if (purchaseWithItems != null) {
-                Result.success(purchaseWithItems)
-            } else {
-                Result.failure(ChibyChibyException.DatabaseError("Purchase with items not found"))
-            }
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getPurchaseWithItems", e))
-        }
-    }
-
-    fun getPurchasesBySupplier(supplierId: Long): Flow<List<Purchase>> = purchaseDao.getPurchasesBySupplier(supplierId)
-
-    fun getPurchasesByDateRange(startDate: Date, endDate: Date): Flow<List<Purchase>> = purchaseDao.getPurchasesByDateRange(startDate, endDate)
-
-    suspend fun createPurchase(purchase: Purchase): Result<Long> {
-        return try {
-            val id = purchaseDao.insertPurchase(purchase)
-            Result.success(id)
+            val purchaseId = purchaseDao.insertPurchase(purchase)
+            val itemsWithId = items.map { it.copy(purchaseId = purchaseId) }
+            purchaseItemDao.insertPurchaseItems(itemsWithId)
+            Result.success(purchaseId)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("createPurchase", e))
         }
     }
 
-    suspend fun updatePurchase(purchase: Purchase): Result<Unit> {
+    suspend fun createPurchaseItems(items: List<PurchaseItem>): Result<List<Long>> {
         return try {
-            purchaseDao.updatePurchase(purchase)
-            Result.success(Unit)
+             val ids = purchaseItemDao.insertPurchaseItems(items)
+             Result.success(ids)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("updatePurchase", e))
+            Result.failure(ChibyChibyException.DatabaseError("createPurchaseItems", e))
         }
     }
 
     suspend fun deletePurchase(id: Long): Result<Unit> {
         return try {
+            purchaseDao.getPurchaseById(id)
+                ?: return Result.failure(ChibyChibyException.DatabaseError("Purchase not found"))
+
+            // Items should be deleted by CASCADE
             purchaseDao.deletePurchaseById(id)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("deletePurchase", e))
-        }
-    }
-
-    suspend fun getPurchaseCount(): Result<Int> {
-        return try {
-            val count = purchaseDao.getPurchaseCount()
-            Result.success(count)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getPurchaseCount", e))
-        }
-    }
-
-    suspend fun getTotalPurchaseAmount(startDate: Date, endDate: Date): Result<Double> {
-        return try {
-            val total = purchaseDao.getTotalPurchaseAmount(startDate, endDate) ?: 0.0
-            Result.success(total)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getTotalPurchaseAmount", e))
         }
     }
 }

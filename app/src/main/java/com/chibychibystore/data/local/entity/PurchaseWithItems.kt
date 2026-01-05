@@ -2,13 +2,14 @@ package com.chibychibystore.data.local.entity
 
 import androidx.room.Embedded
 import androidx.room.Relation
+import kotlinx.serialization.Serializable
 
-data class PembelianWithItems(
-    @Embedded
-    val pembelian: Pembelian,
+@Serializable
+data class PurchaseWithItems(
+    @Embedded val purchase: Purchase,
     @Relation(
         parentColumn = "id",
         entityColumn = "purchaseId"
     )
-    val items: List<ItemPembelian>
+    val items: List<PurchaseItem>
 )

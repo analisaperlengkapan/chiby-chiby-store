@@ -14,7 +14,7 @@ import java.util.Date
         Index(value = ["username"], unique = true)
     ]
 )
-data class Pengguna(
+data class User(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val username: String,
