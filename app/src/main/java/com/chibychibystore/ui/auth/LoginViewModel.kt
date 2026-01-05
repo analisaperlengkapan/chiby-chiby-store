@@ -1,4 +1,4 @@
-package com.chibychibystore.ui.viewmodel
+package com.chibychibystore.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

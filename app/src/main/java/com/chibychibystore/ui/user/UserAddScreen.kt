@@ -26,41 +26,32 @@ fun UserAddScreen(
     viewModel: UserManagementViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val formState by viewModel.createUserFormState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var selectedRole by remember { mutableStateOf(Role.CASHIER) }
-
-    var usernameError by remember { mutableStateOf<String?>(null) }
-    var passwordError by remember { mutableStateOf<String?>(null) }
-    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
-
     val roles = remember { Role.values() }
 
-    fun validateInput(): Boolean {
-        // Reset errors
-        usernameError = null
-        passwordError = null
-        confirmPasswordError = null
+    // Handle success navigation
+    LaunchedEffect(uiState.successMessage) {
+        if (uiState.successMessage != null) {
+            navController.navigateUp()
+            // Optional: Show success message/snackbar could be done here or in the previous screen
+        }
+    }
 
-        var isValid = true
-
-        if (username.isBlank()) {
-            usernameError = "Username tidak boleh kosong"
-            isValid = false
+    // Handle error messages
+    LaunchedEffect(formState.errorMessage) {
+        formState.errorMessage?.let { error ->
+            snackbarHostState.showSnackbar(error)
         }
-        if (password.length < 6) {
-            passwordError = "Password minimal 6 karakter"
-            isValid = false
+    }
+    
+    // Also handle general UI errors if any
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { error ->
+            snackbarHostState.showSnackbar(error)
         }
-        if (password != confirmPassword) {
-            confirmPasswordError = "Password tidak cocok"
-            isValid = false
-        }
-        return isValid
     }
 
     Scaffold(
@@ -80,45 +71,36 @@ fun UserAddScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (uiState.isLoading) {
+            if (uiState.isLoading || formState.isSubmitting) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
             TextFieldOutlined(
-                value = username,
-                onValueChange = {
-                    username = it
-                    usernameError = null
-                },
+                value = formState.username,
+                onValueChange = viewModel::onCreateUserUsernameChange,
                 label = stringResource(R.string.username),
                 modifier = Modifier.fillMaxWidth(),
-                isError = usernameError != null,
-                errorMessage = usernameError
+                isError = formState.errorMessage != null && formState.username.isBlank(), // Simple heuristic for error highlight
+                errorMessage = if (formState.username.isBlank() && formState.errorMessage != null) formState.errorMessage else null
             )
 
             TextFieldOutlined(
-                value = password,
-                onValueChange = {
-                    password = it
-                    passwordError = null
-                },
+                value = formState.password,
+                onValueChange = viewModel::onCreateUserPasswordChange,
                 label = stringResource(R.string.password),
                 modifier = Modifier.fillMaxWidth(),
-                isError = passwordError != null,
-                errorMessage = passwordError,
+                isError = formState.errorMessage != null && formState.password.isBlank(),
+                errorMessage = null, // Error displayed in snackbar usually, or we can map specific field errors if VM supported it
                 isPassword = true
             )
 
             TextFieldOutlined(
-                value = confirmPassword,
-                onValueChange = {
-                    confirmPassword = it
-                    confirmPasswordError = null
-                },
+                value = formState.confirmPassword,
+                onValueChange = viewModel::onCreateUserConfirmPasswordChange,
                 label = "Konfirmasi Password",
                 modifier = Modifier.fillMaxWidth(),
-                isError = confirmPasswordError != null,
-                errorMessage = confirmPasswordError,
+                isError = formState.errorMessage != null && formState.confirmPassword != formState.password,
+                errorMessage = null,
                 isPassword = true
             )
 
@@ -130,8 +112,8 @@ fun UserAddScreen(
             ) {
                 roles.forEach { role ->
                     FilterChip(
-                        selected = selectedRole == role,
-                        onClick = { selectedRole = role },
+                        selected = formState.role == role,
+                        onClick = { viewModel.onCreateUserRoleChange(role) },
                         label = { Text(role.displayName) }
                     )
                 }
@@ -141,22 +123,9 @@ fun UserAddScreen(
 
             ButtonPrimary(
                 text = stringResource(R.string.common_save),
-                onClick = {
-                    if (validateInput()) {
-                        scope.launch {
-                            val result = viewModel.createUser(username, password, selectedRole)
-                            if (result.isSuccess) {
-                                navController.navigateUp()
-                            } else {
-                                snackbarHostState.showSnackbar(
-                                    message = result.exceptionOrNull()?.message ?: "Gagal membuat pengguna"
-                                )
-                            }
-                        }
-                    }
-                },
+                onClick = { viewModel.createUser() },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isLoading
+                enabled = !uiState.isLoading && !formState.isSubmitting
             )
         }
     }

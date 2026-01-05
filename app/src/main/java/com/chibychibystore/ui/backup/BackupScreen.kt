@@ -1,5 +1,5 @@
 @file:Suppress("DEPRECATION")
-package com.chibychibystore.ui.screens
+package com.chibychibystore.ui.backup
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -43,8 +43,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.CardItem
 import com.chibychibystore.ui.components.shared.LoadingIndicator
-import com.chibychibystore.ui.viewmodel.BackupUiState
-import com.chibychibystore.ui.viewmodel.BackupViewModel
+import com.chibychibystore.ui.backup.BackupUiState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

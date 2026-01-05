@@ -10,6 +10,8 @@ import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.service.printer.PrinterService
 import com.chibychibystore.service.printer.ReceiptFormatter
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.error.ChibyChibyException
+import com.chibychibystore.util.Permissions
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
@@ -174,12 +176,12 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun createSale(sale: Penjualan, items: List<ItemPenjualan>): Result<PenjualanWithItems> {
         try {
-            if (!authService.hasPermission("CREATE_SALES")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk membuat penjualan"))
+            if (!authService.hasPermission(Permissions.CREATE_SALES)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.CREATE_SALES))
             }
             // Basic validations
             if (items.isEmpty()) {
-                return Result.failure(Exception("item penjualan harus ada"))
+                return Result.failure(ChibyChibyException.ValidationError("items", "Item penjualan harus ada"))
             }
 
             // Validate payment method if using enum
@@ -188,16 +190,16 @@ class SaleServiceImpl @Inject constructor(
             // Validate and update inventory (using updateProduk for this codebase)
             for (item in items) {
                 val product = produkRepository.getProduk(item.productId)
-                    ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
+                    ?: return Result.failure(ChibyChibyException.ValidationError("productId", "Produk dengan ID ${item.productId} tidak ditemukan"))
 
                 if (product.stockQuantity < item.quantity) {
-                    return Result.failure(Exception("stok tidak mencukupi untuk produk ${product.name}"))
+                    return Result.failure(ChibyChibyException.BusinessLogicError("Stok tidak mencukupi untuk produk ${product.name}"))
                 }
 
                 val updatedProduct = product.copy(stockQuantity = product.stockQuantity - item.quantity)
                 val updRes = produkRepository.updateProduk(updatedProduct)
                 if (updRes.isFailure) {
-                    return Result.failure(updRes.exceptionOrNull() ?: Exception("Gagal memperbarui stok untuk produk ${product.name}"))
+                    return Result.failure(updRes.exceptionOrNull() ?: ChibyChibyException.DatabaseError("Gagal memperbarui stok untuk produk ${product.name}"))
                 }
             }
 
@@ -214,7 +216,7 @@ class SaleServiceImpl @Inject constructor(
 
             return penjualanRepository.getPenjualanWithItemsById(penjualanId)
         } catch (e: Exception) {
-            return Result.failure(e)
+            return Result.failure(ChibyChibyException.DatabaseError("createSale", e))
         }
     }
 
@@ -259,8 +261,8 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun getSale(id: Long): Result<PenjualanWithItems?> {
         return try {
-            if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
+            if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.VIEW_SALES_REPORTS))
             }
             penjualanRepository.getPenjualanWithItemsById(id)
         } catch (e: Exception) {
@@ -270,8 +272,8 @@ class SaleServiceImpl @Inject constructor(
 
     override suspend fun getSalesCountByDateRange(startDate: String, endDate: String): Result<Int> {
         return try {
-            if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
+            if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.VIEW_SALES_REPORTS))
             }
             val startLocalDate = java.time.LocalDate.parse(startDate)
             val endLocalDate = java.time.LocalDate.parse(endDate)
@@ -327,8 +329,8 @@ class SaleServiceImpl @Inject constructor(
         cashierId: Long?
     ): Result<List<Penjualan>> {
         return try {
-            if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
+            if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.VIEW_SALES_REPORTS))
             }
             // Get a snapshot of all sales (do not collect indefinitely)
             val salesSnapshot = penjualanRepository.getAllPenjualan().first()
@@ -355,8 +357,8 @@ class SaleServiceImpl @Inject constructor(
 
     override suspend fun getRecentSales(limit: Int): Result<List<Penjualan>> {
         return try {
-            if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
+            if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.VIEW_SALES_REPORTS))
             }
             val sales = penjualanRepository.getRecentPenjualan(limit).first()
             Result.success(sales)
@@ -372,15 +374,15 @@ class SaleServiceImpl @Inject constructor(
         val lock = refundLocks.computeIfAbsent(id) { Mutex() }
         return lock.withLock {
             try {
-                if (!authService.hasPermission("APPROVE_LARGE_TRANSACTIONS")) {
-                    return Result.failure(Exception("Tidak memiliki izin untuk melakukan refund"))
+                if (!authService.hasPermission(Permissions.APPROVE_LARGE_TRANSACTIONS)) {
+                    return Result.failure(ChibyChibyException.PermissionError(Permissions.APPROVE_LARGE_TRANSACTIONS))
                 }
                 val penjualanRes = penjualanRepository.getPenjualanById(id)
-                val penjualan = penjualanRes.getOrNull() ?: return Result.failure(Exception("Penjualan dengan ID $id tidak ditemukan"))
+                val penjualan = penjualanRes.getOrNull() ?: return Result.failure(ChibyChibyException.DatabaseError("Penjualan dengan ID $id tidak ditemukan"))
 
                 // Idempotency: if already refunded, reject further refunds
                 if (penjualan.isRefunded) {
-                    return Result.failure(Exception("Penjualan dengan ID $id sudah direfund"))
+                    return Result.failure(ChibyChibyException.BusinessLogicError("Penjualan dengan ID $id sudah direfund"))
                 }
 
                 // Get items for sale
@@ -390,7 +392,7 @@ class SaleServiceImpl @Inject constructor(
                 // Restore stock
                 for (item in items) {
                     val product = produkRepository.getProduk(item.productId)
-                        ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
+                        ?: return Result.failure(ChibyChibyException.DatabaseError("Produk dengan ID ${item.productId} tidak ditemukan"))
                     val updated = product.copy(stockQuantity = product.stockQuantity + item.quantity)
                     produkRepository.updateProduk(updated)
                 }
@@ -408,11 +410,11 @@ class SaleServiceImpl @Inject constructor(
 
     override suspend fun cancelSale(id: Long): Result<Unit> {
         return try {
-            if (!authService.hasPermission("APPROVE_LARGE_TRANSACTIONS")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk membatalkan penjualan"))
+            if (!authService.hasPermission(Permissions.APPROVE_LARGE_TRANSACTIONS)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.APPROVE_LARGE_TRANSACTIONS))
             }
             val penjualanRes = penjualanRepository.getPenjualanById(id)
-            val penjualan = penjualanRes.getOrNull() ?: return Result.failure(Exception("Penjualan dengan ID $id tidak ditemukan"))
+            val penjualan = penjualanRes.getOrNull() ?: return Result.failure(ChibyChibyException.DatabaseError("Penjualan dengan ID $id tidak ditemukan"))
 
             val itemsFlow = itemPenjualanRepository.getItemsBySaleId(id)
             val items = itemsFlow.first()
@@ -420,7 +422,7 @@ class SaleServiceImpl @Inject constructor(
             // Restore stock
             for (item in items) {
                 val product = produkRepository.getProduk(item.productId)
-                    ?: return Result.failure(Exception("Produk dengan ID ${item.productId} tidak ditemukan"))
+                    ?: return Result.failure(ChibyChibyException.DatabaseError("Produk dengan ID ${item.productId} tidak ditemukan"))
                 val updated = product.copy(stockQuantity = product.stockQuantity + item.quantity)
                 produkRepository.updateProduk(updated)
             }
@@ -485,8 +487,8 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun searchSales(query: String): Result<List<Penjualan>> {
         return try {
-            if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
+            if (!authService.hasPermission(Permissions.VIEW_SALES_REPORTS)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.VIEW_SALES_REPORTS))
             }
             // Take a snapshot from the flow instead of collecting indefinitely
             val sales = penjualanRepository.searchPenjualan(query).first()
@@ -544,14 +546,14 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun updateSale(id: Long, sale: Penjualan): Result<Penjualan> {
         return try {
-            if (!authService.hasPermission("APPROVE_LARGE_TRANSACTIONS")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk mengupdate penjualan"))
+            if (!authService.hasPermission(Permissions.APPROVE_LARGE_TRANSACTIONS)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.APPROVE_LARGE_TRANSACTIONS))
             }
             val updateResult = penjualanRepository.updatePenjualan(id, sale)
             if (updateResult.isSuccess) {
                 Result.success(sale)
             } else {
-                Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengupdate penjualan"))
+                Result.failure(updateResult.exceptionOrNull() ?: ChibyChibyException.DatabaseError("Gagal mengupdate penjualan"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -612,12 +614,12 @@ class SaleServiceImpl @Inject constructor(
      */
     override suspend fun deleteSale(id: Long): Result<Unit> {
         return try {
-            if (!authService.hasPermission("APPROVE_LARGE_TRANSACTIONS")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk menghapus penjualan"))
+            if (!authService.hasPermission(Permissions.APPROVE_LARGE_TRANSACTIONS)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.APPROVE_LARGE_TRANSACTIONS))
             }
             // Get sale with items first
             val saleResult = penjualanRepository.getPenjualanWithItemsById(id)
-            val saleWithItems = saleResult.getOrNull() ?: return Result.failure(saleResult.exceptionOrNull() ?: Exception("Penjualan tidak ditemukan"))
+            val saleWithItems = saleResult.getOrNull() ?: return Result.failure(saleResult.exceptionOrNull() ?: ChibyChibyException.DatabaseError("Penjualan tidak ditemukan"))
 
             // Restore inventory stock
             for (item in saleWithItems.items) {
@@ -626,7 +628,7 @@ class SaleServiceImpl @Inject constructor(
                 if (product != null) {
                     val newStock = product.stockQuantity + item.quantity
                     val updateResult = produkRepository.updateStock(item.productId, newStock)
-                    if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengembalikan stok produk ${product.name}"))
+                    if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: ChibyChibyException.DatabaseError("Gagal mengembalikan stok produk ${product.name}"))
                 }
             }
 

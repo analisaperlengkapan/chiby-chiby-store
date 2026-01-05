@@ -14,7 +14,9 @@ import java.util.Date
     indices = [
         Index(value = ["barcode"], unique = true),
         Index(value = ["categoryId"]),
-        Index(value = ["warehouseId"])
+        Index(value = ["warehouseId"]),
+        Index(value = ["name"]),
+        Index(value = ["stockQuantity"])
     ],
     foreignKeys = [
         ForeignKey(

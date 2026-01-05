@@ -1,8 +1,5 @@
 @file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.sales
-import com.chibychibystore.ui.components.shared.AppTopBar
-import com.chibychibystore.ui.components.shared.ErrorMessage
-import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,17 +12,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.PaymentMethod
-import com.chibychibystore.ui.components.shared.*
+import com.chibychibystore.ui.components.*
+import com.chibychibystore.ui.components.shared.LoadingIndicator
+import com.chibychibystore.ui.theme.ChibyPinkPrimary
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SalesHistoryScreen(
     navController: NavController,
@@ -35,18 +32,13 @@ fun SalesHistoryScreen(
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("id", "ID")) }
 
-    Scaffold(
-        topBar = {
-            AppTopBar(
-                title = "Riwayat Penjualan",
-                navigationIcon = Icons.Filled.ArrowBack,
-                onNavigationClick = { navController.popBackStack() },
-                actions = {
-                    IconButton(onClick = { viewModel.clearFilters() }) {
-                        Icon(Icons.Default.Clear, "Clear Filters")
-                    }
-                }
-            )
+    ChibyScaffold(
+        title = "Riwayat Penjualan",
+        onNavigateUp = { navController.popBackStack() },
+        actions = {
+            IconButton(onClick = { viewModel.clearFilters() }) {
+                Icon(Icons.Default.Clear, "Clear Filters", tint = androidx.compose.ui.graphics.Color.White)
+            }
         }
     ) { padding ->
         Column(
@@ -55,56 +47,53 @@ fun SalesHistoryScreen(
                 .padding(padding)
         ) {
             // Filters Section
-            Card(
+            ChibyCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = 2
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column {
                     Text(
                         "Filter",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = ChibyPinkPrimary
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Search Bar
-                    SearchBar(
-                        query = uiState.searchQuery,
-                        onQueryChange = { viewModel.updateSearchQuery(it) },
-                        placeholder = "Cari berdasarkan ID, metode pembayaran..."
+                    ChibyInput(
+                        value = uiState.searchQuery,
+                        onValueChange = { viewModel.updateSearchQuery(it) },
+                        label = "Cari Transaksi",
+                        leadingIcon = { Icon(Icons.Default.Search, null, tint = ChibyPinkPrimary) },
+                        modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    // Date Filters
+// Date Filters
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedButton(
+                        ChibyOutlinedButton(
+                            text = uiState.startDate?.let {
+                                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)
+                            } ?: "Tanggal Mulai",
                             onClick = { viewModel.showDatePicker(DatePickerType.START) },
                             modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                uiState.startDate?.let {
-                                    SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)
-                                } ?: "Tanggal Mulai"
-                            )
-                        }
+                        )
 
-                        OutlinedButton(
+                        ChibyOutlinedButton(
+                            text = uiState.endDate?.let {
+                                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)
+                            } ?: "Tanggal Akhir",
                             onClick = { viewModel.showDatePicker(DatePickerType.END) },
                             modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                uiState.endDate?.let {
-                                    SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)
-                                } ?: "Tanggal Akhir"
-                            )
-                        }
+                        )
                     }
                 }
             }
@@ -112,41 +101,18 @@ fun SalesHistoryScreen(
             // Sales List
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
-                    uiState.isLoading -> {
-                        LoadingIndicator()
-                    }
+                    uiState.isLoading -> LoadingIndicator("Memuat riwayat penjualan...")
 
                     uiState.error != null -> {
-                        androidx.compose.material3.Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            colors = androidx.compose.material3.CardDefaults.cardColors(
-                                containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
-                                contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
-                            ),
-                            shape = androidx.compose.material3.MaterialTheme.shapes.medium
-                        ) {
-                            androidx.compose.foundation.layout.Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
-                            ) {
-                                androidx.compose.material3.Text(text = uiState.error ?: "")
-                                androidx.compose.foundation.layout.Row {
-                                    androidx.compose.material3.TextButton(onClick = { viewModel.loadSales() }) {
-                                        androidx.compose.material3.Text("Coba Lagi")
-                                    }
-                                    androidx.compose.material3.IconButton(onClick = { viewModel.clearError() }) {
-                                        androidx.compose.material3.Icon(
-                                            imageVector = Icons.Default.Close,
-                                            contentDescription = "Tutup",
-                                            tint = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
-                                        )
-                                    }
-                                }
+                       ChibyCard(
+                           modifier = Modifier.padding(16.dp),
+                           containerColor = MaterialTheme.colorScheme.errorContainer
+                       ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(text = uiState.error ?: "", color = MaterialTheme.colorScheme.error)
+                                TextButton(onClick = { viewModel.loadSales() }) { Text("Coba Lagi") }
                             }
-                        }
+                       }
                     }
 
                     uiState.sales.isEmpty() -> {
@@ -161,12 +127,9 @@ fun SalesHistoryScreen(
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(
-                                items = uiState.sales,
-                                key = { it.id }
-                            ) { sale ->
+                            items(items = uiState.sales, key = { it.id }) { sale ->
                                 SaleItem(
                                     sale = sale,
                                     onClick = { viewModel.loadReceipt(sale.id) },
@@ -217,60 +180,83 @@ fun SalesHistoryScreen(
 }
 
 @Composable
+private fun EmptyState(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, message: String) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(title, style = MaterialTheme.typography.titleLarge)
+        Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
 private fun SaleItem(
     sale: com.chibychibystore.data.local.entity.Penjualan,
     onClick: () -> Unit,
     dateFormat: SimpleDateFormat,
     currencyFormat: NumberFormat
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ChibyCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        elevation = 2
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
                 Text(
                     "Penjualan #${sale.id}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-
                 Text(
-                    currencyFormat.format(sale.totalAmount),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    dateFormat.format(sale.saleDate),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
             Text(
-                dateFormat.format(sale.saleDate),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                currencyFormat.format(sale.totalAmount),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = ChibyPinkPrimary
             )
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    "Metode: ${sale.paymentMethod.name}",
-                    style = MaterialTheme.typography.bodySmall
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                 Icon(Icons.Default.Payment, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                 Spacer(modifier = Modifier.width(4.dp))
+                 Text(
+                    "${sale.paymentMethod.name}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Lihat Struk", style = MaterialTheme.typography.labelMedium, color = ChibyPinkPrimary)
                 Icon(
-                    Icons.Default.Receipt,
-                    contentDescription = "Lihat Struk",
-                    tint = MaterialTheme.colorScheme.primary
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = ChibyPinkPrimary,
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
@@ -288,71 +274,49 @@ private fun ReceiptDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "Struk Penjualan #${saleWithItems.penjualan.id}",
-                style = MaterialTheme.typography.headlineSmall
-            )
-        },
+        title = { Text("Struk Penjualan #${saleWithItems.penjualan.id}") },
         text = {
             Column {
                 Text("Tanggal: ${dateFormat.format(saleWithItems.penjualan.saleDate)}")
-                Text("Metode Pembayaran: ${saleWithItems.penjualan.paymentMethod.name}")
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text("Items:", fontWeight = FontWeight.Bold)
-
+                Text("Metode: ${saleWithItems.penjualan.paymentMethod.name}")
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider()
                 LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
                     items(saleWithItems.items) { item ->
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("${item.quantity}x Item #${item.productId}")
-                            Text(currencyFormat.format(item.totalPrice))
+                            Text("${item.quantity}x Item", style = MaterialTheme.typography.bodySmall)
+                            Text(currencyFormat.format(item.totalPrice), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Total:", fontWeight = FontWeight.Bold)
+                    Text("Total", fontWeight = FontWeight.Bold)
                     Text(
                         currencyFormat.format(saleWithItems.penjualan.totalAmount),
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = ChibyPinkPrimary
                     )
                 }
             }
         },
         confirmButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = onPrintReceipt,
-                    enabled = !isPrinting
-                ) {
-                    if (isPrinting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                    } else {
-                        Icon(Icons.Default.Print, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                    Text(if (isPrinting) "Mencetak..." else "Cetak Struk")
-                }
-
-                TextButton(onClick = onDismiss) {
-                    Text("Tutup")
-                }
-            }
+            ChibyButton(
+                text = if (isPrinting) "Mencetak..." else "Cetak Struk",
+                onClick = onPrintReceipt,
+                isLoading = isPrinting,
+                enabled = !isPrinting
+            )
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Tutup") }
         }
     )
 }
@@ -365,24 +329,17 @@ private fun AppDatePickerDialog(
     initialDate: Date
 ) {
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDate.time)
-
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(
-                onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        onDateSelected(Date(millis))
-                    }
+            TextButton(onClick = {
+                datePickerState.selectedDateMillis?.let { millis ->
+                    onDateSelected(Date(millis))
                 }
-            ) {
-                Text("Oke")
-            }
+            }) { Text("Oke", color = ChibyPinkPrimary) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Batal")
-            }
+            TextButton(onClick = onDismiss) { Text("Batal") }
         }
     ) {
         DatePicker(state = datePickerState)

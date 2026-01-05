@@ -1,4 +1,4 @@
-package com.chibychibystore.ui.viewmodel
+package com.chibychibystore.ui.dashboard
 import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.lifecycle.ViewModel

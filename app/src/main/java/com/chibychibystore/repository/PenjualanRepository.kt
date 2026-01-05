@@ -78,11 +78,6 @@ class PenjualanRepository @Inject constructor(
      */
     suspend fun createPenjualan(penjualan: Penjualan, items: List<ItemPenjualan>): Result<PenjualanWithItems> {
         return try {
-            // Validasi data
-            if (items.isEmpty()) {
-                return Result.failure(ChibyChibyException.ValidationError("items", "Penjualan harus memiliki minimal 1 item"))
-            }
-
             // Hitung total amount dari items
             val totalAmount = items.sumOf { it.totalPrice }
             val penjualanWithTotal = penjualan.copy(totalAmount = totalAmount)

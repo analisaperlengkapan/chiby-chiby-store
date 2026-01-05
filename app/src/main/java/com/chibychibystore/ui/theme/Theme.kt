@@ -16,19 +16,19 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = ChibyPinkLight,
-    onPrimary = ChibyPinkDark,
+    primary = ChibyPinkPrimary,
+    onPrimary = White,
     primaryContainer = ChibyPinkDark,
     onPrimaryContainer = ChibyPinkLight,
     secondary = ChibyYellowSecondary,
-    onSecondary = ChibyYellowDark,
+    onSecondary = Black,
     secondaryContainer = ChibyYellowDark,
     onSecondaryContainer = ChibyYellowLight,
     tertiary = ChibyTeal,
     onTertiary = White,
     background = Neutral10,
     onBackground = Neutral90,
-    surface = Neutral10,
+    surface = Neutral20,
     onSurface = Neutral90,
     surfaceVariant = Neutral20,
     onSurfaceVariant = Neutral90,
@@ -40,12 +40,12 @@ private val LightColorScheme = lightColorScheme(
     primary = ChibyPinkPrimary,
     onPrimary = White,
     primaryContainer = ChibyPinkLight,
-    onPrimaryContainer = OnChibyPinkContainer,
+    onPrimaryContainer = ChibyPinkDark,
     secondary = ChibyYellowSecondary,
     onSecondary = Black,
     secondaryContainer = ChibyYellowLight,
-    onSecondaryContainer = OnChibyYellowContainer,
-    tertiary = ChibyTealDark,
+    onSecondaryContainer = ChibyYellowDark,
+    tertiary = ChibyTeal,
     onTertiary = White,
     background = Neutral99,
     onBackground = Neutral10,
@@ -54,7 +54,8 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = Neutral95,
     onSurfaceVariant = Neutral20,
     error = Error,
-    onError = White
+    onError = White,
+    outline = Neutral20
 )
 
 @Composable

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.service.ProductService
+import com.chibychibystore.error.ChibyChibyException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -183,49 +184,37 @@ class InventoryViewModel @Inject constructor(
                     // Setup reactive updates untuk real-time UI
                     observeProducts()
                 }.onFailure { exception ->
+                    val errorMessage = if (exception is ChibyChibyException) {
+                        exception.message
+                    } else {
+                        "Gagal memuat produk: ${exception.message}"
+                    }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = exception.message ?: "Gagal memuat produk"
+                        error = errorMessage
                     )
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "Terjadi kesalahan: ${e.message}"
+                    error = "Terjadi kesalahan sistem: ${e.message}"
                 )
             }
         }
     }
 
-    /**
-     * Observe perubahan produk secara real-time dengan reactive filtering
-     *
-     * **Reactive Flow:**
-     * 1. Subscribe ke ProductService.observeProducts() Flow
-     * 2. Terapkan client-side filtering berdasarkan searchQuery
-     * 3. Update UI state setiap kali ada perubahan
-     * 4. Handle errors dengan user-friendly messages
-     *
-     * **Filtering Logic:**
-     * - Jika searchQuery kosong: tampilkan semua produk
-     * - Jika ada query: filter berdasarkan nama atau barcode (case-insensitive)
-     * - Real-time filtering tanpa re-query ke database
-     *
-     * **Performance:**
-     * - Client-side filtering untuk instant search
-     * - collectLatest untuk skip intermediate updates
-     * - Error handling dengan catch operator
-     *
-     * **Memory Management:**
-     * - Lifecycle-aware melalui viewModelScope
-     * - Automatic cancellation saat ViewModel destroyed
-     */
     private fun observeProducts() {
         viewModelScope.launch {
             productService.observeProducts()
                 .catch { e ->
+                    // Handle flow exceptions
+                    val errorMessage = if (e is ChibyChibyException) {
+                        e.message
+                    } else {
+                        "Gagal mengamati perubahan produk: ${e.message}"
+                    }
                     _uiState.value = _uiState.value.copy(
-                        error = "Gagal mengamati perubahan produk: ${e.message}"
+                        error = errorMessage
                     )
                 }
                 .collectLatest { products ->
@@ -244,22 +233,6 @@ class InventoryViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Update search query dan trigger real-time filtering
-     *
-     * **Search Behavior:**
-     * - Instant filtering tanpa delay
-     * - Case-insensitive matching
-     * - Search pada nama produk dan barcode
-     * - Real-time updates melalui observeProducts()
-     *
-     * **Performance:**
-     * - Client-side filtering untuk responsiveness
-     * - Tidak ada database query untuk setiap keystroke
-     * - Efficient untuk large product catalogs
-     *
-     * @param query String pencarian baru (bisa kosong untuk clear search)
-     */
     fun updateSearchQuery(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
 
@@ -290,73 +263,6 @@ class InventoryViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Search produk berdasarkan query - ADVANCED SEARCH METHOD
-     *
-     * **Business Logic Flow:**
-     * 1. **Query Validation**: Check if query kosong (fallback ke loadProducts)
-     * 2. **State Preparation**: Set loading state, clear errors
-     * 3. **Service Search**: Call ProductService.searchProducts() dengan query
-     * 4. **State Update**: Update products list dengan search results
-     * 5. **Error Handling**: Comprehensive error handling dengan user feedback
-     *
-     * **Search Strategy:**
-     * - Server-side search untuk accuracy dan performance
-     * - Full-text search across product fields
-     * - Case-insensitive matching
-     * - Real-time results untuk instant feedback
-     *
-     * **State Management:**
-     * - Loading state selama search operation
-     * - Products list replacement dengan search results
-     * - Search query preservation untuk UI display
-     * - Error state untuk failure handling
-     *
-     * **Integration Points:**
-     * - ProductService.searchProducts() untuk advanced search
-     * - loadProducts() sebagai fallback untuk empty queries
-     * - InventoryScreen untuk search input binding
-     * - Error handling untuk user feedback
-     *
-     * **Performance Considerations:**
-     * - Async search untuk non-blocking UI
-     * - Server-side filtering untuk large datasets
-     * - Efficient state updates (minimal emissions)
-     * - Memory management untuk search results
-     *
-     * **Error Scenarios:**
-     * - Empty query (handled gracefully)
-     * - Search service failures
-     * - Network issues (though offline-first)
-     * - Invalid search syntax
-     *
-     * **UI Integration:**
-     * - Search input binding
-     * - Loading indicators selama search
-     * - Results display dengan highlighting
-     * - Error messages untuk failures
-     *
-     * **Usage Example:**
-     * ```kotlin
-     * // Search dari UI input
-     * viewModel.searchProducts("indomie")
-     *
-     * // Empty search fallback
-     * viewModel.searchProducts("") // Calls loadProducts()
-     *
-     * // Handle search state
-     * if (uiState.isLoading) showSearchLoading()
-     * ```
-     *
-     * @param query Search query string (nama produk, barcode, dll)
-     *
-     * @throws Exception jika ProductService.searchProducts gagal
-     *
-     * @see ProductService.searchProducts
-     * @see loadProducts
-     * @see InventoryUiState.searchQuery
-     * @see InventoryUiState.products
-     */
     fun searchProducts(query: String) {
         if (query.isBlank()) {
             loadProducts()
@@ -375,15 +281,20 @@ class InventoryViewModel @Inject constructor(
                         isLoading = false
                     )
                 }.onFailure { exception ->
+                    val errorMessage = if (exception is ChibyChibyException) {
+                        exception.message
+                    } else {
+                        "Gagal mencari produk: ${exception.message}"
+                    }
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = exception.message ?: "Gagal mencari produk"
+                        error = errorMessage
                     )
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "Terjadi kesalahan: ${e.message}"
+                    error = "Terjadi kesalahan sistem: ${e.message}"
                 )
             }
         }

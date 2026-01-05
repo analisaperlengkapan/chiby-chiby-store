@@ -7,7 +7,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.service.AuthService
 
-import com.chibychibystore.ui.screens.auth.LoginScreen
+import com.chibychibystore.ui.auth.LoginScreen
 
 import javax.inject.Inject
 

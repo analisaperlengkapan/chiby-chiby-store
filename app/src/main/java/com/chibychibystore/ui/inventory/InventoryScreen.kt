@@ -1,8 +1,4 @@
 package com.chibychibystore.ui.inventory
-import com.chibychibystore.data.local.entity.Produk
-import com.chibychibystore.ui.components.shared.AppTopBar
-import com.chibychibystore.ui.components.shared.ErrorMessage
-import com.chibychibystore.ui.components.shared.LoadingIndicator
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,8 +19,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.ui.components.shared.CardItem
+import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.ui.components.ChibyButton
+import com.chibychibystore.ui.components.ChibyCard
+import com.chibychibystore.ui.components.ChibyInput
+import com.chibychibystore.ui.components.ChibyScaffold
+import com.chibychibystore.ui.components.shared.LoadingIndicator
 import com.chibychibystore.ui.navigation.Screen
+import com.chibychibystore.ui.theme.ChibyPinkPrimary
+import com.chibychibystore.ui.theme.ChibyYellowSecondary
+import com.chibychibystore.ui.theme.Error
+import com.chibychibystore.ui.theme.Success
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,86 +39,69 @@ fun InventoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Scaffold(
-        topBar = {
-            AppTopBar(
-                title = "Inventory",
-                actions = {
-                    IconButton(onClick = { navController.navigate(Screen.ProductAdd.route) }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Product")
-                    }
-                }
-            )
-        }
+    ChibyScaffold(
+        title = "Inventory",
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { navController.navigate(Screen.ProductAdd.route) },
+                containerColor = ChibyPinkPrimary,
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add")
+            }
+        },
+        onNavigateUp = { navController.navigateUp() }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Search Bar
-            OutlinedTextField(
-                value = uiState.searchQuery,
-                onValueChange = viewModel::updateSearchQuery,
+            // Header Search
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("Cari produk...") },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = "Search")
-                },
-                singleLine = true
-            )
+                    .padding(16.dp)
+            ) {
+                ChibyInput(
+                    value = uiState.searchQuery,
+                    onValueChange = viewModel::updateSearchQuery,
+                    label = "Cari Produk...",
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = null, tint = ChibyPinkPrimary)
+                    }
+                )
+            }
 
             // Low Stock Alert
             if (uiState.lowStockProducts.isNotEmpty()) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
+                ChibyCard(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    containerColor = Error.copy(alpha = 0.1f),
+                    elevation = 0
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "${uiState.lowStockProducts.size} produk stok rendah",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
+                    Text(
+                        text = "⚠️ ${uiState.lowStockProducts.size} produk stok rendah",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Error,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
             // Content
             when {
-                uiState.isLoading -> {
-                    LoadingIndicator()
-                }
+                uiState.isLoading -> LoadingIndicator("Memuat inventory...")
                 uiState.error != null -> {
-                    androidx.compose.material3.Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        colors = androidx.compose.material3.CardDefaults.cardColors(
-                            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
-                            contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
-                        ),
-                        shape = androidx.compose.material3.MaterialTheme.shapes.medium
+                    ChibyCard(
+                        modifier = Modifier.padding(16.dp),
+                        containerColor = Error.copy(alpha = 0.1f)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            androidx.compose.material3.Text(text = uiState.error ?: "")
-                        }
+                        Text(
+                            text = uiState.error ?: "",
+                            color = Error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
                 }
                 uiState.products.isEmpty() -> {
@@ -142,10 +131,16 @@ private fun EmptyInventoryState(onAddProduct: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Icon(
+            Icons.Default.Inventory, 
+            contentDescription = null, 
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.outline
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Belum ada produk",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Medium
+            style = MaterialTheme.typography.titleLarge
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -154,11 +149,11 @@ private fun EmptyInventoryState(onAddProduct: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onAddProduct) {
-            Icon(Icons.Default.Add, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Tambah Produk")
-        }
+        ChibyButton(
+            text = "Tambah Produk",
+            onClick = onAddProduct,
+            modifier = Modifier.width(200.dp)
+        )
     }
 }
 
@@ -170,16 +165,10 @@ private fun ProductList(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(
-            items = products,
-            key = { it.id }
-        ) { product ->
-            ProductListItem(
-                product = product,
-                onClick = { onProductClick(product) }
-            )
+        items(items = products, key = { it.id }) { product ->
+            ProductListItem(product = product, onClick = { onProductClick(product) })
         }
     }
 }
@@ -189,88 +178,83 @@ private fun ProductListItem(
     product: Produk,
     onClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
+    ChibyCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        elevation = 2
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                if (product.barcode != null) {
                     Text(
-                        text = product.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = product.barcode,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (product.barcode != null) {
-                        Text(
-                            text = product.barcode,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
-
-                // Stock indicator
-                StockIndicator(stock = product.stockQuantity, minStock = product.minStock)
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            val isLowStock = product.stockQuantity <= product.minStock
+            val statusColor = if (isLowStock) Error else Success
+            val statusText = if (isLowStock) "Low Stock" else "In Stock"
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                color = statusColor.copy(alpha = 0.1f),
+                shape = MaterialTheme.shapes.small
             ) {
                 Text(
-                    text = "Rp ${product.sellingPrice}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                Text(
-                    text = "Stok: ${product.stockQuantity}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = statusText,
+                    color = statusColor,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
         }
-    }
-}
 
-@Composable
-private fun StockIndicator(stock: Int, minStock: Int) {
-    val isLowStock = stock <= minStock
-    val backgroundColor = if (isLowStock) {
-        MaterialTheme.colorScheme.error
-    } else {
-        MaterialTheme.colorScheme.primary
-    }
+        Spacer(modifier = Modifier.height(12.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        Spacer(modifier = Modifier.height(12.dp))
 
-    Box(
-        modifier = Modifier
-            .background(
-                color = backgroundColor,
-                shape = MaterialTheme.shapes.small
-            )
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        Text(
-            text = if (isLowStock) "Stok Rendah" else "Stok Normal",
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White,
-            fontWeight = FontWeight.Medium
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Harga Jual",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Rp ${product.sellingPrice}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = ChibyPinkPrimary
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "Stok",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "${product.stockQuantity} Unit",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
     }
 }

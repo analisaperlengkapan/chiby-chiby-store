@@ -2,7 +2,9 @@ package com.chibychibystore.service
 
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.util.Permissions
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -266,8 +268,8 @@ class ProductServiceImpl @Inject constructor(
      */
     override suspend fun createProduct(product: Produk): Result<Produk> {
         return try {
-            if (!authService.hasPermission("EDIT_INVENTORY")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
+            if (!authService.hasPermission(Permissions.EDIT_INVENTORY)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.EDIT_INVENTORY))
             }
             // Validasi input berdasarkan business rules
             validateProduct(product)
@@ -276,14 +278,14 @@ class ProductServiceImpl @Inject constructor(
             if (!product.barcode.isNullOrBlank()) {
                 val existingResult = productRepository.getProdukByBarcode(product.barcode)
                 if (existingResult.isSuccess && existingResult.getOrNull() != null) {
-                    return Result.failure(Exception("Barcode sudah digunakan oleh produk lain"))
+                    return Result.failure(ChibyChibyException.ValidationError("barcode", "Barcode sudah digunakan oleh produk lain"))
                 }
             }
 
             val createResult = productRepository.createProduk(product)
-            val createdProductId = createResult.getOrNull() ?: return Result.failure(createResult.exceptionOrNull() ?: Exception("Gagal membuat produk"))
+            val createdProductId = createResult.getOrNull() ?: return Result.failure(createResult.exceptionOrNull() ?: ChibyChibyException.DatabaseError("Gagal membuat produk"))
             val createdProductResult = productRepository.getProdukById(createdProductId)
-            val createdProduct = createdProductResult.getOrNull() ?: return Result.failure(createdProductResult.exceptionOrNull() ?: Exception("Gagal mengambil produk yang dibuat"))
+            val createdProduct = createdProductResult.getOrNull() ?: return Result.failure(createdProductResult.exceptionOrNull() ?: ChibyChibyException.DatabaseError("Gagal mengambil produk yang dibuat"))
             Result.success(createdProduct)
         } catch (e: Exception) {
             Result.failure(e)
@@ -292,8 +294,8 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun updateProduct(product: Produk): Result<Produk> {
         return try {
-            if (!authService.hasPermission("EDIT_INVENTORY")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
+            if (!authService.hasPermission(Permissions.EDIT_INVENTORY)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.EDIT_INVENTORY))
             }
             // Validasi input
             validateProduct(product)
@@ -304,15 +306,15 @@ class ProductServiceImpl @Inject constructor(
                 if (existingResult.isSuccess) {
                     val existing = existingResult.getOrNull()
                     if (existing != null && existing.id != product.id) {
-                        return Result.failure(Exception("Barcode sudah digunakan oleh produk lain"))
+                        return Result.failure(ChibyChibyException.ValidationError("barcode", "Barcode sudah digunakan oleh produk lain"))
                     }
                 }
             }
 
             val updateResult = productRepository.updateProduk(product)
-            if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: Exception("Gagal mengupdate produk"))
+            if (updateResult.isFailure) return Result.failure(updateResult.exceptionOrNull() ?: ChibyChibyException.DatabaseError("Gagal mengupdate produk"))
             val updatedProductResult = productRepository.getProdukById(product.id)
-            val updatedProduct = updatedProductResult.getOrNull() ?: return Result.failure(updatedProductResult.exceptionOrNull() ?: Exception("Gagal mengambil produk yang diupdate"))
+            val updatedProduct = updatedProductResult.getOrNull() ?: return Result.failure(updatedProductResult.exceptionOrNull() ?: ChibyChibyException.DatabaseError("Gagal mengambil produk yang diupdate"))
             Result.success(updatedProduct)
         } catch (e: Exception) {
             Result.failure(e)
@@ -321,11 +323,11 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun deleteProduct(id: String): Result<Unit> {
         return try {
-            if (!authService.hasPermission("EDIT_INVENTORY")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
+            if (!authService.hasPermission(Permissions.EDIT_INVENTORY)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.EDIT_INVENTORY))
             }
             val deleteResult = productRepository.deleteProduk(id.toLong())
-            if (deleteResult.isFailure) return Result.failure(deleteResult.exceptionOrNull() ?: Exception("Gagal menghapus produk"))
+            if (deleteResult.isFailure) return Result.failure(deleteResult.exceptionOrNull() ?: ChibyChibyException.DatabaseError("Gagal menghapus produk"))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -334,8 +336,8 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun getProduct(id: String): Result<Produk?> {
         return try {
-            if (!authService.hasPermission("VIEW_INVENTORY")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
+            if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.VIEW_INVENTORY))
             }
             val product = productRepository.getProdukById(id.toLong()).getOrNull()
             Result.success(product)
@@ -350,8 +352,8 @@ class ProductServiceImpl @Inject constructor(
         searchQuery: String?
     ): Result<List<Produk>> {
         return try {
-            if (!authService.hasPermission("VIEW_INVENTORY")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
+            if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.VIEW_INVENTORY))
             }
             val flow = when {
                 !searchQuery.isNullOrBlank() -> productRepository.searchProduk(searchQuery)
@@ -368,8 +370,8 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun searchProducts(query: String): Result<List<Produk>> {
         return try {
-            if (!authService.hasPermission("VIEW_INVENTORY")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
+            if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.VIEW_INVENTORY))
             }
             val products = productRepository.searchProduk(query).first()
             Result.success(products)
@@ -380,15 +382,15 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun updateStock(productId: String, newStock: Int): Result<Unit> {
         return try {
-            if (!authService.hasPermission("EDIT_INVENTORY")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk mengedit inventory"))
+            if (!authService.hasPermission(Permissions.EDIT_INVENTORY)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.EDIT_INVENTORY))
             }
             if (newStock < 0) {
-                return Result.failure(Exception("Stok tidak boleh negatif"))
+                return Result.failure(ChibyChibyException.ValidationError("stock", "Stok tidak boleh negatif"))
             }
 
             val stockUpdateResult = productRepository.updateStock(productId.toLong(), newStock)
-            if (stockUpdateResult.isFailure) return Result.failure(stockUpdateResult.exceptionOrNull() ?: Exception("Gagal memperbarui stok"))
+            if (stockUpdateResult.isFailure) return Result.failure(stockUpdateResult.exceptionOrNull() ?: ChibyChibyException.DatabaseError("Gagal memperbarui stok"))
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -397,8 +399,8 @@ class ProductServiceImpl @Inject constructor(
 
     override suspend fun getLowStockProducts(): Result<List<Produk>> {
         return try {
-            if (!authService.hasPermission("VIEW_INVENTORY")) {
-                return Result.failure(Exception("Tidak memiliki izin untuk melihat inventory"))
+            if (!authService.hasPermission(Permissions.VIEW_INVENTORY)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.VIEW_INVENTORY))
             }
             val products = productRepository.getLowStockProduk().first()
             Result.success(products)
@@ -406,7 +408,7 @@ class ProductServiceImpl @Inject constructor(
             Result.failure(e)
         }
     }
-
+    
     override fun observeProducts(): Flow<List<Produk>> {
         return productRepository.getAllProduk()
     }
@@ -422,36 +424,30 @@ class ProductServiceImpl @Inject constructor(
     /**
      * Validasi data produk berdasarkan business rules retail
      *
-     * **Validation Rules:**
-     * - Nama produk tidak boleh kosong/blank
-     * - Harga beli >= 0 (tidak boleh negatif)
-     * - Harga jual >= 0 (tidak boleh negatif)
-     * - Harga jual >= harga beli (untuk profitabilitas)
-     * - Stok awal >= 0 (tidak boleh negatif)
-     * - Minimum stok >= 0 (untak alert system)
-     *
-     * **Business Logic:**
-     * - Mencegah produk dengan harga jual < harga beli (rugi)
-     * - Memastikan stok selalu dalam range valid
-     * - Validasi nama untuk UI display
-     *
-     * **Error Types:**
-     * - IllegalArgumentException untuk business rule violations
-     * - Require() akan throw exception dengan message spesifik
-     *
      * @param product Produk yang akan divalidasi
-     * @throws IllegalArgumentException jika ada data yang tidak valid
+     * @throws ChibyChibyException.ValidationError jika ada data yang tidak valid
+     * @throws ChibyChibyException.BusinessLogicError jika melanggar business rule
      */
     private fun validateProduct(product: Produk) {
-        require(product.name.isNotBlank()) { "Nama produk tidak boleh kosong" }
-        require(product.costPrice >= 0) { "Harga beli tidak boleh negatif" }
-        require(product.sellingPrice >= 0) { "Harga jual tidak boleh negatif" }
-        require(product.stockQuantity >= 0) { "Stok tidak boleh negatif" }
-        require(product.minStock >= 0) { "Minimum stok tidak boleh negatif" }
+        if (product.name.isBlank()) {
+            throw ChibyChibyException.ValidationError("name", "Nama produk tidak boleh kosong")
+        }
+        if (product.costPrice < 0) {
+            throw ChibyChibyException.ValidationError("costPrice", "Harga beli tidak boleh negatif")
+        }
+        if (product.sellingPrice < 0) {
+            throw ChibyChibyException.ValidationError("sellingPrice", "Harga jual tidak boleh negatif")
+        }
+        if (product.stockQuantity < 0) {
+            throw ChibyChibyException.ValidationError("stockQuantity", "Stok tidak boleh negatif")
+        }
+        if (product.minStock < 0) {
+            throw ChibyChibyException.ValidationError("minStock", "Stok minimum tidak boleh negatif")
+        }
 
         // Business rule: harga jual harus >= harga beli untuk profit
         if (product.sellingPrice < product.costPrice) {
-            throw IllegalArgumentException("Harga jual tidak boleh lebih rendah dari harga beli")
+            throw ChibyChibyException.BusinessLogicError("Harga jual tidak boleh lebih rendah dari harga beli")
         }
     }
 }

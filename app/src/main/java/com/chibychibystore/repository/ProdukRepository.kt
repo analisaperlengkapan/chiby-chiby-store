@@ -95,9 +95,6 @@ class ProdukRepository @Inject constructor(
      */
     suspend fun createProduk(produk: Produk): Result<Long> {
         return try {
-            // Validasi input
-            validateProdukData(produk)
-
             // Check if barcode already exists (if provided)
             if (!produk.barcode.isNullOrBlank()) {
                 val existingProduk = produkDao.getProdukByBarcode(produk.barcode)
@@ -119,9 +116,6 @@ class ProdukRepository @Inject constructor(
      */
     suspend fun updateProduk(produk: Produk): Result<Unit> {
         return try {
-            // Validasi input
-            validateProdukData(produk)
-
             // Check if produk exists
             val existingProduk = produkDao.getProdukById(produk.id)
                 ?: return Result.failure(ChibyChibyException.DatabaseError("Produk tidak ditemukan"))
@@ -151,11 +145,11 @@ class ProdukRepository @Inject constructor(
             val produk = produkDao.getProdukById(id)
                 ?: return Result.failure(ChibyChibyException.DatabaseError("Produk tidak ditemukan"))
 
-            // Validate quantity
-            if (produk.stockQuantity + quantity < 0) {
-                return Result.failure(ChibyChibyException.ValidationError("quantity", "Stok tidak boleh negatif"))
-            }
-
+            // Validate quantity (optional: db will likely constrain non-negative if set, but we removed service check? No, Service check is stricter)
+            // Keeping basic repo check for safety if desired, or removing if Service guarantees it.
+            // Requirement was to remove validation from repo.
+            // Let's rely on Service or Database constraints.
+            
             produkDao.updateStock(id, quantity)
             Result.success(Unit)
 
@@ -164,6 +158,8 @@ class ProdukRepository @Inject constructor(
         }
     }
 
+    // ... deleteProduk, getProdukCount, getTotalStock ...
+    
     /**
      * Delete produk
      */
@@ -202,30 +198,6 @@ class ProdukRepository @Inject constructor(
             Result.success(total)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getTotalStock", e))
-        }
-    }
-
-    private fun validateProdukData(produk: Produk) {
-        if (produk.name.isBlank()) {
-            throw ChibyChibyException.ValidationError("name", "Nama produk tidak boleh kosong")
-        }
-        if (produk.name.length < 2) {
-            throw ChibyChibyException.ValidationError("name", "Nama produk minimal 2 karakter")
-        }
-        if (produk.costPrice < 0) {
-            throw ChibyChibyException.ValidationError("costPrice", "Harga beli tidak boleh negatif")
-        }
-        if (produk.sellingPrice < 0) {
-            throw ChibyChibyException.ValidationError("sellingPrice", "Harga jual tidak boleh negatif")
-        }
-        if (produk.sellingPrice < produk.costPrice) {
-            throw ChibyChibyException.ValidationError("sellingPrice", "Harga jual tidak boleh kurang dari harga beli")
-        }
-        if (produk.stockQuantity < 0) {
-            throw ChibyChibyException.ValidationError("stockQuantity", "Stok tidak boleh negatif")
-        }
-        if (produk.minStock < 0) {
-            throw ChibyChibyException.ValidationError("minStock", "Stok minimum tidak boleh negatif")
         }
     }
 }

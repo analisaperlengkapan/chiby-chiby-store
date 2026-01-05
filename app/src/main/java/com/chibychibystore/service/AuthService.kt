@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.security.MessageDigest
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.util.Permissions
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -480,12 +481,12 @@ class AuthServiceImpl @Inject constructor(
      */
     private fun hasManagerPermission(permission: String): Boolean {
         return when (permission) {
-            "VIEW_SALES_REPORTS",
-            "VIEW_FINANCIAL_REPORTS",
-            "APPROVE_LARGE_TRANSACTIONS",
-            "VIEW_INVENTORY",
-            "EDIT_INVENTORY",
-            "MANAGE_USERS" -> true
+            Permissions.VIEW_SALES_REPORTS,
+            Permissions.VIEW_FINANCIAL_REPORTS,
+            Permissions.APPROVE_LARGE_TRANSACTIONS,
+            Permissions.VIEW_INVENTORY,
+            Permissions.EDIT_INVENTORY,
+            Permissions.MANAGE_USERS -> true
             else -> false
         }
     }
@@ -503,10 +504,10 @@ class AuthServiceImpl @Inject constructor(
      */
     private fun hasCashierPermission(permission: String): Boolean {
         return when (permission) {
-            "CREATE_SALES",
-            "VIEW_INVENTORY",
-            "VIEW_DAILY_SALES_REPORT",
-            "VIEW_SALES_REPORTS" -> true
+            Permissions.CREATE_SALES,
+            Permissions.VIEW_INVENTORY,
+            Permissions.VIEW_DAILY_SALES_REPORT,
+            Permissions.VIEW_SALES_REPORTS -> true
             else -> false
         }
     }
@@ -526,11 +527,11 @@ class AuthServiceImpl @Inject constructor(
      */
     private fun hasWarehousePermission(permission: String): Boolean {
         return when (permission) {
-            "VIEW_INVENTORY",
-            "EDIT_INVENTORY",
-            "MANAGE_WAREHOUSES",
-            "PRINT_BARCODE_LABELS",
-            "VIEW_INVENTORY_REPORTS" -> true
+            Permissions.VIEW_INVENTORY,
+            Permissions.EDIT_INVENTORY,
+            Permissions.MANAGE_WAREHOUSES,
+            Permissions.PRINT_BARCODE_LABELS,
+            Permissions.VIEW_INVENTORY_REPORTS -> true
             else -> false
         }
     }

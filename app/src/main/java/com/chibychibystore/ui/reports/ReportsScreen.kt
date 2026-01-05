@@ -1,6 +1,7 @@
 package com.chibychibystore.ui.reports
 
 import android.content.Intent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -17,9 +18,11 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chibychibystore.R
 import com.chibychibystore.service.*
-import com.chibychibystore.ui.components.shared.AppTopBar
-// DatePickerDialog is provided by Material3
-// Chart components are in the same package, so no need to import them
+import com.chibychibystore.ui.components.ChibyScaffold
+import com.chibychibystore.ui.components.ChibyCard
+import com.chibychibystore.ui.components.ChibyInput
+
+import com.chibychibystore.ui.theme.ChibyPinkPrimary
 import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -67,28 +70,24 @@ fun ReportsScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            AppTopBar(
-                title = stringResource(R.string.reports_title),
-                navigationIcon = Icons.AutoMirrored.Filled.ArrowBack,
-                onNavigationClick = onNavigateBack,
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.exportCurrentReportToPdf() },
-                        enabled = !uiState.isExporting && uiState.reportData != null
-                    ) {
-                        if (uiState.isExporting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(Icons.Default.Download, contentDescription = "Export PDF")
-                        }
-                    }
+    ChibyScaffold(
+        title = stringResource(R.string.reports_title),
+        onNavigateUp = onNavigateBack,
+        actions = {
+            IconButton(
+                onClick = { viewModel.exportCurrentReportToPdf() },
+                enabled = !uiState.isExporting && uiState.reportData != null
+            ) {
+                if (uiState.isExporting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Icon(Icons.Default.Download, contentDescription = "Export PDF", tint = androidx.compose.ui.graphics.Color.White)
                 }
-            )
+            }
         }
     ) { padding ->
         Column(
@@ -112,7 +111,7 @@ fun ReportsScreen(
 
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = ChibyPinkPrimary)
                 }
             } else if (uiState.error != null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -154,11 +153,11 @@ private fun ReportTypeSelector(
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        OutlinedTextField(
+        ChibyInput(
             value = selectedType.displayName,
             onValueChange = {},
             readOnly = true,
-            label = { Text(stringResource(R.string.reports_select_type)) },
+            label = stringResource(R.string.reports_select_type),
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
@@ -169,7 +168,8 @@ private fun ReportTypeSelector(
 
         ExposedDropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            containerColor = MaterialTheme.colorScheme.surface
         ) {
             ReportType.values().forEach { type ->
                 DropdownMenuItem(
@@ -202,31 +202,35 @@ private fun DateRangeFilter(
             .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        OutlinedTextField(
-            value = startDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
-            onValueChange = {},
-            label = { Text(stringResource(R.string.reports_start_date)) },
-            readOnly = true,
-            modifier = Modifier.weight(1f),
-            trailingIcon = {
-                IconButton(onClick = { showStartDatePicker = true }) {
-                    Icon(Icons.Default.DateRange, contentDescription = "Select start date")
+        Box(modifier = Modifier.weight(1f)) {
+            ChibyInput(
+                value = startDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
+                onValueChange = {},
+                label = stringResource(R.string.reports_start_date),
+                readOnly = true,
+                modifier = Modifier.fillMaxWidth().clickable { showStartDatePicker = true },
+                trailingIcon = {
+                    IconButton(onClick = { showStartDatePicker = true }) {
+                        Icon(Icons.Default.DateRange, contentDescription = "Select start date", tint = ChibyPinkPrimary)
+                    }
                 }
-            }
-        )
+            )
+        }
 
-        OutlinedTextField(
-            value = endDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
-            onValueChange = {},
-            label = { Text(stringResource(R.string.reports_end_date)) },
-            readOnly = true,
-            modifier = Modifier.weight(1f),
-            trailingIcon = {
-                IconButton(onClick = { showEndDatePicker = true }) {
-                    Icon(Icons.Default.DateRange, contentDescription = "Select end date")
+        Box(modifier = Modifier.weight(1f)) {
+             ChibyInput(
+                value = endDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: "",
+                onValueChange = {},
+                label = stringResource(R.string.reports_end_date),
+                readOnly = true,
+                modifier = Modifier.fillMaxWidth().clickable { showEndDatePicker = true },
+                trailingIcon = {
+                    IconButton(onClick = { showEndDatePicker = true }) {
+                        Icon(Icons.Default.DateRange, contentDescription = "Select end date", tint = ChibyPinkPrimary)
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 
     if (showStartDatePicker) {
@@ -244,7 +248,7 @@ private fun DateRangeFilter(
                     }
                     showStartDatePicker = false
                 }) {
-                    Text(stringResource(R.string.common_ok))
+                    Text(stringResource(R.string.common_ok), color = ChibyPinkPrimary)
                 }
             },
             dismissButton = {
@@ -272,7 +276,7 @@ private fun DateRangeFilter(
                     }
                     showEndDatePicker = false
                 }) {
-                    Text(stringResource(R.string.common_ok))
+                    Text(stringResource(R.string.common_ok), color = ChibyPinkPrimary)
                 }
             },
             dismissButton = {
@@ -297,6 +301,7 @@ private fun GrossSalesReportScreen(data: GrossSalesReport?) {
             value = "Rp ${"%,.0f".format(data.totalSales)}",
             subtitle = "${data.totalTransactions} transaksi"
         )
+        Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Rata-rata per Transaksi",
             value = "Rp ${"%,.0f".format(data.averageTransaction)}"
@@ -312,14 +317,17 @@ private fun ProfitMarginReportScreen(data: ProfitMarginReport?) {
             title = "Total Pendapatan",
             value = "Rp ${"%,.0f".format(data.totalRevenue)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Total Biaya",
             value = "Rp ${"%,.0f".format(data.totalCost)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Laba Kotor",
             value = "Rp ${"%,.0f".format(data.grossProfit)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Margin Keuntungan",
             value = "${"%.1f".format(data.profitMargin)}%"
@@ -335,10 +343,12 @@ private fun NetProfitReportScreen(data: NetProfitReport?) {
             title = "Laba Kotor",
             value = "Rp ${"%,.0f".format(data.grossProfit)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Total Pengeluaran",
             value = "Rp ${"%,.0f".format(data.totalExpenses)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Laba Bersih",
             value = "Rp ${"%,.0f".format(data.netProfit)}",
@@ -403,18 +413,22 @@ private fun IncomeStatementReportScreen(data: IncomeStatement?) {
             title = "Pendapatan",
             value = "Rp ${"%,.0f".format(data.revenue)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Harga Pokok Penjualan",
             value = "Rp ${"%,.0f".format(data.costOfGoodsSold)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Laba Kotor",
             value = "Rp ${"%,.0f".format(data.grossProfit)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Beban Operasional",
             value = "Rp ${"%,.0f".format(data.operatingExpenses)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Laba Bersih",
             value = "Rp ${"%,.0f".format(data.netIncome)}"
@@ -430,18 +444,22 @@ private fun CashFlowReportScreen(data: CashFlow?) {
             title = "Arus Kas Operasional",
             value = "Rp ${"%,.0f".format(data.operatingCashFlow)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Arus Kas Investasi",
             value = "Rp ${"%,.0f".format(data.investingCashFlow)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Arus Kas Pendanaan",
             value = "Rp ${"%,.0f".format(data.financingCashFlow)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Arus Kas Bersih",
             value = "Rp ${"%,.0f".format(data.netCashFlow)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Saldo Akhir",
             value = "Rp ${"%,.0f".format(data.endingCash)}"
@@ -457,6 +475,7 @@ private fun ExpenseReportScreen(data: ExpenseReport?) {
             title = "Total Pengeluaran",
             value = "Rp ${"%,.0f".format(data.totalExpenses)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         if (data.expensesByCategory.isNotEmpty()) {
             val chartData = data.expensesByCategory.map {
                 val name = if (it.key is Enum<*>) (it.key as Enum<*>).name else it.key.toString()
@@ -478,14 +497,17 @@ private fun BalanceSheetReportScreen(data: BalanceSheet?) {
             title = "Total Aset",
             value = "Rp ${"%,.0f".format(data.assets)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Total Liabilitas",
             value = "Rp ${"%,.0f".format(data.liabilities)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Ekuitas",
             value = "Rp ${"%,.0f".format(data.equity)}"
         )
+         Spacer(modifier = Modifier.height(8.dp))
         MetricCard(
             title = "Nilai Inventaris",
             value = "Rp ${"%,.0f".format(data.inventoryValue)}"

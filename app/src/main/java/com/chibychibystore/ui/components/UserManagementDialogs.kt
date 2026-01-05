@@ -11,9 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
-import com.chibychibystore.ui.viewmodel.CreateUserFormState
-import com.chibychibystore.ui.viewmodel.EditUserFormState
-import com.chibychibystore.ui.viewmodel.ResetPasswordFormState
+import com.chibychibystore.ui.user.CreateUserFormState
+import com.chibychibystore.ui.user.EditUserFormState
+import com.chibychibystore.ui.user.ResetPasswordFormState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

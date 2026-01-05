@@ -9,6 +9,8 @@ import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.ProductService
 import com.chibychibystore.service.SaleService
+import com.chibychibystore.error.ChibyChibyException
+// import com.chibychibystore.util.Permissions
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -376,10 +378,16 @@ class PosViewModel @Inject constructor(
                         isSearching = false
                     )
                 } else {
+                    val exception = result.exceptionOrNull()
+                    val errorMessage = if (exception is ChibyChibyException) {
+                        exception.message
+                    } else {
+                        "Gagal mencari produk: ${exception?.message}"
+                    }
                     _uiState.value = _uiState.value.copy(
                         searchResults = emptyList(),
                         isSearching = false,
-                        error = result.exceptionOrNull()?.message ?: "Gagal mencari produk"
+                        error = errorMessage
                     )
                 }
             } catch (e: Exception) {
@@ -387,7 +395,7 @@ class PosViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(
                         searchResults = emptyList(),
                         isSearching = false,
-                        error = "Error: ${e.message}"
+                        error = "Terjadi kesalahan: ${e.message}"
                     )
                 }
             }
@@ -396,64 +404,6 @@ class PosViewModel @Inject constructor(
 
     /**
      * Tambah produk ke shopping cart dengan quantity handling
-     *
-     * **Business Logic Flow:**
-     * 1. **Duplicate Check**: Cek jika produk sudah ada di cart
-     * 2. **Quantity Update**: Jika sudah ada, tambah quantity
-     * 3. **New Item Addition**: Jika belum ada, buat CartItem baru
-     * 4. **Totals Recalculation**: Update subtotal, tax, discount, total
-     * 5. **State Update**: Emit new state untuk UI refresh
-     *
-     * **Cart Management Rules:**
-     * - Existing items: Quantity accumulation (1 + 1 = 2)
-     * - New items: Added dengan specified quantity
-     * - Stock validation: Tidak dilakukan di level cart (di payment time)
-     * - Price consistency: Menggunakan product.sellingPrice
-     *
-     * **State Management:**
-     * - Immutable cart updates (functional programming)
-     * - Automatic totals calculation
-     * - Reactive UI updates melalui StateFlow
-     * - Error clearing untuk user feedback
-     *
-     * **Business Constraints:**
-     * - Quantity harus > 0 (validated di CartItem constructor)
-     * - Product harus valid (dari search results)
-     * - No stock checking at cart level (optimistic approach)
-     * - Real-time totals untuk user feedback
-     *
-     * **Performance Considerations:**
-     * - O(n) cart search untuk existing items
-     * - Efficient list operations dengan immutable updates
-     * - Minimal state emissions untuk UI efficiency
-     * - Memory efficient untuk large carts
-     *
-     * **UI Integration:**
-     * - Triggers cart list updates
-     * - Updates totals display
-     * - Enables checkout button
-     * - Provides quantity feedback
-     *
-     * **Usage Example:**
-     * ```kotlin
-     * // Add single product
-     * viewModel.addProductToCart(selectedProduct)
-     *
-     * // Add multiple quantity
-     * viewModel.addProductToCart(selectedProduct, quantity = 3)
-     *
-     * // From barcode scan
-     * viewModel.addProductToCart(scannedProduct, quantity = 1)
-     * ```
-     *
-     * @param product Produk yang akan ditambahkan ke cart
-     * @param quantity Jumlah produk yang akan ditambahkan (default: 1)
-     *
-     * @throws IllegalArgumentException jika quantity <= 0 (via CartItem validation)
-     *
-     * @see CartItem
-     * @see updateCartTotals
-     * @see PosUiState.cartItems
      */
     fun addProductToCart(product: Produk, quantity: Int = 1) {
         val currentState = _uiState.value
@@ -479,69 +429,6 @@ class PosViewModel @Inject constructor(
         updateCartTotals(updatedCartItems)
     }
 
-    /**
-     * Update quantity produk di cart dengan validation
-     *
-     * **Business Logic Flow:**
-     * 1. **Item Lookup**: Cari item di cart berdasarkan productId
-     * 2. **Quantity Validation**: Validasi new quantity (0 = remove, >0 = update)
-     * 3. **Item Update**: Update quantity atau remove jika 0
-     * 4. **Totals Recalculation**: Update semua totals
-     * 5. **State Update**: Emit new state untuk UI refresh
-     *
-     * **Quantity Rules:**
-     * - quantity > 0: Update item quantity
-     * - quantity = 0: Remove item dari cart
-     * - quantity < 0: Invalid (tidak diizinkan)
-     *
-     * **Cart Management:**
-     * - Immutable updates (functional programming)
-     * - Automatic item removal untuk quantity 0
-     * - Efficient list operations
-     * - State consistency maintenance
-     *
-     * **Business Constraints:**
-     * - Item harus exist di cart
-     * - Quantity harus >= 0
-     * - No stock validation (optimistic approach)
-     * - Real-time totals untuk user feedback
-     *
-     * **Performance Considerations:**
-     * - O(n) cart search untuk item lookup
-     * - Efficient list operations dengan immutable updates
-     * - Minimal state emissions
-     * - Memory efficient untuk large carts
-     *
-     * **UI Integration:**
-     * - Triggers cart list updates
-     * - Updates totals display
-     * - Handles item removal animations
-     * - Provides quantity validation feedback
-     *
-     * **Error Handling:**
-     * - Item not found: Silent ignore (UI consistency)
-     * - Invalid quantity: Validation di UI level
-     * - State corruption: Automatic recovery
-     *
-     * **Usage Example:**
-     * ```kotlin
-     * // Increase quantity
-     * viewModel.updateCartItemQuantity(productId, 3)
-     *
-     * // Decrease quantity
-     * viewModel.updateCartItemQuantity(productId, 1)
-     *
-     * // Remove item
-     * viewModel.updateCartItemQuantity(productId, 0)
-     * ```
-     *
-     * @param productId ID produk yang akan diupdate
-     * @param newQuantity Quantity baru (0 untuk remove)
-     *
-     * @see CartItem.updateQuantity
-     * @see removeCartItem
-     * @see updateCartTotals
-     */
     fun updateCartItemQuantity(productId: Long, newQuantity: Int) {
         if (newQuantity <= 0) {
             removeCartItem(productId)
@@ -560,111 +447,12 @@ class PosViewModel @Inject constructor(
         updateCartTotals(updatedCartItems)
     }
 
-    /**
-     * Hapus produk dari cart
-     *
-     * **Business Logic Flow:**
-     * 1. **Item Removal**: Filter out item dari cart list
-     * 2. **Totals Recalculation**: Update semua totals
-     * 3. **State Update**: Emit new state untuk UI refresh
-     *
-     * **Cart Management:**
-     * - Immutable removal (functional programming)
-     * - Automatic totals recalculation
-     * - State consistency maintenance
-     * - Efficient list operations
-     *
-     * **Business Constraints:**
-     * - Item harus exist di cart (tidak error jika tidak ada)
-     * - No additional validation required
-     * - Real-time totals untuk user feedback
-     *
-     * **Performance Considerations:**
-     * - O(n) cart filtering
-     * - Efficient immutable operations
-     * - Minimal state emissions
-     * - Memory efficient
-     *
-     * **UI Integration:**
-     * - Triggers cart list updates
-     * - Updates totals display
-     * - Handles removal animations
-     * - Updates checkout availability
-     *
-     * **Error Handling:**
-     * - Item not found: Silent ignore (UI consistency)
-     * - State corruption: Automatic recovery
-     * - Concurrent modifications: StateFlow handles
-     *
-     * **Usage Example:**
-     * ```kotlin
-     * // Remove specific item
-     * viewModel.removeCartItem(productId)
-     *
-     * // From UI swipe action
-     * viewModel.removeCartItem(cartItem.productId)
-     * ```
-     *
-     * @param productId ID produk yang akan dihapus
-     *
-     * @see updateCartTotals
-     * @see PosUiState.cartItems
-     */
     fun removeCartItem(productId: Long) {
         val currentState = _uiState.value
         val updatedCartItems = currentState.cartItems.filter { it.product.id != productId }
         updateCartTotals(updatedCartItems)
     }
 
-    /**
-     * Clear semua items dari cart - reset ke state awal
-     *
-     * **Business Logic Flow:**
-     * 1. **Cart Reset**: Empty cart items list
-     * 2. **Totals Reset**: Reset semua totals ke 0
-     * 3. **State Reset**: Clear error/success messages
-     * 4. **UI Reset**: Emit clean state untuk UI refresh
-     *
-     * **Cart Management:**
-     * - Complete cart reset (functional programming)
-     * - State consistency maintenance
-     * - Clean slate untuk new transaction
-     * - Memory efficient (empty list)
-     *
-     * **Business Constraints:**
-     * - No validation required (always allowed)
-     * - Safe operation (no data loss concerns)
-     * - User-initiated action
-     *
-     * **Performance Considerations:**
-     * - O(1) operation (constant time)
-     * - Minimal state emissions
-     * - Memory efficient (empty collections)
-     * - Fast UI reset
-     *
-     * **UI Integration:**
-     * - Triggers complete cart refresh
-     * - Resets totals display
-     * - Disables checkout button
-     * - Clears all cart-related UI elements
-     *
-     * **Error Handling:**
-     * - No error conditions possible
-     * - State corruption: Automatic recovery
-     * - Concurrent modifications: StateFlow handles
-     *
-     * **Usage Example:**
-     * ```kotlin
-     * // Clear cart after transaction
-     * viewModel.clearCart()
-     *
-     * // Reset for new customer
-     * viewModel.clearCart()
-     * ```
-     *
-     * @see PosUiState.cartItems
-     * @see PosUiState.subtotal
-     */
     fun clearCart() {
         _uiState.value = _uiState.value.copy(
             cartItems = emptyList(),
@@ -677,84 +465,10 @@ class PosViewModel @Inject constructor(
         )
     }
 
-    /**
-     * Set metode pembayaran untuk transaksi
-     *
-     * **Business Logic:**
-     * - Update payment method di UI state
-     * - Validasi method (CASH/CARD) dilakukan di UI level
-     * - Reactive update untuk payment button display
-     *
-     * **State Management:**
-     * - Immediate state update
-     * - Triggers UI refresh untuk payment options
-     * - Maintains cart state consistency
-     *
-     * **Usage Example:**
-     * ```kotlin
-     * // Set cash payment
-     * viewModel.setPaymentMethod("CASH")
-     *
-     * // Set card payment
-     * viewModel.setPaymentMethod("CARD")
-     * ```
-     *
-     * @param method Payment method ("CASH" or "CARD")
-     *
-     * @see PosUiState.paymentMethod
-     * @see processPayment
-     */
     fun setPaymentMethod(method: String) {
         _uiState.value = _uiState.value.copy(paymentMethod = method)
     }
 
-    /**
-     * Set discount amount untuk transaksi
-     *
-     * **Business Logic Flow:**
-     * 1. **Discount Application**: Apply discount ke subtotal + tax
-     * 2. **Total Recalculation**: total = subtotal + tax - discount
-     * 3. **Minimum Total**: Ensure total tidak negatif (maxOf 0.0)
-     * 4. **State Update**: Emit new state dengan updated totals
-     *
-     * **Discount Rules:**
-     * - Discount applied after tax calculation
-     * - Total cannot be negative (floor at 0.0)
-     * - Real-time recalculation untuk user feedback
-     * - Percentage or fixed amount support
-     *
-     * **State Management:**
-     * - Immediate totals update
-     * - Reactive UI refresh
-     * - Maintains cart item integrity
-     * - Error state clearing
-     *
-     * **Business Constraints:**
-     * - Discount >= 0 (no negative discounts)
-     * - Total cannot be negative
-     * - Real-time validation
-     *
-     * **UI Integration:**
-     * - Triggers totals display update
-     * - Enables/disables payment based on total
-     * - Shows discount impact immediately
-     *
-     * **Usage Example:**
-     * ```kotlin
-     * // Apply 10% discount
-     * val discountAmount = subtotal * 0.1
-     * viewModel.setDiscount(discountAmount)
-     *
-     * // Apply fixed discount
-     * viewModel.setDiscount(5000.0)
-     * ```
-     *
-     * @param discount Discount amount (positive value)
-     *
-     * @see PosUiState.discount
-     * @see PosUiState.total
-     * @see updateCartTotals
-     */
     fun setDiscount(discount: Double) {
         val currentState = _uiState.value
         val newTotal = currentState.subtotal + currentState.tax - discount
@@ -764,93 +478,6 @@ class PosViewModel @Inject constructor(
         )
     }
 
-    /**
-     * Process payment dan create sale transaction - CORE BUSINESS METHOD
-     *
-     * **Business Logic Flow:**
-     * 1. **Validation**: Cek cart tidak kosong, payment method valid
-     * 2. **Transaction Creation**: Convert cart items ke SaleItems
-     * 3. **Sale Processing**: Create Penjualan dengan SaleService
-     * 4. **Inventory Update**: Automatic stock reduction via SaleService
-     * 5. **State Reset**: Clear cart, show success, enable receipt printing
-     * 6. **Error Handling**: Comprehensive error handling dengan user feedback
-     *
-     * **Transaction Processing:**
-     * - Atomic operation (all-or-nothing)
-     * - Inventory validation dan update
-     * - Sale record creation dengan audit trail
-     * - Cashier attribution untuk accountability
-     * - Payment method tracking
-     *
-     * **Business Rules:**
-     * - Cart tidak boleh kosong
-     * - Payment method harus valid (CASH/CARD)
-     * - Stock availability validation
-     * - Transaction timestamp recording
-     * - Cashier authentication required
-     *
-     * **State Management:**
-     * - Loading state selama processing
-     * - Success state dengan sale ID
-     * - Error state dengan descriptive messages
-     * - Receipt dialog trigger
-     * - Cart reset setelah success
-     *
-     * **Integration Points:**
-     * - SaleService.createSale() untuk transaction processing
-     * - Inventory automatic updates
-     * - Receipt printing preparation
-     * - UI state management untuk feedback
-     *
-     * **Performance Considerations:**
-     * - Async processing untuk non-blocking UI
-     * - Efficient cart-to-sale conversion
-     * - Minimal state emissions
-     * - Memory cleanup setelah transaction
-     *
-     * **Error Scenarios:**
-     * - Empty cart: Validation error
-     * - Insufficient stock: Business logic error
-     * - Database errors: Technical error
-     * - Network issues: Communication error
-     * - Concurrent modifications: State conflict
-     *
-     * **UI Integration:**
-     * - Payment button loading state
-     * - Success confirmation dialog
-     * - Receipt printing option
-     * - Cart reset untuk next transaction
-     * - Error message display
-     *
-     * **Audit Trail:**
-     * - Sale record dengan timestamp
-     * - Cashier attribution
-     * - Payment method logging
-     * - Transaction amount tracking
-     *
-     * **Usage Example:**
-     * ```kotlin
-     * // Process payment for current cashier
-     * viewModel.processPayment(currentCashierId)
-     *
-     * // After payment success
-     * if (uiState.completedSaleId != null) {
-     *     // Show receipt dialog
-     *     // Print receipt option
-     * }
-     * ```
-     *
-     * @param cashierId ID kasir yang memproses transaksi
-     *
-     * @throws ValidationError jika cart kosong
-     * @throws BusinessLogicError jika stock insufficient
-     * @throws DatabaseError jika transaction gagal
-     *
-     * @see SaleService.createSale
-     * @see PosUiState.isProcessingPayment
-     * @see PosUiState.completedSaleId
-     * @see printReceipt
-     */
     fun processPayment() {
         val currentState = _uiState.value
 
@@ -892,179 +519,33 @@ class PosViewModel @Inject constructor(
 
                 val result = saleService.createSale(sale, saleItems)
 
-                if (result.isSuccess) {
-                    val saleWithItems = result.getOrNull()
+                result.onSuccess { saleWithItems ->
                     _uiState.value = PosUiState(
                         successMessage = "Pembayaran berhasil diproses",
                         paymentMethod = currentState.paymentMethod,
-                        completedSaleId = saleWithItems?.penjualan?.id,
+                        completedSaleId = saleWithItems.penjualan.id,
                         showReceiptDialog = true
                     )
-                } else {
+                }.onFailure { exception ->
+                    val errorMessage = if (exception is ChibyChibyException) {
+                        exception.message
+                    } else {
+                        "Gagal memproses pembayaran: ${exception.message}"
+                    }
                     _uiState.value = currentState.copy(
                         isProcessingPayment = false,
-                        error = result.exceptionOrNull()?.message ?: "Gagal memproses pembayaran"
+                        error = errorMessage
                     )
                 }
             } catch (e: Exception) {
                 _uiState.value = currentState.copy(
                     isProcessingPayment = false,
-                    error = "Error: ${e.message}"
+                    error = "Terjadi kesalahan sistem: ${e.message}"
                 )
             }
         }
     }
 
-    /**
-     * Start barcode scanning mode
-     *
-     * **Business Logic:**
-     * - Enable camera scanning untuk barcode detection
-     * - Update UI state untuk show scanner overlay
-     * - Prepare untuk real-time barcode processing
-     *
-     * **Hardware Integration:**
-     * - Camera permission required
-     * - ZXing library untuk barcode detection
-     * - Real-time preview dengan overlay
-     *
-     * **State Management:**
-     * - Set isScanning = true
-     * - Triggers UI camera preview
-     * - Enables barcode processing
-     *
-     * **UI Integration:**
-     * - Show camera preview
-     * - Display scan instructions
-     * - Enable cancel scanning option
-     *
-     * **Usage Example:**
-     * ```kotlin
-     * // Start scanning from UI button
-     * viewModel.startScanning()
-     *
-     * // UI shows camera with overlay
-     * if (uiState.isScanning) {
-     *     CameraPreview()
-     * }
-     * ```
-     *
-     * @see stopScanning
-     * @see onBarcodeScanned
-     * @see PosUiState.isScanning
-     */
-    fun startScanning() {
-        _uiState.value = _uiState.value.copy(isScanning = true)
-    }
-
-    /**
-     * Stop barcode scanning mode
-     *
-     * **Business Logic:**
-     * - Disable camera scanning
-     * - Return to normal POS interface
-     * - Clear scanning state
-     *
-     * **Hardware Integration:**
-     * - Release camera resources
-     * - Stop barcode detection
-     * - Reset scanner state
-     *
-     * **State Management:**
-     * - Set isScanning = false
-     * - Triggers UI back to normal mode
-     * - Maintains cart state
-     *
-     * **UI Integration:**
-     * - Hide camera preview
-     * - Show normal POS interface
-     * - Reset scan instructions
-     *
-     * **Usage Example:**
-     * ```kotlin
-     * // Stop scanning from UI cancel button
-     * viewModel.stopScanning()
-     *
-     * // UI returns to normal POS view
-     * if (!uiState.isScanning) {
-     *     PosInterface()
-     * }
-     * ```
-     *
-     * @see startScanning
-     * @see PosUiState.isScanning
-     */
-    fun stopScanning() {
-        _uiState.value = _uiState.value.copy(isScanning = false)
-    }
-
-    /**
-     * Handle barcode scanning result - CORE SCANNING METHOD
-     *
-     * **Business Logic Flow:**
-     * 1. **Product Lookup**: Search product by exact barcode match
-     * 2. **Validation**: Check if product exists dengan barcode tersebut
-     * 3. **Cart Addition**: Add product to cart jika ditemukan
-     * 4. **State Update**: Update UI state dengan success/error feedback
-     * 5. **Scan Reset**: Stop scanning mode setelah processing
-     *
-     * **Barcode Processing:**
-     * - Exact barcode matching (case-sensitive)
-     * - Product search via ProductService
-     * - Support multiple barcode formats (EAN-13, Code 128, etc.)
-     * - Real-time processing untuk smooth UX
-     *
-     * **Business Rules:**
-     * - Barcode harus exact match
-     * - Product harus exist dan active
-     * - Automatic cart addition dengan quantity 1
-     * - Scan mode auto-stop setelah success/error
-     *
-     * **State Management:**
-     * - Loading state selama search
-     * - Success state dengan cart update
-     * - Error state dengan descriptive messages
-     * - Scan mode termination
-     *
-     * **Error Scenarios:**
-     * - Product not found: User-friendly error message
-     * - Search failure: Service error handling
-     * - Invalid barcode: Format validation
-     * - Network issues: Offline handling
-     *
-     * **UI Integration:**
-     * - Visual feedback untuk scan result
-     * - Automatic cart refresh
-     * - Error message display
-     * - Scan mode exit
-     *
-     * **Performance Considerations:**
-     * - Async processing untuk non-blocking UI
-     * - Efficient product search
-     * - Minimal state emissions
-     * - Fast barcode processing
-     *
-     * **Usage Example:**
-     * ```kotlin
-     * // From ZXing scanner callback
-     * viewModel.onBarcodeScanned("8991234567890")
-     *
-     * // Handle result in UI
-     * when {
-     *     uiState.error?.contains("barcode") == true -> showError()
-     *     cartItems.size > previousSize -> showSuccess()
-     * }
-     * ```
-     *
-     * @param barcode Detected barcode string dari scanner
-     *
-     * @throws ProductNotFound jika barcode tidak cocok dengan produk manapun
-     * @throws ServiceError jika product search gagal
-     *
-     * @see ProductService.searchProducts
-     * @see addProductToCart
-     * @see PosUiState.isScanning
-     */
     fun onBarcodeScanned(barcode: String) {
         viewModelScope.launch {
             try {
@@ -1087,9 +568,15 @@ class PosViewModel @Inject constructor(
                         )
                     }
                 } else {
+                    val exception = result.exceptionOrNull()
+                    val errorMessage = if (exception is ChibyChibyException) {
+                        exception.message
+                    } else {
+                        "Gagal mencari produk: ${exception?.message}"
+                    }
                     _uiState.value = _uiState.value.copy(
                         isScanning = false,
-                        error = "Gagal mencari produk dengan barcode"
+                        error = errorMessage
                     )
                 }
             } catch (e: Exception) {

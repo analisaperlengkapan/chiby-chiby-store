@@ -1,4 +1,4 @@
-package com.chibychibystore.ui.viewmodel
+package com.chibychibystore.ui.settings
 import com.chibychibystore.ui.components.shared.ErrorMessage
 
 import androidx.lifecycle.ViewModel

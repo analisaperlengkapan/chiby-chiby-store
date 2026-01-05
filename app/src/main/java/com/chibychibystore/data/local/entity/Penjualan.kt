@@ -13,7 +13,8 @@ import java.util.Date
     tableName = "penjualan",
     indices = [
         Index(value = ["saleDate"]),
-        Index(value = ["cashierId"])
+        Index(value = ["cashierId", "saleDate"]),
+        Index(value = ["paymentMethod"])
     ],
     foreignKeys = [
         ForeignKey(

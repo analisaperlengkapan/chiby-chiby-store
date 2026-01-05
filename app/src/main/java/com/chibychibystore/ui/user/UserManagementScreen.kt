@@ -1,4 +1,4 @@
-package com.chibychibystore.ui.screens
+package com.chibychibystore.ui.user
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,7 +18,6 @@ import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.ui.components.shared.*
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.UserManagementDialogs
-import com.chibychibystore.ui.viewmodel.UserManagementViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
