@@ -33,8 +33,7 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
         } else {
-            val dDate = date.toDate()
-            val totalPenjualan = saleRepository.getTotalCashReceipts(dDate, dDate).getOrNull() ?: 0.0
+            val totalPenjualan = saleRepository.getTotalCashReceipts(date, date).getOrNull() ?: 0.0
             val totalTransactions = saleRepository.getPenjualanCountByDateRange(date, date).getOrNull() ?: 0
             val avg = if (totalTransactions > 0) totalPenjualan / totalTransactions else 0.0
             Result.success(LaporanPenjualanHarian(date, totalPenjualan, totalTransactions, avg, emptyList()))
@@ -60,7 +59,7 @@ class ReportingServiceImpl @Inject constructor(
             val dStart = startDate.toDate()
             val dEnd = endDate.toDate()
 
-            val totalRevenue = saleRepository.getTotalRevenue(dStart, dEnd).getOrNull() ?: 0.0
+            val totalRevenue = saleRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
             val totalPengeluaran = expenseRepository.getTotalPengeluaranAmount(dStart, dEnd).getOrNull() ?: 0.0
 
             val purchases = purchaseRepository.getPurchasesInDateRange(startDate, endDate)
@@ -146,11 +145,8 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat data penjualan kotor"))
         } else {
-            val dStart = startDate.toDate()
-            val dEnd = endDate.toDate()
-
-            val totalPenjualan = saleRepository.getTotalCashReceipts(dStart, dEnd).getOrNull() ?: 0.0
-            val totalTransactions = saleRepository.getPenjualanCountNonRefunded(dStart, dEnd).getOrNull() ?: 0
+            val totalPenjualan = saleRepository.getTotalCashReceipts(startDate, endDate).getOrNull() ?: 0.0
+            val totalTransactions = saleRepository.getPenjualanCountNonRefunded(startDate, endDate).getOrNull() ?: 0
 
             val avg = if (totalTransactions > 0) totalPenjualan / totalTransactions else 0.0
             Result.success(LaporanPenjualanKotor(totalPenjualan, totalTransactions, avg))
@@ -163,10 +159,7 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission("VIEW_FINANCIAL_REPORTS")) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat margin keuntungan"))
         } else {
-            val dStart = startDate.toDate()
-            val dEnd = endDate.toDate()
-
-            val revenue = saleRepository.getTotalRevenue(dStart, dEnd).getOrNull() ?: 0.0
+            val revenue = saleRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
             val purchases = purchaseRepository.getPurchasesInDateRange(startDate, endDate)
             val costOfGoods = purchases.sumOf { it.totalAmount }
 

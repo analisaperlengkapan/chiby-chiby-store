@@ -75,9 +75,14 @@ class PenjualanRepository @Inject constructor(
      * Get penjualan in date range
      */
     suspend fun getSalesInDateRange(startDate: LocalDate, endDate: LocalDate): List<Penjualan> {
+        val (start, end) = getDateRange(startDate, endDate)
+        return penjualanDao.getPenjualanByRentangTanggal(start, end).first()
+    }
+
+    private fun getDateRange(startDate: LocalDate, endDate: LocalDate): Pair<Date, Date> {
         val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
         val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
-        return penjualanDao.getPenjualanByRentangTanggal(start, end).first()
+        return Pair(start, end)
     }
 
     /**
@@ -140,8 +145,7 @@ class PenjualanRepository @Inject constructor(
      */
     suspend fun getTotalPenjualanAmount(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
-            val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
-            val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+            val (start, end) = getDateRange(startDate, endDate)
             val total = penjualanDao.getTotalPenjualanAmount(start, end) ?: 0.0
             Result.success(total)
         } catch (e: Exception) {
@@ -154,8 +158,7 @@ class PenjualanRepository @Inject constructor(
      */
     suspend fun getPenjualanCountByDateRange(startDate: LocalDate, endDate: LocalDate): Result<Int> {
         return try {
-            val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
-            val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+            val (start, end) = getDateRange(startDate, endDate)
             val count = penjualanDao.getPenjualanCountByDateRange(start, end)
             Result.success(count)
         } catch (e: Exception) {
@@ -163,33 +166,43 @@ class PenjualanRepository @Inject constructor(
         }
     }
 
-    suspend fun getTotalCashReceipts(startDate: Date, endDate: Date): Result<Double> {
+    /**
+     * Get total cash receipts (non-refunded total amount)
+     */
+    suspend fun getTotalCashReceipts(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
-             // Reusing the wrapper that takes LocalDate? No, converting Date to LocalDate is annoying.
-             // But existing method takes LocalDate.
-             // Let's implement directly or forward.
-             // Actually, ReportingServiceImpl passes Date to this method (because I didn't verify .toDate removal for this call? No, ReportingService getGrossSales uses .toDate()).
-             // So inputs are Date.
-             // But getTotalPenjualanAmount takes LocalDate.
-             // Let's overload it or convert.
-             val localStart = startDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-             val localEnd = endDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-             getTotalPenjualanAmount(localStart, localEnd)
+            val (start, end) = getDateRange(startDate, endDate)
+            val total = penjualanDao.getTotalCashReceipts(start, end) ?: 0.0
+            Result.success(total)
         } catch (e: Exception) {
-             Result.failure(e)
+            Result.failure(ChibyChibyException.DatabaseError("getTotalCashReceipts", e))
         }
     }
 
-    suspend fun getTotalRevenue(startDate: Date, endDate: Date): Result<Double> = getTotalCashReceipts(startDate, endDate)
+    /**
+     * Get total revenue (non-refunded total amount minus tax)
+     */
+    suspend fun getTotalRevenue(startDate: LocalDate, endDate: LocalDate): Result<Double> {
+        return try {
+            val (start, end) = getDateRange(startDate, endDate)
+            val total = penjualanDao.getTotalRevenue(start, end) ?: 0.0
+            Result.success(total)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getTotalRevenue", e))
+        }
+    }
 
-    suspend fun getPenjualanCountNonRefunded(startDate: Date, endDate: Date): Result<Int> {
-         return try {
-             val localStart = startDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-             val localEnd = endDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-             getPenjualanCountByDateRange(localStart, localEnd) // Assumption: all valid sales count
-         } catch (e: Exception) {
-             Result.failure(e)
-         }
+    /**
+     * Get count of non-refunded sales
+     */
+    suspend fun getPenjualanCountNonRefunded(startDate: LocalDate, endDate: LocalDate): Result<Int> {
+        return try {
+            val (start, end) = getDateRange(startDate, endDate)
+            val count = penjualanDao.getPenjualanCountNonRefunded(start, end)
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getPenjualanCountNonRefunded", e))
+        }
     }
 
     /**
