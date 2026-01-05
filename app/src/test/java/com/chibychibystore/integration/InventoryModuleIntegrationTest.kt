@@ -53,7 +53,7 @@ class InventoryModuleIntegrationTest : BaseTest() {
 
         // Setup repositories
         gudangRepository = GudangRepository(database.gudangDao())
-        kategoriRepository = KategoriRepository(database.kategoriDao())
+        kategoriRepository = KategoriRepository(database.kategoriDao(), database.produkDao())
         produkRepository = ProdukRepository(database.produkDao())
 
         // Setup services
