@@ -1,6 +1,7 @@
 package com.chibychibystore.repository
 
 import com.chibychibystore.data.local.dao.PemasokDao
+import com.chibychibystore.data.local.dao.PembelianDao
 import com.chibychibystore.data.local.entity.Pemasok
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
@@ -13,7 +14,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class PemasokRepository @Inject constructor(
-    private val pemasokDao: PemasokDao
+    private val pemasokDao: PemasokDao,
+    private val pembelianDao: PembelianDao
 ) {
 
     /**
@@ -87,9 +89,11 @@ class PemasokRepository @Inject constructor(
             val pemasok = pemasokDao.getPemasokById(id)
                 ?: return Result.failure(ChibyChibyException.DatabaseError("Pemasok tidak ditemukan"))
 
-            // Check if pemasok is used by purchases (business rule)
-            // This would require checking PembelianDao, but for now we'll allow deletion
-            // In a full implementation, you'd check for foreign key constraints
+            // Check if pemasok is used by purchases
+            val purchaseCount = pembelianDao.countPembelianByPemasok(id)
+            if (purchaseCount > 0) {
+                return Result.failure(ChibyChibyException.DatabaseError("Pemasok tidak dapat dihapus karena memiliki riwayat pembelian"))
+            }
 
             pemasokDao.deletePemasokById(id)
             Result.success(Unit)
