@@ -63,10 +63,7 @@ class WarehouseServiceImpl @Inject constructor(
                 return Result.failure(Exception("Tidak memiliki izin untuk menghapus gudang"))
             }
             
-            val productsInGudang = productRepository.getProdukByGudang(id).first()
-            if (productsInGudang.isNotEmpty()) {
-                return Result.failure(Exception("Tidak dapat menghapus gudang yang masih memiliki product"))
-            }
+            // Logic validation is handled in Repository
 
             val deleteResult = warehouseRepository.deleteGudang(id)
             if (deleteResult is Result.Failure) return Result.failure(deleteResult.exception)

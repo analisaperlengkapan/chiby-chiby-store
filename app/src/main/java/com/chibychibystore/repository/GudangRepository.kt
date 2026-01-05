@@ -1,6 +1,7 @@
 package com.chibychibystore.repository
 
 import com.chibychibystore.data.local.dao.GudangDao
+import com.chibychibystore.data.local.dao.ProdukDao
 import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
@@ -13,7 +14,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class GudangRepository @Inject constructor(
-    private val gudangDao: GudangDao
+    private val gudangDao: GudangDao,
+    private val produkDao: ProdukDao
 ) {
 
     /**
@@ -111,8 +113,10 @@ class GudangRepository @Inject constructor(
                 ?: return Result.failure(ChibyChibyException.DatabaseError("Gudang tidak ditemukan"))
 
             // Check if gudang is used by products (business rule)
-            // This would require checking ProdukDao, but for now we'll allow deletion
-            // In a full implementation, you'd check for foreign key constraints
+            val productCount = produkDao.countProdukByGudang(id)
+            if (productCount > 0) {
+                return Result.failure(ChibyChibyException.BusinessLogicError("Gudang tidak dapat dihapus karena masih digunakan oleh produk"))
+            }
 
             gudangDao.deleteGudangById(id)
             Result.success(Unit)

@@ -216,6 +216,32 @@ class WarehouseViewModel @Inject constructor(
     }
 
     /**
+     * Delete warehouse
+     */
+    fun deleteWarehouse(warehouseId: Long) {
+        viewModelScope.launch {
+            _isLoading.update { true }
+            clearMessages()
+            try {
+                val result = warehouseService.deleteGudang(warehouseId)
+                result.onSuccess {
+                    _successMessage.update { "Gudang berhasil dihapus" }
+                    // If deleted warehouse was selected, deselect it
+                    if (_selectedWarehouseId.value == warehouseId) {
+                        _selectedWarehouseId.update { null }
+                    }
+                }.onFailure { e ->
+                    _error.update { e.message ?: "Gagal menghapus gudang" }
+                }
+            } catch (e: Exception) {
+                _error.update { "Terjadi kesalahan: ${e.message}" }
+            } finally {
+                _isLoading.update { false }
+            }
+        }
+    }
+
+    /**
      * Clear messages
      */
     fun clearError() {
