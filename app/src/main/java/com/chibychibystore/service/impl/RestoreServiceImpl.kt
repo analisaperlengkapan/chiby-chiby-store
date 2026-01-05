@@ -8,6 +8,7 @@ import com.chibychibystore.service.RestoreProgress
 import androidx.security.crypto.MasterKey
 import com.chibychibystore.data.backup.BackupData
 import com.chibychibystore.repository.*
+import androidx.room.withTransaction
 import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -290,18 +291,18 @@ class RestoreServiceImpl @Inject constructor(
         for (sale in sales) {
             try {
                 val saleItems = items.filter { it.saleId == sale.id }
-                val result = saleRepository.createPenjualan(sale, saleItems)
-                if (result is com.chibychibystore.data.model.Result.Success) {
-                    count++
+
+                database.withTransaction {
+                    val result = saleRepository.createPenjualan(sale, saleItems)
+                    if (result is com.chibychibystore.data.model.Result.Failure) {
+                        throw result.exception
+                    }
                 }
+                count++
             } catch (e: Exception) {
                 // Log error but continue
             }
         }
-
-        // Items are created with sale if using createPenjualan(sale, items)
-        // If createPenjualan doesn't handle items, we need to insert them separately
-        // Assuming createPenjualan handles transaction and inserts both.
 
         return count
     }
@@ -311,21 +312,26 @@ class RestoreServiceImpl @Inject constructor(
         for (purchase in purchases) {
             try {
                 val purchaseItems = items.filter { it.purchaseId == purchase.id }
-                val result = purchaseRepository.createPembelian(purchase)
-                
-                if (result is com.chibychibystore.data.model.Result.Success) {
-                    val createdPurchaseId = result.data.id
-                    
-                    purchaseItems.forEach { item ->
-                        try {
-                           val newItem = item.copy(purchaseId = createdPurchaseId, id = 0)
-                           purchaseItemRepository.createItemPembelian(newItem)
-                        } catch (e: Exception) {
-                            // Log error
+
+                database.withTransaction {
+                    val result = purchaseRepository.createPembelian(purchase)
+
+                    if (result is com.chibychibystore.data.model.Result.Success) {
+                        val createdPurchaseId = result.data.id
+
+                        val newItems = purchaseItems.map { it.copy(purchaseId = createdPurchaseId, id = 0) }
+
+                        if (newItems.isNotEmpty()) {
+                            val itemsResult = purchaseItemRepository.createItemPembelianList(newItems)
+                            if (itemsResult is com.chibychibystore.data.model.Result.Failure) {
+                                throw itemsResult.exception
+                            }
                         }
+                    } else {
+                        throw result.exceptionOrNull() ?: Exception("Failed to create purchase")
                     }
-                    count++
                 }
+                count++
             } catch (e: Exception) {
                 // Log error but continue
             }
