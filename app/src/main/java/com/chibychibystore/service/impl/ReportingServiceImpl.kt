@@ -233,17 +233,17 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan per kategori"))
         } else {
-            val dStart = startDate.toDate()
-            val dEnd = endDate.toDate()
-
             val byKategori = mutableMapOf<Long, Triple<Int, Double, Double>>()
-            val sales = saleRepository.getSalesInDateRange(startDate, endDate)
-            val salesFiltered = sales.filter { !it.isRefunded }
+            val salesWithItems = saleRepository.getSalesWithItemsInDateRange(startDate, endDate)
+            val salesFiltered = salesWithItems.filter { !it.penjualan.isRefunded }
 
-            salesFiltered.forEach { sale ->
-                val items = saleItemRepository.getItemsByPenjualanId(sale.id).first()
-                items.forEach { item ->
-                    val prod = productRepository.getProduk(item.productId)
+            // Pre-fetch all products to avoid N+1 query
+            val productIds = salesFiltered.flatMap { it.items }.map { it.productId }.distinct()
+            val productsMap = productRepository.getProdukByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+
+            salesFiltered.forEach { saleWithItems ->
+                saleWithItems.items.forEach { item ->
+                    val prod = productsMap[item.productId]
                     val catId = prod?.categoryId ?: -1L
                     val cost = (prod?.costPrice ?: 0.0) * item.quantity
                     val cur = byKategori[catId] ?: Triple(0, 0.0, 0.0)
@@ -271,15 +271,20 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat tren penjualan"))
         } else {
+            val allSales = saleRepository.getSalesInDateRange(startDate, endDate)
+            val salesByDate = allSales
+                .filter { !it.isRefunded }
+                .groupBy {
+                    it.saleDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+                }
+
             val days = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate).toInt()
             val trend = mutableListOf<DataTren>()
             for (i in 0..days) {
                 val day = startDate.plusDays(i.toLong())
-                val dDay = day.toDate()
-                val sales = saleRepository.getSalesInDateRange(day, day)
-                val salesFiltered = sales.filter { !it.isRefunded }
-                val total = salesFiltered.sumOf { it.totalAmount }
-                val tx = salesFiltered.size
+                val salesForDay = salesByDate[day] ?: emptyList()
+                val total = salesForDay.sumOf { it.totalAmount }
+                val tx = salesForDay.size
                 trend.add(DataTren(tanggal = day, penjualan = total, transaksi = tx))
             }
             Result.success(trend)
@@ -295,14 +300,18 @@ class ReportingServiceImpl @Inject constructor(
             val start = date.withDayOfMonth(1)
             val end = date
 
-            val sales = saleRepository.getSalesInDateRange(start, end)
-            val salesFiltered = sales.filter { !it.isRefunded }
-            val revenue = salesFiltered.sumOf { it.totalAmount }
+            val salesWithItems = saleRepository.getSalesWithItemsInDateRange(start, end)
+            val salesFiltered = salesWithItems.filter { !it.penjualan.isRefunded }
+            val revenue = salesFiltered.sumOf { it.penjualan.totalAmount }
+
+            // Pre-fetch all products
+            val productIds = salesFiltered.flatMap { it.items }.map { it.productId }.distinct()
+            val productsMap = productRepository.getProdukByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+
             var cogs = 0.0
-            salesFiltered.forEach { sale ->
-                val items = saleItemRepository.getItemsByPenjualanId(sale.id).first()
-                items.forEach { item ->
-                    val prod = productRepository.getProduk(item.productId)
+            salesFiltered.forEach { saleWithItems ->
+                saleWithItems.items.forEach { item ->
+                    val prod = productsMap[item.productId]
                     cogs += (prod?.costPrice ?: 0.0) * item.quantity
                 }
             }

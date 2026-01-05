@@ -79,6 +79,14 @@ class PenjualanRepository @Inject constructor(
         return penjualanDao.getPenjualanByRentangTanggal(start, end).first()
     }
 
+    /**
+     * Get penjualan with items in date range
+     */
+    suspend fun getSalesWithItemsInDateRange(startDate: LocalDate, endDate: LocalDate): List<PenjualanWithItems> {
+        val (start, end) = getDateRange(startDate, endDate)
+        return penjualanDao.getPenjualanWithItemsByRentangTanggal(start, end).first()
+    }
+
     private fun getDateRange(startDate: LocalDate, endDate: LocalDate): Pair<Date, Date> {
         val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
         val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
