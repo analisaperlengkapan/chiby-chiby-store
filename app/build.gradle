@@ -72,7 +72,6 @@ android {
                 exclude '**/service/ProductServiceTest.*'
                 exclude '**/service/ExpenseServiceTest.*'
                 exclude '**/service/PdfExportServiceTest.*'
-                exclude '**/service/BarcodeServiceTest.*'
                 exclude '**/service/CashManagementServiceTest.*'
                 exclude '**/service/DataSeedingServiceTest.*'
                 exclude '**/service/BackupServiceTest.*'
@@ -123,7 +122,6 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         exclude('**/service/ProductServiceTest.*')
         exclude('**/service/ExpenseServiceTest.*')
         exclude('**/service/PdfExportServiceTest.*')
-        exclude('**/service/BarcodeServiceTest.*')
         exclude('**/service/CashManagementServiceTest.*')
         exclude('**/service/DataSeedingServiceTest.*')
         exclude('**/service/BackupServiceTest.*')
