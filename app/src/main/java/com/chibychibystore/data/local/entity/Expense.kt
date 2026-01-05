@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 import java.util.Date
 
 /**
- * Enum untuk kategori pengeluaran retail
+ * Enum for expense categories
  */
 @Serializable
 enum class ExpenseCategory(val displayName: String) {
@@ -49,20 +49,20 @@ enum class ExpenseCategory(val displayName: String) {
     ],
     foreignKeys = [
         ForeignKey(
-            entity = Pengguna::class,
+            entity = User::class,
             parentColumns = ["id"],
             childColumns = ["approvedBy"],
             onDelete = ForeignKey.SET_NULL
         ),
         ForeignKey(
-            entity = Pengguna::class,
+            entity = User::class,
             parentColumns = ["id"],
             childColumns = ["createdBy"],
             onDelete = ForeignKey.CASCADE
         )
     ]
 )
-data class Pengeluaran(
+data class Expense(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     @Serializable(with = DateSerializer::class)

@@ -10,38 +10,38 @@ import java.util.Date
 
 @Serializable
 @Entity(
-    tableName = "produk",
+    tableName = "pembelian",
     indices = [
-        Index(value = ["barcode"], unique = true),
-        Index(value = ["categoryId"]),
-        Index(value = ["warehouseId"])
+        Index(value = ["purchaseDate"]),
+        Index(value = ["supplierId"]),
+        Index(value = ["receivedBy"]),
+        Index(value = ["invoiceNumber"], unique = true)
     ],
     foreignKeys = [
         ForeignKey(
-            entity = Kategori::class,
+            entity = Supplier::class,
             parentColumns = ["id"],
-            childColumns = ["categoryId"],
-            onDelete = ForeignKey.CASCADE
+            childColumns = ["supplierId"],
+            onDelete = ForeignKey.RESTRICT
         ),
         ForeignKey(
-            entity = Gudang::class,
+            entity = User::class,
             parentColumns = ["id"],
-            childColumns = ["warehouseId"],
-            onDelete = ForeignKey.CASCADE
+            childColumns = ["receivedBy"],
+            onDelete = ForeignKey.SET_NULL
         )
     ]
 )
-data class Produk(
+data class Purchase(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val name: String,
-    val barcode: String? = null,
-    val categoryId: Long,
-    val costPrice: Double,
-    val sellingPrice: Double,
-    val stockQuantity: Int = 0,
-    val warehouseId: Long,
-    val minStock: Int = 0,
+    @Serializable(with = DateSerializer::class)
+    val purchaseDate: Date = Date(),
+    val supplierId: Long,
+    val invoiceNumber: String,
+    val totalAmount: Double,
+    val notes: String? = null,
+    val receivedBy: Long? = null,
     @Serializable(with = DateSerializer::class)
     val createdAt: Date = Date(),
     @Serializable(with = DateSerializer::class)

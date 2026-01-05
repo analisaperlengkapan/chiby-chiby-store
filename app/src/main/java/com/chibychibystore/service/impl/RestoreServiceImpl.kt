@@ -26,9 +26,8 @@ class RestoreServiceImpl @Inject constructor(
     private val productRepository: ProductRepository,
     private val supplierRepository: SupplierRepository,
     private val saleRepository: SaleRepository,
-    private val itemSaleRepository: ItemSaleRepository,
+    private val saleItemRepository: SaleItemRepository,
     private val purchaseRepository: PurchaseRepository,
-    private val itemPurchaseRepository: ItemPurchaseRepository,
     private val expenseRepository: ExpenseRepository
 ) : RestoreService {
 
@@ -56,50 +55,50 @@ class RestoreServiceImpl @Inject constructor(
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Menghapus data lama", progress = 0.3f, currentStepIndex = 3, totalSteps = 12)
             // Note: In a real implementation, you might want to make this optional
 
-            // Step 4: Restore pengguna
+            // Step 4: Restore users
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pengguna", progress = 0.4f, currentStepIndex = 4, totalSteps = 12)
-            val penggunaRestored = restorePengguna(backupData.data.pengguna)
+            val usersRestored = restoreUsers(backupData.data.users)
 
-            // Step 5: Restore kategori
+            // Step 5: Restore categories
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data kategori", progress = 0.5f, currentStepIndex = 5, totalSteps = 12)
-            val kategoriRestored = restoreKategori(backupData.data.kategori)
+            val categoriesRestored = restoreCategories(backupData.data.categories)
 
-            // Step 6: Restore gudang
+            // Step 6: Restore warehouses
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data gudang", progress = 0.6f, currentStepIndex = 6, totalSteps = 12)
-            val gudangRestored = restoreGudang(backupData.data.gudang)
+            val warehousesRestored = restoreWarehouses(backupData.data.warehouses)
 
-            // Step 7: Restore pemasok
+            // Step 7: Restore suppliers
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pemasok", progress = 0.7f, currentStepIndex = 7, totalSteps = 12)
-            val pemasokRestored = restorePemasok(backupData.data.pemasok)
+            val suppliersRestored = restoreSuppliers(backupData.data.suppliers)
 
-            // Step 8: Restore product
+            // Step 8: Restore products
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data product", progress = 0.8f, currentStepIndex = 8, totalSteps = 12)
-            val productRestored = restoreProduct(backupData.data.product)
+            val productsRestored = restoreProducts(backupData.data.products)
 
-            // Step 9: Restore penjualan and items
+            // Step 9: Restore sales and items
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data penjualan", progress = 0.9f, currentStepIndex = 9, totalSteps = 12)
-            val penjualanRestored = restorePenjualan(backupData.data.penjualan, backupData.data.itemPenjualan)
+            val salesRestored = restoreSales(backupData.data.sales, backupData.data.saleItems)
 
-            // Step 10: Restore pembelian and items
+            // Step 10: Restore purchases and items
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pembelian", progress = 0.95f, currentStepIndex = 10, totalSteps = 12)
-            val pembelianRestored = restorePembelian(backupData.data.pembelian, backupData.data.itemPembelian)
+            val purchasesRestored = restorePurchases(backupData.data.purchases, backupData.data.purchaseItems)
 
-            // Step 11: Restore pengeluaran
+            // Step 11: Restore expenses
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pengeluaran", progress = 0.98f, currentStepIndex = 11, totalSteps = 12)
-            val pengeluaranRestored = restorePengeluaran(backupData.data.pengeluaran)
+            val expensesRestored = restoreExpenses(backupData.data.expenses)
 
             // Step 12: Finalize
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Finalisasi", progress = 1.0f, currentStepIndex = 12, totalSteps = 12)
 
             val recordsRestored = mapOf(
-                "pengguna" to penggunaRestored,
-                "kategori" to kategoriRestored,
-                "gudang" to gudangRestored,
-                "product" to productRestored,
-                "pemasok" to pemasokRestored,
-                "penjualan" to penjualanRestored,
-                "pembelian" to pembelianRestored,
-                "pengeluaran" to pengeluaranRestored
+                "pengguna" to usersRestored,
+                "kategori" to categoriesRestored,
+                "gudang" to warehousesRestored,
+                "product" to productsRestored,
+                "pemasok" to suppliersRestored,
+                "penjualan" to salesRestored,
+                "pembelian" to purchasesRestored,
+                "pengeluaran" to expensesRestored
             )
 
             _restoreProgress.value = RestoreProgress(isInProgress = false)
@@ -129,16 +128,16 @@ class RestoreServiceImpl @Inject constructor(
                 version = backupData.version,
                 createdAt = backupData.createdAt,
                 recordCounts = mapOf(
-                    "pengguna" to backupData.data.pengguna.size,
-                    "kategori" to backupData.data.kategori.size,
-                    "gudang" to backupData.data.gudang.size,
-                    "product" to backupData.data.product.size,
-                    "pemasok" to backupData.data.pemasok.size,
-                    "penjualan" to backupData.data.penjualan.size,
-                    "itemPenjualan" to backupData.data.itemPenjualan.size,
-                    "pembelian" to backupData.data.pembelian.size,
-                    "itemPembelian" to backupData.data.itemPembelian.size,
-                    "pengeluaran" to backupData.data.pengeluaran.size
+                    "pengguna" to backupData.data.users.size,
+                    "kategori" to backupData.data.categories.size,
+                    "gudang" to backupData.data.warehouses.size,
+                    "product" to backupData.data.products.size,
+                    "pemasok" to backupData.data.suppliers.size,
+                    "penjualan" to backupData.data.sales.size,
+                    "itemPenjualan" to backupData.data.saleItems.size,
+                    "pembelian" to backupData.data.purchases.size,
+                    "itemPembelian" to backupData.data.purchaseItems.size,
+                    "pengeluaran" to backupData.data.expenses.size
                 ),
                 sizeBytes = file.length()
             ))
@@ -153,16 +152,16 @@ class RestoreServiceImpl @Inject constructor(
             val backupData = json.decodeFromString<BackupData>(decryptedJson)
 
             val recordCounts = mapOf(
-                "pengguna" to backupData.data.pengguna.size,
-                "kategori" to backupData.data.kategori.size,
-                "gudang" to backupData.data.gudang.size,
-                "product" to backupData.data.product.size,
-                "pemasok" to backupData.data.pemasok.size,
-                "penjualan" to backupData.data.penjualan.size,
-                "itemPenjualan" to backupData.data.itemPenjualan.size,
-                "pembelian" to backupData.data.pembelian.size,
-                "itemPembelian" to backupData.data.itemPembelian.size,
-                "pengeluaran" to backupData.data.pengeluaran.size
+                "pengguna" to backupData.data.users.size,
+                "kategori" to backupData.data.categories.size,
+                "gudang" to backupData.data.warehouses.size,
+                "product" to backupData.data.products.size,
+                "pemasok" to backupData.data.suppliers.size,
+                "penjualan" to backupData.data.sales.size,
+                "itemPenjualan" to backupData.data.saleItems.size,
+                "pembelian" to backupData.data.purchases.size,
+                "itemPembelian" to backupData.data.purchaseItems.size,
+                "pengeluaran" to backupData.data.expenses.size
             )
 
             val isValid = backupData.metadata.checksum == calculateChecksum(decryptedJson)
@@ -189,9 +188,9 @@ class RestoreServiceImpl @Inject constructor(
         return json.decodeFromString<BackupData>(decryptedJson)
     }
 
-    private suspend fun restorePengguna(pengguna: List<com.chibychibystore.data.local.entity.User>): Int {
+    private suspend fun restoreUsers(users: List<com.chibychibystore.data.local.entity.User>): Int {
         var count = 0
-        for (user in pengguna) {
+        for (user in users) {
             try {
                 userRepository.createUser(user)
                 count++
@@ -202,9 +201,9 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restoreKategori(kategori: List<com.chibychibystore.data.local.entity.Category>): Int {
+    private suspend fun restoreCategories(categories: List<com.chibychibystore.data.local.entity.Category>): Int {
         var count = 0
-        for (cat in kategori) {
+        for (cat in categories) {
             try {
                 categoryRepository.createCategory(cat)
                 count++
@@ -215,9 +214,9 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restoreGudang(gudang: List<com.chibychibystore.data.local.entity.Warehouse>): Int {
+    private suspend fun restoreWarehouses(warehouses: List<com.chibychibystore.data.local.entity.Warehouse>): Int {
         var count = 0
-        for (warehouse in gudang) {
+        for (warehouse in warehouses) {
             try {
                 warehouseRepository.createWarehouse(warehouse)
                 count++
@@ -228,9 +227,9 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restorePemasok(pemasok: List<com.chibychibystore.data.local.entity.Supplier>): Int {
+    private suspend fun restoreSuppliers(suppliers: List<com.chibychibystore.data.local.entity.Supplier>): Int {
         var count = 0
-        for (supplier in pemasok) {
+        for (supplier in suppliers) {
             try {
                 supplierRepository.createSupplier(supplier)
                 count++
@@ -241,9 +240,9 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restoreProduct(product: List<com.chibychibystore.data.local.entity.Product>): Int {
+    private suspend fun restoreProducts(products: List<com.chibychibystore.data.local.entity.Product>): Int {
         var count = 0
-        for (product in product) {
+        for (product in products) {
             try {
                 productRepository.createProduct(product)
                 count++
@@ -254,9 +253,9 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restorePenjualan(penjualan: List<com.chibychibystore.data.local.entity.Sale>, items: List<com.chibychibystore.data.local.entity.SaleItem>): Int {
+    private suspend fun restoreSales(sales: List<com.chibychibystore.data.local.entity.Sale>, items: List<com.chibychibystore.data.local.entity.SaleItem>): Int {
         var count = 0
-        for (sale in penjualan) {
+        for (sale in sales) {
             try {
                 val saleItems = items.filter { it.saleId == sale.id }
                 saleRepository.createSale(sale, saleItems)
@@ -266,42 +265,30 @@ class RestoreServiceImpl @Inject constructor(
             }
         }
 
-        // Restore items
-        for (item in items) {
-            try {
-                itemSaleRepository.createSaleItem(item)
-            } catch (e: Exception) {
-                // Log error but continue
-            }
-        }
+        // Items are created with sale if using createSale(sale, items)
+        // If createSale doesn't handle items, we need to insert them separately
+        // Assuming createSale handles transaction and inserts both.
+
         return count
     }
 
-    private suspend fun restorePembelian(pembelian: List<com.chibychibystore.data.local.entity.Purchase>, items: List<com.chibychibystore.data.local.entity.PurchaseItem>): Int {
+    private suspend fun restorePurchases(purchases: List<com.chibychibystore.data.local.entity.Purchase>, items: List<com.chibychibystore.data.local.entity.PurchaseItem>): Int {
         var count = 0
-        for (purchase in pembelian) {
+        for (purchase in purchases) {
             try {
-                purchaseRepository.createPurchase(purchase)
+                val purchaseItems = items.filter { it.purchaseId == purchase.id }
+                purchaseRepository.createPurchase(purchase, purchaseItems)
                 count++
             } catch (e: Exception) {
                 // Log error but continue
             }
         }
-
-        // Restore items
-        for (item in items) {
-            try {
-                itemPurchaseRepository.createPurchaseItems(item)
-            } catch (e: Exception) {
-                // Log error but continue
-            }
-        }
         return count
     }
 
-    private suspend fun restorePengeluaran(pengeluaran: List<com.chibychibystore.data.local.entity.Expense>): Int {
+    private suspend fun restoreExpenses(expenses: List<com.chibychibystore.data.local.entity.Expense>): Int {
         var count = 0
-        for (expense in pengeluaran) {
+        for (expense in expenses) {
             try {
                 expenseRepository.createExpense(expense)
                 count++

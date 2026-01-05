@@ -1,6 +1,6 @@
 package com.chibychibystore.service
 
-import com.chibychibystore.data.local.entity.Pengeluaran
+import com.chibychibystore.data.local.entity.Expense
 import com.chibychibystore.data.model.Result
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
@@ -19,12 +19,12 @@ interface ExpenseService {
     /**
      * Membuat pengeluaran baru
      */
-    suspend fun createExpense(expense: Pengeluaran): Result<Pengeluaran>
+    suspend fun createExpense(expense: Expense): Result<Expense>
     
     /**
      * Update pengeluaran existing
      */
-    suspend fun updateExpense(expense: Pengeluaran): Result<Pengeluaran>
+    suspend fun updateExpense(expense: Expense): Result<Expense>
     
     /**
      * Menghapus pengeluaran
@@ -34,7 +34,7 @@ interface ExpenseService {
     /**
      * Mendapatkan pengeluaran berdasarkan ID
      */
-    suspend fun getExpense(id: Long): Result<Pengeluaran?>
+    suspend fun getExpense(id: Long): Result<Expense?>
     
     /**
      * Mendapatkan semua pengeluaran dengan filter
@@ -44,7 +44,7 @@ interface ExpenseService {
         startDate: LocalDate? = null,
         endDate: LocalDate? = null,
         category: String? = null
-    ): Result<List<Pengeluaran>>
+    ): Result<List<Expense>>
     
     /**
      * Mendapatkan total pengeluaran dalam periode
@@ -59,10 +59,10 @@ interface ExpenseService {
     /**
      * Observable untuk pengeluaran
      */
-    fun observeExpenses(): Flow<List<Pengeluaran>>
+    fun observeExpenses(): Flow<List<Expense>>
     
     /**
      * Observable untuk pengeluaran berdasarkan kategori
      */
-    fun observeExpensesByCategory(category: String): Flow<List<Pengeluaran>>
+    fun observeExpensesByCategory(category: String): Flow<List<Expense>>
 }

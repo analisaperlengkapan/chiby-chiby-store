@@ -14,7 +14,7 @@ import java.util.Date
         Index(value = ["name"])
     ]
 )
-data class Pemasok(
+data class Supplier(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,

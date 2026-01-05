@@ -1,6 +1,6 @@
 package com.chibychibystore.service
 
-import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.User
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.Flow
  *
  * @author Chiby Chiby Store Development Team
  * @since 1.0.0
- * @see Pengguna
+ * @see User
  * @see com.chibychibystore.data.local.entity.Role
  * @see ChibyChibyException
  */
@@ -41,7 +41,7 @@ interface AuthService {
      *
      * @param username Username yang akan login (tidak boleh kosong)
      * @param password Password dalam plain text (akan di-hash dengan SHA-256)
-     * @return Result yang berisi [Pengguna] jika berhasil, atau exception jika gagal
+     * @return Result yang berisi [User] jika berhasil, atau exception jika gagal
      *
      * @throws ChibyChibyException.ValidationError jika username/password kosong
      * @throws ChibyChibyException.AuthenticationError jika credentials salah
@@ -57,7 +57,7 @@ interface AuthService {
      * }
      * ```
      */
-    suspend fun login(username: String, password: String): Result<Pengguna>
+    suspend fun login(username: String, password: String): Result<User>
 
     /**
      * Melakukan logout untuk current user
@@ -74,9 +74,9 @@ interface AuthService {
     /**
      * Mendapatkan user yang sedang login saat ini
      *
-     * @return [Pengguna] yang sedang login, atau null jika tidak ada user yang login
+     * @return [User] yang sedang login, atau null jika tidak ada user yang login
      */
-    suspend fun getCurrentUser(): Pengguna?
+    suspend fun getCurrentUser(): User?
 
     /**
      * Mengecek apakah current user memiliki permission tertentu
@@ -118,9 +118,9 @@ interface AuthService {
      * Flow ini akan emit user saat ini setiap kali terjadi perubahan.
      * Berguna untuk reactive UI updates.
      *
-     * @return Flow yang emit [Pengguna] atau null
+     * @return Flow yang emit [User] atau null
      */
-    fun observeCurrentUser(): Flow<Pengguna?>
+    fun observeCurrentUser(): Flow<User?>
 
     /**
      * Menginisialisasi session dari data tersimpan saat aplikasi start

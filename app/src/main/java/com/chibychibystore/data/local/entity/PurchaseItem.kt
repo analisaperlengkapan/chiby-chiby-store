@@ -15,20 +15,20 @@ import kotlinx.serialization.Serializable
     ],
     foreignKeys = [
         ForeignKey(
-            entity = Pembelian::class,
+            entity = Purchase::class,
             parentColumns = ["id"],
             childColumns = ["purchaseId"],
             onDelete = ForeignKey.CASCADE
         ),
         ForeignKey(
-            entity = Produk::class,
+            entity = Product::class,
             parentColumns = ["id"],
             childColumns = ["productId"],
             onDelete = ForeignKey.CASCADE
         )
     ]
 )
-data class ItemPembelian(
+data class PurchaseItem(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val purchaseId: Long,
