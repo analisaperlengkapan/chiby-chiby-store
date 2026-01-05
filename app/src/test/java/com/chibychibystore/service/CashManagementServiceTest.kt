@@ -1,7 +1,7 @@
 package com.chibychibystore.service
 
 import com.chibychibystore.data.Result
-import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.repository.PengeluaranRepository
@@ -11,10 +11,12 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.mockito.ArgumentMatchers
 import org.mockito.Mock
 import org.mockito.Mockito.*
 import org.mockito.MockitoAnnotations
 import java.time.LocalDate
+import java.util.Date
 
 @ExperimentalCoroutinesApi
 class CashManagementServiceTest {
@@ -39,7 +41,7 @@ class CashManagementServiceTest {
     private val testExpense = Pengeluaran(
         id = 1,
         expenseDate = java.util.Date(),
-        category = ExpenseCategory.UTILITIES,
+        category = KategoriPengeluaran.UTILITIES,
         amount = 50000.0,
         description = "Test expense",
         approvedBy = 1,
@@ -62,7 +64,8 @@ class CashManagementServiceTest {
         val expenses = listOf(testExpense)
 
         `when`(saleRepository.getSalesInDateRange(startDate, endDate)).thenReturn(sales)
-        `when`(expenseRepository.getExpensesInDateRange(startDate, endDate)).thenReturn(expenses)
+        // Using any() because matching Date ranges in mockito can be tricky with type conversion
+        `when`(expenseRepository.getPengeluaransByDateRangeList(ArgumentMatchers.any(Date::class.java), ArgumentMatchers.any(Date::class.java))).thenReturn(expenses)
 
         // When
         val result = cashManagementService.calculateOperatingCashFlow(startDate, endDate)
@@ -81,7 +84,7 @@ class CashManagementServiceTest {
         val endDate = LocalDate.now()
 
         `when`(saleRepository.getSalesInDateRange(startDate, endDate)).thenReturn(emptyList())
-        `when`(expenseRepository.getExpensesInDateRange(startDate, endDate)).thenReturn(emptyList())
+        `when`(expenseRepository.getPengeluaransByDateRangeList(ArgumentMatchers.any(Date::class.java), ArgumentMatchers.any(Date::class.java))).thenReturn(emptyList())
 
         // When
         val result = cashManagementService.calculateOperatingCashFlow(startDate, endDate)
@@ -92,15 +95,50 @@ class CashManagementServiceTest {
     }
 
     @Test
+    fun `calculateFinancingCashFlow should return correct calculation`() = runTest {
+        // Given
+        val startDate = LocalDate.now().minusDays(30)
+        val endDate = LocalDate.now()
+        val financingExpense = Pengeluaran(
+            id = 2,
+            expenseDate = java.util.Date(),
+            category = KategoriPengeluaran.LOAN_REPAYMENT,
+            amount = 25000.0,
+            description = "Loan Repayment",
+            createdBy = 1
+        )
+        val expenses = listOf(testExpense, financingExpense)
+
+        `when`(expenseRepository.getPengeluaransByDateRangeList(ArgumentMatchers.any(Date::class.java), ArgumentMatchers.any(Date::class.java))).thenReturn(expenses)
+
+        // When
+        val result = cashManagementService.calculateFinancingCashFlow(startDate, endDate)
+
+        // Then
+        assertTrue(result is Result.Success)
+        val financingCashFlow = (result as Result.Success).data
+        // Financing Cash Flow should be negative of sum of financing expenses
+        assertEquals(-25000.0, financingCashFlow, 0.01)
+    }
+
+    @Test
     fun `getCashFlowSummary should return complete summary`() = runTest {
         // Given
         val startDate = LocalDate.now().minusDays(30)
         val endDate = LocalDate.now()
+        val financingExpense = Pengeluaran(
+            id = 2,
+            expenseDate = java.util.Date(),
+            category = KategoriPengeluaran.LOAN_REPAYMENT,
+            amount = 10000.0,
+            description = "Loan Repayment",
+            createdBy = 1
+        )
         val sales = listOf(testSale)
-        val expenses = listOf(testExpense)
+        val expenses = listOf(testExpense, financingExpense)
 
         `when`(saleRepository.getSalesInDateRange(startDate, endDate)).thenReturn(sales)
-        `when`(expenseRepository.getExpensesInDateRange(startDate, endDate)).thenReturn(expenses)
+        `when`(expenseRepository.getPengeluaransByDateRangeList(ArgumentMatchers.any(Date::class.java), ArgumentMatchers.any(Date::class.java))).thenReturn(expenses)
 
         // When
         val result = cashManagementService.getCashFlowSummary(startDate, endDate)
@@ -109,9 +147,10 @@ class CashManagementServiceTest {
         assertTrue(result is Result.Success)
         val summary = (result as Result.Success).data
         assertEquals(50000.0, summary.operatingCashFlow, 0.01)
-        assertEquals(0.0, summary.investingCashFlow, 0.01) // Not implemented yet
-        assertEquals(0.0, summary.financingCashFlow, 0.01) // Not implemented yet
-        assertEquals(50000.0, summary.netCashFlow, 0.01)
+        assertEquals(0.0, summary.investingCashFlow, 0.01)
+        assertEquals(-10000.0, summary.financingCashFlow, 0.01)
+        // Net = Operating + Investing + Financing = 50000 + 0 - 10000 = 40000
+        assertEquals(40000.0, summary.netCashFlow, 0.01)
     }
 
     @Test
