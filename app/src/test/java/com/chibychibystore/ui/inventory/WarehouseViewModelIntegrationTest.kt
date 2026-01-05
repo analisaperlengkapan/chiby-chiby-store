@@ -7,7 +7,7 @@ import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.repository.GudangRepository
 import com.chibychibystore.repository.ProdukRepository
-import com.chibychibystore.service.WarehouseServiceImpl
+import com.chibychibystore.service.impl.WarehouseServiceImpl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher

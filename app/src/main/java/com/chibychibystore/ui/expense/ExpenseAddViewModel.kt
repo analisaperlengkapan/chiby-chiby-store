@@ -25,7 +25,7 @@ data class ExpenseAddUiState(
 )
 
 /**
- * ViewModel untuk menambah pengeluaran baru
+ * ViewModel untuk menambah expense baru
  */
 @HiltViewModel
 class ExpenseAddViewModel @Inject constructor(
@@ -40,7 +40,7 @@ class ExpenseAddViewModel @Inject constructor(
     }
 
     /**
-     * Update jumlah pengeluaran
+     * Update jumlah expense
      */
     fun updateAmount(amount: String) {
         _uiState.value = _uiState.value.copy(amount = amount)
@@ -48,7 +48,7 @@ class ExpenseAddViewModel @Inject constructor(
     }
 
     /**
-     * Update kategori pengeluaran
+     * Update kategori expense
      */
     fun updateCategory(category: ExpenseCategory) {
         _uiState.value = _uiState.value.copy(selectedCategory = category)
@@ -56,7 +56,7 @@ class ExpenseAddViewModel @Inject constructor(
     }
 
     /**
-     * Update tanggal pengeluaran
+     * Update tanggal expense
      */
     fun updateDate(date: Date) {
         _uiState.value = _uiState.value.copy(expenseDate = date)
@@ -64,7 +64,7 @@ class ExpenseAddViewModel @Inject constructor(
     }
 
     /**
-     * Update deskripsi pengeluaran
+     * Update deskripsi expense
      */
     fun updateDescription(description: String) {
         _uiState.value = _uiState.value.copy(description = description)
@@ -86,7 +86,7 @@ class ExpenseAddViewModel @Inject constructor(
     }
 
     /**
-     * Simpan pengeluaran
+     * Simpan expense
      */
     fun saveExpense(onSuccess: () -> Unit) {
         if (!_uiState.value.isFormValid) return
@@ -98,15 +98,15 @@ class ExpenseAddViewModel @Inject constructor(
                 val state = _uiState.value
                 val amount = state.amount.toDoubleOrNull() ?: 0.0
                 val expenseDate = state.expenseDate ?: run {
-                    _uiState.value = _uiState.value.copy(error = "Tanggal pengeluaran tidak valid", isLoading = false)
+                    _uiState.value = _uiState.value.copy(error = "Tanggal expense tidak valid", isLoading = false)
                     return@launch
                 }
                 val category = state.selectedCategory ?: run {
-                    _uiState.value = _uiState.value.copy(error = "Kategori harus dipilih", isLoading = false)
+                    _uiState.value = _uiState.value.copy(error = "Category harus dipilih", isLoading = false)
                     return@launch
                 }
 
-                val pengeluaran = com.chibychibystore.data.local.entity.Pengeluaran(
+                val expense = com.chibychibystore.data.local.entity.Expense(
                     expenseDate = java.util.Date.from(expenseDate.toInstant()),
                     category = category,
                     amount = amount,
@@ -115,13 +115,13 @@ class ExpenseAddViewModel @Inject constructor(
                     createdBy = 0L // createdBy will be set by service/auth layer if needed
                 )
 
-                val result = expenseService.createExpense(pengeluaran)
+                val result = expenseService.createExpense(expense)
 
                 if (result.isSuccess) {
                     onSuccess()
                 } else {
                     _uiState.value = _uiState.value.copy(
-                        error = result.exceptionOrNull()?.message ?: "Gagal menyimpan pengeluaran",
+                        error = result.exceptionOrNull()?.message ?: "Gagal menyimpan expense",
                         isLoading = false
                     )
                 }

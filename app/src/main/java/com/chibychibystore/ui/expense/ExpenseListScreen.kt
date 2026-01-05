@@ -25,7 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.ui.components.shared.*
 import com.chibychibystore.data.local.entity.ExpenseCategory
-import com.chibychibystore.data.local.entity.Pengeluaran
+import com.chibychibystore.data.local.entity.Expense
 
 import com.chibychibystore.ui.navigation.Screen
 import java.text.NumberFormat
@@ -44,10 +44,10 @@ fun ExpenseListScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Manajemen Pengeluaran",
+                title = "Manajemen Expense",
                 actions = {
                     IconButton(onClick = { navController.navigate(Screen.ExpenseAdd.route) }) {
-                        Icon(Icons.Default.Add, contentDescription = "Tambah Pengeluaran")
+                        Icon(Icons.Default.Add, contentDescription = "Tambah Expense")
                     }
                 }
             )
@@ -72,7 +72,7 @@ fun ExpenseListScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Filter Pengeluaran",
+                            text = "Filter Expense",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -153,13 +153,13 @@ fun ExpenseListScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "Belum ada pengeluaran",
+                            text = "Belum ada expense",
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Tambah pengeluaran pertama Anda",
+                            text = "Tambah expense pertama Anda",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -208,7 +208,7 @@ fun ExpenseListScreen(
 
 @Composable
 private fun ExpenseItem(
-    expense: Pengeluaran,
+    expense: Expense,
     dateFormatter: SimpleDateFormat,
     onClick: () -> Unit
 ) {
@@ -294,7 +294,7 @@ fun ExpenseFilterDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Filter Pengeluaran") },
+        title = { Text("Filter Expense") },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -328,7 +328,7 @@ fun ExpenseFilterDialog(
 
                 // Category Section
                 Column {
-                    Text("Kategori", style = MaterialTheme.typography.labelLarge)
+                    Text("Category", style = MaterialTheme.typography.labelLarge)
                     Spacer(modifier = Modifier.height(8.dp))
 
                     var expanded by remember { mutableStateOf(false) }
@@ -337,7 +337,7 @@ fun ExpenseFilterDialog(
                         onExpandedChange = { expanded = it }
                     ) {
                         OutlinedTextField(
-                            value = selectedCategory?.displayName ?: "Semua Kategori",
+                            value = selectedCategory?.displayName ?: "Semua Category",
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -348,7 +348,7 @@ fun ExpenseFilterDialog(
                             onDismissRequest = { expanded = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Semua Kategori") },
+                                text = { Text("Semua Category") },
                                 onClick = {
                                     selectedCategory = null
                                     expanded = false

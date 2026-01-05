@@ -117,7 +117,7 @@ class PrinterServiceImpl @Inject constructor(
                 ?: return@withContext Result.failure(Exception("Bluetooth tidak tersedia di device ini"))
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                return@withContext Result.failure(Exception("Tidak memiliki izin Bluetooth (BLUETOOTH_CONNECT)"))
+                return@withContext Result.failure(Exception("Tidak memiliki izin Bluetooth (BLUETOOTH_CONNECT). Mohon izinkan di pengaturan."))
             }
 
             if (!adapter.isEnabled) {
@@ -150,7 +150,18 @@ class PrinterServiceImpl @Inject constructor(
 
             // Create socket connection
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                return@withContext Result.failure(Exception("Tidak memiliki izin Bluetooth (BLUETOOTH_CONNECT)"))
+                return@withContext Result.failure(Exception("Tidak memiliki izin Bluetooth (BLUETOOTH_CONNECT). Mohon izinkan di pengaturan."))
+            }
+
+            // Ensure cancellation of discovery before connecting
+            try {
+                if (bluetoothAdapter?.isDiscovering == true) {
+                    bluetoothAdapter?.cancelDiscovery()
+                }
+            } catch (e: SecurityException) {
+                Log.w(TAG, "Could not cancel discovery: missing permission", e)
+            } catch (e: Exception) {
+                Log.w(TAG, "Error cancelling discovery", e)
             }
 
             bluetoothSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
@@ -253,7 +264,7 @@ class PrinterServiceImpl @Inject constructor(
     }
 
     override suspend fun printBarcodeLabels(
-        product: com.chibychibystore.data.local.entity.Produk,
+        product: com.chibychibystore.data.local.entity.Product,
         labelSize: com.chibychibystore.ui.barcode.LabelSize,
         quantity: Int
     ): Result<Unit> = withContext(Dispatchers.IO) {
@@ -411,7 +422,7 @@ class PrinterServiceImpl @Inject constructor(
     }
 
     private fun buildBarcodeLabelData(
-        product: com.chibychibystore.data.local.entity.Produk,
+        product: com.chibychibystore.data.local.entity.Product,
         labelSize: com.chibychibystore.ui.barcode.LabelSize
     ): ByteArray {
         val label = mutableListOf<ByteArray>()

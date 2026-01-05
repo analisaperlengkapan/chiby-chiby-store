@@ -41,6 +41,7 @@ fun BarcodeScannerScreen(
     viewModel: BarcodeScannerViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val uiState by viewModel.uiState.collectAsState()
 
     // Camera permission launcher
@@ -249,47 +250,59 @@ private fun BarcodeScannerView(
     onError: (String) -> Unit
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
-    AndroidView(
-        factory = { ctx ->
-            DecoratedBarcodeView(ctx).apply {
-                // Configure barcode view
-                cameraSettings.isAutoFocusEnabled = true
-                cameraSettings.isBarcodeSceneModeEnabled = true
-                cameraSettings.isMeteringEnabled = true
+    // Remember the DecoratedBarcodeView so we don't recreate it on recomposition
+    val barcodeView = remember {
+        DecoratedBarcodeView(context).apply {
+            // Configure barcode view
+            cameraSettings.isAutoFocusEnabled = true
+            cameraSettings.isBarcodeSceneModeEnabled = true
+            cameraSettings.isMeteringEnabled = true
+            setStatusText("")
 
-                // Set barcode callback
-                decodeContinuous(object : BarcodeCallback {
-                    override fun barcodeResult(result: BarcodeResult?) {
-                        result?.let {
-                            val barcode = it.text
-                            if (!barcode.isNullOrBlank()) {
-                                Log.d("BarcodeScanner", "Scanned barcode: $barcode")
-                                onBarcodeScanned(barcode)
-                            }
+            // Set callback immediately during initialization
+            decodeContinuous(object : BarcodeCallback {
+                override fun barcodeResult(result: BarcodeResult?) {
+                    result?.let {
+                        val barcode = it.text
+                        if (!barcode.isNullOrBlank()) {
+                            Log.d("BarcodeScanner", "Scanned barcode: $barcode")
+                            onBarcodeScanned(barcode)
                         }
                     }
-
-                    override fun possibleResultPoints(resultPoints: MutableList<com.google.zxing.ResultPoint>?) {
-                        // Optional: Handle possible result points for UI feedback
-                    }
-                })
-
-                // Handle decode errors
-                setStatusText("")
-            }
-        },
-        modifier = Modifier.fillMaxSize(),
-        update = { view ->
-            try {
-                if (!view.isActivated) {
-                    view.resume()
                 }
-            } catch (e: Exception) {
-                Log.e("BarcodeScanner", "Error updating scanner view", e)
-                onError(e.message ?: "Scanner error")
+
+                override fun possibleResultPoints(resultPoints: MutableList<com.google.zxing.ResultPoint>?) {
+                    // Optional: Handle possible result points
+                }
+            })
+        }
+    }
+
+    // Manage lifecycle
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> barcodeView.resume()
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> barcodeView.pause()
+                else -> {}
             }
         }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            barcodeView.pause()
+        }
+    }
+
+    AndroidView(
+        factory = {
+            barcodeView
+        },
+        modifier = Modifier.fillMaxSize()
+        // No update block needed for the view itself as config is static and callback is set in init
     )
 }
 

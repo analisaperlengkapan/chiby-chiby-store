@@ -1,5 +1,5 @@
 package com.chibychibystore.ui.inventory
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,7 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.local.entity.Gudang
+import com.chibychibystore.data.local.entity.Warehouse
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.CardItem
 import com.chibychibystore.ui.components.shared.ErrorMessage
@@ -36,10 +36,10 @@ fun WarehouseListScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Manajemen Gudang",
+                title = "Manajemen Warehouse",
                 actions = {
                     IconButton(onClick = { navController.navigate(Screen.WarehouseAdd.route) }) {
-                        Icon(Icons.Default.Add, contentDescription = "Tambah Gudang")
+                        Icon(Icons.Default.Add, contentDescription = "Tambah Warehouse")
                     }
                 }
             )
@@ -113,9 +113,9 @@ fun WarehouseListScreen(
 
 @Composable
 private fun WarehouseListContent(
-    warehouses: List<Gudang>,
-    allWarehouseStock: Map<Gudang, List<com.chibychibystore.data.local.entity.Produk>>,
-    onWarehouseClick: (Gudang) -> Unit,
+    warehouses: List<Warehouse>,
+    allWarehouseStock: Map<Warehouse, List<Product>>,
+    onWarehouseClick: (Warehouse) -> Unit,
     onRefresh: () -> Unit
 ) {
     Column(
@@ -174,7 +174,7 @@ private fun WarehouseSummaryHeader(
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
-                    text = "Gudang",
+                    text = "Warehouse",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -192,7 +192,7 @@ private fun WarehouseSummaryHeader(
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
-                    text = "Produk",
+                    text = "Product",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -203,8 +203,8 @@ private fun WarehouseSummaryHeader(
 
 @Composable
 private fun WarehouseListItem(
-    warehouse: Gudang,
-    products: List<com.chibychibystore.data.local.entity.Produk>,
+    warehouse: Warehouse,
+    products: List<Product>,
     onClick: () -> Unit
 ) {
     CardItem(
@@ -241,7 +241,7 @@ private fun WarehouseListItem(
                     horizontalAlignment = Alignment.End
                 ) {
                     Text(
-                        text = "${products.size} produk",
+                        text = "${products.size} product",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -261,7 +261,7 @@ private fun WarehouseListItem(
                 // Show top 3 products
                 val topProducts = products.take(3)
                 Text(
-                    text = "Produk: ${topProducts.joinToString(", ") { it.name }}",
+                    text = "Product: ${topProducts.joinToString(", ") { it.name }}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
@@ -270,7 +270,7 @@ private fun WarehouseListItem(
 
                 if (products.size > 3) {
                     Text(
-                        text = "+${products.size - 3} produk lainnya",
+                        text = "+${products.size - 3} product lainnya",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -325,7 +325,7 @@ private fun WarehouseEmptyState(
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Tambah Gudang")
+            Text("Tambah Warehouse")
         }
     }
 }

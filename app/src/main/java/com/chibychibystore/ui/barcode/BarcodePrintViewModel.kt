@@ -2,7 +2,7 @@ package com.chibychibystore.ui.barcode
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.service.ProductService
 import com.chibychibystore.service.printer.PrinterService
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,8 +15,8 @@ import javax.inject.Inject
  * UI State untuk Barcode Print Screen
  */
 data class BarcodePrintUiState(
-    val products: List<Produk> = emptyList(),
-    val selectedProduct: Produk? = null,
+    val products: List<Product> = emptyList(),
+    val selectedProduct: Product? = null,
     val searchQuery: String = "",
     val selectedSize: LabelSize = LabelSize.MEDIUM,
     val quantity: Int = 1,
@@ -27,7 +27,7 @@ data class BarcodePrintUiState(
 
 /**
  * ViewModel untuk Barcode Print Screen
- * Mengelola pemilihan produk dan pencetakan label barcode
+ * Mengelola pemilihan product dan pencetakan label barcode
  */
 @HiltViewModel
 class BarcodePrintViewModel @Inject constructor(
@@ -43,7 +43,7 @@ class BarcodePrintViewModel @Inject constructor(
     }
 
     /**
-     * Load semua produk untuk pemilihan
+     * Load semua product untuk pemilihan
      */
     private fun loadProducts() {
         viewModelScope.launch {
@@ -59,7 +59,7 @@ class BarcodePrintViewModel @Inject constructor(
                 }.onFailure { exception ->
                     _uiState.value = _uiState.value.copy(
                         isLoadingProducts = false,
-                        error = exception.message ?: "Gagal memuat produk"
+                        error = exception.message ?: "Gagal memuat product"
                     )
                 }
             } catch (e: Exception) {
@@ -72,7 +72,7 @@ class BarcodePrintViewModel @Inject constructor(
     }
 
     /**
-     * Update search query dan filter produk
+     * Update search query dan filter product
      */
     fun updateSearchQuery(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
@@ -80,7 +80,7 @@ class BarcodePrintViewModel @Inject constructor(
     }
 
     /**
-     * Filter produk berdasarkan search query
+     * Filter product berdasarkan search query
      */
     private fun filterProducts(query: String) {
         val allProducts = _uiState.value.products
@@ -96,9 +96,9 @@ class BarcodePrintViewModel @Inject constructor(
     }
 
     /**
-     * Pilih produk untuk dicetak labelnya
+     * Pilih product untuk dicetak labelnya
      */
-    fun selectProduct(product: Produk) {
+    fun selectProduct(product: Product) {
         _uiState.value = _uiState.value.copy(selectedProduct = product)
     }
 

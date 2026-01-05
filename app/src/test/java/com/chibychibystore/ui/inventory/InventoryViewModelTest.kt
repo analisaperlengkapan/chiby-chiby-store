@@ -22,194 +22,96 @@ class InventoryViewModelTest {
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        viewModel = InventoryViewModel(productService)
+        // Setup default mocks for flows to prevent crashes on init
+        `when`(productService.observeProducts()).thenReturn(flowOf(emptyList()))
+        `when`(productService.observeLowStockProducts()).thenReturn(flowOf(emptyList()))
     }
 
     @Test
-    fun `initial state should be loading`() = runTest {
+    fun `initial state should be loading then loaded`() = runTest {
         // Given
         val products = listOf(
             Produk("1", "Product 1", "111", "1", 10000.0, 15000.0, 10, "1")
         )
-        `when`(productService.getProducts()).thenReturn(Result.success(products))
         `when`(productService.observeProducts()).thenReturn(flowOf(products))
-        `when`(productService.getLowStockProducts()).thenReturn(Result.success(emptyList()))
+        `when`(productService.observeLowStockProducts()).thenReturn(flowOf(emptyList()))
 
-        // When - ViewModel is initialized
+        viewModel = InventoryViewModel(productService)
 
         // Then
         viewModel.uiState.test {
+            // Initial state (from stateIn initialValue)
             val initialState = awaitItem()
-            assertTrue(initialState.isLoading)
-            assertTrue(initialState.products.isEmpty())
+            assertTrue(initialState is InventoryUiState.Loading)
 
+            // Loaded state
             val loadedState = awaitItem()
-            assertFalse(loadedState.isLoading)
-            assertEquals(products, loadedState.products)
+            assertTrue(loadedState is InventoryUiState.Success)
+            assertEquals(products, (loadedState as InventoryUiState.Success).products)
         }
     }
 
     @Test
-    fun `loadProducts should update state with products on success`() = runTest {
+    fun `updateSearchQuery should switch to search flow`() = runTest {
         // Given
-        val products = listOf(
-            Produk("1", "Product 1", "111", "1", 10000.0, 15000.0, 10, "1"),
-            Produk("2", "Product 2", "222", "1", 20000.0, 25000.0, 5, "1")
-        )
-        `when`(productService.getProducts()).thenReturn(Result.success(products))
-        `when`(productService.observeProducts()).thenReturn(flowOf(products))
-        `when`(productService.getLowStockProducts()).thenReturn(Result.success(emptyList()))
-
-        // When
-        viewModel.loadProducts()
-
-        // Then
-        viewModel.uiState.test {
-            // Skip initial loading state
-            skipItems(1)
-
-            val loadedState = awaitItem()
-            assertFalse(loadedState.isLoading)
-            assertEquals(products, loadedState.products)
-            assertNull(loadedState.error)
-        }
-
-        verify(productService).getProducts()
-    }
-
-    @Test
-    fun `loadProducts should update state with error on failure`() = runTest {
-        // Given
-        val errorMessage = "Database error"
-        `when`(productService.getProducts()).thenReturn(Result.failure(Exception(errorMessage)))
-        `when`(productService.getLowStockProducts()).thenReturn(Result.success(emptyList()))
-
-        // When
-        viewModel.loadProducts()
-
-        // Then
-        viewModel.uiState.test {
-            // Skip initial loading state
-            skipItems(1)
-
-            val errorState = awaitItem()
-            assertFalse(errorState.isLoading)
-            assertEquals(errorMessage, errorState.error)
-            assertTrue(errorState.products.isEmpty())
-        }
-    }
-
-    @Test
-    fun `updateSearchQuery should filter products when query is not blank`() = runTest {
-        // Given
-        val products = listOf(
-            Produk("1", "Apple", "111", "1", 10000.0, 15000.0, 10, "1"),
-            Produk("2", "Banana", "222", "1", 20000.0, 25000.0, 5, "1"),
-            Produk("3", "Orange", "333", "1", 15000.0, 20000.0, 8, "1")
-        )
-
-        // Set initial products
-        viewModel.uiState.value.copy(products = products)
-
-        // When
-        viewModel.updateSearchQuery("Apple")
-
-        // Then
-        viewModel.uiState.test {
-            val filteredState = awaitItem()
-            assertEquals(1, filteredState.products.size)
-            assertEquals("Apple", filteredState.products.first().name)
-            assertEquals("Apple", filteredState.searchQuery)
-        }
-    }
-
-    @Test
-    fun `updateSearchQuery should load all products when query is blank`() = runTest {
-        // Given
-        val products = listOf(
+        val allProducts = listOf(
             Produk("1", "Apple", "111", "1", 10000.0, 15000.0, 10, "1"),
             Produk("2", "Banana", "222", "1", 20000.0, 25000.0, 5, "1")
         )
-        `when`(productService.getProducts()).thenReturn(Result.success(products))
-
-        // When
-        viewModel.updateSearchQuery("")
-
-        // Then
-        verify(productService).getProducts()
-    }
-
-    @Test
-    fun `searchProducts should update state with filtered products on success`() = runTest {
-        // Given
-        val query = "test"
-        val products = listOf(
-            Produk("1", "Test Product", "111", "1", 10000.0, 15000.0, 10, "1")
+        val searchResults = listOf(
+            Produk("1", "Apple", "111", "1", 10000.0, 15000.0, 10, "1")
         )
-        `when`(productService.searchProducts(query)).thenReturn(Result.success(products))
 
-        // When
-        viewModel.searchProducts(query)
+        `when`(productService.observeProducts()).thenReturn(flowOf(allProducts))
+        `when`(productService.observeSearchProducts("Apple")).thenReturn(flowOf(searchResults))
+        `when`(productService.observeLowStockProducts()).thenReturn(flowOf(emptyList()))
+
+        viewModel = InventoryViewModel(productService)
 
         // Then
         viewModel.uiState.test {
-            // Skip initial state
-            skipItems(1)
+            awaitItem() // Initial loading
+            val defaultState = awaitItem() as InventoryUiState.Success // All products
+            assertEquals(allProducts, defaultState.products)
 
-            val searchState = awaitItem()
-            assertFalse(searchState.isLoading)
-            assertEquals(products, searchState.products)
-            assertEquals(query, searchState.searchQuery)
+            // When
+            viewModel.updateSearchQuery("Apple")
+
+            // Then
+            val searchState = awaitItem() as InventoryUiState.Success
+            assertEquals("Apple", searchState.searchQuery)
+            assertEquals(searchResults, searchState.products)
         }
-
-        verify(productService).searchProducts(query)
     }
 
     @Test
-    fun `searchProducts should load all products when query is blank`() = runTest {
+    fun `updateSearchQuery to blank should switch back to observeProducts`() = runTest {
         // Given
-        val products = listOf(
-            Produk("1", "Product 1", "111", "1", 10000.0, 15000.0, 10, "1")
-        )
-        `when`(productService.getProducts()).thenReturn(Result.success(products))
+        val allProducts = listOf(Produk("1", "A", "1", "1", 0.0, 0.0, 0, "1"))
+        val searchResults = listOf(Produk("2", "B", "2", "2", 0.0, 0.0, 0, "2"))
 
-        // When
-        viewModel.searchProducts("")
+        `when`(productService.observeProducts()).thenReturn(flowOf(allProducts))
+        `when`(productService.observeSearchProducts("B")).thenReturn(flowOf(searchResults))
+        `when`(productService.observeLowStockProducts()).thenReturn(flowOf(emptyList()))
 
-        // Then
-        verify(productService).getProducts()
-        verify(productService, never()).searchProducts(any())
-    }
+        viewModel = InventoryViewModel(productService)
+        viewModel.updateSearchQuery("B") // Start with search
 
-    @Test
-    fun `clearError should clear error message`() = runTest {
-        // Given
-        viewModel.uiState.value.copy(error = "Test error")
+        viewModel.uiState.test {
+            // Skip synchronization emissions
+            awaitItem() // Loading
 
-        // When
-        viewModel.clearError()
+            // Should eventually be in search state
+            val stateWithQuery = awaitItem() as InventoryUiState.Success
+            assertEquals("B", stateWithQuery.searchQuery)
 
-        // Then
-        assertNull(viewModel.uiState.value.error)
-    }
+            // When
+            viewModel.updateSearchQuery("")
 
-    @Test
-    fun `refresh should reload products and low stock products`() = runTest {
-        // Given
-        val products = listOf(
-            Produk("1", "Product 1", "111", "1", 10000.0, 15000.0, 10, "1")
-        )
-        val lowStockProducts = listOf(
-            Produk("2", "Low Stock Product", "222", "1", 1000.0, 1500.0, 1, "1", minStok = 5)
-        )
-        `when`(productService.getProducts()).thenReturn(Result.success(products))
-        `when`(productService.getLowStockProducts()).thenReturn(Result.success(lowStockProducts))
-
-        // When
-        viewModel.refresh()
-
-        // Then
-        verify(productService).getProducts()
-        verify(productService).getLowStockProducts()
+            // Then
+            val finalState = awaitItem() as InventoryUiState.Success
+            assertTrue(finalState.searchQuery.isBlank())
+            assertEquals(allProducts, finalState.products)
+        }
     }
 }

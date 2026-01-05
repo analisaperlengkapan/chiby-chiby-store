@@ -2,7 +2,7 @@ package com.chibychibystore.ui.user
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.User
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.UserManagementService
@@ -10,7 +10,14 @@ import com.chibychibystore.service.UserStats
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -55,8 +62,8 @@ import javax.inject.Inject
  * @property searchQuery The current search text used to filter users by username
  */
 data class UserManagementUiState(
-    val users: List<Pengguna> = emptyList(),
-    val filteredUsers: List<Pengguna> = emptyList(),
+    val users: List<User> = emptyList(),
+    val filteredUsers: List<User> = emptyList(),
     val selectedRole: Role? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -66,7 +73,7 @@ data class UserManagementUiState(
     val showEditUserDialog: Boolean = false,
     val showDeleteUserDialog: Boolean = false,
     val showResetPasswordDialog: Boolean = false,
-    val selectedUser: Pengguna? = null,
+    val selectedUser: User? = null,
     val searchQuery: String = ""
 )
 
@@ -252,6 +259,10 @@ class UserManagementViewModel @Inject constructor(
     private val _resetPasswordFormState = MutableStateFlow(ResetPasswordFormState())
     val resetPasswordFormState: StateFlow<ResetPasswordFormState> = _resetPasswordFormState
 
+    // Internal mutable state for search and filter
+    private val _searchQuery = MutableStateFlow("")
+    private val _selectedRole = MutableStateFlow<Role?>(null)
+
     /**
      * Initializes the ViewModel and loads initial user data.
      *
@@ -276,61 +287,52 @@ class UserManagementViewModel @Inject constructor(
      * - Caches data in StateFlow for reactive UI updates
      */
     init {
-        loadUsers()
+        // loadUsers is now reactive via stateIn
         loadUserStats()
     }
 
-    /**
-     * Loads all users from the UserManagementService and updates the UI state.
-     *
-     * This method establishes a reactive connection to the user data stream, automatically
-     * updating the UI whenever user data changes. It implements proper error handling
-     * and loading state management for a smooth user experience.
-     *
-     * ## Data Flow:
-     * 1. Set loading state to true and clear any previous errors
-     * 2. Subscribe to user data stream from UserManagementService
-     * 3. Update UI state with loaded users and apply current filters
-     * 4. Handle any errors during data loading
-     *
-     * ## Reactive Behavior:
-     * - Automatically updates when user data changes in the database
-     * - Applies current search and filter criteria to loaded data
-     * - Maintains loading states for proper UI feedback
-     *
-     * ## Error Scenarios:
-     * - Database connection issues
-     * - Permission denied for user access
-     * - Network timeouts (if applicable)
-     *
-     * ## Performance:
-     * - Uses collectLatest to avoid processing outdated data
-     * - Efficient filtering applied client-side
-     * - Minimal memory footprint with StateFlow caching
+    /*
+     * Reactive UI State Pipeline
+     * Combines users, search query, role filter, and dialog states into a single UI state.
      */
-    private fun loadUsers() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-
-            try {
-                userManagementService.getAllUsers().collectLatest { users ->
-                    _uiState.update {
-                        it.copy(
-                            users = users,
-                            filteredUsers = filterUsers(users, it.searchQuery, it.selectedRole),
-                            isLoading = false
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "Gagal memuat pengguna: ${e.message}"
-                    )
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    val uiState: StateFlow<UserManagementUiState> = run {
+        val filteredUsersFlow = _searchQuery
+            .debounce(300L)
+            .flatMapLatest { query ->
+                if (query.isBlank()) {
+                    userManagementService.getAllUsers()
+                } else {
+                    userManagementService.searchUsers(query)
                 }
             }
-        }
+            .catch { emit(emptyList()) }
+
+        combine(
+            filteredUsersFlow,
+            _searchQuery,
+            _selectedRole,
+            _uiState // We still need the base mutable state for dialog flags and messages
+        ) { users, query, role, currentState ->
+            // Apply role filter in memory since we already fetched by query
+            val finalFilteredUsers = if (role != null) {
+                users.filter { it.role == role }
+            } else {
+                users
+            }
+
+            currentState.copy(
+                users = users, // Note: This might represent filtered list now if searching
+                filteredUsers = finalFilteredUsers,
+                searchQuery = query,
+                selectedRole = role,
+                isLoading = false // Data flow emitted, so loading is done
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = UserManagementUiState(isLoading = true)
+        )
     }
 
     /**
@@ -386,8 +388,7 @@ class UserManagementViewModel @Inject constructor(
      * @param query The search query string entered by the user
      */
     fun onSearchQueryChange(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
-        updateFilteredUsers()
+        _searchQuery.update { query }
     }
 
     /**
@@ -409,69 +410,9 @@ class UserManagementViewModel @Inject constructor(
      * @param role The role to filter by, or null to show all roles
      */
     fun onRoleFilterChange(role: Role?) {
-        _uiState.update { it.copy(selectedRole = role) }
-        updateFilteredUsers()
+        _selectedRole.update { role }
     }
 
-    /**
-     * Updates the filtered user list based on current search and filter criteria.
-     *
-     * This private method applies the current search query and role filter to the
-     * complete user list, updating the filteredUsers in the UI state.
-     *
-     * ## Filtering Logic:
-     * 1. Start with all users
-     * 2. Apply search query filter (username matching)
-     * 3. Apply role filter if specified
-     * 4. Update UI state with filtered results
-     *
-     * ## Performance:
-     * - Efficient client-side filtering
-     * - No service calls required
-     * - Immediate UI updates
-     */
-    private fun updateFilteredUsers() {
-        _uiState.update { state ->
-            state.copy(
-                filteredUsers = filterUsers(state.users, state.searchQuery, state.selectedRole)
-            )
-        }
-    }
-
-    /**
-     * Applies search and role filters to a list of users.
-     *
-     * This method implements the core filtering logic for user management,
-     * supporting both text search and role-based filtering.
-     *
-     * ## Filter Criteria:
-     * - **Search Query**: Matches username (case-insensitive partial match)
-     * - **Role Filter**: Exact role match or null for all roles
-     * - **Combined Filtering**: Both criteria must be satisfied
-     *
-     * ## Search Algorithm:
-     * - Username contains query string (partial match)
-     * - Case-insensitive comparison
-     * - Empty query matches all users
-     *
-     * ## Role Filtering:
-     * - Null role parameter matches all roles
-     * - Specific role matches exact role enum value
-     * - Supports all defined roles (OWNER, MANAGER, CASHIER, WAREHOUSE)
-     *
-     * @param users The complete list of users to filter
-     * @param query The search query string (empty string matches all)
-     * @param role The role filter (null matches all roles)
-     * @return Filtered list of users matching both criteria
-     */
-    private fun filterUsers(users: List<Pengguna>, query: String, role: Role?): List<Pengguna> {
-        return users.filter { user ->
-            val matchesQuery = query.isBlank() ||
-                    user.username.contains(query, ignoreCase = true)
-            val matchesRole = role == null || user.role == role
-            matchesQuery && matchesRole
-        }
-    }
 
     /**
      * Opens the create-user dialog and resets the create-user form.
@@ -614,7 +555,7 @@ class UserManagementViewModel @Inject constructor(
                 ).onSuccess {
                     _uiState.update {
                         it.copy(
-                            successMessage = "Pengguna berhasil dibuat",
+                            successMessage = "User berhasil dibuat",
                             showCreateUserDialog = false
                         )
                     }
@@ -624,7 +565,7 @@ class UserManagementViewModel @Inject constructor(
                     _createUserFormState.update {
                         it.copy(
                             isSubmitting = false,
-                            errorMessage = error.message ?: "Gagal membuat pengguna"
+                            errorMessage = error.message ?: "Gagal membuat user"
                         )
                     }
                 }
@@ -645,10 +586,10 @@ class UserManagementViewModel @Inject constructor(
      * The selected user is stored in [UserManagementUiState.selectedUser] to support
      * subsequent update/delete/reset flows.
      *
-     * Note: `isActive` is currently hard-coded to true until the `Pengguna` entity
+     * Note: `isActive` is currently hard-coded to true until the `User` entity
      * includes an active flag.
      */
-    fun showEditUserDialog(user: Pengguna) {
+    fun showEditUserDialog(user: User) {
         _uiState.update {
             it.copy(
                 showEditUserDialog = true,
@@ -696,7 +637,7 @@ class UserManagementViewModel @Inject constructor(
      * Updates the isActive field in the edit-user form.
      */
     fun onEditUserIsActiveChange(isActive: Boolean) {
-        _editUserFormState.value = _editUserFormState.value.copy(isActive = isActive)
+        _editUserFormState.update { it.copy(isActive = isActive) }
     }
 
     /**
@@ -744,7 +685,7 @@ class UserManagementViewModel @Inject constructor(
                 ).onSuccess {
                     _uiState.update {
                         it.copy(
-                            successMessage = "Pengguna berhasil diperbarui",
+                            successMessage = "User berhasil diperbarui",
                             showEditUserDialog = false
                         )
                     }
@@ -753,7 +694,7 @@ class UserManagementViewModel @Inject constructor(
                     _editUserFormState.update {
                         it.copy(
                             isSubmitting = false,
-                            errorMessage = error.message ?: "Gagal memperbarui pengguna"
+                            errorMessage = error.message ?: "Gagal memperbarui user"
                         )
                     }
                 }
@@ -773,7 +714,7 @@ class UserManagementViewModel @Inject constructor(
      *
      * The selected user is stored in [UserManagementUiState.selectedUser].
      */
-    fun showDeleteUserDialog(user: Pengguna) {
+    fun showDeleteUserDialog(user: User) {
         _uiState.update {
             it.copy(
                 showDeleteUserDialog = true,
@@ -831,7 +772,7 @@ class UserManagementViewModel @Inject constructor(
                 ).onSuccess {
                     _uiState.update {
                         it.copy(
-                            successMessage = "Pengguna berhasil dihapus",
+                            successMessage = "User berhasil dihapus",
                             showDeleteUserDialog = false
                         )
                     }
@@ -840,7 +781,7 @@ class UserManagementViewModel @Inject constructor(
                 }.onFailure { error ->
                     _uiState.update {
                         it.copy(
-                            errorMessage = error.message ?: "Gagal menghapus pengguna",
+                            errorMessage = error.message ?: "Gagal menghapus user",
                             showDeleteUserDialog = false
                         )
                     }
@@ -861,7 +802,7 @@ class UserManagementViewModel @Inject constructor(
     /**
      * Opens the reset-password dialog for a selected user and resets the password form.
      */
-    fun showResetPasswordDialog(user: Pengguna) {
+    fun showResetPasswordDialog(user: User) {
         _uiState.update {
             it.copy(
                 showResetPasswordDialog = true,

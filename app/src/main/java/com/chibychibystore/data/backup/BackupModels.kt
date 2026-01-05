@@ -2,10 +2,9 @@ package com.chibychibystore.data.backup
 
 import com.chibychibystore.data.local.entity.*
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Contextual
 
 /**
- * Root container untuk backup data
+ * Root container for backup data
  */
 @Serializable
 data class BackupData(
@@ -26,18 +25,18 @@ data class BackupMetadata(
 )
 
 /**
- * Container untuk semua entity backup
+ * Container for all backup entities
  */
 @Serializable
 data class BackupEntities(
-    val pengguna: List<Pengguna>,
-    val kategori: List<Kategori>,
-    val gudang: List<Gudang>,
-    val produk: List<Produk>,
-    val pemasok: List<Pemasok>,
-    val penjualan: List<Penjualan>,
-    val itemPenjualan: List<ItemPenjualan>,
-    val pembelian: List<Pembelian>,
-    val itemPembelian: List<ItemPembelian>,
-    val pengeluaran: List<Pengeluaran>
+    val users: List<User>,
+    val categories: List<Category>,
+    val warehouses: List<Warehouse>,
+    val products: List<Product>,
+    val suppliers: List<Supplier>,
+    val sales: List<Sale>,
+    val saleItems: List<SaleItem>,
+    val purchases: List<Purchase>,
+    val purchaseItems: List<PurchaseItem>,
+    val expenses: List<Expense>
 )

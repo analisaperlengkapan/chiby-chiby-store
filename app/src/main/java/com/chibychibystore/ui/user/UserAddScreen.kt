@@ -6,7 +6,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -32,32 +31,28 @@ fun UserAddScreen(
 
     val roles = remember { Role.values() }
 
-    // Handle success navigation
+    // Handle success message
     LaunchedEffect(uiState.successMessage) {
-        if (uiState.successMessage != null) {
-            navController.navigateUp()
-            // Optional: Show success message/snackbar could be done here or in the previous screen
+        uiState.successMessage?.let { message ->
+            scope.launch {
+                snackbarHostState.showSnackbar(message)
+                navController.navigateUp()
+            }
         }
     }
 
-    // Handle error messages
+    // Handle form error messages from ViewModel
     LaunchedEffect(formState.errorMessage) {
         formState.errorMessage?.let { error ->
             snackbarHostState.showSnackbar(error)
-        }
-    }
-    
-    // Also handle general UI errors if any
-    LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let { error ->
-            snackbarHostState.showSnackbar(error)
+            // Note: In a real app we might want to clear this, but the VM handles it on next input
         }
     }
 
     Scaffold(
         topBar = {
-                AppTopBar(
-                title = "Tambah Pengguna",
+            AppTopBar(
+                title = "Tambah User",
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() }
             )
@@ -80,8 +75,8 @@ fun UserAddScreen(
                 onValueChange = viewModel::onCreateUserUsernameChange,
                 label = stringResource(R.string.username),
                 modifier = Modifier.fillMaxWidth(),
-                isError = formState.errorMessage != null && formState.username.isBlank(), // Simple heuristic for error highlight
-                errorMessage = if (formState.username.isBlank() && formState.errorMessage != null) formState.errorMessage else null
+                isError = false, // VM handles validation via snackbar/error message in state
+                errorMessage = null
             )
 
             TextFieldOutlined(
@@ -89,8 +84,8 @@ fun UserAddScreen(
                 onValueChange = viewModel::onCreateUserPasswordChange,
                 label = stringResource(R.string.password),
                 modifier = Modifier.fillMaxWidth(),
-                isError = formState.errorMessage != null && formState.password.isBlank(),
-                errorMessage = null, // Error displayed in snackbar usually, or we can map specific field errors if VM supported it
+                isError = false,
+                errorMessage = null,
                 isPassword = true
             )
 
@@ -99,7 +94,7 @@ fun UserAddScreen(
                 onValueChange = viewModel::onCreateUserConfirmPasswordChange,
                 label = "Konfirmasi Password",
                 modifier = Modifier.fillMaxWidth(),
-                isError = formState.errorMessage != null && formState.confirmPassword != formState.password,
+                isError = false,
                 errorMessage = null,
                 isPassword = true
             )
@@ -123,7 +118,7 @@ fun UserAddScreen(
 
             ButtonPrimary(
                 text = stringResource(R.string.common_save),
-                onClick = { viewModel.createUser() },
+                onClick = viewModel::createUser,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading && !formState.isSubmitting
             )

@@ -21,7 +21,6 @@ import com.chibychibystore.ui.barcode.BarcodeScannerScreen
 import com.chibychibystore.ui.barcode.BarcodePrintScreen
 import com.chibychibystore.ui.backup.BackupScreen
 import com.chibychibystore.ui.dashboard.DashboardScreen
-import com.chibychibystore.ui.user.UserManagementScreen
 import com.chibychibystore.ui.settings.SettingsScreen
 import com.chibychibystore.ui.reports.ReportsScreen
 import com.chibychibystore.ui.sales.SalesHistoryScreen
@@ -32,6 +31,7 @@ import com.chibychibystore.ui.expense.ExpenseAddScreen
 import com.chibychibystore.ui.user.UserListScreen
 import com.chibychibystore.ui.user.UserAddScreen
 import com.chibychibystore.ui.user.UserDetailScreen
+import com.chibychibystore.ui.supplier.SupplierListScreen
 import javax.inject.Inject
 
 @Composable
@@ -388,6 +388,19 @@ fun AppNavigation(
                 }
             ) {
                 UserDetailScreen(navController = navController, userId = userId)
+            }
+        }
+
+        composable(Screen.SupplierList.route) {
+            AuthGuard(
+                authService = authService,
+                onLoginSuccess = {
+                    navController.navigate(Screen.SupplierList.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                }
+            ) {
+                SupplierListScreen(navController = navController)
             }
         }
     }

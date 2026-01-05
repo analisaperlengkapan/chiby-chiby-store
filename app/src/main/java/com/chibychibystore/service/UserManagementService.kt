@@ -1,6 +1,6 @@
 package com.chibychibystore.service
 
-import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.User
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.data.model.Result
 import kotlinx.coroutines.flow.Flow
@@ -12,17 +12,22 @@ interface UserManagementService {
     /**
      * Get all users
      */
-    fun getAllUsers(): Flow<List<Pengguna>>
+    fun getAllUsers(): Flow<List<User>>
 
     /**
      * Get user by ID
      */
-    suspend fun getUserById(userId: Long): Result<Pengguna>
+    suspend fun getUserById(userId: Long): Result<User>
 
     /**
      * Get users by role
      */
-    fun getUsersByRole(role: Role): Flow<List<Pengguna>>
+    fun getUsersByRole(role: Role): Flow<List<User>>
+
+    /**
+     * Search users
+     */
+    fun searchUsers(query: String): Flow<List<User>>
 
     /**
      * Create new user

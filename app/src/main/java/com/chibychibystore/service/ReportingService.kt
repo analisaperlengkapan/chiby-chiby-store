@@ -103,6 +103,9 @@ data class CategorySales(
     val profit: Double
 )
 
+/**
+ * Data class representing sales trend for a specific date.
+ */
 data class TrendData(
     val date: LocalDate,
     val sales: Double,

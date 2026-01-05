@@ -9,7 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.User
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.ui.user.CreateUserFormState
 import com.chibychibystore.ui.user.EditUserFormState
@@ -25,7 +25,7 @@ fun UserManagementDialogs(
     createUserFormState: CreateUserFormState,
     editUserFormState: EditUserFormState,
     resetPasswordFormState: ResetPasswordFormState,
-    selectedUser: Pengguna?,
+    selectedUser: User?,
     onCreateUser: () -> Unit,
     onUpdateUser: () -> Unit,
     onDeleteUser: () -> Unit,
@@ -48,7 +48,7 @@ fun UserManagementDialogs(
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = onDismissCreate,
-            title = { Text("Tambah Pengguna Baru") },
+            title = { Text("Tambah User Baru") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     OutlinedTextField(
@@ -140,7 +140,7 @@ fun UserManagementDialogs(
     if (showEditDialog && selectedUser != null) {
         AlertDialog(
             onDismissRequest = onDismissEdit,
-            title = { Text("Edit Pengguna") },
+            title = { Text("Edit User") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     OutlinedTextField(
@@ -228,9 +228,9 @@ fun UserManagementDialogs(
     if (showDeleteDialog && selectedUser != null) {
         AlertDialog(
             onDismissRequest = onDismissDelete,
-            title = { Text("Hapus Pengguna") },
+            title = { Text("Hapus User") },
             text = {
-                Text("Apakah Anda yakin ingin menghapus pengguna '${selectedUser.username}'? Tindakan ini tidak dapat dibatalkan.")
+                Text("Apakah Anda yakin ingin menghapus user '${selectedUser.username}'? Tindakan ini tidak dapat dibatalkan.")
             },
             confirmButton = {
                 Button(
@@ -257,7 +257,7 @@ fun UserManagementDialogs(
             title = { Text("Reset Password") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("Reset password untuk pengguna '${selectedUser.username}'")
+                    Text("Reset password untuk user '${selectedUser.username}'")
 
                     OutlinedTextField(
                         value = resetPasswordFormState.newPassword,

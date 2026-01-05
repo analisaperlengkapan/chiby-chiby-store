@@ -3,57 +3,37 @@ package com.chibychibystore.data.local.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.chibychibystore.data.local.dao.GudangDao
-import com.chibychibystore.data.local.dao.ItemPembelianDao
-import com.chibychibystore.data.local.dao.ItemPenjualanDao
-import com.chibychibystore.data.local.dao.KategoriDao
-import com.chibychibystore.data.local.dao.PemasokDao
-import com.chibychibystore.data.local.dao.PembelianDao
-import com.chibychibystore.data.local.dao.PengeluaranDao
-import com.chibychibystore.data.local.dao.PenjualanDao
-import com.chibychibystore.data.local.dao.PenggunaDao
-import com.chibychibystore.data.local.dao.ProdukDao
-import com.chibychibystore.data.local.dao.UserSessionDao
-import com.chibychibystore.data.local.entity.UserSession
-import com.chibychibystore.data.local.entity.Gudang
-import com.chibychibystore.data.local.entity.ItemPembelian
-import com.chibychibystore.data.local.entity.ItemPenjualan
-import com.chibychibystore.data.local.entity.Kategori
-import com.chibychibystore.data.local.entity.Pemasok
-import com.chibychibystore.data.local.entity.Pembelian
-import com.chibychibystore.data.local.entity.Pengeluaran
-import com.chibychibystore.data.local.entity.Penjualan
-import com.chibychibystore.data.local.entity.Pengguna
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.dao.*
+import com.chibychibystore.data.local.entity.*
 
 @Database(
     entities = [
-        Pengguna::class,
-        Kategori::class,
-        Gudang::class,
-        Produk::class,
-        Pemasok::class,
-        Pembelian::class,
-        ItemPembelian::class,
-        Penjualan::class,
-        ItemPenjualan::class,
-        Pengeluaran::class,
+        User::class,
+        Category::class,
+        Warehouse::class,
+        Product::class,
+        Supplier::class,
+        Purchase::class,
+        PurchaseItem::class,
+        Sale::class,
+        SaleItem::class,
+        Expense::class,
         UserSession::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class ChibyChibyDatabase : RoomDatabase() {
-    abstract fun penggunaDao(): PenggunaDao
-    abstract fun kategoriDao(): KategoriDao
-    abstract fun gudangDao(): GudangDao
-    abstract fun produkDao(): ProdukDao
-    abstract fun pemasokDao(): PemasokDao
-    abstract fun pembelianDao(): PembelianDao
-    abstract fun itemPembelianDao(): ItemPembelianDao
-    abstract fun penjualanDao(): PenjualanDao
-    abstract fun itemPenjualanDao(): ItemPenjualanDao
-    abstract fun pengeluaranDao(): PengeluaranDao
+    abstract fun userDao(): UserDao
+    abstract fun categoryDao(): CategoryDao
+    abstract fun warehouseDao(): WarehouseDao
+    abstract fun productDao(): ProductDao
+    abstract fun supplierDao(): SupplierDao
+    abstract fun purchaseDao(): PurchaseDao
+    abstract fun purchaseItemDao(): PurchaseItemDao
+    abstract fun saleDao(): SaleDao
+    abstract fun saleItemDao(): SaleItemDao
+    abstract fun expenseDao(): ExpenseDao
     abstract fun userSessionDao(): UserSessionDao
 }

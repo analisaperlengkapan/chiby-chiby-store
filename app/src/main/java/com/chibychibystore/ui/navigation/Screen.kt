@@ -35,4 +35,5 @@ sealed class Screen(val route: String) {
         fun createRoute(userId: Long) = "users/$userId"
     }
     object Settings : Screen("settings")
+    object SupplierList : Screen("suppliers")
 }

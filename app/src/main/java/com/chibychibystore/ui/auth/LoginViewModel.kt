@@ -2,7 +2,7 @@ package com.chibychibystore.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.usecase.AuthUseCases
+import com.chibychibystore.service.AuthService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -132,14 +132,14 @@ data class LoginUiState(
  *
  * **Arsitektur & Pola:**
  * - MVVM Pattern: Reactive UI updates melalui StateFlow
- * - Use Case Pattern: Business logic melalui AuthUseCases
+ * - Service Pattern: Business logic melalui AuthService
  * - State Management: Centralized state di LoginUiState
  * - Reactive Programming: StateFlow untuk real-time UI updates
  *
  * **Tanggung Jawab Utama:**
  * - Input handling untuk username dan password fields
  * - Client-side validation sebelum authentication
- * - Orchestration authentication process melalui AuthUseCases
+ * - Orchestration authentication process melalui AuthService
  * - Error handling dan user feedback untuk login failures
  * - State management untuk loading, success, dan error states
  * - Session state reset untuk logout dan navigation
@@ -155,7 +155,7 @@ data class LoginUiState(
  * **Authentication Workflow:**
  * 1. **Input Phase**: User enters username/password → onUsernameChange/onPasswordChange
  * 2. **Validation Phase**: Input validation → login() method validation
- * 3. **Authentication Phase**: Call AuthUseCases.login() → async processing
+ * 3. **Authentication Phase**: Call AuthService.login() → async processing
  * 4. **Result Phase**: Success → navigation trigger, Failure → error display
  * 5. **Recovery Phase**: Error dismissal → clearError(), Retry → login()
  *
@@ -171,19 +171,19 @@ data class LoginUiState(
  * ```
  *
  * **Dependencies:**
- * - AuthUseCases: Core authentication business logic
+ * - AuthService: Core authentication business logic
  * - ViewModelScope: Coroutine scope untuk async operations
  * - StateFlow: Reactive state management
  *
  * **Security Considerations:**
- * - Password Handling: Plain text di memory, hashed di AuthUseCases layer
+ * - Password Handling: Plain text di memory, hashed di Service layer
  * - Input Validation: Client-side validation sebelum server transmission
  * - State Cleanup: Automatic credential cleanup pada reset
  * - Error Messages: Non-revealing error messages untuk security
  *
  * **Integration Points:**
  * - LoginScreen: Compose UI yang consume LoginUiState
- * - AuthUseCases: Backend authentication logic
+ * - AuthService: Backend authentication logic
  * - Navigation: Triggered by isLoginSuccessful flag
  * - Session Management: State reset pada logout
  *
@@ -191,7 +191,7 @@ data class LoginUiState(
  * ```kotlin
  * @HiltViewModel
  * class LoginViewModel @Inject constructor(
- *     private val authUseCases: AuthUseCases
+ *     private val authService: AuthService
  * ) : ViewModel() {
  *
  *     // Reactive state untuk UI binding
@@ -212,11 +212,11 @@ data class LoginUiState(
  *
  * **Threading & Coroutines:**
  * - Main Thread: UI state updates dan user interactions
- * - IO Thread: Authentication calls melalui AuthUseCases
+ * - IO Thread: Authentication calls melalui AuthService
  * - Error Handling: Comprehensive exception handling di semua operations
  *
  * **Testing Considerations:**
- * - Unit Tests: Mock AuthUseCases untuk business logic testing
+ * - Unit Tests: Mock AuthService untuk business logic testing
  * - Integration Tests: Full authentication flow testing
  * - UI Tests: StateFlow emissions dan user interaction flows
  *
@@ -228,19 +228,19 @@ data class LoginUiState(
  *
  * **Error Handling:**
  * - Input Validation: Immediate client-side validation dengan clear messages
- * - Authentication Failures: User-friendly error messages dari AuthUseCases
+ * - Authentication Failures: User-friendly error messages dari AuthService
  * - Network Issues: Graceful handling dengan appropriate error states
  * - Unexpected Errors: Exception catching dengan fallback messages
  *
- * @property authUseCases Use case untuk authentication business logic
+ * @property authService Service untuk authentication business logic
  * @property uiState Reactive state untuk UI binding dan updates
  * @see LoginUiState Data class untuk UI state management
- * @see AuthUseCases Backend authentication logic
+ * @see AuthService Backend authentication logic
  * @see LoginScreen Compose UI yang menggunakan ViewModel ini
  */
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val authUseCases: AuthUseCases
+    private val authService: AuthService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -325,7 +325,7 @@ class LoginViewModel @Inject constructor(
      * **Security Considerations:**
      * - In-Memory Storage: Password disimpan plain text di memory sementara
      * - No Persistence: Password tidak di-cache atau di-persist
-     * - Secure Transmission: Password dikirim ke AuthUseCases untuk hashing
+     * - Secure Transmission: Password dikirim ke AuthService untuk hashing
      * - Memory Cleanup: State direset setelah login attempt
      *
      * **UX Considerations:**
@@ -337,7 +337,7 @@ class LoginViewModel @Inject constructor(
      * **Integration Points:**
      * - PasswordTextField: onValueChange callback dengan masking
      * - UI State: Reactive binding ke password field
-     * - AuthUseCases: Password dikirim untuk authentication
+     * - AuthService: Password dikirim untuk authentication
      * - Error Display: Automatic error clearing saat typing
      *
      * **Usage Example:**
@@ -358,13 +358,13 @@ class LoginViewModel @Inject constructor(
      * ```
      *
      * **Note:** Method ini menangani password sebagai plain text di memory.
-     * Password hashing dan security dilakukan di layer AuthUseCases.
+     * Password hashing dan security dilakukan di layer AuthService.
      * Error clearing memberikan UX yang lebih intuitif saat user correction.
      *
      * @param password Input password baru dari user
      * @see onUsernameChange
      * @see login
-     * @see AuthUseCases
+     * @see AuthService
      * @see LoginUiState.password
      */
     fun onPasswordChange(password: String) {
@@ -378,14 +378,14 @@ class LoginViewModel @Inject constructor(
      * Proses authentication dengan username dan password
      *
      * Metode ini menangani seluruh flow authentication mulai dari validasi input,
-     * proses login melalui AuthUseCases, hingga state management untuk UI feedback.
+     * proses login melalui AuthService, hingga state management untuk UI feedback.
      * Merupakan entry point utama untuk user authentication di aplikasi.
      *
      * **Business Logic Flow:**
      * 1. Ambil current state untuk validasi
      * 2. Validasi input: username dan password tidak boleh kosong
      * 3. Set loading state dan clear previous errors
-     * 4. Panggil AuthUseCases.login() dengan credentials
+     * 4. Panggil AuthService.login() dengan credentials
      * 5. Handle success: update state dengan login successful flag
      * 6. Handle failure: update state dengan error message
      * 7. Exception handling: catch unexpected errors
@@ -403,19 +403,19 @@ class LoginViewModel @Inject constructor(
      * - Error: Comprehensive error handling dengan fallback messages
      *
      * **Security Considerations:**
-     * - Password Handling: Plain text di memory, hashed di AuthUseCases
+     * - Password Handling: Plain text di memory, hashed di AuthService
      * - Failed Attempts: Error messages tidak reveal security info
      * - Session Management: Success flag triggers navigation/session setup
      * - Input Sanitization: Basic validation prevents empty credentials
      *
      * **Error Handling:**
      * - Validation Errors: Immediate return dengan error message
-     * - Auth Failures: Service error messages dari AuthUseCases
+     * - Auth Failures: Service error messages dari AuthService
      * - Network Issues: Generic error dengan user-friendly message
      * - Unexpected Errors: Exception catching dengan fallback message
      *
      * **Integration Points:**
-     * - AuthUseCases.login(): Core authentication logic
+     * - AuthService.login(): Core authentication logic
      * - UI Components: Button click handler dengan loading state
      * - Navigation: Triggered by `isLoginSuccessful` flag
      * - Error Display: Reactive error message updates
@@ -454,7 +454,7 @@ class LoginViewModel @Inject constructor(
      * Navigation dan session setup biasanya ditangani di UI layer
      * berdasarkan `isLoginSuccessful` flag.
      *
-     * @see AuthUseCases.login
+     * @see AuthService.login
      * @see onUsernameChange
      * @see onPasswordChange
      * @see LoginUiState.isLoginSuccessful
@@ -471,7 +471,7 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = currentState.copy(isLoading = true, errorMessage = null)
             
-            val result = authUseCases.login(currentState.username, currentState.password)
+            val result = authService.login(currentState.username, currentState.password)
             
             if (result.isSuccess) {
                 _uiState.value = currentState.copy(

@@ -2,14 +2,20 @@ package com.chibychibystore.ui.inventory
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.Gudang
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Warehouse
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.service.WarehouseService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -17,150 +23,83 @@ import javax.inject.Inject
  * UI State untuk Warehouse Screen
  */
 data class WarehouseUiState(
-    val warehouses: List<Gudang> = emptyList(),
-    val selectedWarehouse: Gudang? = null,
-    val products: List<Produk> = emptyList(),
+    val warehouses: List<Warehouse> = emptyList(),
+    val selectedWarehouse: Warehouse? = null,
+    val products: List<Product> = emptyList(),
     val isLoading: Boolean = false,
     val isTransferring: Boolean = false,
     val error: String? = null,
     val successMessage: String? = null,
-    val allWarehouseStock: Map<Gudang, List<Produk>> = emptyMap()
+    val allWarehouseStock: Map<Warehouse, List<Product>> = emptyMap() // Keep for now if used by views, though redundant with reactive selection
 )
 
 /**
  * ViewModel untuk Warehouse Screen
- * Mengelola gudang dan transfer stok antar gudang
+ * Mengelola gudang dan transfer stok antar gudang dengan reactive architecture.
  */
 @HiltViewModel
 class WarehouseViewModel @Inject constructor(
     private val warehouseService: WarehouseService
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(WarehouseUiState())
-    val uiState: StateFlow<WarehouseUiState> = _uiState
+    // Triggers and Local State
+    private val _selectedWarehouseId = MutableStateFlow<Long?>(null)
+    private val _isLoading = MutableStateFlow(false)
+    private val _isTransferring = MutableStateFlow(false)
+    private val _error = MutableStateFlow<String?>(null)
+    private val _successMessage = MutableStateFlow<String?>(null)
 
-    init {
-        loadWarehouses()
-    }
-
-    /**
-     * Load semua gudang
-     */
-    fun loadWarehouses() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-
-            try {
-                val result = warehouseService.getWarehouses()
-                result.onSuccess { warehouses ->
-                    _uiState.value = _uiState.value.copy(
-                        warehouses = warehouses,
-                        isLoading = false
-                    )
-                    // Setup reactive updates
-                    observeWarehouses()
-
-                    // Load stock untuk semua gudang
-                    loadAllWarehouseStock()
-                }.onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = exception.message ?: "Gagal memuat gudang"
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Terjadi kesalahan: ${e.message}"
-                )
-            }
+    // Warehouses Stream
+    private val _warehousesFlow = warehouseService.observeWarehouses()
+        .catch { e ->
+            _error.update { "Gagal memuat gudang: ${e.message}" }
+            emit(emptyList())
         }
+
+    // Warehouse Stock Stream (Reactive based on selection)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val _warehouseStockFlow = _selectedWarehouseId.flatMapLatest { id ->
+        if (id == null) {
+            flowOf(emptyList())
+        } else {
+            warehouseService.observeWarehouseStock(id)
+        }
+    }.catch { e ->
+        _error.update { "Gagal memuat stok gudang: ${e.message}" }
+        emit(emptyList())
     }
 
-    /**
-     * Observe perubahan gudang secara real-time
-     */
-    private fun observeWarehouses() {
-        viewModelScope.launch {
-            warehouseService.observeWarehouses()
-                .catch { e ->
-                    _uiState.value = _uiState.value.copy(
-                        error = "Gagal mengamati perubahan gudang: ${e.message}"
-                    )
-                }
-                .collectLatest { warehouses ->
-                    _uiState.value = _uiState.value.copy(warehouses = warehouses)
-                }
-        }
-    }
+    // Combined UI State
+    val uiState: StateFlow<WarehouseUiState> = combine(
+        _warehousesFlow,
+        _warehouseStockFlow,
+        _selectedWarehouseId,
+        _isLoading,
+        _isTransferring,
+        _error,
+        _successMessage
+    ) { warehouses, products, selectedId, isLoading, isTransferring, error, success ->
+        WarehouseUiState(
+            warehouses = warehouses,
+            selectedWarehouse = warehouses.find { it.id == selectedId },
+            products = products,
+            isLoading = isLoading,
+            isTransferring = isTransferring,
+            error = error,
+            successMessage = success
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = WarehouseUiState(isLoading = true)
+    )
 
     /**
      * Pilih gudang untuk melihat stok
      */
-    fun selectWarehouse(warehouse: Gudang) {
-        _uiState.value = _uiState.value.copy(
-            selectedWarehouse = warehouse,
-            error = null,
-            successMessage = null
-        )
-        loadWarehouseStock(warehouse.id)
-    }
-
-    /**
-     * Load stok untuk gudang tertentu
-     */
-    private fun loadWarehouseStock(warehouseId: Long) {
-        viewModelScope.launch {
-            try {
-                val result = warehouseService.getWarehouseStock(warehouseId)
-                result.onSuccess { products ->
-                    _uiState.value = _uiState.value.copy(products = products)
-                    // Setup reactive updates untuk gudang ini
-                    observeWarehouseStock(warehouseId)
-                }.onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        error = exception.message ?: "Gagal memuat stok gudang"
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = "Terjadi kesalahan: ${e.message}"
-                )
-            }
-        }
-    }
-
-    /**
-     * Observe perubahan stok gudang secara real-time
-     */
-    private fun observeWarehouseStock(warehouseId: Long) {
-        viewModelScope.launch {
-            warehouseService.observeWarehouseStock(warehouseId)
-                .catch { e ->
-                    _uiState.value = _uiState.value.copy(
-                        error = "Gagal mengamati perubahan stockQuantity: ${e.message}"
-                    )
-                }
-                .collectLatest { products ->
-                    _uiState.value = _uiState.value.copy(products = products)
-                }
-        }
-    }
-
-    /**
-     * Load stok untuk semua gudang
-     */
-    private fun loadAllWarehouseStock() {
-        viewModelScope.launch {
-            try {
-                val result = warehouseService.getAllWarehouseStock()
-                result.onSuccess { warehouseStock ->
-                    _uiState.value = _uiState.value.copy(allWarehouseStock = warehouseStock)
-                }.onFailure { /* Ignore error untuk all warehouse stock */ }
-            } catch (e: Exception) {
-                // Ignore error untuk all warehouse stock
-            }
-        }
+    fun selectWarehouse(warehouse: Warehouse) {
+        _selectedWarehouseId.update { warehouse.id }
+        clearMessages()
     }
 
     /**
@@ -173,81 +112,43 @@ class WarehouseViewModel @Inject constructor(
         quantity: Int
     ) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isTransferring = true, error = null, successMessage = null)
-
+            _isTransferring.update { true }
+            clearMessages()
             try {
                 val result = warehouseService.transferStock(productId, fromWarehouseId, toWarehouseId, quantity)
                 result.onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        isTransferring = false,
-                        successMessage = "Transfer stok berhasil"
-                    )
-                    // Refresh data
-                    loadAllWarehouseStock()
-                    _uiState.value.selectedWarehouse?.let { selected ->
-                        loadWarehouseStock(selected.id)
-                    }
-                }.onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isTransferring = false,
-                        error = exception.message ?: "Gagal transfer stok"
-                    )
+                    _successMessage.update { "Transfer stok berhasil" }
+                }.onFailure { e ->
+                    _error.update { e.message ?: "Gagal transfer stok" }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isTransferring = false,
-                    error = "Terjadi kesalahan: ${e.message}"
-                )
+                _error.update { "Terjadi kesalahan: ${e.message}" }
+            } finally {
+                _isTransferring.update { false }
             }
         }
     }
 
     /**
-     * Assign produk ke gudang
+     * Assign product ke gudang
      */
     fun assignProductToWarehouse(productId: Long, warehouseId: Long) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null, successMessage = null)
-
+            _isLoading.update { true }
+            clearMessages()
             try {
                 val result = warehouseService.assignProductToWarehouse(productId, warehouseId)
                 result.onSuccess {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        successMessage = "Produk berhasil dipindahkan ke gudang"
-                    )
-                    // Refresh data
-                    loadAllWarehouseStock()
-                    _uiState.value.selectedWarehouse?.let { selected ->
-                        loadWarehouseStock(selected.id)
-                    }
-                }.onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = exception.message ?: "Gagal memindahkan produk"
-                    )
+                    _successMessage.update { "Product berhasil dipindahkan ke gudang" }
+                }.onFailure { e ->
+                    _error.update { e.message ?: "Gagal memindahkan product" }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Terjadi kesalahan: ${e.message}"
-                )
+                _error.update { "Terjadi kesalahan: ${e.message}" }
+            } finally {
+                _isLoading.update { false }
             }
         }
-    }
-
-    /**
-     * Clear error message
-     */
-    fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
-    }
-
-    /**
-     * Clear success message
-     */
-    fun clearSuccessMessage() {
-        _uiState.value = _uiState.value.copy(successMessage = null)
     }
 
     /**
@@ -255,34 +156,27 @@ class WarehouseViewModel @Inject constructor(
      */
     fun createWarehouse(name: String, location: String, capacity: Int) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null, successMessage = null)
-
+            _isLoading.update { true }
+            clearMessages()
             try {
-                val warehouse = Gudang(
-                    id = 0, // Will be generated by service
+                val warehouse = Warehouse(
+                    id = 0,
                     name = name,
                     location = location,
                     capacity = capacity,
                     createdAt = java.util.Date()
                 )
-
                 val result = warehouseService.createWarehouse(warehouse)
-                result.onSuccess { createdWarehouse ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        successMessage = "Gudang '${createdWarehouse.name}' berhasil dibuat"
-                    )
-                }.onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = exception.message ?: "Gagal membuat gudang"
-                    )
+                result.onSuccess { created ->
+                    _successMessage.update { "Warehouse '${created.name}' berhasil dibuat" }
+                    // No manual reload needed, flow updates automatically
+                }.onFailure { e ->
+                    _error.update { e.message ?: "Gagal membuat gudang" }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Terjadi kesalahan: ${e.message}"
-                )
+                _error.update { "Terjadi kesalahan: ${e.message}" }
+            } finally {
+                _isLoading.update { false }
             }
         }
     }
@@ -292,58 +186,62 @@ class WarehouseViewModel @Inject constructor(
      */
     fun updateWarehouse(warehouseId: Long, name: String, location: String, capacity: Int) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null, successMessage = null)
-
+            _isLoading.update { true }
+            clearMessages()
             try {
-                val warehouse = Gudang(
+                val warehouse = Warehouse(
                     id = warehouseId,
                     name = name,
                     location = location,
                     capacity = capacity,
                     createdAt = java.util.Date()
                 )
-
                 val result = warehouseService.updateWarehouse(warehouse)
-                result.onSuccess { updatedWarehouse ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        successMessage = "Gudang '${updatedWarehouse.name}' berhasil diperbarui"
-                    )
-                    // Refresh warehouse list
-                    loadWarehouses()
-                }.onFailure { exception ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = exception.message ?: "Gagal memperbarui gudang"
-                    )
+                result.onSuccess { updated ->
+                    _successMessage.update { "Warehouse '${updated.name}' berhasil diperbarui" }
+                }.onFailure { e ->
+                    _error.update { e.message ?: "Gagal memperbarui gudang" }
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Terjadi kesalahan: ${e.message}"
-                )
+                _error.update { "Terjadi kesalahan: ${e.message}" }
+            } finally {
+                _isLoading.update { false }
             }
         }
     }
 
     /**
-     * Refresh data
+     * Clear messages
+     */
+    fun clearError() {
+        _error.update { null }
+    }
+
+    fun clearSuccessMessage() {
+        _successMessage.update { null }
+    }
+
+    private fun clearMessages() {
+        _error.update { null }
+        _successMessage.update { null }
+    }
+
+    /**
+     * Refresh data - mainly for error clearing or if service pulled from network
      */
     fun refresh() {
-        loadWarehouses()
+        clearMessages()
+        // Flows restart automatically if needed due to sharing strategy,
+        // or we could force a reload in a network scenario.
+        // For local DB, this is mostly a no-op or error clear.
     }
 
-    /**
-     * Get gudang berdasarkan ID
-     */
-    fun getWarehouseById(warehouseId: Long): Gudang? {
-        return _uiState.value.warehouses.find { it.id == warehouseId }
+    // Legacy accessors (can be removed if not used by view directly, but safe to keep)
+    fun getWarehouseById(warehouseId: Long): Warehouse? {
+        return uiState.value.warehouses.find { it.id == warehouseId }
     }
 
-    /**
-     * Get produk berdasarkan ID dari gudang yang dipilih
-     */
-    fun getProductById(productId: Long): Produk? {
-        return _uiState.value.products.find { it.id == productId }
+    fun getProductById(productId: Long): Product? {
+        return uiState.value.products.find { it.id == productId }
     }
 }

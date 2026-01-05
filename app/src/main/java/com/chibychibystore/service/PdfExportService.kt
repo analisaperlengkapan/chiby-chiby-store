@@ -116,7 +116,7 @@ class PdfExportService @Inject constructor(
             val reportData = reportingService.getSalesByProduct(startDate, endDate)
             when (reportData) {
                 is Result.Success -> {
-                    val fileName = "Laporan_Penjualan_Produk_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
+                    val fileName = "Laporan_Penjualan_Product_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
                     val filePath = createPdfFile(fileName)
 
                     createSalesByProductPdf(filePath, reportData.data, startDate, endDate)
@@ -393,13 +393,13 @@ class PdfExportService @Inject constructor(
         val document = Document(pdf)
 
         try {
-            addHeader(document, "Laporan Penjualan per Produk", startDate, endDate)
+            addHeader(document, "Laporan Penjualan per Product", startDate, endDate)
 
             val table = Table(UnitValue.createPercentArray(floatArrayOf(25f, 15f, 20f, 20f, 20f)))
             table.setWidth(UnitValue.createPercentValue(100f))
 
             // Header row
-            table.addCell(createHeaderCell("Produk"))
+            table.addCell(createHeaderCell("Product"))
             table.addCell(createHeaderCell("Terjual"))
             table.addCell(createHeaderCell("Pendapatan"))
             table.addCell(createHeaderCell("Biaya"))

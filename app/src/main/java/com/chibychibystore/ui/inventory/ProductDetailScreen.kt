@@ -1,6 +1,6 @@
 @file:Suppress("DEPRECATION")
 package com.chibychibystore.ui.inventory
-import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.Product
 import com.chibychibystore.ui.components.shared.ErrorMessage
 import com.chibychibystore.ui.components.shared.LoadingIndicator
 
@@ -98,8 +98,8 @@ fun ProductDetailScreen(
     // Delete confirmation dialog
     if (showDeleteDialog) {
         ConfirmDialog(
-            title = "Hapus Produk?",
-            message = "Produk ${uiState.product?.name} akan dihapus. Tindakan ini tidak dapat dibatalkan.",
+            title = "Hapus Product?",
+            message = "Product ${uiState.product?.name} akan dihapus. Tindakan ini tidak dapat dibatalkan.",
             confirmText = "Hapus",
             dismissText = "Batal",
             onConfirm = {
@@ -137,7 +137,7 @@ private fun ProductDetailTopBar(
     onDeleteClick: () -> Unit
 ) {
     AppTopBar(
-        title = if (uiState.isEditing) "Edit Produk" else "Detail Produk",
+        title = if (uiState.isEditing) "Edit Product" else "Detail Product",
         navigationIcon = Icons.Filled.ArrowBack,
         onNavigationClick = onBackClick,
         actions = {
@@ -162,9 +162,9 @@ private fun ProductDetailTopBar(
 
 @Composable
 private fun ProductDetailContent(
-    product: Produk,
+    product: Product,
     isEditing: Boolean,
-    onProductChange: (Produk) -> Unit
+    onProductChange: (Product) -> Unit
 ) {
     var editedProduct by remember { mutableStateOf(product) }
 
@@ -197,7 +197,7 @@ private fun ProductDetailContent(
                 )
 
                 ProductTextField(
-                    label = "Nama Produk",
+                    label = "Nama Product",
                     value = editedProduct.name,
                     onValueChange = { editedProduct = editedProduct.copy(name = it) },
                     enabled = isEditing,
