@@ -49,8 +49,8 @@ class PemasokRepositoryTest {
         val result = repository.deletePemasok(pemasokId)
 
         assertTrue(result is Result.Failure)
-        val exception = (result as Result.Failure).exception as ChibyChibyException.DatabaseError
-        assertEquals("Pemasok tidak dapat dihapus karena memiliki riwayat pembelian", exception.message)
+        val exception = (result as Result.Failure).exception as ChibyChibyException.BusinessLogicError
+        assertEquals("Pelanggaran aturan bisnis: Pemasok tidak dapat dihapus karena memiliki riwayat pembelian", exception.message)
         coVerify(exactly = 0) { pemasokDao.deletePemasokById(any()) }
     }
 

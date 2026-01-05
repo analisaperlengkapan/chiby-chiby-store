@@ -92,7 +92,8 @@ class PemasokRepository @Inject constructor(
             // Check if pemasok is used by purchases
             val purchaseCount = pembelianDao.countPembelianByPemasok(id)
             if (purchaseCount > 0) {
-                return Result.failure(ChibyChibyException.DatabaseError("Pemasok tidak dapat dihapus karena memiliki riwayat pembelian"))
+                // Return a specific BusinessLogicError instead of generic DatabaseError for better UI handling
+                return Result.failure(ChibyChibyException.BusinessLogicError("Pemasok tidak dapat dihapus karena memiliki riwayat pembelian"))
             }
 
             pemasokDao.deletePemasokById(id)
