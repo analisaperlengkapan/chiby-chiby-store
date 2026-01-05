@@ -40,4 +40,7 @@ interface PembelianDao {
 
     @Query("SELECT COUNT(*) FROM pembelian")
     suspend fun getPembelianCount(): Int
+
+    @Query("SELECT COUNT(*) FROM pembelian WHERE supplierId = :supplierId")
+    suspend fun countPembelianByPemasok(supplierId: Long): Int
 }

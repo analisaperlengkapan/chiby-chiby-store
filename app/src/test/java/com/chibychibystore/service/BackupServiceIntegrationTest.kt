@@ -36,7 +36,7 @@ class BackupServiceIntegrationTest : BaseTest() {
             KategoriRepository(db.kategoriDao()),
             GudangRepository(db.gudangDao()),
             ProdukRepository(db.produkDao()),
-            PemasokRepository(db.pemasokDao()),
+            PemasokRepository(db.pemasokDao(), db.pembelianDao()),
             PenjualanRepository(db.penjualanDao(), db.itemPenjualanDao()),
             ItemPenjualanRepository(db.itemPenjualanDao()),
             PembelianRepository(db.pembelianDao()),
