@@ -70,14 +70,13 @@ class BackupServiceImpl @Inject constructor(
             val penjualan = saleRepository.getAllPenjualan().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item penjualan", progress = 0.7f, currentStepIndex = 7, totalSteps = 10)
-            val itemPenjualan = emptyList<com.chibychibystore.data.local.entity.ItemPenjualan>()
+            val itemPenjualan = itemPenjualanRepository.getAllItemPenjualan().firstOrNull() ?: emptyList()
 
-            // Note: Need to fix pembelian repository reference
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pembelian", progress = 0.8f, currentStepIndex = 8, totalSteps = 10)
             val pembelian = purchaseRepository.getAllPembelian().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item pembelian", progress = 0.9f, currentStepIndex = 9, totalSteps = 10)
-            val itemPembelian = emptyList<com.chibychibystore.data.local.entity.ItemPembelian>()
+            val itemPembelian = itemPembelianRepository.getAllItemPembelian().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengeluaran", progress = 1.0f, currentStepIndex = 10, totalSteps = 10)
             val pengeluaran = expenseRepository.getAllPengeluarans().firstOrNull() ?: emptyList()
