@@ -1,7 +1,7 @@
 package com.chibychibystore.service
 
 import com.chibychibystore.data.Result
-import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.repository.PengeluaranRepository
@@ -39,9 +39,20 @@ class CashManagementServiceTest {
     private val testExpense = Pengeluaran(
         id = 1,
         expenseDate = java.util.Date(),
-        category = ExpenseCategory.UTILITIES,
+        category = KategoriPengeluaran.UTILITIES,
         amount = 50000.0,
         description = "Test expense",
+        approvedBy = 1,
+        createdBy = 1,
+        createdAt = java.util.Date()
+    )
+
+    private val testInvestingExpense = Pengeluaran(
+        id = 2,
+        expenseDate = java.util.Date(),
+        category = KategoriPengeluaran.EQUIPMENT,
+        amount = 20000.0,
+        description = "Test equipment",
         approvedBy = 1,
         createdBy = 1,
         createdAt = java.util.Date()
@@ -97,7 +108,7 @@ class CashManagementServiceTest {
         val startDate = LocalDate.now().minusDays(30)
         val endDate = LocalDate.now()
         val sales = listOf(testSale)
-        val expenses = listOf(testExpense)
+        val expenses = listOf(testExpense, testInvestingExpense)
 
         `when`(saleRepository.getSalesInDateRange(startDate, endDate)).thenReturn(sales)
         `when`(expenseRepository.getExpensesInDateRange(startDate, endDate)).thenReturn(expenses)
@@ -109,9 +120,9 @@ class CashManagementServiceTest {
         assertTrue(result is Result.Success)
         val summary = (result as Result.Success).data
         assertEquals(50000.0, summary.operatingCashFlow, 0.01)
-        assertEquals(0.0, summary.investingCashFlow, 0.01) // Not implemented yet
+        assertEquals(-20000.0, summary.investingCashFlow, 0.01)
         assertEquals(0.0, summary.financingCashFlow, 0.01) // Not implemented yet
-        assertEquals(50000.0, summary.netCashFlow, 0.01)
+        assertEquals(30000.0, summary.netCashFlow, 0.01)
     }
 
     @Test

@@ -25,7 +25,8 @@ enum class KategoriPengeluaran(val displayName: String) {
     SUPPLIES_MAINTENANCE("Suplies & Perawatan"),
     DEPRECIATION("Depresiasi"),
     PROFESSIONAL_SERVICES("Jasa Profesional"),
-    MISCELLANEOUS("Lain-lain");
+    MISCELLANEOUS("Lain-lain"),
+    EQUIPMENT("Peralatan & Aset");
 
     companion object {
         fun fromDisplayName(displayName: String): KategoriPengeluaran? {
@@ -34,7 +35,9 @@ enum class KategoriPengeluaran(val displayName: String) {
 
         // Grup kategori untuk pelaporan
         val COGS_CATEGORIES = setOf(INVENTORY_PURCHASES)
-        val OPERATING_EXPENSE_CATEGORIES = values().toSet() - COGS_CATEGORIES
+        val INVESTING_CATEGORIES = setOf(EQUIPMENT)
+        val NON_CASH_CATEGORIES = setOf(DEPRECIATION)
+        val OPERATING_EXPENSE_CATEGORIES = values().toSet() - COGS_CATEGORIES - INVESTING_CATEGORIES - NON_CASH_CATEGORIES
     }
 }
 

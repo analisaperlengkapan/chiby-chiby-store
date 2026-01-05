@@ -70,10 +70,9 @@ class CashManagementService @Inject constructor(
             val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
 
-            // Equipment purchases and store improvements
+            // Equipment purchases and store improvements (Investing activities)
             val equipmentExpenses = pengeluaranRepository.getPengeluaransByDateRangeList(start, end)
-                .filter { it.category == KategoriPengeluaran.SUPPLIES_MAINTENANCE ||
-                         it.category == KategoriPengeluaran.DEPRECIATION }
+                .filter { it.category in KategoriPengeluaran.INVESTING_CATEGORIES }
                 .sumOf { it.amount }
 
             val investingCashFlow = -equipmentExpenses
