@@ -136,4 +136,29 @@ class PengeluaranRepository @Inject constructor(
             Result.failure(ChibyChibyException.DatabaseError("getTotalPengeluaranAmount", e))
         }
     }
+
+    /**
+     * Get total unapproved pengeluaran amount before date
+     */
+    suspend fun getUnapprovedPengeluaranTotalBeforeDate(date: Date): Double {
+        return try {
+            pengeluaranDao.getUnapprovedPengeluaranTotalBeforeDate(date) ?: 0.0
+        } catch (e: Exception) {
+            0.0
+        }
+    }
+
+    /**
+     * Get approved pengeluaran summary grouped by category
+     */
+    suspend fun getApprovedRingkasanPengeluaranPerKategori(
+        startDate: Date,
+        endDate: Date
+    ): Map<KategoriPengeluaran, Double> {
+        return try {
+            pengeluaranDao.getApprovedRingkasanPengeluaranPerKategori(startDate, endDate)
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
 }
