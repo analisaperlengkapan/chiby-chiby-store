@@ -1,6 +1,6 @@
 package com.chibychibystore
 
-import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.ItemPenjualan
@@ -22,7 +22,7 @@ object TestDataBuilder {
             Pengeluaran(
                 id = 0,
                 expenseDate = baseDate,
-                category = ExpenseCategory.INVENTORY_PURCHASES,
+                category = KategoriPengeluaran.INVENTORY_PURCHASES,
                 amount = 500000.0, // Rp 500k inventory purchase
                 description = "Pembelian inventory makanan",
                 approvedBy = approvedBy,
@@ -33,7 +33,7 @@ object TestDataBuilder {
             Pengeluaran(
                 id = 0,
                 expenseDate = baseDate,
-                category = ExpenseCategory.RENT_LEASE,
+                category = KategoriPengeluaran.RENT_LEASE,
                 amount = 3000000.0, // Rp 3M rent
                 description = "Sewa toko bulan Desember",
                 approvedBy = approvedBy,
@@ -43,7 +43,7 @@ object TestDataBuilder {
             Pengeluaran(
                 id = 0,
                 expenseDate = baseDate,
-                category = ExpenseCategory.UTILITIES,
+                category = KategoriPengeluaran.UTILITIES,
                 amount = 500000.0, // Rp 500k utilities
                 description = "Tagihan listrik dan air",
                 approvedBy = approvedBy,
@@ -53,7 +53,7 @@ object TestDataBuilder {
             Pengeluaran(
                 id = 0,
                 expenseDate = baseDate,
-                category = ExpenseCategory.SALARIES_WAGES,
+                category = KategoriPengeluaran.SALARIES_WAGES,
                 amount = 2000000.0, // Rp 2M salaries
                 description = "Gaji karyawan",
                 approvedBy = approvedBy,
@@ -63,7 +63,7 @@ object TestDataBuilder {
             Pengeluaran(
                 id = 0,
                 expenseDate = baseDate,
-                category = ExpenseCategory.SUPPLIES_MAINTENANCE,
+                category = KategoriPengeluaran.SUPPLIES_MAINTENANCE,
                 amount = 300000.0, // Rp 300k supplies
                 description = "Pembelian supplies toko",
                 approvedBy = approvedBy,
@@ -74,7 +74,7 @@ object TestDataBuilder {
             Pengeluaran(
                 id = 0,
                 expenseDate = baseDate,
-                category = ExpenseCategory.MARKETING_ADVERTISING,
+                category = KategoriPengeluaran.MARKETING_ADVERTISING,
                 amount = 2000000.0, // Rp 2M marketing (above threshold)
                 description = "Kampanye iklan sosial media",
                 approvedBy = null, // Not approved yet
@@ -150,7 +150,10 @@ object TestDataBuilder {
         const val NET_PROFIT = -4620000.0
 
         // Operating cash flow = sales - operating expenses - COGS
-        const val OPERATING_CASH_FLOW = -6220000.0
+        // Unapproved expenses (2M marketing) are excluded from cash flow
+        // Operating Expenses (Paid) = 5.8M - 2.0M = 3.8M
+        // Cash Flow = 80k - 3.8M - 500k = -4.22M
+        const val OPERATING_CASH_FLOW = -4220000.0
 
         // Inventory value (cost basis) = 100 units * 15000 = 1,500,000
         const val INVENTORY_VALUE = 1500000.0
@@ -158,10 +161,10 @@ object TestDataBuilder {
         // Assets = inventory + cash (assuming cash = 0 for test)
         const val TOTAL_ASSETS = 1500000.0
 
-        // Liabilities = 0 (not implemented yet)
-        const val TOTAL_LIABILITIES = 0.0
+        // Liabilities = Unapproved expenses (Marketing 2M)
+        const val TOTAL_LIABILITIES = 2000000.0
 
         // Equity = assets - liabilities
-        const val TOTAL_EQUITY = 1500000.0
+        const val TOTAL_EQUITY = -500000.0
     }
 }

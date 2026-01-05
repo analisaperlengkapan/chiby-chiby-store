@@ -2,9 +2,12 @@ package com.chibychibystore.service
 
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
+import com.chibychibystore.repository.PengeluaranRepository
 import com.chibychibystore.repository.ProdukRepository
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,6 +18,7 @@ import javax.inject.Singleton
 @Singleton
 class BalanceSheetService @Inject constructor(
     private val produkRepository: ProdukRepository,
+    private val pengeluaranRepository: PengeluaranRepository,
     private val cashManagementService: CashManagementService
 ) {
 
@@ -64,7 +68,15 @@ class BalanceSheetService @Inject constructor(
      */
     suspend fun calculateTotalLiabilities(asOfDate: LocalDate): Result<Double> {
         return try {
-            val totalLiabilities = 0.0
+            val date = Date.from(asOfDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+
+            // Liabilities = Unapproved expenses (Accounts Payable)
+            val allExpenses = pengeluaranRepository.getAllPengeluarans().first()
+
+            val totalLiabilities = allExpenses
+                .filter { it.expenseDate <= date && it.approvedBy == null }
+                .sumOf { it.amount }
+
             Result.success(totalLiabilities)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung total liabilities", e))

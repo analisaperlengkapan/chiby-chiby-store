@@ -46,13 +46,15 @@ class CashManagementService @Inject constructor(
             val salesRevenue = sales.sumOf { it.totalAmount }
 
             // Get operating expenses (cash outflows)
+            // Filter only approved/paid expenses
             val operatingExpenses = pengeluaranRepository.getPengeluaransByDateRangeList(start, end)
-                .filter { it.category in KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES }
+                .filter { it.category in KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES && it.approvedBy != null }
                 .sumOf { it.amount }
 
             // Get inventory purchases (COGS - cash outflows for inventory)
+            // Filter only approved/paid expenses
             val inventoryPurchases = pengeluaranRepository.getPengeluaransByDateRangeList(start, end)
-                .filter { it.category in KategoriPengeluaran.COGS_CATEGORIES }
+                .filter { it.category in KategoriPengeluaran.COGS_CATEGORIES && it.approvedBy != null }
                 .sumOf { it.amount }
 
             val operatingCashFlow = salesRevenue - operatingExpenses - inventoryPurchases
@@ -71,9 +73,11 @@ class CashManagementService @Inject constructor(
             val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
 
             // Equipment purchases and store improvements
+            // Filter only approved/paid expenses
             val equipmentExpenses = pengeluaranRepository.getPengeluaransByDateRangeList(start, end)
-                .filter { it.category == KategoriPengeluaran.SUPPLIES_MAINTENANCE ||
-                         it.category == KategoriPengeluaran.DEPRECIATION }
+                .filter { (it.category == KategoriPengeluaran.SUPPLIES_MAINTENANCE ||
+                         it.category == KategoriPengeluaran.DEPRECIATION) &&
+                         it.approvedBy != null }
                 .sumOf { it.amount }
 
             val investingCashFlow = -equipmentExpenses
