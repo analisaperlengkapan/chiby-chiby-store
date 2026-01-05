@@ -40,8 +40,10 @@ interface BackupService {
 interface RestoreService {
     /**
      * Restore data dari backup file
+     * @param backupPath Lokasi file backup
+     * @param clearExistingData Jika true, data lama akan dihapus sebelum restore. Jika false, data akan digabung (ignore duplicate).
      */
-    suspend fun restoreFromBackup(backupPath: String): Result<RestoreResult>
+    suspend fun restoreFromBackup(backupPath: String, clearExistingData: Boolean = true): Result<RestoreResult>
 
     /**
      * Preview isi backup sebelum restore

@@ -268,14 +268,35 @@ fun BackupScreen(
 
     // Restore Confirmation Dialog
     showRestoreDialog?.let { backupPath ->
+        var clearExistingData by remember { mutableStateOf(true) }
+
         AlertDialog(
             onDismissRequest = { showRestoreDialog = null },
             title = { Text("Pulihkan Data") },
-            text = { Text("Apakah Anda yakin ingin memulihkan data dari backup ini? Data yang ada saat ini akan digantikan.") },
+            text = {
+                Column {
+                    Text("Apakah Anda yakin ingin memulihkan data dari backup ini?")
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.material3.Checkbox(
+                            checked = clearExistingData,
+                            onCheckedChange = { clearExistingData = it }
+                        )
+                        Text(
+                            text = "Hapus data saat ini sebelum restore",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.restoreFromBackup(backupPath)
+                        viewModel.restoreFromBackup(backupPath, clearExistingData)
                         showRestoreDialog = null
                     }
                 ) {

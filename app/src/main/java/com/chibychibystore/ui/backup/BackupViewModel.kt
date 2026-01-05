@@ -134,11 +134,11 @@ class BackupViewModel @Inject constructor(
         }
     }
 
-    fun restoreFromBackup(backupPath: String) {
+    fun restoreFromBackup(backupPath: String, clearExistingData: Boolean = true) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRestoring = true, error = null)
 
-            when (val result = restoreService.restoreFromBackup(backupPath)) {
+            when (val result = restoreService.restoreFromBackup(backupPath, clearExistingData)) {
                 is com.chibychibystore.data.model.Result.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isRestoring = false,
