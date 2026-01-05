@@ -22,10 +22,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -34,11 +32,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.chibychibystore.BuildConfig
+import com.chibychibystore.R
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
@@ -52,9 +52,10 @@ import java.util.concurrent.Executors
 fun BarcodeScanner(
     onBarcodeDetected: (String) -> Unit,
     modifier: Modifier = Modifier,
-    isScanning: Boolean = true
+    isScanning: Boolean = true,
+    isProcessing: Boolean = false,
+    instructionText: String = stringResource(id = R.string.barcode_scan_instructions)
 ) {
-    var isProcessing by remember { mutableStateOf(false) }
     val primaryColor = MaterialTheme.colorScheme.primary
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -85,6 +86,7 @@ fun BarcodeScanner(
                 factory = { ctx ->
                     val previewView = PreviewView(ctx)
                     val executor = ContextCompat.getMainExecutor(ctx)
+                    val mainExecutor = ContextCompat.getMainExecutor(ctx)
 
                     cameraProviderFuture.addListener({
                         try {
@@ -107,8 +109,10 @@ fun BarcodeScanner(
                                         it.setAnalyzer(
                                             analysisExecutor,
                                             BarcodeAnalyzer { barcode ->
-                                                if (currentIsScanning) {
-                                                    currentOnBarcodeDetected(barcode)
+                                                mainExecutor.execute {
+                                                    if (currentIsScanning) {
+                                                        currentOnBarcodeDetected(barcode)
+                                                    }
                                                 }
                                             }
                                         )
@@ -233,9 +237,9 @@ fun BarcodeScanner(
                 )
             }
 
-            if (isScanning) {
+            if (isScanning && instructionText.isNotBlank()) {
                 Text(
-                    text = "Arahkan kamera ke barcode",
+                    text = instructionText,
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White,
                     textAlign = TextAlign.Center,
@@ -243,15 +247,15 @@ fun BarcodeScanner(
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 32.dp)
                 )
+            }
 
-                // Helpful debug: allow simulation of barcode detection in preview/dev builds
-                if (BuildConfig.DEBUG) {
-                    androidx.compose.material3.Button(
-                        onClick = { onBarcodeDetected("SIMULATED_BARCODE") },
-                        modifier = Modifier.align(Alignment.Center)
-                    ) {
-                        Text(text = "Simulate Scan")
-                    }
+            // Helpful debug: allow simulation of barcode detection in preview/dev builds
+            if (isScanning && BuildConfig.DEBUG) {
+                androidx.compose.material3.Button(
+                    onClick = { onBarcodeDetected("SIMULATED_BARCODE") },
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    Text(text = "Simulate Scan")
                 }
             }
 
@@ -267,7 +271,7 @@ fun BarcodeScanner(
         }
     }
 }
-
+// ... BarcodeAnalyzer (same as before, unchange)
 private class BarcodeAnalyzer(
     private val onBarcodeDetected: (String) -> Unit
 ) : ImageAnalysis.Analyzer {
@@ -318,9 +322,6 @@ private class BarcodeAnalyzer(
 
             // To convert from CW rotation needed (rotationDegrees) to CCW operations:
             // 90 CW = 270 CCW (3 rotations)
-            // 180 CW = 180 CCW (2 rotations)
-            // 270 CW = 90 CCW (1 rotation)
-            // 0 CW = 0 CCW
             // Formula: (4 - (degrees / 90)) % 4
             val rotations = (4 - (rotationDegrees / 90)) % 4
             repeat(rotations) {
