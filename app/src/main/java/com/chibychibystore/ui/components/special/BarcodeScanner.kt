@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.chibychibystore.BuildConfig
 
 @Composable
 fun BarcodeScanner(
@@ -150,11 +151,13 @@ fun BarcodeScanner(
                 )
 
                 // Helpful debug: allow simulation of barcode detection in preview/dev builds
-                androidx.compose.material3.Button(
-                    onClick = { onBarcodeDetected("SIMULATED_BARCODE") },
-                    modifier = Modifier.align(Alignment.Center)
-                ) {
-                    Text(text = "Simulate Scan")
+                if (BuildConfig.DEBUG) {
+                    androidx.compose.material3.Button(
+                        onClick = { onBarcodeDetected("SIMULATED_BARCODE") },
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        Text(text = "Simulate Scan")
+                    }
                 }
             }
 
