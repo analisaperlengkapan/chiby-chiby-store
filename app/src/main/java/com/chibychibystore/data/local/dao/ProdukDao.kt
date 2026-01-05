@@ -25,6 +25,9 @@ interface ProdukDao {
     @Query("SELECT * FROM produk WHERE categoryId = :categoryId ORDER BY name ASC")
     fun getProdukByKategori(categoryId: Long): Flow<List<Produk>>
 
+    @Query("SELECT COUNT(*) FROM produk WHERE categoryId = :categoryId")
+    suspend fun countProdukByKategori(categoryId: Long): Int
+
     @Query("SELECT * FROM produk WHERE warehouseId = :warehouseId ORDER BY name ASC")
     fun getProdukByGudang(warehouseId: Long): Flow<List<Produk>>
 

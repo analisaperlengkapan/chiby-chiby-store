@@ -1,7 +1,9 @@
 package com.chibychibystore.repository
 
 import com.chibychibystore.data.local.dao.KategoriDao
+import com.chibychibystore.data.local.dao.ProdukDao
 import com.chibychibystore.data.local.entity.Kategori
+import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -20,13 +22,15 @@ class KategoriRepositoryTest {
 
     @Mock
     private lateinit var kategoriDao: KategoriDao
+    @Mock
+    private lateinit var produkDao: ProdukDao
 
     private lateinit var repository: KategoriRepository
 
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        repository = KategoriRepository(kategoriDao)
+        repository = KategoriRepository(kategoriDao, produkDao)
     }
 
     @Test
@@ -38,7 +42,7 @@ class KategoriRepositoryTest {
         whenever(kategoriDao.getAllKategori()).thenReturn(flowOf(kategoriList))
 
         val result = repository.getAllKategori()
-        
+
         assertNotNull(result)
         verify(kategoriDao).getAllKategori()
     }
@@ -49,7 +53,7 @@ class KategoriRepositoryTest {
         whenever(kategoriDao.getKategoriById(1L)).thenReturn(kategori)
 
         val result = repository.getKategoriById(1L)
-        
+
         assertTrue(result.isSuccess)
         assertEquals(kategori, result.getOrNull())
         verify(kategoriDao).getKategoriById(1L)
@@ -83,10 +87,26 @@ class KategoriRepositoryTest {
     fun `deleteKategori should call dao delete`() = runTest {
         val kategori = Kategori(id = 1L, name = "Elektronik", description = "Produk elektronik", createdAt = Date())
         whenever(kategoriDao.getKategoriById(1L)).thenReturn(kategori)
+        whenever(produkDao.countProdukByKategori(1L)).thenReturn(0)
 
         val result = repository.deleteKategori(1L)
 
         assertTrue(result.isSuccess)
         verify(kategoriDao).deleteKategoriById(1L)
+    }
+
+    @Test
+    fun `deleteKategori should fail if products exist`() = runTest {
+        val kategori = Kategori(id = 1L, name = "Elektronik", description = "Produk elektronik", createdAt = Date())
+        whenever(kategoriDao.getKategoriById(1L)).thenReturn(kategori)
+        whenever(produkDao.countProdukByKategori(1L)).thenReturn(5)
+
+        val result = repository.deleteKategori(1L)
+
+        assertTrue(result.isFailure)
+        val exception = result.exceptionOrNull()
+        assertTrue(exception is ChibyChibyException.ValidationError)
+        assertEquals("Tidak dapat menghapus kategori yang masih memiliki produk", exception?.message)
+        verify(kategoriDao, org.mockito.kotlin.never()).deleteKategoriById(1L)
     }
 }

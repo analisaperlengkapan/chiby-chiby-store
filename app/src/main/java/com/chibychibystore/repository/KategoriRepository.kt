@@ -1,6 +1,7 @@
 package com.chibychibystore.repository
 
 import com.chibychibystore.data.local.dao.KategoriDao
+import com.chibychibystore.data.local.dao.ProdukDao
 import com.chibychibystore.data.local.entity.Kategori
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
@@ -13,7 +14,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class KategoriRepository @Inject constructor(
-    private val kategoriDao: KategoriDao
+    private val kategoriDao: KategoriDao,
+    private val produkDao: ProdukDao
 ) {
 
     /**
@@ -111,8 +113,15 @@ class KategoriRepository @Inject constructor(
                 ?: return Result.failure(ChibyChibyException.DatabaseError("Kategori tidak ditemukan"))
 
             // Check if kategori is used by products (business rule)
-            // This would require checking ProdukDao, but for now we'll allow deletion
-            // In a full implementation, you'd check for foreign key constraints
+            val productCount = produkDao.countProdukByKategori(id)
+            if (productCount > 0) {
+                return Result.failure(
+                    ChibyChibyException.ValidationError(
+                        "id",
+                        "Tidak dapat menghapus kategori yang masih memiliki produk"
+                    )
+                )
+            }
 
             kategoriDao.deleteKategoriById(id)
             Result.success(Unit)
