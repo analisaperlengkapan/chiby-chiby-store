@@ -47,7 +47,11 @@ class ExpenseServiceImpl @Inject constructor(
 
     override suspend fun getExpense(id: Long): Result<Expense?> {
         val result = expenseRepository.getExpenseById(id)
-        return if (result.isSuccess) Result.success(result.getOrNull()) else Result.failure(result.exceptionOrNull()!!)
+        return if (result.isSuccess) {
+            Result.success(result.getOrNull())
+        } else {
+            Result.failure(result.exceptionOrNull() ?: Exception("Unknown error occurred"))
+        }
     }
 
     override suspend fun getExpenses(

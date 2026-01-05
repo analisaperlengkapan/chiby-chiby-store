@@ -86,9 +86,11 @@ fun ExpenseListScreen(
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (uiState.startDate != null && uiState.endDate != null) {
-                val dateRangeFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("id", "ID")) }
+                                val dateRangeFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale("id", "ID")) }
+                                val startDateStr = uiState.startDate?.let { dateRangeFormatter.format(it) } ?: ""
+                                val endDateStr = uiState.endDate?.let { dateRangeFormatter.format(it) } ?: ""
                                 Text(
-                    text = "${dateRangeFormatter.format(uiState.startDate!!)} - ${dateRangeFormatter.format(uiState.endDate!!)}",
+                    text = "$startDateStr - $endDateStr",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
