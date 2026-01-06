@@ -38,14 +38,14 @@ class ProdukRepository @Inject constructor(
     }
 
     /**
-     * Get produk by list of IDs
+     * Get products by list of IDs
      */
-    suspend fun getProdukByIds(ids: List<Long>): Result<List<Produk>> {
+    suspend fun getProductsByIds(ids: List<Long>): Result<List<Produk>> {
         return try {
             val products = produkDao.getProdukByIds(ids)
             Result.success(products)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getProdukByIds", e))
+            Result.failure(ChibyChibyException.DatabaseError("getProductsByIds", e))
         }
     }
 

@@ -57,7 +57,7 @@ class SaleServiceImpl @Inject constructor(
 
                 // Bulk fetch products for validation
                 val productIds = items.map { it.productId }.distinct()
-                val productsResult = productRepository.getProdukByIds(productIds)
+                val productsResult = productRepository.getProductsByIds(productIds)
 
                 if (productsResult is Result.Success) {
                      val products = productsResult.data ?: emptyList()
