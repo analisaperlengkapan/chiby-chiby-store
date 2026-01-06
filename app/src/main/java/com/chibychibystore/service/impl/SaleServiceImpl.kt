@@ -1,6 +1,7 @@
 package com.chibychibystore.service.impl
 
 import com.chibychibystore.data.local.entity.ItemPenjualan
+import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.PenjualanWithItems
 import com.chibychibystore.data.model.Result
@@ -18,9 +19,11 @@ import java.util.Date
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.room.withTransaction
 
 @Singleton
 class SaleServiceImpl @Inject constructor(
+    private val db: ChibyChibyDatabase,
     private val penjualanRepository: PenjualanRepository,
     private val itemPenjualanRepository: ItemPenjualanRepository,
     private val productRepository: ProdukRepository,
@@ -36,28 +39,47 @@ class SaleServiceImpl @Inject constructor(
             return Result.failure(Exception("Item penjualan tidak boleh kosong"))
         }
 
-        var calculatedSubtotal = 0.0
-        items.forEach { item ->
-            calculatedSubtotal += item.quantity * item.unitPrice
-        }
-
-        val finalTax = calculatedSubtotal * AppConstants.TAX_RATE
-        val finalTotal = kotlin.math.max(0.0, calculatedSubtotal + finalTax - sale.discount)
-
-        val saleToSave = sale.copy(
-            totalAmount = finalTotal,
-            tax = finalTax,
-            saleDate = Date()
-        )
-
         return try {
-            val result = penjualanRepository.createPenjualan(saleToSave, items)
-            if (result is Result.Success) {
-                for (item in items) {
-                    productRepository.adjustStock(item.productId, -item.quantity)
+            db.withTransaction {
+                var calculatedSubtotal = 0.0
+                items.forEach { item ->
+                    calculatedSubtotal += item.quantity * item.unitPrice
                 }
+
+                val finalTax = calculatedSubtotal * AppConstants.TAX_RATE
+                val finalTotal = kotlin.math.max(0.0, calculatedSubtotal + finalTax - sale.discount)
+
+                val saleToSave = sale.copy(
+                    totalAmount = finalTotal,
+                    tax = finalTax,
+                    saleDate = Date()
+                )
+
+                val result = penjualanRepository.createPenjualan(saleToSave, items)
+
+                if (result is Result.Success) {
+                    for (item in items) {
+                        // Check stock before adjusting
+                        val productResult = productRepository.getProductById(item.productId)
+                        if (productResult is Result.Success && productResult.data != null) {
+                            val product = productResult.data!!
+                            if (product.stockQuantity < item.quantity) {
+                                throw IllegalStateException("Stok tidak mencukupi untuk ${product.name}")
+                            }
+                        }
+
+                        // Adjust stock
+                        val stockResult = productRepository.adjustStock(item.productId, -item.quantity)
+                        if (stockResult is Result.Failure) {
+                            throw stockResult.exception
+                        }
+                    }
+                } else if (result is Result.Failure) {
+                    throw result.exception
+                }
+
+                result
             }
-            result
         } catch (e: Exception) {
             Result.failure(e)
         }
