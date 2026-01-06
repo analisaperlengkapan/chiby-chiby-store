@@ -1,7 +1,7 @@
 package com.chibychibystore.ui.pos
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.chibychibystore.constant.AppConstants
 import com.chibychibystore.data.local.entity.ItemPenjualan
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.Produk
@@ -9,7 +9,8 @@ import com.chibychibystore.data.local.entity.PaymentMethod
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.ProductService
 import com.chibychibystore.service.SaleService
-import com.chibychibystore.error.ChibyChibyException
+import com.chibychibystore.ui.base.BaseViewModel
+import com.chibychibystore.ui.base.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -58,7 +59,7 @@ data class PosUiState(
     val completedSaleId: Long? = null,
     val showReceiptDialog: Boolean = false,
     val isPrintingReceipt: Boolean = false
-)
+) : UiState
 
 /**
  * ViewModel for Point of Sale (POS) Screen
@@ -68,13 +69,16 @@ class PosViewModel @Inject constructor(
     private val productService: ProductService,
     private val saleService: SaleService,
     private val authService: AuthService
-) : ViewModel() {
+) : BaseViewModel<PosUiState>(PosUiState()) {
 
-    private val _uiState = MutableStateFlow(PosUiState())
     private val _searchQuery = MutableStateFlow("")
 
+    init {
+        setupSearch()
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-    val uiState: StateFlow<PosUiState> = run {
+    private fun setupSearch() {
         val searchResultsFlow = _searchQuery
             .debounce(300L)
             .flatMapLatest { query ->
@@ -86,53 +90,49 @@ class PosViewModel @Inject constructor(
                 }
             }
 
-        combine(
-            _uiState,
-            searchResultsFlow,
-            _searchQuery
-        ) { currentState, searchResults, query ->
-            currentState.copy(
-                searchResults = searchResults,
-                searchQuery = query,
-                isSearching = false
-            )
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = PosUiState()
-        )
+        // We launch a collection of search results to update the state
+        viewModelScope.launch {
+            searchResultsFlow.collect { results ->
+                updateState {
+                    it.copy(
+                        searchResults = results,
+                        isSearching = false
+                    )
+                }
+            }
+        }
     }
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
-        _uiState.update { it.copy(isSearching = query.isNotBlank()) }
+        updateState { it.copy(searchQuery = query, isSearching = query.isNotBlank()) }
     }
 
     fun onBarcodeScanned(barcode: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isSearching = true) }
+        launchWithState {
+            updateState { it.copy(isSearching = true) }
             val result = productService.getProductByBarcode(barcode)
             result.onSuccess { produk ->
                 if (produk != null) {
                     addProductToCart(produk)
-                    _uiState.update { it.copy(isSearching = false, successMessage = "Produk ditambahkan: ${produk.name}") }
+                    updateState { it.copy(isSearching = false, successMessage = "Produk ditambahkan: ${produk.name}") }
                 } else {
-                    _uiState.update { it.copy(isSearching = false, error = "Produk dengan barcode $barcode tidak ditemukan") }
+                    updateState { it.copy(isSearching = false, error = "Produk dengan barcode $barcode tidak ditemukan") }
                 }
             }.onFailure { e ->
-                _uiState.update { it.copy(isSearching = false, error = "Gagal memindai: ${e.message}") }
+                updateState { it.copy(isSearching = false, error = "Gagal memindai: ${e.message}") }
             }
         }
     }
 
     fun addProductToCart(product: Produk, quantity: Int = 1) {
-        _uiState.update { currentState ->
+        updateState { currentState ->
             val existingItem = currentState.cartItems.find { it.product.id == product.id }
             
             // Basic stock validation
             val currentQtyInCart = existingItem?.quantity ?: 0
             if (product.stockQuantity < currentQtyInCart + quantity) {
-                return@update currentState.copy(error = "Stok tidak mencukupi untuk ${product.name}")
+                return@updateState currentState.copy(error = "Stok tidak mencukupi untuk ${product.name}")
             }
 
             val updatedCartItems = if (existingItem != null) {
@@ -157,12 +157,12 @@ class PosViewModel @Inject constructor(
             return
         }
 
-        _uiState.update { currentState ->
+        updateState { currentState ->
             val updatedCartItems = currentState.cartItems.map { item ->
                 if (item.product.id == productId) {
                     // Re-validate stock
                     if (item.product.stockQuantity < newQuantity) {
-                         return@update currentState.copy(error = "Stok tidak mencukupi untuk ${item.product.name}")
+                         return@updateState currentState.copy(error = "Stok tidak mencukupi untuk ${item.product.name}")
                     }
                     item.updateQuantity(newQuantity)
                 } else {
@@ -174,14 +174,14 @@ class PosViewModel @Inject constructor(
     }
 
     fun removeCartItem(productId: Long) {
-        _uiState.update { currentState ->
+        updateState { currentState ->
             val updatedCartItems = currentState.cartItems.filter { it.product.id != productId }
             calculateNewState(currentState, updatedCartItems)
         }
     }
 
     fun clearCart() {
-        _uiState.update { currentState ->
+        updateState { currentState ->
             currentState.copy(
                 cartItems = emptyList(),
                 subtotal = 0.0,
@@ -195,18 +195,18 @@ class PosViewModel @Inject constructor(
     }
 
     fun setPaymentMethod(method: String) {
-        _uiState.update { it.copy(paymentMethod = method) }
+        updateState { it.copy(paymentMethod = method) }
     }
 
     fun processPayment() {
-        val currentState = _uiState.value
+        val currentState = currentState
         if (currentState.cartItems.isEmpty()) {
-            _uiState.update { it.copy(error = "Keranjang kosong") }
+            updateState { it.copy(error = "Keranjang kosong") }
             return
         }
 
-        viewModelScope.launch {
-            _uiState.update { it.copy(isProcessingPayment = true, error = null) }
+        launchWithState {
+            updateState { it.copy(isProcessingPayment = true, error = null) }
             
             val currentUser = authService.getCurrentUser()
             val userId = currentUser?.id ?: 0L
@@ -232,7 +232,7 @@ class PosViewModel @Inject constructor(
 
             val result = saleService.createPenjualan(sale, items)
             result.onSuccess { completedSale ->
-                _uiState.update { 
+                updateState {
                     it.copy(
                         isProcessingPayment = false,
                         successMessage = "Pembayaran berhasil",
@@ -246,14 +246,14 @@ class PosViewModel @Inject constructor(
                     )
                 }
             }.onFailure { e ->
-                _uiState.update { it.copy(isProcessingPayment = false, error = "Gagal memproses pembayaran: ${e.message}") }
+                updateState { it.copy(isProcessingPayment = false, error = "Gagal memproses pembayaran: ${e.message}") }
             }
         }
     }
 
     private fun calculateNewState(currentState: PosUiState, items: List<CartItem>): PosUiState {
         val subtotal = items.sumOf { it.totalPrice }
-        val tax = subtotal * 0.1 // 10% tax
+        val tax = subtotal * AppConstants.TAX_RATE
         val total = subtotal + tax - currentState.discount
         return currentState.copy(
             cartItems = items,
@@ -264,19 +264,19 @@ class PosViewModel @Inject constructor(
     }
 
     fun clearError() {
-        _uiState.update { it.copy(error = null) }
+        updateState { it.copy(error = null) }
     }
 
     fun clearSuccessMessage() {
-        _uiState.update { it.copy(successMessage = null) }
+        updateState { it.copy(successMessage = null) }
     }
 
     fun printReceipt() {
-        val saleId = _uiState.value.completedSaleId ?: return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isPrintingReceipt = true) }
+        val saleId = currentState.completedSaleId ?: return
+        launchWithState {
+            updateState { it.copy(isPrintingReceipt = true) }
             val result = saleService.cetakStruk(saleId)
-            _uiState.update { 
+            updateState {
                 it.copy(
                     isPrintingReceipt = false,
                     successMessage = if (result.isSuccess) "Struk sedang dicetak" else "Gagal mencetak struk"
@@ -286,7 +286,7 @@ class PosViewModel @Inject constructor(
     }
 
     fun startNewTransaction() {
-        _uiState.update { 
+        updateState {
             it.copy(
                 completedSaleId = null,
                 showReceiptDialog = false
@@ -296,6 +296,6 @@ class PosViewModel @Inject constructor(
     }
 
     fun dismissReceiptDialog() {
-        _uiState.update { it.copy(showReceiptDialog = false) }
+        updateState { it.copy(showReceiptDialog = false) }
     }
 }
