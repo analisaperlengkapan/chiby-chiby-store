@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.Kategori
 import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.service.BarcodeService
 import com.chibychibystore.service.ProductService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,7 @@ data class ProductDetailUiState(
 @HiltViewModel
 class ProductDetailViewModel @Inject constructor(
     private val productService: ProductService,
+    private val barcodeService: BarcodeService,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -224,6 +226,13 @@ class ProductDetailViewModel @Inject constructor(
      */
     fun clearSuccessMessage() {
         _uiState.value = _uiState.value.copy(successMessage = null)
+    }
+
+    /**
+     * Generate barcode value baru
+     */
+    suspend fun generateBarcodeValue(): String {
+        return barcodeService.generateNewBarcodeValue()
     }
 
     /**

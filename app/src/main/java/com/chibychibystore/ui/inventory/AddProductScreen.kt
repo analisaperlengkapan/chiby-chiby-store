@@ -14,12 +14,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.chibychibystore.R
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.shared.AppTopBar
+import com.chibychibystore.ui.navigation.Screen
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +33,7 @@ fun AddProductScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     var editedProduct by remember {
         mutableStateOf(
@@ -46,6 +51,21 @@ fun AddProductScreen(
         )
     }
 
+    // Listen for scanned barcode result
+    val currentBackStackEntry = navController.currentBackStackEntry
+    val savedStateHandle = currentBackStackEntry?.savedStateHandle
+    val scannedBarcode by savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState()
+
+    LaunchedEffect(scannedBarcode) {
+        scannedBarcode?.let { barcode ->
+            if (barcode.isNotBlank()) {
+                editedProduct = editedProduct.copy(barcode = barcode)
+                // Clear the result to avoid re-triggering
+                savedStateHandle?.remove<String>("scanned_barcode")
+            }
+        }
+    }
+
     // Initialize with empty product for adding
     LaunchedEffect(Unit) {
         // ProductDetailViewModel will default to create-mode when productId is null.
@@ -54,7 +74,7 @@ fun AddProductScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Tambah Product",
+                title = stringResource(R.string.pos_add_product), // Reusing similar string or add new one if strictly "Tambah Product"
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
@@ -64,7 +84,7 @@ fun AddProductScreen(
                         },
                         enabled = editedProduct.name.isNotBlank()
                     ) {
-                        Icon(Icons.Default.Save, contentDescription = "Simpan")
+                        Icon(Icons.Default.Save, contentDescription = stringResource(R.string.common_save))
                     }
                 }
             )
@@ -174,7 +194,22 @@ private fun AddProductContent(
                     label = "Barcode",
                     value = editedProduct.barcode ?: "",
                     onValueChange = { editedProduct = editedProduct.copy(barcode = it.takeIf { it.isNotBlank() }) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    trailingIcon = {
+                        Row {
+                            IconButton(onClick = { navController.navigate(Screen.BarcodeScanner.route) }) {
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.barcode_scan_action))
+                            }
+                            IconButton(onClick = {
+                                scope.launch {
+                                    val newBarcode = viewModel.generateBarcodeValue()
+                                    editedProduct = editedProduct.copy(barcode = newBarcode)
+                                }
+                            }) {
+                                Icon(Icons.Default.Autorenew, contentDescription = stringResource(R.string.barcode_generate_auto))
+                            }
+                        }
+                    }
                 )
             }
         }
@@ -276,7 +311,8 @@ private fun ProductTextField(
     value: String,
     onValueChange: (String) -> Unit,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    isRequired: Boolean = false
+    isRequired: Boolean = false,
+    trailingIcon: @Composable (() -> Unit)? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -291,6 +327,7 @@ private fun ProductTextField(
         },
         keyboardOptions = keyboardOptions,
         modifier = Modifier.fillMaxWidth(),
-        singleLine = true
+        singleLine = true,
+        trailingIcon = trailingIcon
     )
 }

@@ -23,6 +23,12 @@ interface BarcodeService {
     ): Result<BarcodeData>
 
     /**
+     * Generate value barcode baru yang valid (EAN-13)
+     * @return String barcode 13 digit
+     */
+    suspend fun generateNewBarcodeValue(): String
+
+    /**
      * Validate barcode string
      * @param barcode String barcode yang akan divalidasi
      * @return true jika valid, false jika tidak

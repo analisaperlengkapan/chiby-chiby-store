@@ -14,12 +14,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.chibychibystore.R
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.dialogs.ConfirmDialog
+import com.chibychibystore.ui.navigation.Screen
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +36,28 @@ fun ProductDetailScreen(
     val product = uiState.product
     var showDeleteDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    // Listen for scanned barcode result
+    val currentBackStackEntry = navController.currentBackStackEntry
+    val savedStateHandle = currentBackStackEntry?.savedStateHandle
+    val scannedBarcode by savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState()
+
+    LaunchedEffect(scannedBarcode) {
+        scannedBarcode?.let { barcode ->
+            if (barcode.isNotBlank()) {
+                // We need to update the local product state, which is handled in Content via onProductChange
+                // But since scannedBarcode comes from navigation, we might not have direct access to 'editedProduct' state which is inside Content.
+                // However, ProductDetailScreen delegates state management to ViewModel helper updateLocalProduct
+                // So we can update it here if we have the current product.
+                uiState.product?.let { current ->
+                     viewModel.updateLocalProduct(current.copy(barcode = barcode))
+                }
+                // Clear the result
+                savedStateHandle?.remove<String>("scanned_barcode")
+            }
+        }
+    }
 
     // Load product when screen opens
     LaunchedEffect(productId) {
@@ -88,6 +114,15 @@ fun ProductDetailScreen(
                         onProductChange = { updatedProduct ->
                             // Update the product in UI state via ViewModel helper
                             viewModel.updateLocalProduct(updatedProduct)
+                        },
+                        onScanClick = { navController.navigate(Screen.BarcodeScanner.route) },
+                        onGenerateClick = {
+                            scope.launch {
+                                val newBarcode = viewModel.generateBarcodeValue()
+                                uiState.product?.let { current ->
+                                    viewModel.updateLocalProduct(current.copy(barcode = newBarcode))
+                                }
+                            }
                         }
                     )
                 }
@@ -137,23 +172,23 @@ private fun ProductDetailTopBar(
     onDeleteClick: () -> Unit
 ) {
     AppTopBar(
-        title = if (uiState.isEditing) "Edit Product" else "Detail Product",
+        title = if (uiState.isEditing) stringResource(R.string.common_edit) + " Product" else "Detail Product",
         navigationIcon = Icons.Filled.ArrowBack,
         onNavigationClick = onBackClick,
         actions = {
             if (uiState.isEditing) {
                 IconButton(onClick = onSaveClick) {
-                    Icon(Icons.Default.Save, contentDescription = "Simpan")
+                    Icon(Icons.Default.Save, contentDescription = stringResource(R.string.common_save))
                 }
                 IconButton(onClick = onCancelClick) {
-                    Icon(Icons.Default.Cancel, contentDescription = "Batal")
+                    Icon(Icons.Default.Cancel, contentDescription = stringResource(R.string.common_cancel))
                 }
             } else {
                 IconButton(onClick = onEditClick) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.common_edit))
                 }
                 IconButton(onClick = onDeleteClick) {
-                    Icon(Icons.Default.Delete, contentDescription = "Hapus")
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.common_delete))
                 }
             }
         }
@@ -164,7 +199,9 @@ private fun ProductDetailTopBar(
 private fun ProductDetailContent(
     product: Produk,
     isEditing: Boolean,
-    onProductChange: (Produk) -> Unit
+    onProductChange: (Produk) -> Unit,
+    onScanClick: () -> Unit,
+    onGenerateClick: () -> Unit
 ) {
     var editedProduct by remember { mutableStateOf(product) }
 
@@ -209,7 +246,19 @@ private fun ProductDetailContent(
                     value = editedProduct.barcode ?: "",
                     onValueChange = { editedProduct = editedProduct.copy(barcode = it.takeIf { it.isNotBlank() }) },
                     enabled = isEditing,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    trailingIcon = if (isEditing) {
+                        {
+                            Row {
+                                IconButton(onClick = onScanClick) {
+                                    Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.barcode_scan_action))
+                                }
+                                IconButton(onClick = onGenerateClick) {
+                                    Icon(Icons.Default.Autorenew, contentDescription = stringResource(R.string.barcode_generate_auto))
+                                }
+                            }
+                        }
+                    } else null
                 )
             }
         }
@@ -318,7 +367,8 @@ private fun ProductTextField(
     onValueChange: (String) -> Unit,
     enabled: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    isRequired: Boolean = false
+    isRequired: Boolean = false,
+    trailingIcon: @Composable (() -> Unit)? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -334,6 +384,7 @@ private fun ProductTextField(
         enabled = enabled,
         keyboardOptions = keyboardOptions,
         modifier = Modifier.fillMaxWidth(),
-        singleLine = true
+        singleLine = true,
+        trailingIcon = trailingIcon
     )
 }

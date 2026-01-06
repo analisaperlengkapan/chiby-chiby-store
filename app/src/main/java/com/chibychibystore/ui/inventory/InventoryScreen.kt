@@ -8,17 +8,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.chibychibystore.R
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.ChibyButton
 import com.chibychibystore.ui.components.ChibyCard
@@ -40,6 +43,21 @@ fun InventoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Listen for scanned barcode result
+    val currentBackStackEntry = navController.currentBackStackEntry
+    val savedStateHandle = currentBackStackEntry?.savedStateHandle
+    val scannedBarcode by savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState()
+
+    LaunchedEffect(scannedBarcode) {
+        scannedBarcode?.let { barcode ->
+            if (barcode.isNotBlank()) {
+                viewModel.updateSearchQuery(barcode)
+                // Clear the result to avoid re-triggering
+                savedStateHandle?.remove<String>("scanned_barcode")
+            }
+        }
+    }
 
     // Show Snackbar on Error
     LaunchedEffect(uiState) {
@@ -81,6 +99,11 @@ fun InventoryScreen(
                     label = "Cari Produk...",
                     leadingIcon = {
                         Icon(Icons.Default.Search, contentDescription = null, tint = ChibyPinkPrimary)
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = { navController.navigate(Screen.BarcodeScanner.route) }) {
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.barcode_scan_action))
+                        }
                     }
                 )
             }
