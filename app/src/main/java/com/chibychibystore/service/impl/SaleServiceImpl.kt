@@ -55,25 +55,42 @@ class SaleServiceImpl @Inject constructor(
                     saleDate = Date()
                 )
 
+                // Bulk fetch products for validation
+                val productIds = items.map { it.productId }.distinct()
+                val productsResult = productRepository.getProdukByIds(productIds)
+
+                if (productsResult is Result.Success) {
+                     val products = productsResult.data ?: emptyList()
+                     val productMap = products.associateBy { it.id }
+
+                     // Group items by product to handle duplicates (if any)
+                     val requiredQuantities = items.groupBy { it.productId }
+                         .mapValues { (_, group) -> group.sumOf { it.quantity } }
+
+                     // Validate total required quantity against stock
+                     for ((productId, requiredQty) in requiredQuantities) {
+                         val product = productMap[productId]
+                             ?: throw IllegalStateException("Produk dengan ID $productId tidak ditemukan")
+
+                         if (product.stockQuantity < requiredQty) {
+                             throw IllegalStateException("Stok tidak mencukupi untuk ${product.name}. Tersedia: ${product.stockQuantity}, Dibutuhkan: $requiredQty")
+                         }
+                     }
+                } else if (productsResult is Result.Failure) {
+                    throw productsResult.exception
+                }
+
+                // Create Sale (Persistence)
                 val result = penjualanRepository.createPenjualan(saleToSave, items)
 
                 if (result is Result.Success) {
-                    for (item in items) {
-                        // Check stock before adjusting
-                        val productResult = productRepository.getProductById(item.productId)
-                        if (productResult is Result.Success && productResult.data != null) {
-                            val product = productResult.data!!
-                            if (product.stockQuantity < item.quantity) {
-                                throw IllegalStateException("Stok tidak mencukupi untuk ${product.name}")
-                            }
-                        }
-
-                        // Adjust stock
-                        val stockResult = productRepository.adjustStock(item.productId, -item.quantity)
-                        if (stockResult is Result.Failure) {
-                            throw stockResult.exception
-                        }
-                    }
+                     // If sale created, adjust stocks
+                     for (item in items) {
+                         val stockResult = productRepository.adjustStock(item.productId, -item.quantity)
+                         if (stockResult is Result.Failure) {
+                             throw stockResult.exception
+                         }
+                     }
                 } else if (result is Result.Failure) {
                     throw result.exception
                 }
