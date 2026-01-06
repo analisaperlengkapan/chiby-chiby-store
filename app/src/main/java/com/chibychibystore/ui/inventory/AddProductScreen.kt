@@ -14,10 +14,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.chibychibystore.R
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.navigation.Screen
@@ -72,7 +74,7 @@ fun AddProductScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Tambah Product",
+                title = stringResource(R.string.pos_add_product), // Reusing similar string or add new one if strictly "Tambah Product"
                 navigationIcon = Icons.Filled.ArrowBack,
                 onNavigationClick = { navController.navigateUp() },
                 actions = {
@@ -82,7 +84,7 @@ fun AddProductScreen(
                         },
                         enabled = editedProduct.name.isNotBlank()
                     ) {
-                        Icon(Icons.Default.Save, contentDescription = "Simpan")
+                        Icon(Icons.Default.Save, contentDescription = stringResource(R.string.common_save))
                     }
                 }
             )
@@ -196,7 +198,7 @@ private fun AddProductContent(
                     trailingIcon = {
                         Row {
                             IconButton(onClick = { navController.navigate(Screen.BarcodeScanner.route) }) {
-                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.barcode_scan_action))
                             }
                             IconButton(onClick = {
                                 scope.launch {
@@ -204,7 +206,7 @@ private fun AddProductContent(
                                     editedProduct = editedProduct.copy(barcode = newBarcode)
                                 }
                             }) {
-                                Icon(Icons.Default.Autorenew, contentDescription = "Generate Otomatis")
+                                Icon(Icons.Default.Autorenew, contentDescription = stringResource(R.string.barcode_generate_auto))
                             }
                         }
                     }

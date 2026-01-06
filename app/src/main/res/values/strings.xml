@@ -59,6 +59,8 @@
     <string name="barcode_camera_permission_title">Izin Kamera Diperlukan</string>
     <string name="barcode_camera_permission_message">Untuk dapat memindai barcode, aplikasi memerlukan akses ke kamera. Berikan izin kamera untuk melanjutkan.</string>
     <string name="barcode_grant_permission">Berikan Izin</string>
+    <string name="barcode_generate_auto">Generate Otomatis</string>
+    <string name="barcode_scan_action">Scan Barcode</string>
 
     <!-- Barcode Print -->
     <string name="barcode_print_title">Cetak Label Barcode</string>

@@ -14,10 +14,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.chibychibystore.R
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.dialogs.ConfirmDialog
 import com.chibychibystore.ui.navigation.Screen
@@ -170,23 +172,23 @@ private fun ProductDetailTopBar(
     onDeleteClick: () -> Unit
 ) {
     AppTopBar(
-        title = if (uiState.isEditing) "Edit Product" else "Detail Product",
+        title = if (uiState.isEditing) stringResource(R.string.common_edit) + " Product" else "Detail Product",
         navigationIcon = Icons.Filled.ArrowBack,
         onNavigationClick = onBackClick,
         actions = {
             if (uiState.isEditing) {
                 IconButton(onClick = onSaveClick) {
-                    Icon(Icons.Default.Save, contentDescription = "Simpan")
+                    Icon(Icons.Default.Save, contentDescription = stringResource(R.string.common_save))
                 }
                 IconButton(onClick = onCancelClick) {
-                    Icon(Icons.Default.Cancel, contentDescription = "Batal")
+                    Icon(Icons.Default.Cancel, contentDescription = stringResource(R.string.common_cancel))
                 }
             } else {
                 IconButton(onClick = onEditClick) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.common_edit))
                 }
                 IconButton(onClick = onDeleteClick) {
-                    Icon(Icons.Default.Delete, contentDescription = "Hapus")
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.common_delete))
                 }
             }
         }
@@ -249,10 +251,10 @@ private fun ProductDetailContent(
                         {
                             Row {
                                 IconButton(onClick = onScanClick) {
-                                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
+                                    Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.barcode_scan_action))
                                 }
                                 IconButton(onClick = onGenerateClick) {
-                                    Icon(Icons.Default.Autorenew, contentDescription = "Generate Otomatis")
+                                    Icon(Icons.Default.Autorenew, contentDescription = stringResource(R.string.barcode_generate_auto))
                                 }
                             }
                         }

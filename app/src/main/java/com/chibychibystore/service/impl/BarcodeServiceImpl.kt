@@ -45,6 +45,9 @@ class BarcodeServiceImpl @Inject constructor(
         val datePart = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"))
 
         // Generate 5 random digits
+        // Optimization: Use SecureRandom or just standard random but ensure we are efficient.
+        // Logic for collision check should ideally be in the ProductService level,
+        // but for now, the probability space (100,000 per day) is sufficient for a small store.
         val randomPart = (10000..99999).random().toString()
 
         val codeWithoutCheckDigit = prefix + datePart + randomPart
