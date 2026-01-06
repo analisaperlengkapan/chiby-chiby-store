@@ -37,6 +37,22 @@ class BarcodeServiceImpl @Inject constructor(
     private val writer = MultiFormatWriter()
     private val qrWriter = QRCodeWriter()
 
+    override suspend fun generateNewBarcodeValue(): String = withContext(ioDispatcher) {
+        // Format: 2 (Internal) + YYMMDD (Date) + XXXXX (Random) + C (Check Digit)
+        // Total 13 digits for EAN-13 compatibility
+
+        val prefix = "2" // Internal prefix
+        val datePart = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"))
+
+        // Generate 5 random digits
+        val randomPart = (10000..99999).random().toString()
+
+        val codeWithoutCheckDigit = prefix + datePart + randomPart
+        val checkDigit = calculateCheckDigit(codeWithoutCheckDigit)
+
+        codeWithoutCheckDigit + checkDigit
+    }
+
     override suspend fun generateBarcode(
         productId: Long,
         format: BarcodeFormat,

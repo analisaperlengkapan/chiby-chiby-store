@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,6 +41,21 @@ fun InventoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Listen for scanned barcode result
+    val currentBackStackEntry = navController.currentBackStackEntry
+    val savedStateHandle = currentBackStackEntry?.savedStateHandle
+    val scannedBarcode by savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState()
+
+    LaunchedEffect(scannedBarcode) {
+        scannedBarcode?.let { barcode ->
+            if (barcode.isNotBlank()) {
+                viewModel.updateSearchQuery(barcode)
+                // Clear the result to avoid re-triggering
+                savedStateHandle?.remove<String>("scanned_barcode")
+            }
+        }
+    }
 
     // Show Snackbar on Error
     LaunchedEffect(uiState) {
@@ -81,6 +97,11 @@ fun InventoryScreen(
                     label = "Cari Produk...",
                     leadingIcon = {
                         Icon(Icons.Default.Search, contentDescription = null, tint = ChibyPinkPrimary)
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = { navController.navigate(Screen.BarcodeScanner.route) }) {
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
+                        }
                     }
                 )
             }

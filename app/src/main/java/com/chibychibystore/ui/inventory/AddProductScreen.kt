@@ -20,6 +20,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.shared.AppTopBar
+import com.chibychibystore.ui.navigation.Screen
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +31,7 @@ fun AddProductScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     var editedProduct by remember {
         mutableStateOf(
@@ -44,6 +47,21 @@ fun AddProductScreen(
                 minStock = 0
             )
         )
+    }
+
+    // Listen for scanned barcode result
+    val currentBackStackEntry = navController.currentBackStackEntry
+    val savedStateHandle = currentBackStackEntry?.savedStateHandle
+    val scannedBarcode by savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState()
+
+    LaunchedEffect(scannedBarcode) {
+        scannedBarcode?.let { barcode ->
+            if (barcode.isNotBlank()) {
+                editedProduct = editedProduct.copy(barcode = barcode)
+                // Clear the result to avoid re-triggering
+                savedStateHandle?.remove<String>("scanned_barcode")
+            }
+        }
     }
 
     // Initialize with empty product for adding
@@ -174,7 +192,22 @@ private fun AddProductContent(
                     label = "Barcode",
                     value = editedProduct.barcode ?: "",
                     onValueChange = { editedProduct = editedProduct.copy(barcode = it.takeIf { it.isNotBlank() }) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    trailingIcon = {
+                        Row {
+                            IconButton(onClick = { navController.navigate(Screen.BarcodeScanner.route) }) {
+                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
+                            }
+                            IconButton(onClick = {
+                                scope.launch {
+                                    val newBarcode = viewModel.generateBarcodeValue()
+                                    editedProduct = editedProduct.copy(barcode = newBarcode)
+                                }
+                            }) {
+                                Icon(Icons.Default.Autorenew, contentDescription = "Generate Otomatis")
+                            }
+                        }
+                    }
                 )
             }
         }
@@ -276,7 +309,8 @@ private fun ProductTextField(
     value: String,
     onValueChange: (String) -> Unit,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    isRequired: Boolean = false
+    isRequired: Boolean = false,
+    trailingIcon: @Composable (() -> Unit)? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -291,6 +325,7 @@ private fun ProductTextField(
         },
         keyboardOptions = keyboardOptions,
         modifier = Modifier.fillMaxWidth(),
-        singleLine = true
+        singleLine = true,
+        trailingIcon = trailingIcon
     )
 }
