@@ -42,20 +42,32 @@ class BarcodeServiceImpl @Inject constructor(
     override suspend fun generateNewBarcodeValue(): String = withContext(ioDispatcher) {
         // Format: 2 (Internal) + YYMMDD (Date) + XXXXX (Random) + C (Check Digit)
         // Total 13 digits for EAN-13 compatibility
-
         val prefix = "2" // Internal prefix
         val datePart = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"))
 
-        // Generate 5 random digits
-        // Optimization: Used SecureRandom for better randomness to avoid collisions.
-        // Logic for collision check should ideally be in the ProductService level,
-        // but for now, the probability space (100,000 per day) is sufficient for a small store.
-        val randomPart = (secureRandom.nextInt(90000) + 10000).toString()
+        // Retry logic to ensure uniqueness
+        var attempt = 0
+        val maxAttempts = 10
 
-        val codeWithoutCheckDigit = prefix + datePart + randomPart
-        val checkDigit = calculateCheckDigit(codeWithoutCheckDigit)
+        while (attempt < maxAttempts) {
+            // Generate 5 random digits using SecureRandom
+            val randomPart = (secureRandom.nextInt(90000) + 10000).toString()
+            val codeWithoutCheckDigit = prefix + datePart + randomPart
+            val checkDigit = calculateCheckDigit(codeWithoutCheckDigit)
+            val fullBarcode = codeWithoutCheckDigit + checkDigit
 
-        codeWithoutCheckDigit + checkDigit
+            // Check for collision
+            val existingProduct = productRepository.getProdukByBarcode(fullBarcode)
+            if (existingProduct.isFailure) {
+                // Not found (Result.Failure means no product found with this barcode, or error)
+                // Note: getProdukByBarcode returns Success if found, Failure if not found (per implementation in Repository)
+                return@withContext fullBarcode
+            }
+
+            attempt++
+        }
+
+        throw ChibyChibyException.BusinessLogicError("Gagal generate unique barcode setelah $maxAttempts percobaan")
     }
 
     override suspend fun generateBarcode(
