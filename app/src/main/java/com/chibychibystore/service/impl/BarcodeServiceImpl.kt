@@ -16,6 +16,7 @@ import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.ProdukRepository
 import com.google.zxing.EncodeHintType
 import com.google.zxing.MultiFormatWriter
+import java.security.SecureRandom
 import com.google.zxing.WriterException
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
@@ -36,24 +37,37 @@ class BarcodeServiceImpl @Inject constructor(
 
     private val writer = MultiFormatWriter()
     private val qrWriter = QRCodeWriter()
+    private val secureRandom = SecureRandom()
 
     override suspend fun generateNewBarcodeValue(): String = withContext(ioDispatcher) {
         // Format: 2 (Internal) + YYMMDD (Date) + XXXXX (Random) + C (Check Digit)
         // Total 13 digits for EAN-13 compatibility
-
         val prefix = "2" // Internal prefix
         val datePart = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"))
 
-        // Generate 5 random digits
-        // Optimization: Use SecureRandom or just standard random but ensure we are efficient.
-        // Logic for collision check should ideally be in the ProductService level,
-        // but for now, the probability space (100,000 per day) is sufficient for a small store.
-        val randomPart = (10000..99999).random().toString()
+        // Retry logic to ensure uniqueness
+        var attempt = 0
+        val maxAttempts = 10
 
-        val codeWithoutCheckDigit = prefix + datePart + randomPart
-        val checkDigit = calculateCheckDigit(codeWithoutCheckDigit)
+        while (attempt < maxAttempts) {
+            // Generate 5 random digits using SecureRandom
+            val randomPart = (secureRandom.nextInt(90000) + 10000).toString()
+            val codeWithoutCheckDigit = prefix + datePart + randomPart
+            val checkDigit = calculateCheckDigit(codeWithoutCheckDigit)
+            val fullBarcode = codeWithoutCheckDigit + checkDigit
 
-        codeWithoutCheckDigit + checkDigit
+            // Check for collision
+            val existingProduct = productRepository.getProdukByBarcode(fullBarcode)
+            if (existingProduct.isFailure) {
+                // Not found (Result.Failure means no product found with this barcode, or error)
+                // Note: getProdukByBarcode returns Success if found, Failure if not found (per implementation in Repository)
+                return@withContext fullBarcode
+            }
+
+            attempt++
+        }
+
+        throw ChibyChibyException.BusinessLogicError("Gagal generate unique barcode setelah $maxAttempts percobaan")
     }
 
     override suspend fun generateBarcode(
