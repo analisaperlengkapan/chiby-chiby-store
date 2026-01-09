@@ -14,6 +14,7 @@ import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.service.AuthService
+import com.chibychibystore.service.PromoService
 import com.chibychibystore.service.printer.PrinterService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,6 +45,7 @@ class SaleServiceImplTest {
     @Mock private lateinit var productRepository: ProdukRepository
     @Mock private lateinit var authService: AuthService
     @Mock private lateinit var printerService: PrinterService
+    @Mock private lateinit var promoService: PromoService
 
     private lateinit var saleService: SaleServiceImpl
 
@@ -65,7 +67,8 @@ class SaleServiceImplTest {
             itemPenjualanRepository,
             productRepository,
             authService,
-            printerService
+            printerService,
+            promoService
         )
     }
 
