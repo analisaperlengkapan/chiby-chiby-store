@@ -38,7 +38,7 @@ fun ReceiptDialog(
             ) {
                 // Success Icon
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.CheckCircle,
+                    imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(48.dp)
@@ -87,7 +87,7 @@ fun ReceiptDialog(
                             Spacer(modifier = Modifier.width(8.dp))
                         } else {
                             Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.Print,
+                                imageVector = Icons.Default.Print,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -107,7 +107,7 @@ fun ReceiptDialog(
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.Add,
+                            imageVector = Icons.Default.Add,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
