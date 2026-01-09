@@ -9,6 +9,7 @@ import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.repository.GudangRepository
 import com.chibychibystore.repository.KategoriRepository
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.StokGudangRepository
 import com.chibychibystore.service.impl.ProductServiceImpl
 import com.chibychibystore.service.impl.WarehouseServiceImpl
 import kotlinx.coroutines.flow.first
@@ -26,7 +27,7 @@ import java.util.Date
 
 /**
  * Integration test untuk Inventory Module
- * 
+ *
  * Test ini memastikan integrasi end-to-end antara:
  * - Database (Room)
  * - Repository layer
@@ -40,6 +41,7 @@ class InventoryModuleIntegrationTest : BaseTest() {
     private lateinit var gudangRepository: GudangRepository
     private lateinit var kategoriRepository: KategoriRepository
     private lateinit var produkRepository: ProdukRepository
+    private lateinit var stokGudangRepository: StokGudangRepository
     private lateinit var warehouseService: WarehouseServiceImpl
     private lateinit var productService: ProductServiceImpl
 
@@ -55,14 +57,15 @@ class InventoryModuleIntegrationTest : BaseTest() {
         gudangRepository = GudangRepository(database.gudangDao())
         kategoriRepository = KategoriRepository(database.kategoriDao(), database.produkDao())
         produkRepository = ProdukRepository(database.produkDao())
+        stokGudangRepository = StokGudangRepository(database.stokGudangDao())
 
         // Setup services
         val authService = Mockito.mock(com.chibychibystore.service.AuthService::class.java)
         runBlocking {
             Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
         }
-        warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, authService)
-        productService = ProductServiceImpl(produkRepository, authService)
+        warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, stokGudangRepository, authService)
+        productService = ProductServiceImpl(produkRepository, stokGudangRepository, authService)
     }
 
     @After
@@ -156,7 +159,7 @@ class InventoryModuleIntegrationTest : BaseTest() {
             capacity = 1000,
             createdAt = Date()
         )
-        
+
         warehouseService.createWarehouse(gudang1)
         warehouseService.createWarehouse(gudang2)
 
@@ -194,11 +197,12 @@ class InventoryModuleIntegrationTest : BaseTest() {
         assertTrue(transferResult.isSuccess)
 
         // Verify stock in Gudang A decreased
-        val productInGudangA = produkRepository.getProdukById(1L).getOrNull()
-        assertEquals(5, productInGudangA?.stockQuantity)
+        val stockInGudangA = stokGudangRepository.getStock(1L, 1L).getOrNull()
+        assertEquals(5, stockInGudangA?.quantity)
 
-        // Note: In real implementation, we would need to track stock per warehouse
-        // This is a simplified test
+        // Verify stock in Gudang B increased
+        val stockInGudangB = stokGudangRepository.getStock(1L, 2L).getOrNull()
+        assertEquals(5, stockInGudangB?.quantity)
     }
 
     @Test
@@ -240,7 +244,7 @@ class InventoryModuleIntegrationTest : BaseTest() {
         // Get low stock products
         val lowStockResult = productService.getLowStockProducts()
         assertTrue(lowStockResult.isSuccess)
-        
+
         val lowStockProducts = lowStockResult.getOrNull()
         assertNotNull(lowStockProducts)
         assertEquals(1, lowStockProducts?.size)
@@ -285,7 +289,7 @@ class InventoryModuleIntegrationTest : BaseTest() {
         // Search by barcode
         val searchResult = produkRepository.getProdukByBarcode("LP001")
         assertTrue(searchResult.isSuccess)
-        
+
         val foundProduct = searchResult.getOrNull()
         assertNotNull(foundProduct)
         assertEquals("Laptop", foundProduct?.name)

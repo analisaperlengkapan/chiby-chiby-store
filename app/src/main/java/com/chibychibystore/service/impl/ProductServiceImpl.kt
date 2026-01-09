@@ -2,8 +2,10 @@ package com.chibychibystore.service.impl
 
 import com.chibychibystore.constant.Permissions
 import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.local.entity.StokGudang
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.StokGudangRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.ProductService
 import com.chibychibystore.error.ChibyChibyException
@@ -15,6 +17,7 @@ import javax.inject.Singleton
 @Singleton
 class ProductServiceImpl @Inject constructor(
     private val productRepository: ProdukRepository,
+    private val stokGudangRepository: StokGudangRepository,
     private val authService: AuthService
 ) : ProductService {
 
@@ -28,6 +31,15 @@ class ProductServiceImpl @Inject constructor(
             val createResult = productRepository.createProduk(produk)
             if (createResult is Result.Failure) return Result.failure(createResult.exception)
             val createdProdukId = (createResult as Result.Success).data
+
+            // Initialize stock for the product's warehouse
+            stokGudangRepository.insertOrUpdateStock(
+                StokGudang(
+                    productId = createdProdukId,
+                    warehouseId = produk.warehouseId,
+                    quantity = produk.stockQuantity
+                )
+            )
 
             val createdProdukResult = productRepository.getProdukById(createdProdukId)
             if (createdProdukResult is Result.Failure) return Result.failure(createdProdukResult.exception)
@@ -95,7 +107,7 @@ class ProductServiceImpl @Inject constructor(
             val flow = when {
                 !searchQuery.isNullOrBlank() -> productRepository.searchProduk(searchQuery)
                 categoryId != null -> productRepository.getProdukByKategori(categoryId.toLong())
-                warehouseId != null -> productRepository.getProdukByGudang(warehouseId.toLong())
+                warehouseId != null -> stokGudangRepository.getProductsByWarehouse(warehouseId.toLong())
                 else -> productRepository.getAllProduk()
             }
             Result.success(flow.first())
@@ -147,7 +159,7 @@ class ProductServiceImpl @Inject constructor(
     }
 
     override fun observeProduksByGudang(warehouseId: String): Flow<List<Produk>> {
-        return productRepository.getProdukByGudang(warehouseId.toLong())
+        return stokGudangRepository.getProductsByWarehouse(warehouseId.toLong())
     }
 
     override fun observeSearchProduks(query: String): Flow<List<Produk>> {
