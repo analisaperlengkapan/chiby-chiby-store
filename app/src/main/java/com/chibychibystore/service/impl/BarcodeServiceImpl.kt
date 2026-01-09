@@ -16,6 +16,7 @@ import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.ProdukRepository
 import com.google.zxing.EncodeHintType
 import com.google.zxing.MultiFormatWriter
+import java.security.SecureRandom
 import com.google.zxing.WriterException
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
@@ -36,6 +37,7 @@ class BarcodeServiceImpl @Inject constructor(
 
     private val writer = MultiFormatWriter()
     private val qrWriter = QRCodeWriter()
+    private val secureRandom = SecureRandom()
 
     override suspend fun generateNewBarcodeValue(): String = withContext(ioDispatcher) {
         // Format: 2 (Internal) + YYMMDD (Date) + XXXXX (Random) + C (Check Digit)
@@ -45,10 +47,10 @@ class BarcodeServiceImpl @Inject constructor(
         val datePart = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"))
 
         // Generate 5 random digits
-        // Optimization: Use SecureRandom or just standard random but ensure we are efficient.
+        // Optimization: Used SecureRandom for better randomness to avoid collisions.
         // Logic for collision check should ideally be in the ProductService level,
         // but for now, the probability space (100,000 per day) is sufficient for a small store.
-        val randomPart = (10000..99999).random().toString()
+        val randomPart = (secureRandom.nextInt(90000) + 10000).toString()
 
         val codeWithoutCheckDigit = prefix + datePart + randomPart
         val checkDigit = calculateCheckDigit(codeWithoutCheckDigit)
