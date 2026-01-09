@@ -169,9 +169,10 @@ fun PosScreen(
         }
     }
 
-    if (uiState.showReceiptDialog && uiState.completedSaleId != null) {
+    val completedSaleId = uiState.completedSaleId
+    if (uiState.showReceiptDialog && completedSaleId != null) {
         ReceiptDialog(
-            saleId = uiState.completedSaleId!!,
+            saleId = completedSaleId,
             isPrinting = uiState.isPrintingReceipt,
             onPrintReceipt = { viewModel.printReceipt() },
             onStartNewTransaction = { viewModel.startNewTransaction() },
