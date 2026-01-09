@@ -4,6 +4,8 @@ import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.repository.GudangRepository
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.StokGudangRepository
+import com.chibychibystore.data.local.entity.StokGudang
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.WarehouseService
@@ -19,6 +21,7 @@ import javax.inject.Singleton
 class WarehouseServiceImpl @Inject constructor(
     private val warehouseRepository: GudangRepository,
     private val productRepository: ProdukRepository,
+    private val stokGudangRepository: StokGudangRepository,
     private val authService: AuthService
 ) : WarehouseService {
 
@@ -151,21 +154,33 @@ class WarehouseServiceImpl @Inject constructor(
             }
             val product = (productResult as Result.Success).data ?: return Result.failure(Exception("Produk tidak ditemukan"))
 
-            if (product.warehouseId != dariGudangId) {
-                return Result.failure(Exception("Produk tidak berada di gudang asal"))
+            // Get source stock
+            val sourceStockResult = stokGudangRepository.getStock(produkId, dariGudangId)
+            val sourceStock = if (sourceStockResult.isSuccess) sourceStockResult.getOrNull() else null
+
+            // If no stock record, check legacy stock in Product if dariGudangId matches product.warehouseId
+            var currentSourceQty = sourceStock?.quantity ?: 0
+            if (sourceStock == null && product.warehouseId == dariGudangId) {
+                // Initialize stock record from legacy product data
+                currentSourceQty = product.stockQuantity
+                stokGudangRepository.insertOrUpdateStock(StokGudang(productId = produkId, warehouseId = dariGudangId, quantity = currentSourceQty))
             }
 
-            if (product.stockQuantity < jumlah) {
+            if (currentSourceQty < jumlah) {
                 return Result.failure(Exception("Stok gudang asal tidak mencukupi"))
             }
 
-            if (jumlah == product.stockQuantity) {
-                val updatedProduk = product.copy(warehouseId = keGudangId)
-                val updateResult = productRepository.updateProduk(updatedProduk)
-                if (updateResult is Result.Failure) return Result.failure(updateResult.exception)
-            } else {
-                 return Result.failure(Exception("Transfer stok sebagian belum didukung karena batasan barcode unik. Silakan transfer seluruh stok."))
-            }
+            // Update source stock
+            val newSourceQty = currentSourceQty - jumlah
+            stokGudangRepository.insertOrUpdateStock(StokGudang(productId = produkId, warehouseId = dariGudangId, quantity = newSourceQty))
+
+            // Update target stock
+            val targetStockResult = stokGudangRepository.getStock(produkId, keGudangId)
+            val targetStock = if (targetStockResult.isSuccess) targetStockResult.getOrNull() else null
+            val currentTargetQty = targetStock?.quantity ?: 0
+            val newTargetQty = currentTargetQty + jumlah
+
+            stokGudangRepository.insertOrUpdateStock(StokGudang(productId = produkId, warehouseId = keGudangId, quantity = newTargetQty))
 
             Result.success(Unit)
         } catch (e: Exception) {
@@ -178,7 +193,7 @@ class WarehouseServiceImpl @Inject constructor(
             if (!authService.hasPermission("VIEW_INVENTORY")) {
                 return Result.failure(Exception("Tidak memiliki izin untuk melihat stok gudang"))
             }
-            val products = productRepository.getProdukByGudang(gudangId).first()
+            val products = stokGudangRepository.getProductsByWarehouse(gudangId).first()
             Result.success(products)
         } catch (e: Exception) {
             Result.failure(e)
@@ -194,7 +209,7 @@ class WarehouseServiceImpl @Inject constructor(
             val result = mutableMapOf<Gudang, List<Produk>>()
 
             for (warehouse in warehouses) {
-                val products = productRepository.getProdukByGudang(warehouse.id).first()
+                val products = stokGudangRepository.getProductsByWarehouse(warehouse.id).first()
                 result[warehouse] = products
             }
 
@@ -209,6 +224,6 @@ class WarehouseServiceImpl @Inject constructor(
     }
 
     override fun observeStokGudang(gudangId: Long): Flow<List<Produk>> {
-        return productRepository.getProdukByGudang(gudangId)
+        return stokGudangRepository.getProductsByWarehouse(gudangId)
     }
 }
