@@ -169,7 +169,15 @@ fun PosScreen(
         }
     }
 
-    // Receipt Dialog (Implement separately or keep if exists)
+    if (uiState.showReceiptDialog && uiState.completedSaleId != null) {
+        ReceiptDialog(
+            saleId = uiState.completedSaleId!!,
+            isPrinting = uiState.isPrintingReceipt,
+            onPrintReceipt = { viewModel.printReceipt() },
+            onStartNewTransaction = { viewModel.startNewTransaction() },
+            onDismiss = { viewModel.dismissReceiptDialog() }
+        )
+    }
 }
 
 @Composable
