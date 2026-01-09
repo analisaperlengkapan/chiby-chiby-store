@@ -8,6 +8,7 @@ import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.local.entity.PaymentMethod
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.ProductService
+import com.chibychibystore.service.PromoService
 import com.chibychibystore.service.SaleService
 import com.chibychibystore.ui.base.BaseViewModel
 import com.chibychibystore.ui.base.UiState
@@ -68,7 +69,8 @@ data class PosUiState(
 class PosViewModel @Inject constructor(
     private val productService: ProductService,
     private val saleService: SaleService,
-    private val authService: AuthService
+    private val authService: AuthService,
+    private val promoService: PromoService
 ) : BaseViewModel<PosUiState>(PosUiState()) {
 
     private val _searchQuery = MutableStateFlow("")
@@ -254,11 +256,13 @@ class PosViewModel @Inject constructor(
     private fun calculateNewState(currentState: PosUiState, items: List<CartItem>): PosUiState {
         val subtotal = items.sumOf { it.totalPrice }
         val tax = subtotal * AppConstants.TAX_RATE
-        val total = subtotal + tax - currentState.discount
+        val discount = promoService.calculateDiscount(subtotal)
+        val total = subtotal + tax - discount
         return currentState.copy(
             cartItems = items,
             subtotal = subtotal,
             tax = tax,
+            discount = discount,
             total = maxOf(0.0, total)
         )
     }
