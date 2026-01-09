@@ -107,7 +107,7 @@ class ProductServiceImpl @Inject constructor(
             val flow = when {
                 !searchQuery.isNullOrBlank() -> productRepository.searchProduk(searchQuery)
                 categoryId != null -> productRepository.getProdukByKategori(categoryId.toLong())
-                warehouseId != null -> productRepository.getProdukByGudang(warehouseId.toLong())
+                warehouseId != null -> stokGudangRepository.getProductsByWarehouse(warehouseId.toLong())
                 else -> productRepository.getAllProduk()
             }
             Result.success(flow.first())
@@ -159,7 +159,7 @@ class ProductServiceImpl @Inject constructor(
     }
 
     override fun observeProduksByGudang(warehouseId: String): Flow<List<Produk>> {
-        return productRepository.getProdukByGudang(warehouseId.toLong())
+        return stokGudangRepository.getProductsByWarehouse(warehouseId.toLong())
     }
 
     override fun observeSearchProduks(query: String): Flow<List<Produk>> {

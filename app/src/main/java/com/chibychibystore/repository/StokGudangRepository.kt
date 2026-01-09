@@ -1,5 +1,6 @@
 package com.chibychibystore.repository
 
+import com.chibychibystore.data.local.dao.ProdukDao
 import com.chibychibystore.data.local.dao.StokGudangDao
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.local.entity.StokGudang
@@ -10,7 +11,8 @@ import javax.inject.Singleton
 
 @Singleton
 class StokGudangRepository @Inject constructor(
-    private val stokGudangDao: StokGudangDao
+    private val stokGudangDao: StokGudangDao,
+    private val produkDao: ProdukDao
 ) {
     suspend fun getStock(productId: Long, warehouseId: Long): Result<StokGudang?> {
         return try {
@@ -30,6 +32,10 @@ class StokGudangRepository @Inject constructor(
             } else {
                 stokGudangDao.insertOrUpdateStock(stokGudang)
             }
+
+            // Sync total stock in Produk table
+            updateProductTotalStock(stokGudang.productId)
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -39,9 +45,23 @@ class StokGudangRepository @Inject constructor(
     suspend fun deleteStock(productId: Long, warehouseId: Long): Result<Unit> {
         return try {
             stokGudangDao.deleteStock(productId, warehouseId)
+
+            // Sync total stock in Produk table
+            updateProductTotalStock(productId)
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private suspend fun updateProductTotalStock(productId: Long) {
+        try {
+            val totalStock = stokGudangDao.getTotalStock(productId) ?: 0
+            produkDao.setStock(productId, totalStock)
+        } catch (e: Exception) {
+            // Log error or handle it, but for now we try best effort to sync
+            e.printStackTrace()
         }
     }
 

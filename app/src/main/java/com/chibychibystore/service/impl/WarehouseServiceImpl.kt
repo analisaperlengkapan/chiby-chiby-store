@@ -2,6 +2,8 @@ package com.chibychibystore.service.impl
 
 import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.data.local.entity.Produk
+import androidx.room.withTransaction
+import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.repository.GudangRepository
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.repository.StokGudangRepository
@@ -22,7 +24,8 @@ class WarehouseServiceImpl @Inject constructor(
     private val warehouseRepository: GudangRepository,
     private val productRepository: ProdukRepository,
     private val stokGudangRepository: StokGudangRepository,
-    private val authService: AuthService
+    private val authService: AuthService,
+    private val db: ChibyChibyDatabase
 ) : WarehouseService {
 
     override suspend fun createGudang(gudang: Gudang): Result<Gudang> {
@@ -148,39 +151,41 @@ class WarehouseServiceImpl @Inject constructor(
                 return Result.failure(Exception("Gudang asal dan tujuan tidak boleh sama"))
             }
 
-            val productResult = productRepository.getProdukById(produkId)
-             if (productResult is Result.Failure) {
-                 return Result.failure(Exception("Produk tidak ditemukan"))
+            db.withTransaction {
+                val productResult = productRepository.getProdukById(produkId)
+                if (productResult is Result.Failure) {
+                     throw Exception("Produk tidak ditemukan")
+                }
+                val product = (productResult as Result.Success).data ?: throw Exception("Produk tidak ditemukan")
+
+                // Get source stock
+                val sourceStockResult = stokGudangRepository.getStock(produkId, dariGudangId)
+                val sourceStock = if (sourceStockResult.isSuccess) sourceStockResult.getOrNull() else null
+
+                // If no stock record, check legacy stock in Product if dariGudangId matches product.warehouseId
+                var currentSourceQty = sourceStock?.quantity ?: 0
+                if (sourceStock == null && product.warehouseId == dariGudangId) {
+                    // Initialize stock record from legacy product data
+                    currentSourceQty = product.stockQuantity
+                    stokGudangRepository.insertOrUpdateStock(StokGudang(productId = produkId, warehouseId = dariGudangId, quantity = currentSourceQty))
+                }
+
+                if (currentSourceQty < jumlah) {
+                    throw Exception("Stok gudang asal tidak mencukupi")
+                }
+
+                // Update source stock
+                val newSourceQty = currentSourceQty - jumlah
+                stokGudangRepository.insertOrUpdateStock(StokGudang(productId = produkId, warehouseId = dariGudangId, quantity = newSourceQty))
+
+                // Update target stock
+                val targetStockResult = stokGudangRepository.getStock(produkId, keGudangId)
+                val targetStock = if (targetStockResult.isSuccess) targetStockResult.getOrNull() else null
+                val currentTargetQty = targetStock?.quantity ?: 0
+                val newTargetQty = currentTargetQty + jumlah
+
+                stokGudangRepository.insertOrUpdateStock(StokGudang(productId = produkId, warehouseId = keGudangId, quantity = newTargetQty))
             }
-            val product = (productResult as Result.Success).data ?: return Result.failure(Exception("Produk tidak ditemukan"))
-
-            // Get source stock
-            val sourceStockResult = stokGudangRepository.getStock(produkId, dariGudangId)
-            val sourceStock = if (sourceStockResult.isSuccess) sourceStockResult.getOrNull() else null
-
-            // If no stock record, check legacy stock in Product if dariGudangId matches product.warehouseId
-            var currentSourceQty = sourceStock?.quantity ?: 0
-            if (sourceStock == null && product.warehouseId == dariGudangId) {
-                // Initialize stock record from legacy product data
-                currentSourceQty = product.stockQuantity
-                stokGudangRepository.insertOrUpdateStock(StokGudang(productId = produkId, warehouseId = dariGudangId, quantity = currentSourceQty))
-            }
-
-            if (currentSourceQty < jumlah) {
-                return Result.failure(Exception("Stok gudang asal tidak mencukupi"))
-            }
-
-            // Update source stock
-            val newSourceQty = currentSourceQty - jumlah
-            stokGudangRepository.insertOrUpdateStock(StokGudang(productId = produkId, warehouseId = dariGudangId, quantity = newSourceQty))
-
-            // Update target stock
-            val targetStockResult = stokGudangRepository.getStock(produkId, keGudangId)
-            val targetStock = if (targetStockResult.isSuccess) targetStockResult.getOrNull() else null
-            val currentTargetQty = targetStock?.quantity ?: 0
-            val newTargetQty = currentTargetQty + jumlah
-
-            stokGudangRepository.insertOrUpdateStock(StokGudang(productId = produkId, warehouseId = keGudangId, quantity = newTargetQty))
 
             Result.success(Unit)
         } catch (e: Exception) {
