@@ -7,6 +7,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 // Default Font Family (can be customized later if custom fonts are added)
+// To use a custom font:
+// 1. Add font files (e.g., my_font_regular.ttf, my_font_bold.ttf) to app/src/main/res/font/
+// 2. Uncomment and modify the code below to define your custom FontFamily:
+/*
+val ChibyFontFamily = FontFamily(
+    androidx.compose.ui.text.font.Font(com.chibychibystore.R.font.my_font_regular, FontWeight.Normal),
+    androidx.compose.ui.text.font.Font(com.chibychibystore.R.font.my_font_bold, FontWeight.Bold)
+)
+*/
+// 3. Comment out or remove the default definition below:
 val ChibyFontFamily = FontFamily.Default
 
 val Typography = Typography(
