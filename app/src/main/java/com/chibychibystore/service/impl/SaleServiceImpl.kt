@@ -10,6 +10,7 @@ import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.constant.AppConstants
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.service.AuthService
+import com.chibychibystore.service.PromoService
 import com.chibychibystore.service.SaleService
 import com.chibychibystore.service.printer.PrinterService
 import com.chibychibystore.service.printer.ReceiptItem
@@ -28,7 +29,8 @@ class SaleServiceImpl @Inject constructor(
     private val itemPenjualanRepository: ItemPenjualanRepository,
     private val productRepository: ProdukRepository,
     private val authService: AuthService,
-    private val printerService: PrinterService
+    private val printerService: PrinterService,
+    private val promoService: PromoService
 ) : SaleService {
 
     override suspend fun createPenjualan(
@@ -47,11 +49,13 @@ class SaleServiceImpl @Inject constructor(
                 }
 
                 val finalTax = calculatedSubtotal * AppConstants.TAX_RATE
-                val finalTotal = kotlin.math.max(0.0, calculatedSubtotal + finalTax - sale.discount)
+                val finalDiscount = promoService.calculateDiscount(calculatedSubtotal)
+                val finalTotal = kotlin.math.max(0.0, calculatedSubtotal + finalTax - finalDiscount)
 
                 val saleToSave = sale.copy(
                     totalAmount = finalTotal,
                     tax = finalTax,
+                    discount = finalDiscount,
                     saleDate = Date()
                 )
 

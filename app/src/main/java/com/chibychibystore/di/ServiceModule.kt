@@ -88,6 +88,12 @@ abstract class ServiceModule {
         supplierServiceImpl: SupplierServiceImpl
     ): SupplierService
 
+    @Binds
+    @Singleton
+    abstract fun bindPromoService(
+        promoServiceImpl: PromoServiceImpl
+    ): PromoService
+
     companion object {
         @Provides
         @Singleton
