@@ -215,7 +215,7 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0'
     
     // PDF generation
-    implementation 'com.itextpdf:itext7-core:9.4.0'
+    implementation 'com.itextpdf:itext7-core:9.5.0'
     // Force a newer Gson version (override transitive gson 2.8.9 from tink) to address known issues
     implementation 'com.google.code.gson:gson:2.13.2'
     
