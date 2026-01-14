@@ -32,6 +32,7 @@ fun SalesHistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
+    val dateOnlyFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
     val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("id", "ID")) }
 
     ChibyScaffold(
@@ -83,7 +84,7 @@ fun SalesHistoryScreen(
                     ) {
                         ChibyOutlinedButton(
                             text = uiState.startDate?.let {
-                                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)
+                                dateOnlyFormat.format(it)
                             } ?: "Tanggal Mulai",
                             onClick = { viewModel.showDatePicker(DatePickerType.START) },
                             modifier = Modifier.weight(1f)
@@ -91,7 +92,7 @@ fun SalesHistoryScreen(
 
                         ChibyOutlinedButton(
                             text = uiState.endDate?.let {
-                                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(it)
+                                dateOnlyFormat.format(it)
                             } ?: "Tanggal Akhir",
                             onClick = { viewModel.showDatePicker(DatePickerType.END) },
                             modifier = Modifier.weight(1f)
