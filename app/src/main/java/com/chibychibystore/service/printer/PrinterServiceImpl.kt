@@ -346,9 +346,12 @@ class PrinterServiceImpl @Inject constructor(
         stream.write(EscPosCommands.BOLD_OFF)
         stream.write("--------------------------------\n".toByteArray())
 
+        // Totals formatter (reused for items and totals - optimization)
+        val currencyFormat = java.text.NumberFormat.getCurrencyInstance(Locale.Builder().setLanguage("id").setRegion("ID").build())
+
         // Items
         items.forEach { item ->
-            val itemLine = formatItemLine(item.name, item.quantity, item.totalPrice)
+            val itemLine = formatItemLine(item.name, item.quantity, item.totalPrice, currencyFormat)
             stream.write("$itemLine\n".toByteArray())
         }
 
@@ -356,8 +359,6 @@ class PrinterServiceImpl @Inject constructor(
         stream.write("================================\n".toByteArray())
 
         // Totals
-        val currencyFormat = java.text.NumberFormat.getCurrencyInstance(Locale.Builder().setLanguage("id").setRegion("ID").build())
-
         stream.write("Subtotal: ${currencyFormat.format(subtotal)}\n".toByteArray())
         if (tax > 0) {
             stream.write("Pajak: ${currencyFormat.format(tax)}\n".toByteArray())
@@ -387,8 +388,7 @@ class PrinterServiceImpl @Inject constructor(
         return stream.toByteArray()
     }
 
-    private fun formatItemLine(name: String, quantity: Int, totalPrice: Double): String {
-        val currencyFormat = java.text.NumberFormat.getCurrencyInstance(Locale.Builder().setLanguage("id").setRegion("ID").build())
+    private fun formatItemLine(name: String, quantity: Int, totalPrice: Double, currencyFormat: java.text.NumberFormat): String {
         val maxNameLength = 20
         val truncatedName = if (name.length > maxNameLength) {
             name.substring(0, maxNameLength - 3) + "..."
