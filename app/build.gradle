@@ -94,7 +94,6 @@ android {
                 exclude '**/service/ProductServiceTest.*'
                 exclude '**/service/ExpenseServiceTest.*'
                 exclude '**/service/PdfExportServiceTest.*'
-                exclude '**/service/BarcodeServiceTest.*'
                 exclude '**/service/CashManagementServiceTest.*'
                 exclude '**/service/DataSeedingServiceTest.*'
                 exclude '**/service/BackupServiceTest.*'
@@ -147,7 +146,6 @@ tasks.withType(JavaCompile).configureEach {
         exclude('**/service/ProductServiceTest.*')
         exclude('**/service/ExpenseServiceTest.*')
         exclude('**/service/PdfExportServiceTest.*')
-        exclude('**/service/BarcodeServiceTest.*')
         exclude('**/service/CashManagementServiceTest.*')
         exclude('**/service/DataSeedingServiceTest.*')
         exclude('**/service/BackupServiceTest.*')
