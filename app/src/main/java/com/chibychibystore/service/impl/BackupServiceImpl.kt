@@ -13,12 +13,18 @@ import com.chibychibystore.service.BackupInfo
 import com.chibychibystore.service.BackupProgress
 import com.chibychibystore.service.BackupService
 import com.chibychibystore.service.BackupValidationResult
+import com.google.gson.stream.JsonWriter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.OutputStream
+import java.io.OutputStreamWriter
+import java.security.DigestOutputStream
 import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -42,87 +48,190 @@ class BackupServiceImpl @Inject constructor(
 ) : BackupService {
 
     private val json = Json { prettyPrint = true }
-    private val masterKey = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+    private val jsonCompact = Json { prettyPrint = false }
+    private val masterKey by lazy {
+        MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+    }
     private val _backupProgress = MutableStateFlow(BackupProgress())
     override fun observeBackupProgress(): StateFlow<BackupProgress> = _backupProgress
 
     override suspend fun createBackup(): Result<BackupInfo> {
+        var tempFile: File? = null
         return try {
             _backupProgress.value = BackupProgress(isInProgress = true, totalSteps = 10)
 
-            // Step 1: Gather all data
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengguna", progress = 0.1f, currentStepIndex = 1, totalSteps = 10)
-            val users = userRepository.getAllUsers().firstOrNull() ?: emptyList()
-
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data kategori", progress = 0.2f, currentStepIndex = 2, totalSteps = 10)
-            val categories = categoryRepository.getAllKategori().firstOrNull() ?: emptyList()
-
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data gudang", progress = 0.3f, currentStepIndex = 3, totalSteps = 10)
-            val warehouses = warehouseRepository.getAllGudang().firstOrNull() ?: emptyList()
-
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data product", progress = 0.4f, currentStepIndex = 4, totalSteps = 10)
-            val products = productRepository.getAllProduk().firstOrNull() ?: emptyList()
-
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pemasok", progress = 0.5f, currentStepIndex = 5, totalSteps = 10)
-            val suppliers = supplierRepository.getAllPemasok().firstOrNull() ?: emptyList()
-
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data penjualan", progress = 0.6f, currentStepIndex = 6, totalSteps = 10)
-            val sales = saleRepository.getAllPenjualan().firstOrNull() ?: emptyList()
-
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item penjualan", progress = 0.7f, currentStepIndex = 7, totalSteps = 10)
-            val saleItems = itemPenjualanRepository.getAllSaleItems().firstOrNull() ?: emptyList()
-
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pembelian", progress = 0.8f, currentStepIndex = 8, totalSteps = 10)
-            val purchases = purchaseRepository.getAllPurchases().firstOrNull() ?: emptyList()
-
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item pembelian", progress = 0.9f, currentStepIndex = 9, totalSteps = 10)
-            val purchaseItems = itemPembelianRepository.getAllPurchaseItems().firstOrNull() ?: emptyList()
-
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengeluaran", progress = 1.0f, currentStepIndex = 10, totalSteps = 10)
-            val expenses = expenseRepository.getAllPengeluarans().firstOrNull() ?: emptyList()
-
-            // Step 2: Create backup data structure
             val createdAt = System.currentTimeMillis()
-            val entities = BackupEntities(
-                users = users,
-                categories = categories,
-                warehouses = warehouses,
-                products = products,
-                suppliers = suppliers,
-                sales = sales,
-                saleItems = saleItems,
-                purchases = purchases,
-                purchaseItems = purchaseItems,
-                expenses = expenses
-            )
+            tempFile = File.createTempFile("backup_temp", ".json", context.cacheDir)
 
-            val backupData = BackupData(
-                version = "1.0",
-                createdAt = createdAt,
-                metadata = BackupMetadata(checksum = ""),
-                data = entities
-            )
+            val digest = MessageDigest.getInstance("SHA-256")
+            val tempFos = FileOutputStream(tempFile)
+            val dos = DigestOutputStream(tempFos, digest)
 
-            // Step 3: Serialize to JSON
-            val jsonString = json.encodeToString(backupData)
+            // Use UTF-8 for JSON
+            val writer = JsonWriter(OutputStreamWriter(dos, "UTF-8"))
 
-            // Step 4: Calculate checksum
-            val checksum = calculateChecksum(jsonString)
+            // We want to skip writing nulls if any, but kotlinx default is to write nulls.
+            // Gson writes nulls only if serializeNulls() is called.
+            // Since we use jsonCompact.encodeToString(item), Gson just writes strings.
+            // Structure: { version, createdAt, metadata: { ... checksum="" }, data: { ... } }
 
-            // Step 5: Update metadata with checksum
-            val finalBackupData = backupData.copy(
-                metadata = backupData.metadata.copy(checksum = checksum)
-            )
-            val finalJsonString = json.encodeToString(finalBackupData)
+            writer.beginObject()
+            writer.name("version").value("1.0")
+            writer.name("createdAt").value(createdAt)
 
-            // Step 6: Create encrypted file
+            // Write metadata with empty checksum
+            writer.name("metadata")
+            // Use jsonCompact to serialize metadata structure exactly as kotlinx would
+            val initialMetadata = BackupMetadata(checksum = "")
+            writer.jsonValue(jsonCompact.encodeToString(initialMetadata))
+
+            writer.name("data")
+            writer.beginObject()
+
+            // Flush to ensure we can calculate offset effectively if needed,
+            // though we rely on re-writing header later.
+            writer.flush()
+            dos.flush()
+
+            // Step 1: Users
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengguna", progress = 0.1f, currentStepIndex = 1, totalSteps = 10)
+            writer.name("users")
+            writer.beginArray()
+            val users = userRepository.getAllUsers().firstOrNull() ?: emptyList()
+            users.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush() // flush periodically to keep memory low? Buffer is small anyway.
+
+            // Step 2: Categories
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data kategori", progress = 0.2f, currentStepIndex = 2, totalSteps = 10)
+            writer.name("categories")
+            writer.beginArray()
+            val categories = categoryRepository.getAllKategori().firstOrNull() ?: emptyList()
+            categories.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 3: Warehouses
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data gudang", progress = 0.3f, currentStepIndex = 3, totalSteps = 10)
+            writer.name("warehouses")
+            writer.beginArray()
+            val warehouses = warehouseRepository.getAllGudang().firstOrNull() ?: emptyList()
+            warehouses.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 4: Products
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data product", progress = 0.4f, currentStepIndex = 4, totalSteps = 10)
+            writer.name("products")
+            writer.beginArray()
+            val products = productRepository.getAllProduk().firstOrNull() ?: emptyList()
+            products.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 5: Suppliers
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pemasok", progress = 0.5f, currentStepIndex = 5, totalSteps = 10)
+            writer.name("suppliers")
+            writer.beginArray()
+            val suppliers = supplierRepository.getAllPemasok().firstOrNull() ?: emptyList()
+            suppliers.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 6: Sales
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data penjualan", progress = 0.6f, currentStepIndex = 6, totalSteps = 10)
+            writer.name("sales")
+            writer.beginArray()
+            val sales = saleRepository.getAllPenjualan().firstOrNull() ?: emptyList()
+            sales.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 7: Sale Items
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item penjualan", progress = 0.7f, currentStepIndex = 7, totalSteps = 10)
+            writer.name("saleItems")
+            writer.beginArray()
+            val saleItems = itemPenjualanRepository.getAllSaleItems().firstOrNull() ?: emptyList()
+            saleItems.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 8: Purchases
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pembelian", progress = 0.8f, currentStepIndex = 8, totalSteps = 10)
+            writer.name("purchases")
+            writer.beginArray()
+            val purchases = purchaseRepository.getAllPurchases().firstOrNull() ?: emptyList()
+            purchases.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 9: Purchase Items
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item pembelian", progress = 0.9f, currentStepIndex = 9, totalSteps = 10)
+            writer.name("purchaseItems")
+            writer.beginArray()
+            val purchaseItems = itemPembelianRepository.getAllPurchaseItems().firstOrNull() ?: emptyList()
+            purchaseItems.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 10: Expenses
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengeluaran", progress = 1.0f, currentStepIndex = 10, totalSteps = 10)
+            writer.name("expenses")
+            writer.beginArray()
+            val expenses = expenseRepository.getAllPengeluarans().firstOrNull() ?: emptyList()
+            expenses.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+
+            // End data object and root object
+            writer.endObject() // End data
+            writer.endObject() // End root
+
+            writer.flush()
+            writer.close() // Close writer, dos, tempFos
+
+            val checksum = digest.digest().joinToString("") { "%02x".format(it) }
+
+            // Step 11: Create Final Encrypted File
             val fileName = generateBackupFileName(createdAt)
             val filePath = createBackupFile(fileName)
-
-            encryptAndSave(finalJsonString, filePath)
-
-            // Step 7: Return backup info
             val file = File(filePath)
+            val outputStream = openBackupOutputStream(file)
+
+            // Construct the prefix with the REAL checksum
+            // Structure must match EXACTLY what we wrote to temp file, except the checksum value.
+            // Temp file: ... "metadata":{"appVersion":"...","deviceInfo":"...","checksum":""},"data": ...
+            // Final file: ... "metadata":{"appVersion":"...","deviceInfo":"...","checksum":"CHECKSUM"},"data": ...
+
+            // Calculate length of the prefix in temp file
+            // Prefix structure: {"version":"1.0","createdAt":<long>,"metadata":<jsonCompact(initialMetadata)>,"data":{
+
+            // To do this reliably, we can reconstruct the prefix strings
+            val prefixStart = "{\"version\":\"1.0\",\"createdAt\":$createdAt,\"metadata\":"
+            val metadataStrTemp = jsonCompact.encodeToString(initialMetadata)
+            val prefixEnd = ",\"data\":{"
+
+            val tempPrefixStr = prefixStart + metadataStrTemp + prefixEnd
+            val tempPrefixBytes = tempPrefixStr.toByteArray(Charsets.UTF_8)
+
+            // Final Prefix
+            val finalMetadata = initialMetadata.copy(checksum = checksum)
+            val metadataStrFinal = jsonCompact.encodeToString(finalMetadata)
+            val finalPrefixStr = prefixStart + metadataStrFinal + prefixEnd
+            val finalPrefixBytes = finalPrefixStr.toByteArray(Charsets.UTF_8)
+
+            outputStream.use { out ->
+                // Write new prefix
+                out.write(finalPrefixBytes)
+
+                // Append body from temp file, skipping tempPrefixBytes.size
+                FileInputStream(tempFile).use { input ->
+                    input.skip(tempPrefixBytes.size.toLong())
+                    input.copyTo(out)
+                }
+            }
+
+            _backupProgress.value = BackupProgress(isInProgress = false)
+
             val backupInfo = BackupInfo(
                 id = checksum,
                 fileName = fileName,
@@ -133,11 +242,13 @@ class BackupServiceImpl @Inject constructor(
                 checksum = checksum
             )
 
-            _backupProgress.value = BackupProgress(isInProgress = false)
+            // Cleanup
+            tempFile.delete()
 
             Result.success(backupInfo)
 
         } catch (e: Exception) {
+            tempFile?.delete()
             _backupProgress.value = BackupProgress(isInProgress = false)
             Result.failure(e)
         }
@@ -213,8 +324,15 @@ class BackupServiceImpl @Inject constructor(
 
 
             // Recalculate checksum over the serialized backup data with the checksum field cleared
-            val checksumBase = json.encodeToString(backupData.copy(metadata = backupData.metadata.copy(checksum = "")))
-            val isValid = backupData.metadata.checksum == calculateChecksum(checksumBase)
+            // Try compact first (new format)
+            val checksumBaseCompact = jsonCompact.encodeToString(backupData.copy(metadata = backupData.metadata.copy(checksum = "")))
+            var isValid = backupData.metadata.checksum == calculateChecksum(checksumBaseCompact)
+
+            if (!isValid) {
+                // Try pretty print (old format)
+                val checksumBasePretty = json.encodeToString(backupData.copy(metadata = backupData.metadata.copy(checksum = "")))
+                isValid = backupData.metadata.checksum == calculateChecksum(checksumBasePretty)
+            }
 
             Result.success(BackupValidationResult(
                 isValid = isValid,
@@ -300,24 +418,27 @@ class BackupServiceImpl @Inject constructor(
         }
     }
 
-    private fun encryptAndSave(data: String, filePath: String) {
-        val file = File(filePath)
-        try {
+    private fun openBackupOutputStream(file: File): OutputStream {
+        return try {
             val encryptedFile = EncryptedFile.Builder(
                 context,
                 file,
                 masterKey,
                 EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
             ).build()
-
-            encryptedFile.openFileOutput().use { output ->
-                output.write(data.toByteArray())
-            }
+            encryptedFile.openFileOutput()
         } catch (e: Exception) {
             // Fallback for test environments or devices where EncryptedFile is not available
-            file.outputStream().use { out ->
-                out.write(data.toByteArray())
-            }
+            file.outputStream()
+        }
+    }
+
+    private fun encryptAndSave(data: String, filePath: String) {
+        // This method is deprecated by new streaming implementation but kept for reference if needed,
+        // though logic is now inside createBackup.
+        val file = File(filePath)
+        openBackupOutputStream(file).use { output ->
+            output.write(data.toByteArray())
         }
     }
 
