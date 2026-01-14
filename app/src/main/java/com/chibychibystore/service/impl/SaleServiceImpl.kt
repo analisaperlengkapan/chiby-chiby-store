@@ -222,9 +222,19 @@ class SaleServiceImpl @Inject constructor(
         val sale = saleWithItems.sale
         val items = saleWithItems.items
 
+        // Fetch product details for names
+        val productIds = items.map { it.productId }.distinct()
+        val productsResult = productRepository.getProductsByIds(productIds)
+        val productMap = if (productsResult is Result.Success) {
+            productsResult.data?.associateBy { it.id } ?: emptyMap()
+        } else {
+            emptyMap()
+        }
+
         val receiptItems = items.map { item ->
+            val productName = productMap[item.productId]?.name ?: "Produk #${item.productId}"
             ReceiptItem(
-                name = "Produk #${item.productId}", 
+                name = productName,
                 quantity = item.quantity,
                 unitPrice = item.unitPrice,
                 totalPrice = item.totalPrice
