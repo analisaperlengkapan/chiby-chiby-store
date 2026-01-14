@@ -22,6 +22,9 @@ interface StokGudangDao {
     @Query("UPDATE stok_gudang SET quantity = :quantity WHERE productId = :productId AND warehouseId = :warehouseId")
     suspend fun updateStockQuantity(productId: Long, warehouseId: Long, quantity: Int)
 
+    @Query("UPDATE stok_gudang SET quantity = quantity + :delta WHERE productId = :productId AND warehouseId = :warehouseId")
+    suspend fun adjustStock(productId: Long, warehouseId: Long, delta: Int)
+
     @Query("DELETE FROM stok_gudang WHERE productId = :productId AND warehouseId = :warehouseId")
     suspend fun deleteStock(productId: Long, warehouseId: Long)
 

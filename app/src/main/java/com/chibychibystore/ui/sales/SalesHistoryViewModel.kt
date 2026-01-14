@@ -49,7 +49,9 @@ class SalesHistoryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SalesHistoryUiState())
     val uiState: StateFlow<SalesHistoryUiState> = _uiState
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    // Use Locale.US to ensure consistent ISO-8601 formatting for backend/service communication,
+    // regardless of the user's device locale settings (e.g., avoids Buddhist calendar years).
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
     init {
         loadSales()
