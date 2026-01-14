@@ -13,10 +13,13 @@ import java.io.ByteArrayOutputStream
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.delay
 import java.io.IOException
 import java.io.OutputStream
 import java.util.*
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.di.IoDispatcher
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.annotation.VisibleForTesting
@@ -72,7 +75,8 @@ object EscPosCommands {
 class PrinterServiceImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     // Accept optional adapter (for testing); resolve via BluetoothManager at runtime to avoid deprecated API
-    private var bluetoothAdapter: BluetoothAdapter? = null
+    private var bluetoothAdapter: BluetoothAdapter? = null,
+    @IoDispatcher private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : PrinterService {
 
     init {
@@ -111,7 +115,7 @@ class PrinterServiceImpl @Inject constructor(
     override fun getPrinterStatus(): PrinterStatus = currentStatus
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    override suspend fun getAvailableDevices(): Result<List<BluetoothDevice>> = withContext(Dispatchers.IO) {
+    override suspend fun getAvailableDevices(): Result<List<BluetoothDevice>> = withContext(dispatcher) {
         try {
             val adapter = bluetoothAdapter
                 ?: return@withContext Result.failure(Exception("Bluetooth tidak tersedia di device ini"))
@@ -140,7 +144,7 @@ class PrinterServiceImpl @Inject constructor(
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    override suspend fun connectPrinter(device: BluetoothDevice): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun connectPrinter(device: BluetoothDevice): Result<Unit> = withContext(dispatcher) {
         try {
             currentStatus = PrinterStatus.CONNECTING
             Log.d(TAG, "Connecting to printer: ${device.name}")
@@ -185,7 +189,7 @@ class PrinterServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun disconnectPrinter(): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun disconnectPrinter(): Result<Unit> = withContext(dispatcher) {
         try {
             outputStream?.close()
             bluetoothSocket?.close()
@@ -212,7 +216,7 @@ class PrinterServiceImpl @Inject constructor(
         total: Double,
         paymentMethod: String,
         cashierName: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = withContext(dispatcher) {
         try {
             if (!isConnected()) {
                 return@withContext Result.failure(Exception("Printer tidak terhubung"))
@@ -229,7 +233,7 @@ class PrinterServiceImpl @Inject constructor(
             outputStream?.flush()
 
             // Small delay to ensure printing is complete
-            Thread.sleep(500)
+            delay(500)
 
             currentStatus = PrinterStatus.CONNECTED
             Result.success(Unit)
@@ -240,7 +244,7 @@ class PrinterServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun printTestReceipt(): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun printTestReceipt(): Result<Unit> = withContext(dispatcher) {
         try {
             if (!isConnected()) {
                 return@withContext Result.failure(Exception("Printer tidak terhubung"))
@@ -252,7 +256,7 @@ class PrinterServiceImpl @Inject constructor(
             outputStream?.write(testData)
             outputStream?.flush()
 
-            Thread.sleep(500)
+            delay(500)
 
             currentStatus = PrinterStatus.CONNECTED
             Result.success(Unit)
@@ -267,7 +271,7 @@ class PrinterServiceImpl @Inject constructor(
         product: com.chibychibystore.data.local.entity.Produk,
         labelSize: com.chibychibystore.ui.barcode.LabelSize,
         quantity: Int
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = withContext(dispatcher) {
         try {
             if (!isConnected()) {
                 return@withContext Result.failure(Exception("Printer tidak terhubung"))
@@ -280,7 +284,7 @@ class PrinterServiceImpl @Inject constructor(
                 outputStream?.write(labelData)
                 outputStream?.flush()
                 // Small delay between labels
-                Thread.sleep(200)
+                delay(200)
             }
 
             currentStatus = PrinterStatus.CONNECTED
@@ -311,76 +315,76 @@ class PrinterServiceImpl @Inject constructor(
         paymentMethod: String,
         cashierName: String
     ): ByteArray {
-        val receipt = mutableListOf<ByteArray>()
+        val stream = ByteArrayOutputStream()
 
         // Initialize printer
-        receipt.add(EscPosCommands.INIT)
+        stream.write(EscPosCommands.INIT)
 
         // Store header - centered and bold
-        receipt.add(EscPosCommands.CENTER)
-        receipt.add(EscPosCommands.BOLD_ON)
-        receipt.add(EscPosCommands.FONT_DOUBLE)
-        receipt.add("$storeName\n".toByteArray())
-        receipt.add(EscPosCommands.BOLD_OFF)
-        receipt.add(EscPosCommands.FONT_NORMAL)
-        receipt.add("$storeAddress\n".toByteArray())
-        receipt.add(EscPosCommands.LF)
+        stream.write(EscPosCommands.CENTER)
+        stream.write(EscPosCommands.BOLD_ON)
+        stream.write(EscPosCommands.FONT_DOUBLE)
+        stream.write("$storeName\n".toByteArray())
+        stream.write(EscPosCommands.BOLD_OFF)
+        stream.write(EscPosCommands.FONT_NORMAL)
+        stream.write("$storeAddress\n".toByteArray())
+        stream.write(EscPosCommands.LF)
 
         // Sale info
-        receipt.add(EscPosCommands.LEFT)
-        receipt.add("No. Penjualan: #$saleId\n".toByteArray())
-        receipt.add("Tanggal: $saleDate\n".toByteArray())
-        receipt.add("Kasir: $cashierName\n".toByteArray())
-        receipt.add(EscPosCommands.LF)
+        stream.write(EscPosCommands.LEFT)
+        stream.write("No. Penjualan: #$saleId\n".toByteArray())
+        stream.write("Tanggal: $saleDate\n".toByteArray())
+        stream.write("Kasir: $cashierName\n".toByteArray())
+        stream.write(EscPosCommands.LF)
 
         // Separator line
-        receipt.add("================================\n".toByteArray())
+        stream.write("================================\n".toByteArray())
 
         // Items header
-        receipt.add(EscPosCommands.BOLD_ON)
-        receipt.add("Item                    Qty  Total\n".toByteArray())
-        receipt.add(EscPosCommands.BOLD_OFF)
-        receipt.add("--------------------------------\n".toByteArray())
+        stream.write(EscPosCommands.BOLD_ON)
+        stream.write("Item                    Qty  Total\n".toByteArray())
+        stream.write(EscPosCommands.BOLD_OFF)
+        stream.write("--------------------------------\n".toByteArray())
 
         // Items
         items.forEach { item ->
             val itemLine = formatItemLine(item.name, item.quantity, item.totalPrice)
-            receipt.add("$itemLine\n".toByteArray())
+            stream.write("$itemLine\n".toByteArray())
         }
 
         // Separator
-        receipt.add("================================\n".toByteArray())
+        stream.write("================================\n".toByteArray())
 
         // Totals
         val currencyFormat = java.text.NumberFormat.getCurrencyInstance(Locale.Builder().setLanguage("id").setRegion("ID").build())
 
-        receipt.add("Subtotal: ${currencyFormat.format(subtotal)}\n".toByteArray())
+        stream.write("Subtotal: ${currencyFormat.format(subtotal)}\n".toByteArray())
         if (tax > 0) {
-            receipt.add("Pajak: ${currencyFormat.format(tax)}\n".toByteArray())
+            stream.write("Pajak: ${currencyFormat.format(tax)}\n".toByteArray())
         }
         if (discount > 0) {
-            receipt.add("Diskon: ${currencyFormat.format(discount)}\n".toByteArray())
+            stream.write("Diskon: ${currencyFormat.format(discount)}\n".toByteArray())
         }
-        receipt.add(EscPosCommands.BOLD_ON)
-        receipt.add("TOTAL: ${currencyFormat.format(total)}\n".toByteArray())
-        receipt.add(EscPosCommands.BOLD_OFF)
+        stream.write(EscPosCommands.BOLD_ON)
+        stream.write("TOTAL: ${currencyFormat.format(total)}\n".toByteArray())
+        stream.write(EscPosCommands.BOLD_OFF)
 
-        receipt.add(EscPosCommands.LF)
-        receipt.add("Metode Pembayaran: $paymentMethod\n".toByteArray())
-        receipt.add(EscPosCommands.LF)
+        stream.write(EscPosCommands.LF)
+        stream.write("Metode Pembayaran: $paymentMethod\n".toByteArray())
+        stream.write(EscPosCommands.LF)
 
         // Footer
-        receipt.add(EscPosCommands.CENTER)
-        receipt.add("Terima Kasih Atas Kunjungannya\n".toByteArray())
-        receipt.add("Barang yang sudah dibeli tidak dapat\n".toByteArray())
-        receipt.add("ditukar/dikembalikan\n".toByteArray())
-        receipt.add(EscPosCommands.LF)
-        receipt.add(EscPosCommands.LF)
+        stream.write(EscPosCommands.CENTER)
+        stream.write("Terima Kasih Atas Kunjungannya\n".toByteArray())
+        stream.write("Barang yang sudah dibeli tidak dapat\n".toByteArray())
+        stream.write("ditukar/dikembalikan\n".toByteArray())
+        stream.write(EscPosCommands.LF)
+        stream.write(EscPosCommands.LF)
 
         // Cut paper
-        receipt.add(EscPosCommands.CUT)
+        stream.write(EscPosCommands.CUT)
 
-        return receipt.reduce { acc, bytes -> acc + bytes }
+        return stream.toByteArray()
     }
 
     private fun formatItemLine(name: String, quantity: Int, totalPrice: Double): String {
@@ -400,35 +404,35 @@ class PrinterServiceImpl @Inject constructor(
     }
 
     private fun buildTestReceiptData(): ByteArray {
-        val test = mutableListOf<ByteArray>()
+        val stream = ByteArrayOutputStream()
 
-        test.add(EscPosCommands.INIT)
-        test.add(EscPosCommands.CENTER)
-        test.add(EscPosCommands.BOLD_ON)
-        test.add(EscPosCommands.FONT_DOUBLE)
-        test.add("TEST RECEIPT\n".toByteArray())
-        test.add(EscPosCommands.BOLD_OFF)
-        test.add(EscPosCommands.FONT_NORMAL)
-        test.add(EscPosCommands.LF)
-        test.add("Printer is working correctly!\n".toByteArray())
+        stream.write(EscPosCommands.INIT)
+        stream.write(EscPosCommands.CENTER)
+        stream.write(EscPosCommands.BOLD_ON)
+        stream.write(EscPosCommands.FONT_DOUBLE)
+        stream.write("TEST RECEIPT\n".toByteArray())
+        stream.write(EscPosCommands.BOLD_OFF)
+        stream.write(EscPosCommands.FONT_NORMAL)
+        stream.write(EscPosCommands.LF)
+        stream.write("Printer is working correctly!\n".toByteArray())
         val dateFormat = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
         val dateStr = dateFormat.format(java.util.Date())
-        test.add("Date: $dateStr\n".toByteArray())
-        test.add(EscPosCommands.LF)
-        test.add(EscPosCommands.LF)
-        test.add(EscPosCommands.CUT)
+        stream.write("Date: $dateStr\n".toByteArray())
+        stream.write(EscPosCommands.LF)
+        stream.write(EscPosCommands.LF)
+        stream.write(EscPosCommands.CUT)
 
-        return test.reduce { acc, bytes -> acc + bytes }
+        return stream.toByteArray()
     }
 
     private fun buildBarcodeLabelData(
         product: com.chibychibystore.data.local.entity.Produk,
         labelSize: com.chibychibystore.ui.barcode.LabelSize
     ): ByteArray {
-        val label = mutableListOf<ByteArray>()
+        val stream = ByteArrayOutputStream()
 
         // Initialize printer
-        label.add(EscPosCommands.INIT)
+        stream.write(EscPosCommands.INIT)
 
         // Set label dimensions based on size
         val (width, height) = when (labelSize) {
@@ -439,38 +443,38 @@ class PrinterServiceImpl @Inject constructor(
         }
 
         // Center alignment
-        label.add(EscPosCommands.CENTER)
+        stream.write(EscPosCommands.CENTER)
 
         // Product name (truncate if too long)
         val productName = product.name.take(width / 2) // Rough character limit
-        label.add(EscPosCommands.BOLD_ON)
-        label.add("$productName\n".toByteArray())
-        label.add(EscPosCommands.BOLD_OFF)
+        stream.write(EscPosCommands.BOLD_ON)
+        stream.write("$productName\n".toByteArray())
+        stream.write(EscPosCommands.BOLD_OFF)
 
         // Price
         val priceText = "Rp ${product.sellingPrice.toInt()}"
-        label.add("$priceText\n".toByteArray())
+        stream.write("$priceText\n".toByteArray())
 
         // Generate and print barcode
         try {
             val barcodeBitmap = generateBarcodeBitmap(product.barcode ?: product.id.toString(), width * 8, height * 8)
             val barcodeData = bitmapToEscPos(barcodeBitmap)
-            label.add(barcodeData)
+            stream.write(barcodeData)
         } catch (e: Exception) {
             Log.e(TAG, "Error generating barcode", e)
             // Fallback: print barcode as text
-            label.add("Barcode: ${product.barcode ?: product.id}\n".toByteArray())
+            stream.write("Barcode: ${product.barcode ?: product.id}\n".toByteArray())
         }
 
         // Barcode number below
-        label.add("${product.barcode ?: product.id}\n".toByteArray())
+        stream.write("${product.barcode ?: product.id}\n".toByteArray())
 
         // Feed and cut
-        label.add(EscPosCommands.LF)
-        label.add(EscPosCommands.LF)
-        label.add(EscPosCommands.CUT)
+        stream.write(EscPosCommands.LF)
+        stream.write(EscPosCommands.LF)
+        stream.write(EscPosCommands.CUT)
 
-        return label.reduce { acc, bytes -> acc + bytes }
+        return stream.toByteArray()
     }
 
     private fun generateBarcodeBitmap(content: String, width: Int, height: Int): android.graphics.Bitmap {
