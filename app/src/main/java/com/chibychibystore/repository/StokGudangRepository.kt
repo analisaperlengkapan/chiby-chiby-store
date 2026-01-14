@@ -42,6 +42,16 @@ class StokGudangRepository @Inject constructor(
         }
     }
 
+    suspend fun adjustStock(productId: Long, warehouseId: Long, delta: Int): Result<Unit> {
+        return try {
+            stokGudangDao.adjustStock(productId, warehouseId, delta)
+            updateProductTotalStock(productId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun deleteStock(productId: Long, warehouseId: Long): Result<Unit> {
         return try {
             stokGudangDao.deleteStock(productId, warehouseId)

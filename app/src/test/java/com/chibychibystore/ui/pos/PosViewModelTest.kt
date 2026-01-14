@@ -8,6 +8,7 @@ import com.chibychibystore.data.model.Result
 import com.chibychibystore.service.ProductService
 import com.chibychibystore.service.SaleService
 import com.chibychibystore.service.AuthService
+import com.chibychibystore.service.PromoService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*
@@ -33,6 +34,7 @@ class PosViewModelTest {
     private lateinit var productService: ProductService
     private lateinit var saleService: SaleService
     private lateinit var authService: AuthService
+    private lateinit var promoService: PromoService
     private lateinit var viewModel: PosViewModel
 
     @Before
@@ -40,6 +42,9 @@ class PosViewModelTest {
         Dispatchers.setMain(testDispatcher)
         productService = mock()
         saleService = mock()
+        promoService = mock()
+
+        whenever(promoService.calculateDiscount(any())).thenReturn(0.0)
 
         // default auth service returns a logged in cashier
         authService = object : AuthService {
@@ -55,7 +60,7 @@ class PosViewModelTest {
             override suspend fun forceLogoutAll() = Result.success(Unit)
         }
 
-        viewModel = PosViewModel(productService, saleService, authService)
+        viewModel = PosViewModel(productService, saleService, authService, promoService)
     }
 
     @After
@@ -134,10 +139,10 @@ class PosViewModelTest {
         viewModel.addProductToCart(product)
         viewModel.setPaymentMethod("CASH")
 
-        // Mock saleService.createSale to return success with a Penjualan id
+        // Mock saleService.createPenjualan to return success with a Penjualan id
         val savedSale = Penjualan(saleDate = Date(), totalAmount = viewModel.uiState.value.total, paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.CASH, cashierId = 1L)
         val fakeSaleWithItems = com.chibychibystore.data.local.entity.PenjualanWithItems(savedSale, emptyList())
-        whenever(saleService.createSale(any(), any())).thenReturn(Result.success(fakeSaleWithItems))
+        whenever(saleService.createPenjualan(any(), any())).thenReturn(Result.success(fakeSaleWithItems))
 
         viewModel.processPayment()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -164,7 +169,7 @@ class PosViewModelTest {
             override suspend fun forceLogoutAll() = Result.success(Unit)
         }
 
-        viewModel = PosViewModel(productService, saleService, unauth)
+        viewModel = PosViewModel(productService, saleService, unauth, promoService)
 
         val product = Produk(
             id = 1L,
@@ -204,15 +209,15 @@ class PosViewModelTest {
             updatedAt = Date()
         )
 
-        whenever(productService.searchProducts("899123")).thenReturn(Result.success(listOf(product)))
+        whenever(productService.getProductByBarcode("899123")).thenReturn(Result.success(product))
 
-        viewModel.startScanning()
         viewModel.onBarcodeScanned("899123")
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertFalse(state.isScanning)
+        assertFalse(state.isSearching)
         assertTrue(state.cartItems.any { it.product.id == product.id })
+        assertNotNull(state.successMessage)
     }
 
     @Test
@@ -243,7 +248,7 @@ class PosViewModelTest {
         )
 
         viewModel.addProductToCart(product)
-        whenever(saleService.createSale(any(), any())).thenReturn(Result.success(com.chibychibystore.data.local.entity.PenjualanWithItems(Penjualan(saleDate = Date(), totalAmount = viewModel.uiState.value.total, paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.CASH, cashierId = 1L), emptyList())))
+        whenever(saleService.createPenjualan(any(), any())).thenReturn(Result.success(com.chibychibystore.data.local.entity.PenjualanWithItems(Penjualan(saleDate = Date(), totalAmount = viewModel.uiState.value.total, paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.CASH, cashierId = 1L), emptyList())))
 
         viewModel.processPayment()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -252,14 +257,14 @@ class PosViewModelTest {
         val saleId = viewModel.uiState.value.completedSaleId
         assertNotNull("completedSaleId should be set after successful payment", saleId)
 
-        whenever(saleService.printReceipt(any(), any(), any(), any())).thenReturn(Result.success(Unit))
+        whenever(saleService.cetakStruk(any(), any(), any(), any())).thenReturn(Result.success(Unit))
 
         viewModel.printReceipt()
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertFalse(state.isPrintingReceipt)
-        assertEquals("Receipt berhasil dicetak", state.successMessage)
-        verify(saleService).printReceipt(saleId!!, "Chiby Chiby Store", "Jl. Example No. 123, Jakarta", "kasir")
+        assertEquals("Struk sedang dicetak", state.successMessage)
+        verify(saleService).cetakStruk(saleId!!, "Chiby Chiby Store", "Jl. Example No. 123, Jakarta", "kasir")
     }
 }
