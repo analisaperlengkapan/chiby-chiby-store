@@ -13,10 +13,13 @@ import java.io.ByteArrayOutputStream
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.delay
 import java.io.IOException
 import java.io.OutputStream
 import java.util.*
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.di.IoDispatcher
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.annotation.VisibleForTesting
@@ -72,7 +75,8 @@ object EscPosCommands {
 class PrinterServiceImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     // Accept optional adapter (for testing); resolve via BluetoothManager at runtime to avoid deprecated API
-    private var bluetoothAdapter: BluetoothAdapter? = null
+    private var bluetoothAdapter: BluetoothAdapter? = null,
+    @IoDispatcher private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : PrinterService {
 
     init {
@@ -111,7 +115,7 @@ class PrinterServiceImpl @Inject constructor(
     override fun getPrinterStatus(): PrinterStatus = currentStatus
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    override suspend fun getAvailableDevices(): Result<List<BluetoothDevice>> = withContext(Dispatchers.IO) {
+    override suspend fun getAvailableDevices(): Result<List<BluetoothDevice>> = withContext(dispatcher) {
         try {
             val adapter = bluetoothAdapter
                 ?: return@withContext Result.failure(Exception("Bluetooth tidak tersedia di device ini"))
@@ -140,7 +144,7 @@ class PrinterServiceImpl @Inject constructor(
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    override suspend fun connectPrinter(device: BluetoothDevice): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun connectPrinter(device: BluetoothDevice): Result<Unit> = withContext(dispatcher) {
         try {
             currentStatus = PrinterStatus.CONNECTING
             Log.d(TAG, "Connecting to printer: ${device.name}")
@@ -185,7 +189,7 @@ class PrinterServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun disconnectPrinter(): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun disconnectPrinter(): Result<Unit> = withContext(dispatcher) {
         try {
             outputStream?.close()
             bluetoothSocket?.close()
@@ -212,7 +216,7 @@ class PrinterServiceImpl @Inject constructor(
         total: Double,
         paymentMethod: String,
         cashierName: String
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = withContext(dispatcher) {
         try {
             if (!isConnected()) {
                 return@withContext Result.failure(Exception("Printer tidak terhubung"))
@@ -229,7 +233,7 @@ class PrinterServiceImpl @Inject constructor(
             outputStream?.flush()
 
             // Small delay to ensure printing is complete
-            Thread.sleep(500)
+            delay(500)
 
             currentStatus = PrinterStatus.CONNECTED
             Result.success(Unit)
@@ -240,7 +244,7 @@ class PrinterServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun printTestReceipt(): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun printTestReceipt(): Result<Unit> = withContext(dispatcher) {
         try {
             if (!isConnected()) {
                 return@withContext Result.failure(Exception("Printer tidak terhubung"))
@@ -252,7 +256,7 @@ class PrinterServiceImpl @Inject constructor(
             outputStream?.write(testData)
             outputStream?.flush()
 
-            Thread.sleep(500)
+            delay(500)
 
             currentStatus = PrinterStatus.CONNECTED
             Result.success(Unit)
@@ -267,7 +271,7 @@ class PrinterServiceImpl @Inject constructor(
         product: com.chibychibystore.data.local.entity.Produk,
         labelSize: com.chibychibystore.ui.barcode.LabelSize,
         quantity: Int
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = withContext(dispatcher) {
         try {
             if (!isConnected()) {
                 return@withContext Result.failure(Exception("Printer tidak terhubung"))
@@ -280,7 +284,7 @@ class PrinterServiceImpl @Inject constructor(
                 outputStream?.write(labelData)
                 outputStream?.flush()
                 // Small delay between labels
-                Thread.sleep(200)
+                delay(200)
             }
 
             currentStatus = PrinterStatus.CONNECTED
