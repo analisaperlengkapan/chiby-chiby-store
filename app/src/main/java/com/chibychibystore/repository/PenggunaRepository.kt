@@ -121,8 +121,7 @@ class PenggunaRepository @Inject constructor(
                 ?: return Result.failure(ChibyChibyException.DatabaseError("Pengguna tidak ditemukan"))
 
             if (user.role == Role.OWNER) {
-                val users = penggunaDao.getAllPengguna().first()
-                val ownerCount = users.count { it.role == Role.OWNER }
+                val ownerCount = penggunaDao.countByRole(Role.OWNER)
                 if (ownerCount <= 1) {
                     return Result.failure(ChibyChibyException.BusinessLogicError("Tidak dapat menghapus owner terakhir"))
                 }
