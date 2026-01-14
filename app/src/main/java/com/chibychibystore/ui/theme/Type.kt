@@ -6,7 +6,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Default Font Family (can be customized later if custom fonts are added)
+// Font Family configuration: Supports switching to custom fonts by updating ChibyFontFamily.
 // To use a custom font:
 // 1. Add font files (e.g., my_font_regular.ttf, my_font_bold.ttf) to app/src/main/res/font/
 // 2. Uncomment and modify the code below to define your custom FontFamily:
