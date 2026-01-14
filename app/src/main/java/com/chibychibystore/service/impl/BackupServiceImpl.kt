@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.put
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -61,37 +64,35 @@ class BackupServiceImpl @Inject constructor(
             _backupProgress.value = BackupProgress(isInProgress = true, totalSteps = 10)
 
             val createdAt = System.currentTimeMillis()
-            tempFile = File.createTempFile("backup_temp", ".json", context.cacheDir)
+            tempFile = File.createTempFile("backup_data_part", ".json", context.cacheDir)
 
+            // 1. Prepare Checksum Calculation
             val digest = MessageDigest.getInstance("SHA-256")
+
+            // 2. Construct the Prefix (Header) with empty checksum
+            // Structure: {"version":"1.0","createdAt":123,"metadata":{"...":"...","checksum":""},"data":
+            // We use kotlinx to ensure exact formatting of the object part, then manually append "data":
+            val initialMetadata = BackupMetadata(checksum = "")
+            val headerJsonObject = buildJsonObject {
+                put("version", "1.0")
+                put("createdAt", createdAt)
+                put("metadata", jsonCompact.encodeToJsonElement(initialMetadata))
+            }
+            val headerStringFull = jsonCompact.encodeToString(headerJsonObject)
+            // Strip the last '}' and append ',"data":'
+            val prefixString = headerStringFull.substring(0, headerStringFull.length - 1) + ",\"data\":"
+            val prefixBytes = prefixString.toByteArray(Charsets.UTF_8)
+
+            // Update digest with prefix
+            digest.update(prefixBytes)
+
+            // 3. Write Data Body to Temp File AND Digest
             val tempFos = FileOutputStream(tempFile)
             val dos = DigestOutputStream(tempFos, digest)
-
-            // Use UTF-8 for JSON
             val writer = JsonWriter(OutputStreamWriter(dos, "UTF-8"))
 
-            // We want to skip writing nulls if any, but kotlinx default is to write nulls.
-            // Gson writes nulls only if serializeNulls() is called.
-            // Since we use jsonCompact.encodeToString(item), Gson just writes strings.
-            // Structure: { version, createdAt, metadata: { ... checksum="" }, data: { ... } }
-
+            // Start the "data" object
             writer.beginObject()
-            writer.name("version").value("1.0")
-            writer.name("createdAt").value(createdAt)
-
-            // Write metadata with empty checksum
-            writer.name("metadata")
-            // Use jsonCompact to serialize metadata structure exactly as kotlinx would
-            val initialMetadata = BackupMetadata(checksum = "")
-            writer.jsonValue(jsonCompact.encodeToString(initialMetadata))
-
-            writer.name("data")
-            writer.beginObject()
-
-            // Flush to ensure we can calculate offset effectively if needed,
-            // though we rely on re-writing header later.
-            writer.flush()
-            dos.flush()
 
             // Step 1: Users
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengguna", progress = 0.1f, currentStepIndex = 1, totalSteps = 10)
@@ -100,7 +101,7 @@ class BackupServiceImpl @Inject constructor(
             val users = userRepository.getAllUsers().firstOrNull() ?: emptyList()
             users.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
             writer.endArray()
-            writer.flush() // flush periodically to keep memory low? Buffer is small anyway.
+            writer.flush()
 
             // Step 2: Categories
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data kategori", progress = 0.2f, currentStepIndex = 2, totalSteps = 10)
@@ -182,52 +183,49 @@ class BackupServiceImpl @Inject constructor(
             expenses.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
             writer.endArray()
 
-            // End data object and root object
-            writer.endObject() // End data
-            writer.endObject() // End root
+            // End "data" object
+            writer.endObject()
 
             writer.flush()
-            writer.close() // Close writer, dos, tempFos
+            writer.close() // Closes dos and tempFos
 
+            // 4. Update Digest with Suffix
+            // The root object closing brace "}"
+            val suffixString = "}"
+            val suffixBytes = suffixString.toByteArray(Charsets.UTF_8)
+            digest.update(suffixBytes)
+
+            // Calculate Checksum
             val checksum = digest.digest().joinToString("") { "%02x".format(it) }
 
-            // Step 11: Create Final Encrypted File
+            // 5. Construct Final File
             val fileName = generateBackupFileName(createdAt)
             val filePath = createBackupFile(fileName)
             val file = File(filePath)
             val outputStream = openBackupOutputStream(file)
 
-            // Construct the prefix with the REAL checksum
-            // Structure must match EXACTLY what we wrote to temp file, except the checksum value.
-            // Temp file: ... "metadata":{"appVersion":"...","deviceInfo":"...","checksum":""},"data": ...
-            // Final file: ... "metadata":{"appVersion":"...","deviceInfo":"...","checksum":"CHECKSUM"},"data": ...
-
-            // Calculate length of the prefix in temp file
-            // Prefix structure: {"version":"1.0","createdAt":<long>,"metadata":<jsonCompact(initialMetadata)>,"data":{
-
-            // To do this reliably, we can reconstruct the prefix strings
-            val prefixStart = "{\"version\":\"1.0\",\"createdAt\":$createdAt,\"metadata\":"
-            val metadataStrTemp = jsonCompact.encodeToString(initialMetadata)
-            val prefixEnd = ",\"data\":{"
-
-            val tempPrefixStr = prefixStart + metadataStrTemp + prefixEnd
-            val tempPrefixBytes = tempPrefixStr.toByteArray(Charsets.UTF_8)
-
-            // Final Prefix
+            // Re-construct prefix with REAL checksum
             val finalMetadata = initialMetadata.copy(checksum = checksum)
-            val metadataStrFinal = jsonCompact.encodeToString(finalMetadata)
-            val finalPrefixStr = prefixStart + metadataStrFinal + prefixEnd
-            val finalPrefixBytes = finalPrefixStr.toByteArray(Charsets.UTF_8)
+            val finalHeaderJsonObject = buildJsonObject {
+                put("version", "1.0")
+                put("createdAt", createdAt)
+                put("metadata", jsonCompact.encodeToJsonElement(finalMetadata))
+            }
+            val finalHeaderStringFull = jsonCompact.encodeToString(finalHeaderJsonObject)
+            val finalPrefixString = finalHeaderStringFull.substring(0, finalHeaderStringFull.length - 1) + ",\"data\":"
+            val finalPrefixBytes = finalPrefixString.toByteArray(Charsets.UTF_8)
 
             outputStream.use { out ->
-                // Write new prefix
+                // Write final prefix
                 out.write(finalPrefixBytes)
 
-                // Append body from temp file, skipping tempPrefixBytes.size
+                // Copy body from temp file
                 FileInputStream(tempFile).use { input ->
-                    input.skip(tempPrefixBytes.size.toLong())
                     input.copyTo(out)
                 }
+
+                // Write suffix
+                out.write(suffixBytes)
             }
 
             _backupProgress.value = BackupProgress(isInProgress = false)
