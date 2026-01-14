@@ -51,7 +51,7 @@ class BarcodeServiceImpl @Inject constructor(
 
         while (attempt < maxAttempts) {
             // Generate 5 random digits using SecureRandom
-            val randomPart = (secureRandom.nextInt(90000) + 10000).toString()
+            val randomPart = generateRandom5Digits()
             val codeWithoutCheckDigit = prefix + datePart + randomPart
             val checkDigit = calculateCheckDigit(codeWithoutCheckDigit)
             val fullBarcode = codeWithoutCheckDigit + checkDigit
@@ -175,6 +175,13 @@ class BarcodeServiceImpl @Inject constructor(
         val calculatedCheckDigit = calculateCheckDigit(code)
 
         return providedCheckDigit == calculatedCheckDigit
+    }
+
+    /**
+     * Generate 5 random digits using SecureRandom to minimize collision probability
+     */
+    private fun generateRandom5Digits(): String {
+        return (secureRandom.nextInt(90000) + 10000).toString()
     }
 
     /**

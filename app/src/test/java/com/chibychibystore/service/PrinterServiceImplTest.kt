@@ -3,6 +3,7 @@ package com.chibychibystore.service
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import com.chibychibystore.service.printer.PrinterServiceImpl
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,7 +22,8 @@ class PrinterServiceImplTest {
         val context = Mockito.mock(Context::class.java)
         val adapter = Mockito.mock(BluetoothAdapter::class.java)
 
-        val service = PrinterServiceImpl(context, adapter)
+        // Use Unconfined dispatcher for testing to execute coroutines immediately
+        val service = PrinterServiceImpl(context, adapter, Dispatchers.Unconfined)
 
         val output = ByteArrayOutputStream()
         service.setTestOutput(output)
@@ -40,7 +42,7 @@ class PrinterServiceImplTest {
         // Provide a mocked adapter but do not call setTestOutput, so service is not connected
         val adapter = Mockito.mock(BluetoothAdapter::class.java)
 
-        val service = PrinterServiceImpl(context, adapter)
+        val service = PrinterServiceImpl(context, adapter, Dispatchers.Unconfined)
 
         val result = service.printTestReceipt()
 
@@ -53,7 +55,7 @@ class PrinterServiceImplTest {
         val context = Mockito.mock(Context::class.java)
         val adapter = Mockito.mock(BluetoothAdapter::class.java)
 
-        val service = PrinterServiceImpl(context, adapter)
+        val service = PrinterServiceImpl(context, adapter, Dispatchers.Unconfined)
 
         val output = ByteArrayOutputStream()
         service.setTestOutput(output)

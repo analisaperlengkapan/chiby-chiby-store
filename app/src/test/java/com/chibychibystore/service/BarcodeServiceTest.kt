@@ -14,6 +14,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
+import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
@@ -104,5 +105,40 @@ class BarcodeServiceTest {
 
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull() is ChibyChibyException.ValidationError)
+    }
+
+    @Test
+    fun `generateNewBarcodeValue generates valid format and handles collisions`() = runTest(testDispatcher) {
+        // Setup mock for collision check
+        // First call matches any string and returns Success (simulating collision)
+        // Second call matches any string and returns Failure (simulating not found/available)
+        `when`(produkRepository.getProdukByBarcode(anyString()))
+            .thenReturn(Result.success(Produk(
+                id = 999L,
+                name = "Existing Product",
+                barcode = "2230101123456",
+                categoryId = 1,
+                costPrice = 0.0,
+                sellingPrice = 0.0,
+                warehouseId = 1
+            )))
+            .thenReturn(Result.failure(Exception("Not found")))
+
+        val barcode = barcodeService.generateNewBarcodeValue()
+
+        // Validate format
+        assertNotNull(barcode)
+        assertEquals(13, barcode.length)
+        assertTrue("Barcode should start with prefix '2'", barcode.startsWith("2"))
+
+        // Date part
+        val datePart = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"))
+        assertEquals("Barcode should contain current date", datePart, barcode.substring(1, 7))
+
+        // Digits
+        assertTrue("Barcode should contain only digits", barcode.all { it.isDigit() })
+
+        // Check digit validity
+        assertTrue("Check digit should be valid", barcodeService.validateCheckDigit(barcode))
     }
 }

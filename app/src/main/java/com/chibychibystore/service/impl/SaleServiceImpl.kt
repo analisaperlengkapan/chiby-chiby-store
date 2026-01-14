@@ -9,6 +9,7 @@ import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.constant.AppConstants
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.StokGudangRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.PromoService
 import com.chibychibystore.service.SaleService
@@ -28,6 +29,7 @@ class SaleServiceImpl @Inject constructor(
     private val penjualanRepository: PenjualanRepository,
     private val itemPenjualanRepository: ItemPenjualanRepository,
     private val productRepository: ProdukRepository,
+    private val stokGudangRepository: StokGudangRepository,
     private val authService: AuthService,
     private val printerService: PrinterService,
     private val promoService: PromoService
@@ -89,10 +91,21 @@ class SaleServiceImpl @Inject constructor(
 
                 if (result is Result.Success) {
                      // If sale created, adjust stocks
+                     val products = if (productsResult is Result.Success) productsResult.data else emptyList()
+                     val productMap = products?.associateBy { it.id } ?: emptyMap()
+
                      for (item in items) {
-                         val stockResult = productRepository.adjustStock(item.productId, -item.quantity)
-                         if (stockResult is Result.Failure) {
-                             throw stockResult.exception
+                         val product = productMap[item.productId]
+                         if (product != null) {
+                             val stockResult = stokGudangRepository.adjustStock(item.productId, product.warehouseId, -item.quantity)
+                             if (stockResult is Result.Failure) {
+                                 throw stockResult.exception
+                             }
+                         } else {
+                             val stockResult = productRepository.adjustStock(item.productId, -item.quantity)
+                             if (stockResult is Result.Failure) {
+                                 throw stockResult.exception
+                             }
                          }
                      }
                 } else if (result is Result.Failure) {
@@ -172,7 +185,12 @@ class SaleServiceImpl @Inject constructor(
             penjualanRepository.updatePenjualan(updatedPenjualan)
 
             saleWithItems.items.forEach { item ->
-                productRepository.adjustStock(item.productId, item.quantity)
+                val productResult = productRepository.getProdukById(item.productId)
+                if (productResult is Result.Success && productResult.data != null) {
+                    stokGudangRepository.adjustStock(item.productId, productResult.data.warehouseId, item.quantity)
+                } else {
+                    productRepository.adjustStock(item.productId, item.quantity)
+                }
             }
 
             Result.success(Unit)
