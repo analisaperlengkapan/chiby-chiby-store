@@ -15,6 +15,15 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Print
 import com.chibychibystore.R
 
+/**
+ * Dialog to display receipt options after a successful sale.
+ *
+ * @param saleId The ID of the completed sale.
+ * @param isPrinting Whether the receipt is currently being printed.
+ * @param onPrintReceipt Callback to trigger receipt printing.
+ * @param onStartNewTransaction Callback to start a new transaction.
+ * @param onDismiss Callback when the dialog is dismissed.
+ */
 @Composable
 fun ReceiptDialog(
     saleId: Long,
