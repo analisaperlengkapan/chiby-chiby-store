@@ -10,6 +10,9 @@ interface StokGudangDao {
     @Query("SELECT * FROM stok_gudang WHERE productId = :productId AND warehouseId = :warehouseId")
     suspend fun getStock(productId: Long, warehouseId: Long): StokGudang?
 
+    @Query("SELECT * FROM stok_gudang WHERE productId IN (:productIds) AND warehouseId = :warehouseId")
+    suspend fun getStocks(productIds: List<Long>, warehouseId: Long): List<StokGudang>
+
     @Query("SELECT * FROM stok_gudang WHERE productId = :productId")
     fun getStocksByProduct(productId: Long): Flow<List<StokGudang>>
 

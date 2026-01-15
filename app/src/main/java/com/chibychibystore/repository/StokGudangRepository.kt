@@ -23,6 +23,15 @@ class StokGudangRepository @Inject constructor(
         }
     }
 
+    suspend fun getStocks(productIds: List<Long>, warehouseId: Long): Result<List<StokGudang>> {
+        return try {
+            val stocks = stokGudangDao.getStocks(productIds, warehouseId)
+            Result.success(stocks)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun insertOrUpdateStock(stokGudang: StokGudang): Result<Unit> {
         return try {
             // Check if exists

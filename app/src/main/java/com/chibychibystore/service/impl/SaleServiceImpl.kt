@@ -74,14 +74,19 @@ class SaleServiceImpl @Inject constructor(
                          .mapValues { (_, group) -> group.sumOf { it.quantity } }
 
                      // Validate total required quantity against stock
+                     val warehouseId = sale.warehouseId
+                     val stockResult = stokGudangRepository.getStocks(requiredQuantities.keys.toList(), warehouseId)
+                     val stockMap = if (stockResult is Result.Success) {
+                         stockResult.data.associateBy { it.productId }
+                     } else {
+                         throw stockResult.exceptionOrNull() ?: Exception("Gagal mengambil data stok")
+                     }
+
                      for ((productId, requiredQty) in requiredQuantities) {
                          val product = productMap[productId]
                              ?: throw IllegalStateException("Produk dengan ID $productId tidak ditemukan")
 
-                         // Check stock in the specific warehouse
-                         val warehouseId = sale.warehouseId
-                         val stockResult = stokGudangRepository.getStock(productId, warehouseId)
-                         val currentStock = stockResult.getOrNull()?.quantity ?: 0
+                         val currentStock = stockMap[productId]?.quantity ?: 0
 
                          if (currentStock < requiredQty) {
                              throw IllegalStateException("Stok tidak mencukupi untuk ${product.name} di Gudang $warehouseId. Tersedia: $currentStock, Dibutuhkan: $requiredQty")

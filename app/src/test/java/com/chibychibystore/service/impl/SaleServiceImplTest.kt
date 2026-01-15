@@ -116,7 +116,7 @@ class SaleServiceImplTest {
         )
 
         `when`(productRepository.getProductsByIds(listOf(1L))).thenReturn(Result.success(listOf(product)))
-        `when`(stokGudangRepository.getStock(1L, 1L)).thenReturn(Result.success(stokGudang))
+        `when`(stokGudangRepository.getStocks(listOf(1L), 1L)).thenReturn(Result.success(listOf(stokGudang)))
 
         // Act
         val result = saleService.createPenjualan(sale, items)
@@ -161,7 +161,7 @@ class SaleServiceImplTest {
         )
 
         `when`(productRepository.getProductsByIds(listOf(1L))).thenReturn(Result.success(listOf(product)))
-        `when`(stokGudangRepository.getStock(1L, 1L)).thenReturn(Result.success(stokGudang))
+        `when`(stokGudangRepository.getStocks(listOf(1L), 1L)).thenReturn(Result.success(listOf(stokGudang)))
         `when`(penjualanRepository.createPenjualan(any(), anyList())).thenReturn(Result.success(PenjualanWithItems(sale, items, emptyList())))
         `when`(stokGudangRepository.adjustStock(1L, 1L, -5)).thenReturn(Result.success(Unit))
 
