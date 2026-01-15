@@ -267,4 +267,38 @@ class PosViewModelTest {
         assertEquals("Struk sedang dicetak", state.successMessage)
         verify(saleService).cetakStruk(saleId!!, "Chiby Chiby Store", "Jl. Example No. 123, Jakarta", "kasir")
     }
+
+    @Test
+    fun `printReceipt should set error when saleService returns failure`() = runTest {
+        // Create a sale first by processing payment
+        val product = Produk(
+            id = 1L,
+            name = "Test Product",
+            barcode = "123",
+            categoryId = 1L,
+            costPrice = 10000.0,
+            sellingPrice = 15000.0,
+            stockQuantity = 10,
+            warehouseId = 1L,
+            minStock = 1,
+            createdAt = Date(),
+            updatedAt = Date()
+        )
+
+        viewModel.addProductToCart(product)
+        whenever(saleService.createPenjualan(any(), any())).thenReturn(Result.success(com.chibychibystore.data.local.entity.PenjualanWithItems(Penjualan(saleDate = Date(), totalAmount = viewModel.uiState.value.total, paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.CASH, cashierId = 1L), emptyList())))
+
+        viewModel.processPayment()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Mock failure
+        whenever(saleService.cetakStruk(any(), any(), any(), any())).thenReturn(Result.failure(Exception("Printer not found")))
+
+        viewModel.printReceipt()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isPrintingReceipt)
+        assertEquals("Gagal mencetak struk: Printer not found", state.error)
+    }
 }

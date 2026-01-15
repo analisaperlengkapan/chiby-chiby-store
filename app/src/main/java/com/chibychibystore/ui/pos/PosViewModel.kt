@@ -276,7 +276,11 @@ class PosViewModel @Inject constructor(
     }
 
     fun printReceipt() {
-        val saleId = currentState.completedSaleId ?: return
+        val saleId = currentState.completedSaleId
+        if (saleId == null) {
+            updateState { it.copy(error = "ID penjualan tidak ditemukan") }
+            return
+        }
         launchWithState {
             updateState { it.copy(isPrintingReceipt = true) }
             val currentUser = authService.getCurrentUser()
@@ -286,10 +290,17 @@ class PosViewModel @Inject constructor(
                 cashierName = cashierName
             )
             updateState {
-                it.copy(
-                    isPrintingReceipt = false,
-                    successMessage = if (result.isSuccess) "Struk sedang dicetak" else "Gagal mencetak struk"
-                )
+                if (result.isSuccess) {
+                    it.copy(
+                        isPrintingReceipt = false,
+                        successMessage = "Struk sedang dicetak"
+                    )
+                } else {
+                    it.copy(
+                        isPrintingReceipt = false,
+                        error = "Gagal mencetak struk: ${result.exceptionOrNull()?.message ?: "Unknown error"}"
+                    )
+                }
             }
         }
     }
