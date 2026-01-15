@@ -78,8 +78,13 @@ class SaleServiceImpl @Inject constructor(
                          val product = productMap[productId]
                              ?: throw IllegalStateException("Produk dengan ID $productId tidak ditemukan")
 
-                         if (product.stockQuantity < requiredQty) {
-                             throw IllegalStateException("Stok tidak mencukupi untuk ${product.name}. Tersedia: ${product.stockQuantity}, Dibutuhkan: $requiredQty")
+                         // Check stock in the specific warehouse
+                         val warehouseId = sale.warehouseId
+                         val stockResult = stokGudangRepository.getStock(productId, warehouseId)
+                         val currentStock = stockResult.getOrNull()?.quantity ?: 0
+
+                         if (currentStock < requiredQty) {
+                             throw IllegalStateException("Stok tidak mencukupi untuk ${product.name} di Gudang $warehouseId. Tersedia: $currentStock, Dibutuhkan: $requiredQty")
                          }
                      }
                 } else if (productsResult is Result.Failure) {
@@ -91,21 +96,12 @@ class SaleServiceImpl @Inject constructor(
 
                 if (result is Result.Success) {
                      // If sale created, adjust stocks
-                     val products = if (productsResult is Result.Success) productsResult.data else emptyList()
-                     val productMap = products?.associateBy { it.id } ?: emptyMap()
-
                      for (item in items) {
-                         val product = productMap[item.productId]
-                         if (product != null) {
-                             val stockResult = stokGudangRepository.adjustStock(item.productId, product.warehouseId, -item.quantity)
-                             if (stockResult is Result.Failure) {
-                                 throw stockResult.exception
-                             }
-                         } else {
-                             val stockResult = productRepository.adjustStock(item.productId, -item.quantity)
-                             if (stockResult is Result.Failure) {
-                                 throw stockResult.exception
-                             }
+                         val warehouseId = sale.warehouseId
+                         // Adjust stock in the specific warehouse
+                         val stockResult = stokGudangRepository.adjustStock(item.productId, warehouseId, -item.quantity)
+                         if (stockResult is Result.Failure) {
+                             throw stockResult.exception
                          }
                      }
                 } else if (result is Result.Failure) {
@@ -184,10 +180,11 @@ class SaleServiceImpl @Inject constructor(
             val updatedPenjualan = saleWithItems.sale.copy(isRefunded = true)
             penjualanRepository.updatePenjualan(updatedPenjualan)
 
+            val warehouseId = saleWithItems.sale.warehouseId
             saleWithItems.items.forEach { item ->
                 val productResult = productRepository.getProdukById(item.productId)
                 if (productResult is Result.Success && productResult.data != null) {
-                    stokGudangRepository.adjustStock(item.productId, productResult.data.warehouseId, item.quantity)
+                    stokGudangRepository.adjustStock(item.productId, warehouseId, item.quantity)
                 } else {
                     productRepository.adjustStock(item.productId, item.quantity)
                 }

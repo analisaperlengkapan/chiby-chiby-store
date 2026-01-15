@@ -130,17 +130,18 @@ class WarehouseStockTrackingTest : BaseTest() {
             saleDate = Date(),
             totalAmount = 400.0,
             paymentMethod = PaymentMethod.CASH,
-            cashierId = 1L
+            cashierId = 1L,
+            warehouseId = whId
         )
 
         val saleResult = saleService.createPenjualan(sale, listOf(saleItem))
         assertTrue(saleResult.isSuccess)
 
-        // 3. Verify Product Stock (Global) - Should pass currently
+        // 3. Verify Product Stock (Global)
         val productAfter = produkRepository.getProdukById(prodId).getOrNull()
         assertEquals("Global stock should decrease", initialStock - soldQty, productAfter?.stockQuantity)
 
-        // 4. Verify Warehouse Stock - Should FAIL currently
+        // 4. Verify Warehouse Stock
         val stockAfter = stokGudangRepository.getStock(prodId, whId).getOrNull()
         assertEquals("Warehouse stock should decrease", initialStock - soldQty, stockAfter?.quantity)
     }

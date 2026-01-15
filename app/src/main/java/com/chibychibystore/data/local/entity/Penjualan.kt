@@ -35,6 +35,8 @@ data class Penjualan(
     val discount: Double = 0.0,
     val paymentMethod: PaymentMethod,
     val cashierId: Long,
+    // Warehouse where the sale occurred. Defaults to 1 for backward compatibility.
+    val warehouseId: Long = 1,
     @Serializable(with = DateSerializer::class)
     val createdAt: Date = Date(),
     // Whether this sale has been refunded. Default false for existing records.
