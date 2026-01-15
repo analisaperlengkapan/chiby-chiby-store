@@ -242,7 +242,7 @@ class ReportingServiceImpl @Inject constructor(
             val result = salesStats.map { stat ->
                 PenjualanKategori(
                     kategoriId = stat.kategoriId,
-                    namaKategori = "Kategori ${stat.kategoriId}",
+                    namaKategori = stat.namaKategori ?: "Kategori ${stat.kategoriId}",
                     jumlahTerjual = stat.jumlahTerjual.toInt(),
                     totalPendapatan = stat.totalPendapatan,
                     totalBiaya = stat.totalBiaya,

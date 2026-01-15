@@ -51,12 +51,14 @@ interface ItemPenjualanDao {
     @Query("""
         SELECT
             p.categoryId as kategoriId,
+            k.name as namaKategori,
             SUM(ip.quantity) as jumlahTerjual,
             SUM(ip.totalPrice) as totalPendapatan,
             SUM(ip.quantity * p.costPrice) as totalBiaya
         FROM item_penjualan ip
         JOIN penjualan s ON ip.saleId = s.id
         JOIN produk p ON ip.productId = p.id
+        LEFT JOIN kategori k ON p.categoryId = k.id
         WHERE s.saleDate BETWEEN :startDate AND :endDate
         AND s.isRefunded = 0
         GROUP BY p.categoryId
