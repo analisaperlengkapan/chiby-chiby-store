@@ -279,7 +279,12 @@ class PosViewModel @Inject constructor(
         val saleId = currentState.completedSaleId ?: return
         launchWithState {
             updateState { it.copy(isPrintingReceipt = true) }
-            val result = saleService.cetakStruk(saleId)
+            val currentUser = authService.getCurrentUser()
+            val cashierName = currentUser?.username ?: "Kasir"
+            val result = saleService.cetakStruk(
+                saleId = saleId,
+                cashierName = cashierName
+            )
             updateState {
                 it.copy(
                     isPrintingReceipt = false,
