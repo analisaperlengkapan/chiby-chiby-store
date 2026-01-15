@@ -25,6 +25,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -91,7 +93,7 @@ class BackupServiceImpl @Inject constructor(
             digest.update(prefixBytes)
 
             // 3. Write Data Body to Temp File AND Digest
-            val tempFos = FileOutputStream(tempFile)
+            val tempFos = BufferedOutputStream(FileOutputStream(tempFile))
             val dos = DigestOutputStream(tempFos, digest)
             val writer = JsonWriter(OutputStreamWriter(dos, "UTF-8"))
 
@@ -206,7 +208,7 @@ class BackupServiceImpl @Inject constructor(
             val fileName = generateBackupFileName(createdAt)
             val filePath = createBackupFile(fileName)
             val file = File(filePath)
-            val outputStream = openBackupOutputStream(file)
+            val outputStream = BufferedOutputStream(openBackupOutputStream(file))
 
             // Re-construct prefix with REAL checksum
             val finalMetadata = initialMetadata.copy(checksum = checksum)
@@ -224,8 +226,8 @@ class BackupServiceImpl @Inject constructor(
                 out.write(finalPrefixBytes)
 
                 // Copy body from temp file
-                FileInputStream(tempFile).use { input ->
-                    input.copyTo(out)
+                BufferedInputStream(FileInputStream(tempFile)).use { input ->
+                    input.copyTo(out, bufferSize = 64 * 1024)
                 }
 
                 // Write suffix
