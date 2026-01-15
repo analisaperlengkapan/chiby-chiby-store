@@ -10,6 +10,8 @@ import com.chibychibystore.data.backup.BackupData
 import com.chibychibystore.repository.*
 import androidx.room.withTransaction
 import com.chibychibystore.data.local.database.ChibyChibyDatabase
+import com.chibychibystore.di.IoDispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
@@ -38,6 +40,7 @@ import com.chibychibystore.service.BackupValidationResult
 class RestoreServiceImpl @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context,
     private val database: ChibyChibyDatabase,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     private val userRepository: PenggunaRepository,
     private val categoryRepository: KategoriRepository,
     private val warehouseRepository: GudangRepository,
@@ -169,9 +172,9 @@ class RestoreServiceImpl @Inject constructor(
         }
     }
 
-    private fun validateBackupFile(backupPath: String): BackupValidationResult {
+    private suspend fun validateBackupFile(backupPath: String): BackupValidationResult {
         return try {
-            val decryptedJson = decryptFile(backupPath)
+            val decryptedJson = decryptFileAsync(backupPath)
             val backupData = json.decodeFromString<BackupData>(decryptedJson)
 
             val recordCounts = mapOf(
@@ -206,8 +209,8 @@ class RestoreServiceImpl @Inject constructor(
         }
     }
 
-    private fun loadBackupData(backupPath: String): BackupData {
-        val decryptedJson = decryptFile(backupPath)
+    private suspend fun loadBackupData(backupPath: String): BackupData {
+        val decryptedJson = decryptFileAsync(backupPath)
         return json.decodeFromString<BackupData>(decryptedJson)
     }
 
@@ -358,6 +361,12 @@ class RestoreServiceImpl @Inject constructor(
         val digest = java.security.MessageDigest.getInstance("SHA-256")
         val hash = digest.digest(data.toByteArray())
         return hash.joinToString("") { "%02x".format(it) }
+    }
+
+    private suspend fun decryptFileAsync(filePath: String): String {
+        return withContext(ioDispatcher) {
+            decryptFile(filePath)
+        }
     }
 
     private fun decryptFile(filePath: String): String {
