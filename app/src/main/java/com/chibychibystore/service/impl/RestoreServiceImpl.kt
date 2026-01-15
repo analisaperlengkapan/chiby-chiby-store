@@ -242,18 +242,16 @@ class RestoreServiceImpl @Inject constructor(
     }
 
     private suspend fun restoreGudangs(warehouses: List<Gudang>): Int {
-        var count = 0
-        for (warehouse in warehouses) {
-            try {
-                val result = warehouseRepository.createGudang(warehouse)
-                if (result is com.chibychibystore.data.model.Result.Success) {
-                    count++
-                }
-            } catch (e: Exception) {
-                // Log error but continue
+        return try {
+            val result = warehouseRepository.createGudangList(warehouses)
+            if (result is com.chibychibystore.data.model.Result.Success) {
+                result.data
+            } else {
+                0
             }
+        } catch (e: Exception) {
+            0
         }
-        return count
     }
 
     private suspend fun restorePemasoks(suppliers: List<Pemasok>): Int {

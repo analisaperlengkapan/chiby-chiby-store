@@ -25,6 +25,9 @@ interface GudangDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertGudangList(gudangList: List<Gudang>): List<Long>
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertGudangListIgnoreConflict(gudangList: List<Gudang>): List<Long>
+
     @Update
     suspend fun updateGudang(gudang: Gudang)
 

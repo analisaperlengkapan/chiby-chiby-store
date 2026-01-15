@@ -84,7 +84,7 @@ class RestoreServiceTest {
         // Mock successful repository operations
         `when`(penggunaRepository.createPengguna(any())).thenReturn(Result.success(1L))
         `when`(kategoriRepository.createKategori(any())).thenReturn(Result.success(1L))
-        `when`(gudangRepository.createGudang(any())).thenReturn(Result.success(1L))
+        `when`(gudangRepository.createGudangList(any())).thenReturn(Result.success(1))
         `when`(produkRepository.createProduk(any())).thenReturn(Result.success(1L))
         `when`(pemasokRepository.createPemasok(any())).thenReturn(Result.success(1L))
         `when`(penjualanRepository.createPenjualan(any(), any())).thenReturn(Result.success(1L))
@@ -113,7 +113,7 @@ class RestoreServiceTest {
         // Mock successful repository operations
         `when`(penggunaRepository.createPengguna(any())).thenReturn(Result.success(1L))
         `when`(kategoriRepository.createKategori(any())).thenReturn(Result.success(1L))
-        `when`(gudangRepository.createGudang(any())).thenReturn(Result.success(1L))
+        `when`(gudangRepository.createGudangList(any())).thenReturn(Result.success(1))
         `when`(produkRepository.createProduk(any())).thenReturn(Result.success(1L))
         `when`(pemasokRepository.createPemasok(any())).thenReturn(Result.success(1L))
         `when`(penjualanRepository.createPenjualan(any(), any())).thenReturn(Result.success(1L))
