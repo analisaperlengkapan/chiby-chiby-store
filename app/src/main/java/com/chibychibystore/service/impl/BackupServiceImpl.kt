@@ -14,9 +14,12 @@ import com.chibychibystore.service.BackupProgress
 import com.chibychibystore.service.BackupService
 import com.chibychibystore.service.BackupValidationResult
 import com.google.gson.stream.JsonWriter
+import com.chibychibystore.di.IoDispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
@@ -38,6 +41,7 @@ import javax.inject.Singleton
 @Singleton
 class BackupServiceImpl @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     private val userRepository: PenggunaRepository,
     private val categoryRepository: KategoriRepository,
     private val warehouseRepository: GudangRepository,
@@ -304,7 +308,7 @@ class BackupServiceImpl @Inject constructor(
 
     override suspend fun validateBackup(backupPath: String): Result<BackupValidationResult> {
         return try {
-            val decryptedJson = decryptFile(backupPath)
+            val decryptedJson = decryptFileAsync(backupPath)
             val backupData = json.decodeFromString<BackupData>(decryptedJson)
 
             val recordCounts = mapOf(
@@ -437,6 +441,12 @@ class BackupServiceImpl @Inject constructor(
         val file = File(filePath)
         openBackupOutputStream(file).use { output ->
             output.write(data.toByteArray())
+        }
+    }
+
+    private suspend fun decryptFileAsync(filePath: String): String {
+        return withContext(ioDispatcher) {
+            decryptFile(filePath)
         }
     }
 
