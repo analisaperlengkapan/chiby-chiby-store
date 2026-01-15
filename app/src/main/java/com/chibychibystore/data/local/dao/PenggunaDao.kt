@@ -32,6 +32,9 @@ interface PenggunaDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPenggunaList(penggunaList: List<Pengguna>): List<Long>
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertPenggunaListIgnoreConflict(penggunaList: List<Pengguna>): List<Long>
+
     @Update
     suspend fun updatePengguna(pengguna: Pengguna)
 

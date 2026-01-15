@@ -88,6 +88,33 @@ class PenggunaRepository @Inject constructor(
     }
 
     /**
+     * Create multiple users efficiently
+     */
+    suspend fun createPenggunaList(users: List<Pengguna>): Result<Int> {
+        return try {
+            val validUsers = users.filter {
+                try {
+                    validatePenggunaData(it)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
+
+            if (validUsers.isEmpty()) {
+                return Result.success(0)
+            }
+
+            val ids = penggunaDao.insertPenggunaListIgnoreConflict(validUsers)
+            val successCount = ids.count { it != -1L }
+            Result.success(successCount)
+
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("createPenggunaList", e))
+        }
+    }
+
+    /**
      * Update pengguna
      */
     suspend fun updateUser(pengguna: Pengguna): Result<Unit> {

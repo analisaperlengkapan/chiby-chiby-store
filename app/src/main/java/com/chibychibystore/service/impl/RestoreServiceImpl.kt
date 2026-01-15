@@ -51,7 +51,9 @@ class RestoreServiceImpl @Inject constructor(
 ) : RestoreService {
 
     private val json = Json { prettyPrint = true }
-    private val masterKey = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+    private val masterKey by lazy {
+        MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+    }
     private val _restoreProgress = MutableStateFlow(RestoreProgress())
     override fun observeRestoreProgress(): StateFlow<RestoreProgress> = _restoreProgress
 
@@ -212,18 +214,12 @@ class RestoreServiceImpl @Inject constructor(
     }
 
     private suspend fun restoreUsers(users: List<Pengguna>): Int {
-        var count = 0
-        for (user in users) {
-            try {
-                val result = userRepository.createPengguna(user)
-                if (result is com.chibychibystore.data.model.Result.Success) {
-                    count++
-                }
-            } catch (e: Exception) {
-                // Log error but continue
-            }
+        val result = userRepository.createPenggunaList(users)
+        return if (result is com.chibychibystore.data.model.Result.Success) {
+            result.data
+        } else {
+            0
         }
-        return count
     }
 
     private suspend fun restoreCategories(categories: List<Kategori>): Int {
