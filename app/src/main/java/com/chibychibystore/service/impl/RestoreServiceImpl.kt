@@ -287,24 +287,39 @@ class RestoreServiceImpl @Inject constructor(
     }
 
     private suspend fun restorePenjualans(sales: List<Penjualan>, items: List<ItemPenjualan>): Int {
-        var count = 0
-        for (sale in sales) {
-            try {
-                val saleItems = items.filter { it.saleId == sale.id }
+        if (sales.isEmpty()) return 0
 
-                database.withTransaction {
-                    val result = saleRepository.createPenjualan(sale, saleItems)
-                    if (result is com.chibychibystore.data.model.Result.Failure) {
-                        throw result.exception
-                    }
+        // Optimistic Batch Approach
+        try {
+            return database.withTransaction {
+                val result = saleRepository.createPenjualanList(sales, items)
+                if (result is com.chibychibystore.data.model.Result.Success) {
+                    result.data
+                } else {
+                    // Trigger rollback and fallback
+                    throw result.exceptionOrNull() ?: Exception("Failed to restore sales batch")
                 }
-                count++
-            } catch (e: Exception) {
-                // Log error but continue
             }
-        }
+        } catch (e: Exception) {
+            // Fallback to iterative approach (slower but resilient to partial failures)
+            var count = 0
+            for (sale in sales) {
+                try {
+                    val saleItems = items.filter { it.saleId == sale.id }
 
-        return count
+                    database.withTransaction {
+                        val result = saleRepository.createPenjualan(sale, saleItems)
+                        if (result is com.chibychibystore.data.model.Result.Failure) {
+                            throw result.exception
+                        }
+                    }
+                    count++
+                } catch (ex: Exception) {
+                    // Log error but continue
+                }
+            }
+            return count
+        }
     }
 
     private suspend fun restorePembelians(purchases: List<Pembelian>, items: List<ItemPembelian>): Int {

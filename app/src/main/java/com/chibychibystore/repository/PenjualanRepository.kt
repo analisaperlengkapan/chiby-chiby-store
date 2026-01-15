@@ -113,6 +113,29 @@ class PenjualanRepository @Inject constructor(
     }
 
     /**
+     * Create multiple penjualan with items (Batch)
+     */
+    suspend fun createPenjualanList(sales: List<Penjualan>, items: List<ItemPenjualan>): Result<Int> {
+        return try {
+            // Filter items to ensure we only insert items belonging to the provided sales
+            val saleIds = sales.map { it.id }.toSet()
+            val relevantItems = items.filter { it.saleId in saleIds }
+
+            // Insert sales batch
+            penjualanDao.insertPenjualanList(sales)
+
+            // Insert items batch
+            if (relevantItems.isNotEmpty()) {
+                itemPenjualanDao.insertItemPenjualanList(relevantItems)
+            }
+
+            Result.success(sales.size)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("createPenjualanList", e))
+        }
+    }
+
+    /**
      * Compatibility wrapper: insert single penjualan and return its id
      */
     suspend fun insertPenjualan(penjualan: Penjualan): Long {

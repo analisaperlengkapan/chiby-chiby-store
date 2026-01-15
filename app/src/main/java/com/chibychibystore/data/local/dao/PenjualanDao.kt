@@ -79,6 +79,9 @@ interface PenjualanDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPenjualan(penjualan: Penjualan): Long
 
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertPenjualanList(penjualan: List<Penjualan>): List<Long>
+
     @Update
     suspend fun updatePenjualan(penjualan: Penjualan)
 
