@@ -38,11 +38,11 @@ constructor(
 
     /** Export Gross Sales Report to PDF */
     suspend fun exportGrossSalesReport(startDate: LocalDate, endDate: LocalDate): Result<String> {
-        return try {
-            val reportData = reportingService.getGrossSales(startDate, endDate)
-            when (reportData) {
-                is Result.Success -> {
-                    withContext(dispatcher) {
+        return withContext(dispatcher) {
+            try {
+                val reportData = reportingService.getGrossSales(startDate, endDate)
+                when (reportData) {
+                    is Result.Success -> {
                         val fileName =
                                 "Laporan_Penjualan_Kotor_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
                         val filePath = createPdfFile(fileName)
@@ -50,26 +50,26 @@ constructor(
                         createGrossSalesPdf(filePath, reportData.data, startDate, endDate)
                         Result.success(filePath)
                     }
+                    is Result.Failure ->
+                            Result.failure(
+                                    Exception(
+                                            "Gagal mendapatkan data laporan: ${reportData.exception.message}"
+                                    )
+                            )
                 }
-                is Result.Failure ->
-                        Result.failure(
-                                Exception(
-                                        "Gagal mendapatkan data laporan: ${reportData.exception.message}"
-                                )
-                        )
+            } catch (e: Exception) {
+                Result.failure(Exception("Gagal export PDF: ${e.message}"))
             }
-        } catch (e: Exception) {
-            Result.failure(Exception("Gagal export PDF: ${e.message}"))
         }
     }
 
     /** Export Profit Margin Report to PDF */
     suspend fun exportProfitMarginReport(startDate: LocalDate, endDate: LocalDate): Result<String> {
-        return try {
-            val reportData = reportingService.getProfitMargin(startDate, endDate)
-            when (reportData) {
-                is Result.Success -> {
-                    withContext(dispatcher) {
+        return withContext(dispatcher) {
+            try {
+                val reportData = reportingService.getProfitMargin(startDate, endDate)
+                when (reportData) {
+                    is Result.Success -> {
                         val fileName =
                                 "Laporan_Margin_Keuntungan_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
                         val filePath = createPdfFile(fileName)
@@ -77,26 +77,26 @@ constructor(
                         createProfitMarginPdf(filePath, reportData.data, startDate, endDate)
                         Result.success(filePath)
                     }
+                    is Result.Failure ->
+                            Result.Failure(
+                                    Exception(
+                                            "Gagal mendapatkan data laporan: ${reportData.exception.message}"
+                                    )
+                            )
                 }
-                is Result.Failure ->
-                        Result.Failure(
-                                Exception(
-                                        "Gagal mendapatkan data laporan: ${reportData.exception.message}"
-                                )
-                        )
+            } catch (e: Exception) {
+                Result.Failure(Exception("Gagal export PDF: ${e.message}"))
             }
-        } catch (e: Exception) {
-            Result.Failure(Exception("Gagal export PDF: ${e.message}"))
         }
     }
 
     /** Export Net Profit Report to PDF */
     suspend fun exportNetProfitReport(startDate: LocalDate, endDate: LocalDate): Result<String> {
-        return try {
-            val reportData = reportingService.getNetProfit(startDate, endDate)
-            when (reportData) {
-                is Result.Success -> {
-                    withContext(dispatcher) {
+        return withContext(dispatcher) {
+            try {
+                val reportData = reportingService.getNetProfit(startDate, endDate)
+                when (reportData) {
+                    is Result.Success -> {
                         val fileName =
                                 "Laporan_Keuntungan_Bersih_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
                         val filePath = createPdfFile(fileName)
@@ -104,16 +104,16 @@ constructor(
                         createNetProfitPdf(filePath, reportData.data, startDate, endDate)
                         Result.success(filePath)
                     }
+                    is Result.Failure ->
+                            Result.Failure(
+                                    Exception(
+                                            "Gagal mendapatkan data laporan: ${reportData.exception.message}"
+                                    )
+                            )
                 }
-                is Result.Failure ->
-                        Result.Failure(
-                                Exception(
-                                        "Gagal mendapatkan data laporan: ${reportData.exception.message}"
-                                )
-                        )
+            } catch (e: Exception) {
+                Result.Failure(Exception("Gagal export PDF: ${e.message}"))
             }
-        } catch (e: Exception) {
-            Result.Failure(Exception("Gagal export PDF: ${e.message}"))
         }
     }
 
@@ -122,11 +122,11 @@ constructor(
             startDate: LocalDate,
             endDate: LocalDate
     ): Result<String> {
-        return try {
-            val reportData = reportingService.getSalesByProduct(startDate, endDate)
-            when (reportData) {
-                is Result.Success -> {
-                    withContext(dispatcher) {
+        return withContext(dispatcher) {
+            try {
+                val reportData = reportingService.getSalesByProduct(startDate, endDate)
+                when (reportData) {
+                    is Result.Success -> {
                         val fileName =
                                 "Laporan_Penjualan_Product_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
                         val filePath = createPdfFile(fileName)
@@ -134,16 +134,16 @@ constructor(
                         createSalesByProductPdf(filePath, reportData.data, startDate, endDate)
                         Result.success(filePath)
                     }
+                    is Result.Failure ->
+                            Result.Failure(
+                                    Exception(
+                                            "Gagal mendapatkan data laporan: ${reportData.exception.message}"
+                                    )
+                            )
                 }
-                is Result.Failure ->
-                        Result.Failure(
-                                Exception(
-                                        "Gagal mendapatkan data laporan: ${reportData.exception.message}"
-                                )
-                        )
+            } catch (e: Exception) {
+                Result.Failure(Exception("Gagal export PDF: ${e.message}"))
             }
-        } catch (e: Exception) {
-            Result.Failure(Exception("Gagal export PDF: ${e.message}"))
         }
     }
 
@@ -152,11 +152,11 @@ constructor(
             startDate: LocalDate,
             endDate: LocalDate
     ): Result<String> {
-        return try {
-            val reportData = reportingService.getSalesByCategory(startDate, endDate)
-            when (reportData) {
-                is Result.Success -> {
-                    withContext(dispatcher) {
+        return withContext(dispatcher) {
+            try {
+                val reportData = reportingService.getSalesByCategory(startDate, endDate)
+                when (reportData) {
+                    is Result.Success -> {
                         val fileName =
                                 "Laporan_Penjualan_Kategori_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
                         val filePath = createPdfFile(fileName)
@@ -164,26 +164,26 @@ constructor(
                         createSalesByCategoryPdf(filePath, reportData.data, startDate, endDate)
                         Result.success(filePath)
                     }
+                    is Result.Failure ->
+                            Result.Failure(
+                                    Exception(
+                                            "Gagal mendapatkan data laporan: ${reportData.exception.message}"
+                                    )
+                            )
                 }
-                is Result.Failure ->
-                        Result.Failure(
-                                Exception(
-                                        "Gagal mendapatkan data laporan: ${reportData.exception.message}"
-                                )
-                        )
+            } catch (e: Exception) {
+                Result.Failure(Exception("Gagal export PDF: ${e.message}"))
             }
-        } catch (e: Exception) {
-            Result.Failure(Exception("Gagal export PDF: ${e.message}"))
         }
     }
 
     /** Export Sales Trend Report to PDF */
     suspend fun exportSalesTrendReport(startDate: LocalDate, endDate: LocalDate): Result<String> {
-        return try {
-            val reportData = reportingService.getSalesTrend(startDate, endDate)
-            when (reportData) {
-                is Result.Success -> {
-                    withContext(dispatcher) {
+        return withContext(dispatcher) {
+            try {
+                val reportData = reportingService.getSalesTrend(startDate, endDate)
+                when (reportData) {
+                    is Result.Success -> {
                         val fileName =
                                 "Laporan_Trend_Penjualan_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
                         val filePath = createPdfFile(fileName)
@@ -191,26 +191,26 @@ constructor(
                         createSalesTrendPdf(filePath, reportData.data, startDate, endDate)
                         Result.success(filePath)
                     }
+                    is Result.Failure ->
+                            Result.Failure(
+                                    Exception(
+                                            "Gagal mendapatkan data laporan: ${reportData.exception.message}"
+                                    )
+                            )
                 }
-                is Result.Failure ->
-                        Result.Failure(
-                                Exception(
-                                        "Gagal mendapatkan data laporan: ${reportData.exception.message}"
-                                )
-                        )
+            } catch (e: Exception) {
+                Result.Failure(Exception("Gagal export PDF: ${e.message}"))
             }
-        } catch (e: Exception) {
-            Result.Failure(Exception("Gagal export PDF: ${e.message}"))
         }
     }
 
     /** Export Income Statement to PDF */
     suspend fun exportIncomeStatement(date: LocalDate): Result<String> {
-        return try {
-            val reportData = reportingService.getIncomeStatement(date)
-            when (reportData) {
-                is Result.Success -> {
-                    withContext(dispatcher) {
+        return withContext(dispatcher) {
+            try {
+                val reportData = reportingService.getIncomeStatement(date)
+                when (reportData) {
+                    is Result.Success -> {
                         val fileName =
                                 "Laporan_Laba_Rugi_${date.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
                         val filePath = createPdfFile(fileName)
@@ -218,26 +218,26 @@ constructor(
                         createIncomeStatementPdf(filePath, reportData.data, date)
                         Result.success(filePath)
                     }
+                    is Result.Failure ->
+                            Result.Failure(
+                                    Exception(
+                                            "Gagal mendapatkan data laporan: ${reportData.exception.message}"
+                                    )
+                            )
                 }
-                is Result.Failure ->
-                        Result.Failure(
-                                Exception(
-                                        "Gagal mendapatkan data laporan: ${reportData.exception.message}"
-                                )
-                        )
+            } catch (e: Exception) {
+                Result.Failure(Exception("Gagal export PDF: ${e.message}"))
             }
-        } catch (e: Exception) {
-            Result.Failure(Exception("Gagal export PDF: ${e.message}"))
         }
     }
 
     /** Export Cash Flow Report to PDF */
     suspend fun exportCashFlowReport(startDate: LocalDate, endDate: LocalDate): Result<String> {
-        return try {
-            val reportData = reportingService.getCashFlow(startDate, endDate)
-            when (reportData) {
-                is Result.Success -> {
-                    withContext(dispatcher) {
+        return withContext(dispatcher) {
+            try {
+                val reportData = reportingService.getCashFlow(startDate, endDate)
+                when (reportData) {
+                    is Result.Success -> {
                         val fileName =
                                 "Laporan_Arus_Kas_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
                         val filePath = createPdfFile(fileName)
@@ -245,26 +245,26 @@ constructor(
                         createCashFlowPdf(filePath, reportData.data, startDate, endDate)
                         Result.success(filePath)
                     }
+                    is Result.Failure ->
+                            Result.Failure(
+                                    Exception(
+                                            "Gagal mendapatkan data laporan: ${reportData.exception.message}"
+                                    )
+                            )
                 }
-                is Result.Failure ->
-                        Result.Failure(
-                                Exception(
-                                        "Gagal mendapatkan data laporan: ${reportData.exception.message}"
-                                )
-                        )
+            } catch (e: Exception) {
+                Result.Failure(Exception("Gagal export PDF: ${e.message}"))
             }
-        } catch (e: Exception) {
-            Result.Failure(Exception("Gagal export PDF: ${e.message}"))
         }
     }
 
     /** Export Expense Report to PDF */
     suspend fun exportExpenseReport(startDate: LocalDate, endDate: LocalDate): Result<String> {
-        return try {
-            val reportData = reportingService.getExpenseReport(startDate, endDate)
-            when (reportData) {
-                is Result.Success -> {
-                    withContext(dispatcher) {
+        return withContext(dispatcher) {
+            try {
+                val reportData = reportingService.getExpenseReport(startDate, endDate)
+                when (reportData) {
+                    is Result.Success -> {
                         val fileName =
                                 "Laporan_Pengeluaran_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
                         val filePath = createPdfFile(fileName)
@@ -272,26 +272,26 @@ constructor(
                         createExpenseReportPdf(filePath, reportData.data, startDate, endDate)
                         Result.success(filePath)
                     }
+                    is Result.Failure ->
+                            Result.Failure(
+                                    Exception(
+                                            "Gagal mendapatkan data laporan: ${reportData.exception.message}"
+                                    )
+                            )
                 }
-                is Result.Failure ->
-                        Result.Failure(
-                                Exception(
-                                        "Gagal mendapatkan data laporan: ${reportData.exception.message}"
-                                )
-                        )
+            } catch (e: Exception) {
+                Result.Failure(Exception("Gagal export PDF: ${e.message}"))
             }
-        } catch (e: Exception) {
-            Result.Failure(Exception("Gagal export PDF: ${e.message}"))
         }
     }
 
     /** Export Balance Sheet to PDF */
     suspend fun exportBalanceSheet(asOfDate: LocalDate): Result<String> {
-        return try {
-            val reportData = reportingService.getBalanceSheet(asOfDate)
-            when (reportData) {
-                is Result.Success -> {
-                    withContext(dispatcher) {
+        return withContext(dispatcher) {
+            try {
+                val reportData = reportingService.getBalanceSheet(asOfDate)
+                when (reportData) {
+                    is Result.Success -> {
                         val fileName =
                                 "Neraca_${asOfDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
                         val filePath = createPdfFile(fileName)
@@ -299,16 +299,16 @@ constructor(
                         createBalanceSheetPdf(filePath, reportData.data, asOfDate)
                         Result.success(filePath)
                     }
+                    is Result.Failure ->
+                            Result.Failure(
+                                    Exception(
+                                            "Gagal mendapatkan data laporan: ${reportData.exception.message}"
+                                    )
+                            )
                 }
-                is Result.Failure ->
-                        Result.Failure(
-                                Exception(
-                                        "Gagal mendapatkan data laporan: ${reportData.exception.message}"
-                                )
-                        )
+            } catch (e: Exception) {
+                Result.Failure(Exception("Gagal export PDF: ${e.message}"))
             }
-        } catch (e: Exception) {
-            Result.Failure(Exception("Gagal export PDF: ${e.message}"))
         }
     }
 
