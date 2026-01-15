@@ -86,6 +86,25 @@ class PengeluaranRepository @Inject constructor(
     }
 
     /**
+     * Create multiple pengeluaran
+     */
+    suspend fun createPengeluarans(pengeluarans: List<Pengeluaran>): Result<Int> {
+        return try {
+            if (pengeluarans.isEmpty()) {
+                return Result.success(0)
+            }
+            if (pengeluarans.any { it.amount <= 0 }) {
+                return Result.failure(ChibyChibyException.ValidationError("amount", "Semua pengeluaran harus memiliki jumlah lebih dari 0"))
+            }
+
+            val ids = pengeluaranDao.insertPengeluarans(pengeluarans)
+            Result.success(ids.size)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("createPengeluarans", e))
+        }
+    }
+
+    /**
      * Update pengeluaran
      */
     suspend fun updatePengeluaran(pengeluaran: Pengeluaran): Result<Unit> {

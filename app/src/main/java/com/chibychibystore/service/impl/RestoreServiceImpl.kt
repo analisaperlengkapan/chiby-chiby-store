@@ -340,18 +340,16 @@ class RestoreServiceImpl @Inject constructor(
     }
 
     private suspend fun restorePengeluarans(expenses: List<Pengeluaran>): Int {
-        var count = 0
-        for (expense in expenses) {
-            try {
-                val result = expenseRepository.createPengeluaran(expense)
-                if (result is com.chibychibystore.data.model.Result.Success) {
-                    count++
-                }
-            } catch (e: Exception) {
-                // Log error but continue
+        return try {
+            val result = expenseRepository.createPengeluarans(expenses)
+            if (result is com.chibychibystore.data.model.Result.Success) {
+                result.data
+            } else {
+                0
             }
+        } catch (e: Exception) {
+            0
         }
-        return count
     }
 
     private fun calculateChecksum(data: String): String {

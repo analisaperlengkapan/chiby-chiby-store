@@ -29,6 +29,9 @@ interface PengeluaranDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPengeluaran(pengeluaran: Pengeluaran): Long
 
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertPengeluarans(pengeluarans: List<Pengeluaran>): List<Long>
+
     @Update
     suspend fun updatePengeluaran(pengeluaran: Pengeluaran)
 
