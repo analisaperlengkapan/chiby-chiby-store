@@ -288,9 +288,10 @@ class RestoreServiceImpl @Inject constructor(
 
     private suspend fun restorePenjualans(sales: List<Penjualan>, items: List<ItemPenjualan>): Int {
         var count = 0
+        val itemsMap = items.groupBy { it.saleId }
         for (sale in sales) {
             try {
-                val saleItems = items.filter { it.saleId == sale.id }
+                val saleItems = itemsMap[sale.id] ?: emptyList()
 
                 database.withTransaction {
                     val result = saleRepository.createPenjualan(sale, saleItems)
@@ -309,9 +310,10 @@ class RestoreServiceImpl @Inject constructor(
 
     private suspend fun restorePembelians(purchases: List<Pembelian>, items: List<ItemPembelian>): Int {
         var count = 0
+        val itemsMap = items.groupBy { it.purchaseId }
         for (purchase in purchases) {
             try {
-                val purchaseItems = items.filter { it.purchaseId == purchase.id }
+                val purchaseItems = itemsMap[purchase.id] ?: emptyList()
 
                 database.withTransaction {
                     val result = purchaseRepository.createPembelian(purchase)
