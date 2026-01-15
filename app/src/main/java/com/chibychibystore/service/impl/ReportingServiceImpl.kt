@@ -300,21 +300,11 @@ class ReportingServiceImpl @Inject constructor(
             val start = date.withDayOfMonth(1)
             val end = date
 
-            val salesWithItems = saleRepository.getSalesWithItemsInDateRange(start, end)
-            val salesFiltered = salesWithItems.filter { !it.penjualan.isRefunded }
-            val revenue = salesFiltered.sumOf { it.penjualan.totalAmount }
+            val revenue = saleRepository.getTotalCashReceipts(start, end).getOrNull() ?: 0.0
 
-            // Pre-fetch all products
-            val productIds = salesFiltered.flatMap { it.items }.map { it.productId }.distinct()
-            val productsMap = productRepository.getProdukByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
-
-            var cogs = 0.0
-            salesFiltered.forEach { saleWithItems ->
-                saleWithItems.items.forEach { item ->
-                    val prod = productsMap[item.productId]
-                    cogs += (prod?.costPrice ?: 0.0) * item.quantity
-                }
-            }
+            val dStart = start.toDate()
+            val dEnd = Date.from(end.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+            val cogs = saleItemRepository.calculateTotalCogs(dStart, dEnd).getOrNull() ?: 0.0
             val expenses = expenseRepository.getPengeluaransByDateRange(start.toDate(), end.toDate()).first()
             val operatingExpenses = expenses.sumOf { it.amount }
             val grossProfit = revenue - cogs

@@ -57,6 +57,18 @@ class ItemPenjualanRepository @Inject constructor(
     }
 
     /**
+     * Calculate total COGS (Cost of Goods Sold)
+     */
+    suspend fun calculateTotalCogs(startDate: java.util.Date, endDate: java.util.Date): Result<Double> {
+        return try {
+            val total = itemPenjualanDao.calculateTotalCogs(startDate, endDate) ?: 0.0
+            Result.success(total)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("calculateTotalCogs", e))
+        }
+    }
+
+    /**
      * Create item penjualan baru
      */
     suspend fun createItemPenjualan(item: ItemPenjualan): Result<ItemPenjualan> {

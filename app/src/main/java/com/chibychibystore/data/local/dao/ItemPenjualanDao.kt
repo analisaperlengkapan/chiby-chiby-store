@@ -46,4 +46,14 @@ interface ItemPenjualanDao {
         GROUP BY ip.productId
     """)
     suspend fun getProdukPenjualanStats(startDate: java.util.Date, endDate: java.util.Date): List<ProdukTerpopulerDto>
+
+    @Query("""
+        SELECT SUM(ip.quantity * p.costPrice)
+        FROM item_penjualan ip
+        JOIN penjualan s ON ip.saleId = s.id
+        JOIN produk p ON ip.productId = p.id
+        WHERE s.saleDate BETWEEN :startDate AND :endDate
+        AND s.isRefunded = 0
+    """)
+    suspend fun calculateTotalCogs(startDate: java.util.Date, endDate: java.util.Date): Double?
 }
