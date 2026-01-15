@@ -7,25 +7,25 @@ class TypeTest {
 
     @Test
     fun typographyUsesCustomFontFamily() {
-        // Verify that all typography styles use the configurable ChibyFontFamily
-        assertEquals(ChibyFontFamily, Typography.displayLarge.fontFamily)
-        assertEquals(ChibyFontFamily, Typography.displayMedium.fontFamily)
-        assertEquals(ChibyFontFamily, Typography.displaySmall.fontFamily)
+        // Verify that all typography styles use the configurable AppFontFamily
+        assertEquals(AppFontFamily, Typography.displayLarge.fontFamily)
+        assertEquals(AppFontFamily, Typography.displayMedium.fontFamily)
+        assertEquals(AppFontFamily, Typography.displaySmall.fontFamily)
 
-        assertEquals(ChibyFontFamily, Typography.headlineLarge.fontFamily)
-        assertEquals(ChibyFontFamily, Typography.headlineMedium.fontFamily)
-        assertEquals(ChibyFontFamily, Typography.headlineSmall.fontFamily)
+        assertEquals(AppFontFamily, Typography.headlineLarge.fontFamily)
+        assertEquals(AppFontFamily, Typography.headlineMedium.fontFamily)
+        assertEquals(AppFontFamily, Typography.headlineSmall.fontFamily)
 
-        assertEquals(ChibyFontFamily, Typography.titleLarge.fontFamily)
-        assertEquals(ChibyFontFamily, Typography.titleMedium.fontFamily)
-        assertEquals(ChibyFontFamily, Typography.titleSmall.fontFamily)
+        assertEquals(AppFontFamily, Typography.titleLarge.fontFamily)
+        assertEquals(AppFontFamily, Typography.titleMedium.fontFamily)
+        assertEquals(AppFontFamily, Typography.titleSmall.fontFamily)
 
-        assertEquals(ChibyFontFamily, Typography.bodyLarge.fontFamily)
-        assertEquals(ChibyFontFamily, Typography.bodyMedium.fontFamily)
-        assertEquals(ChibyFontFamily, Typography.bodySmall.fontFamily)
+        assertEquals(AppFontFamily, Typography.bodyLarge.fontFamily)
+        assertEquals(AppFontFamily, Typography.bodyMedium.fontFamily)
+        assertEquals(AppFontFamily, Typography.bodySmall.fontFamily)
 
-        assertEquals(ChibyFontFamily, Typography.labelLarge.fontFamily)
-        assertEquals(ChibyFontFamily, Typography.labelMedium.fontFamily)
-        assertEquals(ChibyFontFamily, Typography.labelSmall.fontFamily)
+        assertEquals(AppFontFamily, Typography.labelLarge.fontFamily)
+        assertEquals(AppFontFamily, Typography.labelMedium.fontFamily)
+        assertEquals(AppFontFamily, Typography.labelSmall.fontFamily)
     }
 }
