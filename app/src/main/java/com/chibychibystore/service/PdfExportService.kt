@@ -3,6 +3,7 @@ package com.chibychibystore.service
 import android.content.Context
 import android.os.Environment
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.di.IoDispatcher
 import com.itextpdf.io.font.constants.StandardFonts
 import com.itextpdf.kernel.colors.ColorConstants
 import com.itextpdf.kernel.font.PdfFontFactory
@@ -15,6 +16,8 @@ import com.itextpdf.layout.element.Table
 import com.itextpdf.layout.properties.TextAlignment
 import com.itextpdf.layout.properties.UnitValue
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -27,7 +30,8 @@ class PdfExportService
 @Inject
 constructor(
         @ApplicationContext private val context: Context,
-        private val reportingService: ReportingService
+        private val reportingService: ReportingService,
+        @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) {
 
     private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
@@ -38,12 +42,14 @@ constructor(
             val reportData = reportingService.getGrossSales(startDate, endDate)
             when (reportData) {
                 is Result.Success -> {
-                    val fileName =
-                            "Laporan_Penjualan_Kotor_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
-                    val filePath = createPdfFile(fileName)
+                    withContext(ioDispatcher) {
+                        val fileName =
+                                "Laporan_Penjualan_Kotor_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
+                        val filePath = createPdfFile(fileName)
 
-                    createGrossSalesPdf(filePath, reportData.data, startDate, endDate)
-                    Result.success(filePath)
+                        createGrossSalesPdf(filePath, reportData.data, startDate, endDate)
+                        Result.success(filePath)
+                    }
                 }
                 is Result.Failure ->
                         Result.failure(
@@ -63,12 +69,14 @@ constructor(
             val reportData = reportingService.getProfitMargin(startDate, endDate)
             when (reportData) {
                 is Result.Success -> {
-                    val fileName =
-                            "Laporan_Margin_Keuntungan_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
-                    val filePath = createPdfFile(fileName)
+                    withContext(ioDispatcher) {
+                        val fileName =
+                                "Laporan_Margin_Keuntungan_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
+                        val filePath = createPdfFile(fileName)
 
-                    createProfitMarginPdf(filePath, reportData.data, startDate, endDate)
-                    Result.success(filePath)
+                        createProfitMarginPdf(filePath, reportData.data, startDate, endDate)
+                        Result.success(filePath)
+                    }
                 }
                 is Result.Failure ->
                         Result.Failure(
@@ -88,12 +96,14 @@ constructor(
             val reportData = reportingService.getNetProfit(startDate, endDate)
             when (reportData) {
                 is Result.Success -> {
-                    val fileName =
-                            "Laporan_Keuntungan_Bersih_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
-                    val filePath = createPdfFile(fileName)
+                    withContext(ioDispatcher) {
+                        val fileName =
+                                "Laporan_Keuntungan_Bersih_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
+                        val filePath = createPdfFile(fileName)
 
-                    createNetProfitPdf(filePath, reportData.data, startDate, endDate)
-                    Result.success(filePath)
+                        createNetProfitPdf(filePath, reportData.data, startDate, endDate)
+                        Result.success(filePath)
+                    }
                 }
                 is Result.Failure ->
                         Result.Failure(
@@ -116,12 +126,14 @@ constructor(
             val reportData = reportingService.getSalesByProduct(startDate, endDate)
             when (reportData) {
                 is Result.Success -> {
-                    val fileName =
-                            "Laporan_Penjualan_Product_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
-                    val filePath = createPdfFile(fileName)
+                    withContext(ioDispatcher) {
+                        val fileName =
+                                "Laporan_Penjualan_Product_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
+                        val filePath = createPdfFile(fileName)
 
-                    createSalesByProductPdf(filePath, reportData.data, startDate, endDate)
-                    Result.success(filePath)
+                        createSalesByProductPdf(filePath, reportData.data, startDate, endDate)
+                        Result.success(filePath)
+                    }
                 }
                 is Result.Failure ->
                         Result.Failure(
@@ -144,12 +156,14 @@ constructor(
             val reportData = reportingService.getSalesByCategory(startDate, endDate)
             when (reportData) {
                 is Result.Success -> {
-                    val fileName =
-                            "Laporan_Penjualan_Kategori_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
-                    val filePath = createPdfFile(fileName)
+                    withContext(ioDispatcher) {
+                        val fileName =
+                                "Laporan_Penjualan_Kategori_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
+                        val filePath = createPdfFile(fileName)
 
-                    createSalesByCategoryPdf(filePath, reportData.data, startDate, endDate)
-                    Result.success(filePath)
+                        createSalesByCategoryPdf(filePath, reportData.data, startDate, endDate)
+                        Result.success(filePath)
+                    }
                 }
                 is Result.Failure ->
                         Result.Failure(
@@ -169,12 +183,14 @@ constructor(
             val reportData = reportingService.getSalesTrend(startDate, endDate)
             when (reportData) {
                 is Result.Success -> {
-                    val fileName =
-                            "Laporan_Trend_Penjualan_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
-                    val filePath = createPdfFile(fileName)
+                    withContext(ioDispatcher) {
+                        val fileName =
+                                "Laporan_Trend_Penjualan_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
+                        val filePath = createPdfFile(fileName)
 
-                    createSalesTrendPdf(filePath, reportData.data, startDate, endDate)
-                    Result.success(filePath)
+                        createSalesTrendPdf(filePath, reportData.data, startDate, endDate)
+                        Result.success(filePath)
+                    }
                 }
                 is Result.Failure ->
                         Result.Failure(
@@ -194,12 +210,14 @@ constructor(
             val reportData = reportingService.getIncomeStatement(date)
             when (reportData) {
                 is Result.Success -> {
-                    val fileName =
-                            "Laporan_Laba_Rugi_${date.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
-                    val filePath = createPdfFile(fileName)
+                    withContext(ioDispatcher) {
+                        val fileName =
+                                "Laporan_Laba_Rugi_${date.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
+                        val filePath = createPdfFile(fileName)
 
-                    createIncomeStatementPdf(filePath, reportData.data, date)
-                    Result.success(filePath)
+                        createIncomeStatementPdf(filePath, reportData.data, date)
+                        Result.success(filePath)
+                    }
                 }
                 is Result.Failure ->
                         Result.Failure(
@@ -219,12 +237,14 @@ constructor(
             val reportData = reportingService.getCashFlow(startDate, endDate)
             when (reportData) {
                 is Result.Success -> {
-                    val fileName =
-                            "Laporan_Arus_Kas_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
-                    val filePath = createPdfFile(fileName)
+                    withContext(ioDispatcher) {
+                        val fileName =
+                                "Laporan_Arus_Kas_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
+                        val filePath = createPdfFile(fileName)
 
-                    createCashFlowPdf(filePath, reportData.data, startDate, endDate)
-                    Result.success(filePath)
+                        createCashFlowPdf(filePath, reportData.data, startDate, endDate)
+                        Result.success(filePath)
+                    }
                 }
                 is Result.Failure ->
                         Result.Failure(
@@ -244,12 +264,14 @@ constructor(
             val reportData = reportingService.getExpenseReport(startDate, endDate)
             when (reportData) {
                 is Result.Success -> {
-                    val fileName =
-                            "Laporan_Pengeluaran_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
-                    val filePath = createPdfFile(fileName)
+                    withContext(ioDispatcher) {
+                        val fileName =
+                                "Laporan_Pengeluaran_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
+                        val filePath = createPdfFile(fileName)
 
-                    createExpenseReportPdf(filePath, reportData.data, startDate, endDate)
-                    Result.success(filePath)
+                        createExpenseReportPdf(filePath, reportData.data, startDate, endDate)
+                        Result.success(filePath)
+                    }
                 }
                 is Result.Failure ->
                         Result.Failure(
@@ -269,12 +291,14 @@ constructor(
             val reportData = reportingService.getBalanceSheet(asOfDate)
             when (reportData) {
                 is Result.Success -> {
-                    val fileName =
-                            "Neraca_${asOfDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
-                    val filePath = createPdfFile(fileName)
+                    withContext(ioDispatcher) {
+                        val fileName =
+                                "Neraca_${asOfDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
+                        val filePath = createPdfFile(fileName)
 
-                    createBalanceSheetPdf(filePath, reportData.data, asOfDate)
-                    Result.success(filePath)
+                        createBalanceSheetPdf(filePath, reportData.data, asOfDate)
+                        Result.success(filePath)
+                    }
                 }
                 is Result.Failure ->
                         Result.Failure(
