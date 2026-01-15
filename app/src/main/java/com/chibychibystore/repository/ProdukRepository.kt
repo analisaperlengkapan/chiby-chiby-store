@@ -123,6 +123,22 @@ class ProdukRepository @Inject constructor(
     }
 
     /**
+     * Create multiple products (batch).
+     * Returns count of successfully inserted products.
+     * Uses OnConflictStrategy.IGNORE to skip duplicates.
+     */
+    suspend fun createProdukList(produks: List<Produk>): Result<Int> {
+        return try {
+            val ids = produkDao.insertProdukListIgnoreConflict(produks)
+            // -1 indicates failure/ignore.
+            val count = ids.count { it != -1L }
+            Result.success(count)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("createProdukList", e))
+        }
+    }
+
+    /**
      * Update produk
      */
     suspend fun updateProduk(produk: Produk): Result<Unit> {

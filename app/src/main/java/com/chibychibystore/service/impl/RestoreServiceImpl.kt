@@ -271,7 +271,14 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restoreProduks(products: List<Produk>): Int {
+    internal suspend fun restoreProduks(products: List<Produk>): Int {
+        // Try batch insertion first for performance
+        val batchResult = productRepository.createProdukList(products)
+        if (batchResult is com.chibychibystore.data.model.Result.Success) {
+            return batchResult.data
+        }
+
+        // Fallback to individual insertion if batch fails
         var count = 0
         for (product in products) {
             try {
