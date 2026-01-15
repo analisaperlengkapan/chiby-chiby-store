@@ -57,6 +57,17 @@ class ItemPenjualanRepository @Inject constructor(
     }
 
     /**
+     * Get sales stats by category in date range
+     */
+    suspend fun getSalesByCategory(startDate: java.util.Date, endDate: java.util.Date): Result<List<com.chibychibystore.data.model.KategoriPenjualanDto>> {
+        return try {
+            Result.success(itemPenjualanDao.getSalesByCategoryStats(startDate, endDate))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Create item penjualan baru
      */
     suspend fun createItemPenjualan(item: ItemPenjualan): Result<ItemPenjualan> {
