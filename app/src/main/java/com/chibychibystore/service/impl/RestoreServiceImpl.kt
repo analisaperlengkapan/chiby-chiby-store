@@ -257,18 +257,12 @@ class RestoreServiceImpl @Inject constructor(
     }
 
     private suspend fun restorePemasoks(suppliers: List<Pemasok>): Int {
-        var count = 0
-        for (supplier in suppliers) {
-            try {
-                val result = supplierRepository.createPemasok(supplier)
-                if (result is com.chibychibystore.data.model.Result.Success) {
-                    count++
-                }
-            } catch (e: Exception) {
-                // Log error but continue
-            }
+        val result = supplierRepository.createPemasokList(suppliers)
+        return if (result is com.chibychibystore.data.model.Result.Success) {
+            result.data
+        } else {
+            0
         }
-        return count
     }
 
     private suspend fun restoreProduks(products: List<Produk>): Int {
