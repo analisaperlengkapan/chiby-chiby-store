@@ -6,6 +6,7 @@ import com.chibychibystore.data.model.Penjualan
 import com.chibychibystore.data.model.ItemPenjualan
 import com.chibychibystore.data.model.Produk
 import com.chibychibystore.data.model.Pengeluaran
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
@@ -29,7 +30,7 @@ class PdfExportServiceTest {
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        pdfExportService = PdfExportService(context, reportingService)
+        pdfExportService = PdfExportService(context, reportingService, UnconfinedTestDispatcher())
     }
 
     @Test
