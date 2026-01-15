@@ -4,6 +4,7 @@ import android.content.Context
 import com.chibychibystore.data.Result
 import com.chibychibystore.data.model.*
 import com.chibychibystore.repository.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
@@ -40,6 +41,12 @@ class BackupServiceTest {
     private lateinit var itemPenjualanRepository: ItemPenjualanRepository
 
     @Mock
+    private lateinit var purchaseRepository: PembelianRepository
+
+    @Mock
+    private lateinit var itemPembelianRepository: ItemPembelianRepository
+
+    @Mock
     private lateinit var pengeluaranRepository: PengeluaranRepository
 
     private lateinit var backupService: BackupService
@@ -56,7 +63,10 @@ class BackupServiceTest {
             pemasokRepository,
             penjualanRepository,
             itemPenjualanRepository,
-            pengeluaranRepository
+            purchaseRepository,
+            itemPembelianRepository,
+            pengeluaranRepository,
+            Dispatchers.Unconfined
         )
     }
 

@@ -9,6 +9,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.repository.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
@@ -41,7 +42,8 @@ class BackupServiceIntegrationTest : BaseTest() {
             ItemPenjualanRepository(db.itemPenjualanDao()),
             PembelianRepository(db.pembelianDao()),
             ItemPembelianRepository(db.itemPembelianDao()),
-            PengeluaranRepository(db.pengeluaranDao())
+            PengeluaranRepository(db.pengeluaranDao()),
+            Dispatchers.Unconfined
         )
     }
 

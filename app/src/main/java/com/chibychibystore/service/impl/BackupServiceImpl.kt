@@ -13,7 +13,10 @@ import com.chibychibystore.service.BackupInfo
 import com.chibychibystore.service.BackupProgress
 import com.chibychibystore.service.BackupService
 import com.chibychibystore.service.BackupValidationResult
+import com.chibychibystore.di.IoDispatcher
 import com.google.gson.stream.JsonWriter
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
@@ -47,7 +50,8 @@ class BackupServiceImpl @Inject constructor(
     private val itemPenjualanRepository: ItemPenjualanRepository,
     private val purchaseRepository: PembelianRepository,
     private val itemPembelianRepository: ItemPembelianRepository,
-    private val expenseRepository: PengeluaranRepository
+    private val expenseRepository: PengeluaranRepository,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : BackupService {
 
     private val json = Json { prettyPrint = true }
@@ -58,9 +62,9 @@ class BackupServiceImpl @Inject constructor(
     private val _backupProgress = MutableStateFlow(BackupProgress())
     override fun observeBackupProgress(): StateFlow<BackupProgress> = _backupProgress
 
-    override suspend fun createBackup(): Result<BackupInfo> {
+    override suspend fun createBackup(): Result<BackupInfo> = withContext(ioDispatcher) {
         var tempFile: File? = null
-        return try {
+        try {
             _backupProgress.value = BackupProgress(isInProgress = true, totalSteps = 10)
 
             val createdAt = System.currentTimeMillis()
@@ -252,8 +256,8 @@ class BackupServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun getBackupHistory(): Result<List<BackupInfo>> {
-        return try {
+    override suspend fun getBackupHistory(): Result<List<BackupInfo>> = withContext(ioDispatcher) {
+        try {
             val backupDir = getBackupDirectory()
             val backupFiles = backupDir.listFiles { file ->
                 file.name.startsWith("backup_") && file.name.endsWith(".enc")
@@ -284,8 +288,8 @@ class BackupServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteBackup(backupId: String): Result<Unit> {
-        return try {
+    override suspend fun deleteBackup(backupId: String): Result<Unit> = withContext(ioDispatcher) {
+        try {
             val backupDir = getBackupDirectory()
             val backupFile = backupDir.listFiles { file ->
                 calculateFileChecksum(file) == backupId
@@ -302,8 +306,8 @@ class BackupServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun validateBackup(backupPath: String): Result<BackupValidationResult> {
-        return try {
+    override suspend fun validateBackup(backupPath: String): Result<BackupValidationResult> = withContext(ioDispatcher) {
+        try {
             val decryptedJson = decryptFile(backupPath)
             val backupData = json.decodeFromString<BackupData>(decryptedJson)
 
