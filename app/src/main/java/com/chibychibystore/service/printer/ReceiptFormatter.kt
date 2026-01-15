@@ -34,6 +34,7 @@ object ReceiptFormatter {
 
         val subtotal = items.sumOf { it.totalPrice }
         val tax = saleWithItems.sale.tax
+        // Discount is calculated by PromoService and stored in the Penjualan entity
         val discount = saleWithItems.sale.discount
         val total = saleWithItems.sale.totalAmount
 

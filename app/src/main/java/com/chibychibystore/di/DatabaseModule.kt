@@ -51,12 +51,33 @@ object DatabaseModule {
             }
         }
 
+        val MIGRATION_5_6 = object : androidx.room.migration.Migration(5, 6) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `promotion` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `description` TEXT NOT NULL,
+                        `type` TEXT NOT NULL,
+                        `value` REAL NOT NULL,
+                        `minPurchaseAmount` REAL NOT NULL,
+                        `maxDiscountAmount` REAL,
+                        `isActive` INTEGER NOT NULL,
+                        `startDate` INTEGER,
+                        `endDate` INTEGER,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             ChibyChibyDatabase::class.java,
             "chiby_chiby_database"
         )
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             // Removed destructive migration for safety, though schema has changed significantly.
             // In a real scenario, we would need complex migrations from old tables (Pengguna, Produk) to new ones (User, Product).
             // Given the scope of "Total Refactor", we assume a fresh install or a manual migration strategy is handled elsewhere if data preservation is critical.
