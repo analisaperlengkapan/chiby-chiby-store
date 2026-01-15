@@ -15,6 +15,9 @@ import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
 import java.time.LocalDate
 
+/**
+ * Benchmark test for PdfExportService to measure export duration.
+ */
 @RunWith(RobolectricTestRunner::class)
 class PdfExportServiceBenchmarkTest {
 
