@@ -25,6 +25,9 @@ interface KategoriDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertKategoriList(kategoriList: List<Kategori>): List<Long>
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertKategoriListIgnoreConflict(kategoriList: List<Kategori>): List<Long>
+
     @Update
     suspend fun updateKategori(kategori: Kategori)
 
