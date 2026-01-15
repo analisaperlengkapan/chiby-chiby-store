@@ -100,4 +100,7 @@ object DatabaseModule {
 
     @Provides
     fun provideStokGudangDao(database: ChibyChibyDatabase) = database.stokGudangDao()
+
+    @Provides
+    fun providePromotionDao(database: ChibyChibyDatabase) = database.promotionDao()
 }

@@ -1,30 +1,25 @@
 package com.chibychibystore.service.impl
 
-import com.chibychibystore.data.model.Promotion
-import com.chibychibystore.data.model.PromotionType
+import com.chibychibystore.data.local.entity.Promotion
+import com.chibychibystore.data.local.entity.PromotionType
+import com.chibychibystore.repository.PromotionRepository
 import com.chibychibystore.service.PromoService
+import kotlinx.coroutines.flow.first
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class PromoServiceImpl @Inject constructor() : PromoService {
+class PromoServiceImpl @Inject constructor(
+    private val promotionRepository: PromotionRepository
+) : PromoService {
 
-    // Internal list of promotions acting as a simple engine/repository
-    private val promotions = listOf(
-        Promotion(
-            id = "DEFAULT_PROMO",
-            name = "Diskon Belanja > 100rb",
-            description = "Dapatkan diskon 5% untuk setiap pembelian di atas Rp 100.000",
-            type = PromotionType.PERCENTAGE,
-            value = 0.05,
-            minPurchaseAmount = 100_000.0,
-            isActive = true
-        )
-    )
+    override suspend fun calculateDiscount(subtotal: Double): Double {
+        // Fetch active promotions for today
+        val promotions = promotionRepository.getActivePromotionsForDate(Date()).first()
 
-    override fun calculateDiscount(subtotal: Double): Double {
         val applicablePromotions = promotions.filter { promo ->
-            promo.isActive && subtotal >= promo.minPurchaseAmount
+             subtotal >= promo.minPurchaseAmount
         }
 
         // Apply the best discount (highest amount)
