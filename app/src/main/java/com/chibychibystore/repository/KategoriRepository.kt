@@ -78,6 +78,34 @@ class KategoriRepository @Inject constructor(
     }
 
     /**
+     * Create kategori list (batch)
+     */
+    suspend fun createKategoriList(kategoriList: List<Kategori>): Result<Int> {
+        return try {
+            // Filter valid categories
+            val validCategories = kategoriList.filter {
+                try {
+                    validateKategoriData(it)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
+
+            if (validCategories.isEmpty()) {
+                return Result.success(0)
+            }
+
+            val results = kategoriDao.insertKategoriListIgnoreConflict(validCategories)
+            // -1L means conflict/ignored
+            val successCount = results.count { it != -1L }
+            Result.success(successCount)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("createKategoriList", e))
+        }
+    }
+
+    /**
      * Update kategori
      */
     suspend fun updateKategori(kategori: Kategori): Result<Unit> {

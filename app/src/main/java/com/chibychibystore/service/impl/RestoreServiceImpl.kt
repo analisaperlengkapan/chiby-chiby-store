@@ -226,19 +226,13 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
-    private suspend fun restoreCategories(categories: List<Kategori>): Int {
-        var count = 0
-        for (cat in categories) {
-            try {
-                val result = categoryRepository.createKategori(cat)
-                if (result is com.chibychibystore.data.model.Result.Success) {
-                    count++
-                }
-            } catch (e: Exception) {
-                // Log error but continue
-            }
+    internal suspend fun restoreCategories(categories: List<Kategori>): Int {
+        val result = categoryRepository.createKategoriList(categories)
+        return if (result is com.chibychibystore.data.model.Result.Success) {
+            result.data
+        } else {
+            0
         }
-        return count
     }
 
     private suspend fun restoreGudangs(warehouses: List<Gudang>): Int {
