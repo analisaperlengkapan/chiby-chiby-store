@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.chibychibystore.data.local.entity.ItemPenjualan
+import com.chibychibystore.data.model.KategoriPenjualanDto
 import com.chibychibystore.data.model.ProdukTerpopulerDto
 import kotlinx.coroutines.flow.Flow
 
@@ -46,4 +47,21 @@ interface ItemPenjualanDao {
         GROUP BY ip.productId
     """)
     suspend fun getProdukPenjualanStats(startDate: java.util.Date, endDate: java.util.Date): List<ProdukTerpopulerDto>
+
+    @Query("""
+        SELECT
+            p.categoryId as kategoriId,
+            k.name as namaKategori,
+            SUM(ip.quantity) as jumlahTerjual,
+            SUM(ip.totalPrice) as totalPendapatan,
+            SUM(ip.quantity * p.costPrice) as totalBiaya
+        FROM item_penjualan ip
+        JOIN penjualan s ON ip.saleId = s.id
+        JOIN produk p ON ip.productId = p.id
+        LEFT JOIN kategori k ON p.categoryId = k.id
+        WHERE s.saleDate BETWEEN :startDate AND :endDate
+        AND s.isRefunded = 0
+        GROUP BY p.categoryId
+    """)
+    suspend fun getSalesByCategoryStats(startDate: java.util.Date, endDate: java.util.Date): List<KategoriPenjualanDto>
 }

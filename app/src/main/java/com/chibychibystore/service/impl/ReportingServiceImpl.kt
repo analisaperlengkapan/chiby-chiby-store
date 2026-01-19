@@ -233,32 +233,20 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan per kategori"))
         } else {
-            val byKategori = mutableMapOf<Long, Triple<Int, Double, Double>>()
-            val salesWithItems = saleRepository.getSalesWithItemsInDateRange(startDate, endDate)
-            val salesFiltered = salesWithItems.filter { !it.penjualan.isRefunded }
+            val dStart = startDate.toDate()
+            val dEnd = endDate.toDate()
 
-            // Pre-fetch all products to avoid N+1 query
-            val productIds = salesFiltered.flatMap { it.items }.map { it.productId }.distinct()
-            val productsMap = productRepository.getProdukByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+            val statsResult = saleItemRepository.getSalesByCategory(dStart, dEnd)
+            val salesStats = statsResult.getOrNull() ?: emptyList()
 
-            salesFiltered.forEach { saleWithItems ->
-                saleWithItems.items.forEach { item ->
-                    val prod = productsMap[item.productId]
-                    val catId = prod?.categoryId ?: -1L
-                    val cost = (prod?.costPrice ?: 0.0) * item.quantity
-                    val cur = byKategori[catId] ?: Triple(0, 0.0, 0.0)
-                    byKategori[catId] = Triple(cur.first + item.quantity, cur.second + item.totalPrice, cur.third + cost)
-                }
-            }
-
-            val result = byKategori.map { (catId, t) ->
+            val result = salesStats.map { stat ->
                 PenjualanKategori(
-                    kategoriId = catId,
-                    namaKategori = "Kategori $catId",
-                    jumlahTerjual = t.first,
-                    totalPendapatan = t.second,
-                    totalBiaya = t.third,
-                    laba = t.second - t.third
+                    kategoriId = stat.kategoriId,
+                    namaKategori = stat.namaKategori ?: "Kategori ${stat.kategoriId}",
+                    jumlahTerjual = stat.jumlahTerjual.toInt(),
+                    totalPendapatan = stat.totalPendapatan,
+                    totalBiaya = stat.totalBiaya,
+                    laba = stat.totalPendapatan - stat.totalBiaya
                 )
             }
             Result.success(result)
