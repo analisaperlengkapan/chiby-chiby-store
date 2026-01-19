@@ -49,6 +49,9 @@ interface ProdukDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertProdukList(produkList: List<Produk>): List<Long>
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertProdukListIgnoreConflict(produkList: List<Produk>): List<Long>
+
     @Update
     suspend fun updateProduk(produk: Produk)
 

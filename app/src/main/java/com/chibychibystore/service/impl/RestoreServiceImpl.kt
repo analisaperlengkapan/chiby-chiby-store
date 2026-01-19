@@ -19,14 +19,6 @@ import kotlinx.serialization.Serializable
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
-
-
-
-
-
-/**
- * Implementation RestoreService menggunakan repository
- */
 import com.chibychibystore.service.RestoreResult
 import com.chibychibystore.service.BackupPreview
 import com.chibychibystore.service.BackupValidationResult
@@ -253,7 +245,14 @@ class RestoreServiceImpl @Inject constructor(
         }
     }
 
-    private suspend fun restoreProduks(products: List<Produk>): Int {
+    internal suspend fun restoreProduks(products: List<Produk>): Int {
+        // Try batch insertion first for performance
+        val batchResult = productRepository.createProdukList(products)
+        if (batchResult is com.chibychibystore.data.model.Result.Success) {
+            return batchResult.data
+        }
+
+        // Fallback to individual insertion if batch fails
         var count = 0
         for (product in products) {
             try {
