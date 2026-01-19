@@ -169,9 +169,9 @@ fun PosScreen(
         }
     }
 
-    // Receipt Dialog
     val completedSaleId = uiState.completedSaleId
     if (uiState.showReceiptDialog && completedSaleId != null) {
+        // Show receipt dialog
         ReceiptDialog(
             saleId = completedSaleId,
             isPrinting = uiState.isPrintingReceipt,
