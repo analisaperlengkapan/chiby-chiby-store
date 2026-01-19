@@ -78,6 +78,33 @@ class GudangRepository @Inject constructor(
     }
 
     /**
+     * Create multiple gudangs (batch)
+     */
+    suspend fun createGudangList(gudangs: List<Gudang>): Result<Int> {
+        return try {
+            val validGudangs = gudangs.filter {
+                try {
+                    validateGudangData(it)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
+
+            if (validGudangs.isEmpty()) {
+                return Result.success(0)
+            }
+
+            val ids = gudangDao.insertGudangListIgnoreConflict(validGudangs)
+            val successCount = ids.count { it != -1L }
+
+            Result.success(successCount)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("createGudangList", e))
+        }
+    }
+
+    /**
      * Update gudang
      */
     suspend fun updateGudang(gudang: Gudang): Result<Unit> {
