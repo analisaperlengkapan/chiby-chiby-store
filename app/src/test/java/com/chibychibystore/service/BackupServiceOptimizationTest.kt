@@ -5,6 +5,7 @@ import com.chibychibystore.data.local.entity.*
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.*
 import com.chibychibystore.service.impl.BackupServiceImpl
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -75,7 +76,8 @@ class BackupServiceOptimizationTest {
             itemPenjualanRepository,
             purchaseRepository,
             itemPembelianRepository,
-            expenseRepository
+            expenseRepository,
+            Dispatchers.Unconfined
         )
 
         // Override backup directory

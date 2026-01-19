@@ -13,7 +13,10 @@ import com.chibychibystore.service.BackupInfo
 import com.chibychibystore.service.BackupProgress
 import com.chibychibystore.service.BackupService
 import com.chibychibystore.service.BackupValidationResult
+import com.chibychibystore.di.IoDispatcher
 import com.google.gson.stream.JsonWriter
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
@@ -22,6 +25,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -47,7 +52,8 @@ class BackupServiceImpl @Inject constructor(
     private val itemPenjualanRepository: ItemPenjualanRepository,
     private val purchaseRepository: PembelianRepository,
     private val itemPembelianRepository: ItemPembelianRepository,
-    private val expenseRepository: PengeluaranRepository
+    private val expenseRepository: PengeluaranRepository,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : BackupService {
 
     private val json = Json { prettyPrint = true }
@@ -58,9 +64,9 @@ class BackupServiceImpl @Inject constructor(
     private val _backupProgress = MutableStateFlow(BackupProgress())
     override fun observeBackupProgress(): StateFlow<BackupProgress> = _backupProgress
 
-    override suspend fun createBackup(): Result<BackupInfo> {
+    override suspend fun createBackup(): Result<BackupInfo> = withContext(ioDispatcher) {
         var tempFile: File? = null
-        return try {
+        try {
             _backupProgress.value = BackupProgress(isInProgress = true, totalSteps = 10)
 
             val createdAt = System.currentTimeMillis()
@@ -87,7 +93,7 @@ class BackupServiceImpl @Inject constructor(
             digest.update(prefixBytes)
 
             // 3. Write Data Body to Temp File AND Digest
-            val tempFos = FileOutputStream(tempFile)
+            val tempFos = BufferedOutputStream(FileOutputStream(tempFile))
             val dos = DigestOutputStream(tempFos, digest)
             val writer = JsonWriter(OutputStreamWriter(dos, "UTF-8"))
 
@@ -202,7 +208,7 @@ class BackupServiceImpl @Inject constructor(
             val fileName = generateBackupFileName(createdAt)
             val filePath = createBackupFile(fileName)
             val file = File(filePath)
-            val outputStream = openBackupOutputStream(file)
+            val outputStream = BufferedOutputStream(openBackupOutputStream(file))
 
             // Re-construct prefix with REAL checksum
             val finalMetadata = initialMetadata.copy(checksum = checksum)
@@ -220,8 +226,8 @@ class BackupServiceImpl @Inject constructor(
                 out.write(finalPrefixBytes)
 
                 // Copy body from temp file
-                FileInputStream(tempFile).use { input ->
-                    input.copyTo(out)
+                BufferedInputStream(FileInputStream(tempFile)).use { input ->
+                    input.copyTo(out, bufferSize = 64 * 1024)
                 }
 
                 // Write suffix
@@ -252,8 +258,8 @@ class BackupServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun getBackupHistory(): Result<List<BackupInfo>> {
-        return try {
+    override suspend fun getBackupHistory(): Result<List<BackupInfo>> = withContext(ioDispatcher) {
+        try {
             val backupDir = getBackupDirectory()
             val backupFiles = backupDir.listFiles { file ->
                 file.name.startsWith("backup_") && file.name.endsWith(".enc")
@@ -284,8 +290,8 @@ class BackupServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteBackup(backupId: String): Result<Unit> {
-        return try {
+    override suspend fun deleteBackup(backupId: String): Result<Unit> = withContext(ioDispatcher) {
+        try {
             val backupDir = getBackupDirectory()
             val backupFile = backupDir.listFiles { file ->
                 calculateFileChecksum(file) == backupId
@@ -302,8 +308,8 @@ class BackupServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun validateBackup(backupPath: String): Result<BackupValidationResult> {
-        return try {
+    override suspend fun validateBackup(backupPath: String): Result<BackupValidationResult> = withContext(ioDispatcher) {
+        try {
             val decryptedJson = decryptFile(backupPath)
             val backupData = json.decodeFromString<BackupData>(decryptedJson)
 
