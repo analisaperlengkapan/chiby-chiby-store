@@ -43,14 +43,15 @@ class BarcodeServiceImpl @Inject constructor(
         // Format: 2 (Internal) + YYMMDD (Date) + XXXXX (Random) + C (Check Digit)
         // Total 13 digits for EAN-13 compatibility
         val prefix = "2" // Internal prefix
-        val datePart = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"))
+        // Use Locale.US to ensure ASCII digits regardless of device locale
+        val datePart = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd", java.util.Locale.US))
 
         // Retry logic to ensure uniqueness
         var attempt = 0
         val maxAttempts = 10
 
         while (attempt < maxAttempts) {
-            // Generate 5 random digits using SecureRandom
+            // Generate 5 random digits using SecureRandom (cryptographically strong)
             val randomPart = generateRandom5Digits()
             val codeWithoutCheckDigit = prefix + datePart + randomPart
             val checkDigit = calculateCheckDigit(codeWithoutCheckDigit)
@@ -178,7 +179,8 @@ class BarcodeServiceImpl @Inject constructor(
     }
 
     /**
-     * Generate 5 random digits using SecureRandom to minimize collision probability
+     * Generate 5 random digits using SecureRandom to minimize collision probability.
+     * Guaranteed to return a string of length 5 (10000..99999).
      */
     private fun generateRandom5Digits(): String {
         return (secureRandom.nextInt(90000) + 10000).toString()
