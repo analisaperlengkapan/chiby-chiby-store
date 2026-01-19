@@ -3,6 +3,7 @@ package com.chibychibystore.data.local.database
 import androidx.room.TypeConverter
 import com.chibychibystore.data.local.entity.PaymentMethod
 import com.chibychibystore.data.local.entity.Role
+import com.chibychibystore.data.local.entity.PromotionType
 import java.util.Date
 
 class Converters {
@@ -34,5 +35,15 @@ class Converters {
     @TypeConverter
     fun paymentMethodToString(paymentMethod: PaymentMethod?): String? {
         return paymentMethod?.name
+    }
+
+    @TypeConverter
+    fun fromPromotionType(value: String?): PromotionType? {
+        return value?.let { PromotionType.valueOf(it) }
+    }
+
+    @TypeConverter
+    fun promotionTypeToString(type: PromotionType?): String? {
+        return type?.name
     }
 }
