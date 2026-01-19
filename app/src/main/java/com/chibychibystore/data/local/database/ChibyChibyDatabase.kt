@@ -21,7 +21,7 @@ import com.chibychibystore.data.local.entity.*
         UserSession::class,
         StokGudang::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

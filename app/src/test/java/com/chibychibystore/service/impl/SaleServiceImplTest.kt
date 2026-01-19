@@ -10,9 +10,11 @@ import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.PenjualanWithItems
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.data.local.entity.StokGudang
 import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.StokGudangRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.PromoService
 import com.chibychibystore.service.printer.PrinterService
@@ -43,6 +45,7 @@ class SaleServiceImplTest {
     @Mock private lateinit var penjualanRepository: PenjualanRepository
     @Mock private lateinit var itemPenjualanRepository: ItemPenjualanRepository
     @Mock private lateinit var productRepository: ProdukRepository
+    @Mock private lateinit var stokGudangRepository: StokGudangRepository
     @Mock private lateinit var authService: AuthService
     @Mock private lateinit var printerService: PrinterService
     @Mock private lateinit var promoService: PromoService
@@ -66,6 +69,7 @@ class SaleServiceImplTest {
             penjualanRepository,
             itemPenjualanRepository,
             productRepository,
+            stokGudangRepository,
             authService,
             printerService,
             promoService
@@ -86,7 +90,8 @@ class SaleServiceImplTest {
             tax = 0.0,
             discount = 0.0,
             paymentMethod = PaymentMethod.CASH,
-            cashierId = 1L
+            cashierId = 1L,
+            warehouseId = 1L
         )
         val items = listOf(
             ItemPenjualan(saleId = 0, productId = 1L, quantity = 10, unitPrice = 1000.0, totalPrice = 10000.0)
@@ -96,23 +101,29 @@ class SaleServiceImplTest {
             id = 1L,
             name = "Test Product",
             sellingPrice = 1000.0,
-            stockQuantity = 5, // Less than requested 10
-            lowStockThreshold = 5,
+            stockQuantity = 5, // Less than requested 10 (Legacy)
+            minStock = 5,
             barcode = "123",
-            categoryId = null,
-            warehouseId = null,
-            imagePath = null,
+            categoryId = 1L,
+            warehouseId = 1L,
             createdAt = Date()
         )
 
+        val stokGudang = StokGudang(
+            productId = 1L,
+            warehouseId = 1L,
+            quantity = 5 // Less than requested 10
+        )
+
         `when`(productRepository.getProductsByIds(listOf(1L))).thenReturn(Result.success(listOf(product)))
+        `when`(stokGudangRepository.getStocks(listOf(1L), 1L)).thenReturn(Result.success(listOf(stokGudang)))
 
         // Act
         val result = saleService.createPenjualan(sale, items)
 
         // Assert
         assertTrue(result.isFailure)
-        assertEquals("Stok tidak mencukupi untuk Test Product. Tersedia: 5, Dibutuhkan: 10", result.exceptionOrNull()?.message)
+        assertEquals("Stok tidak mencukupi untuk Test Product di Gudang 1. Tersedia: 5, Dibutuhkan: 10", result.exceptionOrNull()?.message)
     }
 
     @Test
@@ -124,7 +135,8 @@ class SaleServiceImplTest {
             tax = 0.0,
             discount = 0.0,
             paymentMethod = PaymentMethod.CASH,
-            cashierId = 1L
+            cashierId = 1L,
+            warehouseId = 1L
         )
         val items = listOf(
             ItemPenjualan(saleId = 0, productId = 1L, quantity = 5, unitPrice = 1000.0, totalPrice = 5000.0)
@@ -135,22 +147,28 @@ class SaleServiceImplTest {
             name = "Test Product",
             sellingPrice = 1000.0,
             stockQuantity = 10, // More than requested 5
-            lowStockThreshold = 5,
+            minStock = 5,
             barcode = "123",
-            categoryId = null,
-            warehouseId = null,
-            imagePath = null,
+            categoryId = 1L,
+            warehouseId = 1L,
             createdAt = Date()
         )
 
+        val stokGudang = StokGudang(
+            productId = 1L,
+            warehouseId = 1L,
+            quantity = 10 // More than requested 5
+        )
+
         `when`(productRepository.getProductsByIds(listOf(1L))).thenReturn(Result.success(listOf(product)))
+        `when`(stokGudangRepository.getStocks(listOf(1L), 1L)).thenReturn(Result.success(listOf(stokGudang)))
         `when`(penjualanRepository.createPenjualan(any(), anyList())).thenReturn(Result.success(PenjualanWithItems(sale, items, emptyList())))
-        `when`(productRepository.adjustStock(1L, -5)).thenReturn(Result.success(Unit))
+        `when`(stokGudangRepository.adjustStock(1L, 1L, -5)).thenReturn(Result.success(Unit))
 
         // Act
         val result = saleService.createPenjualan(sale, items)
 
         // Assert
         assertTrue(result.isSuccess)
+        verify(stokGudangRepository).adjustStock(1L, 1L, -5)
     }
-}
