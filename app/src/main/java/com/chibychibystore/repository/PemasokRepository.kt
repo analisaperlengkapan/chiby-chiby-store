@@ -61,6 +61,33 @@ class PemasokRepository @Inject constructor(
     }
 
     /**
+     * Create multiple pemasok
+     */
+    suspend fun createPemasokList(pemasokList: List<Pemasok>): Result<Int> {
+        return try {
+            val validList = pemasokList.filter {
+                try {
+                    validatePemasokData(it)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
+
+            if (validList.isEmpty()) {
+                return Result.success(0)
+            }
+
+            val ids = pemasokDao.insertPemasokList(validList)
+            // Count success (ids that are not -1)
+            val successCount = ids.count { it != -1L }
+            Result.success(successCount)
+        } catch (e: Exception) {
+             Result.failure(ChibyChibyException.DatabaseError("createPemasokList", e))
+        }
+    }
+
+    /**
      * Update pemasok
      */
     suspend fun updatePemasok(pemasok: Pemasok): Result<Unit> {

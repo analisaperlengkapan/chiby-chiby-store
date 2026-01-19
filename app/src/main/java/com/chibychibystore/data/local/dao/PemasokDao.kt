@@ -22,6 +22,9 @@ interface PemasokDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPemasok(pemasok: Pemasok): Long
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertPemasokList(pemasokList: List<Pemasok>): List<Long>
+
     @Update
     suspend fun updatePemasok(pemasok: Pemasok)
 
