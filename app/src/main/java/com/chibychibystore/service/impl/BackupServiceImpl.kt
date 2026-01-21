@@ -17,9 +17,11 @@ import com.chibychibystore.di.IoDispatcher
 import com.google.gson.stream.JsonWriter
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+import com.chibychibystore.di.IoDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
@@ -43,19 +45,8 @@ import javax.inject.Singleton
 @Singleton
 class BackupServiceImpl @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context,
-<<<<<<< HEAD
-    private val userRepository: PenggunaRepository,
-    private val categoryRepository: KategoriRepository,
-    private val warehouseRepository: GudangRepository,
-    private val productRepository: ProdukRepository,
-    private val supplierRepository: PemasokRepository,
-    private val saleRepository: PenjualanRepository,
-    private val itemPenjualanRepository: ItemPenjualanRepository,
-    private val purchaseRepository: PembelianRepository,
-    private val itemPembelianRepository: ItemPembelianRepository,
-    private val expenseRepository: PengeluaranRepository,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
-=======
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     private val userRepository: UserRepository,
     private val categoryRepository: CategoryRepository,
     private val warehouseRepository: WarehouseRepository,
@@ -66,7 +57,6 @@ class BackupServiceImpl @Inject constructor(
     private val purchaseRepository: PurchaseRepository,
     private val purchaseItemRepository: PurchaseItemRepository,
     private val expenseRepository: ExpenseRepository
->>>>>>> feat/ui-overhaul
 ) : BackupService {
 
     private val json = Json { prettyPrint = true }
@@ -82,25 +72,21 @@ class BackupServiceImpl @Inject constructor(
         try {
             _backupProgress.value = BackupProgress(isInProgress = true, totalSteps = 10)
 
-<<<<<<< HEAD
-            val createdAt = System.currentTimeMillis()
-            tempFile = File.createTempFile("backup_data_part", ".json", context.cacheDir)
-=======
             // Step 1: Gather all data
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengguna", progress = 0.1f, currentStepIndex = 1, totalSteps = 10)
-            val pengguna = userRepository.getAllUsers().firstOrNull() ?: emptyList()
+            val users = userRepository.getAllUsers().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data kategori", progress = 0.2f, currentStepIndex = 2, totalSteps = 10)
-            val kategori = categoryRepository.getAllCategories().firstOrNull() ?: emptyList()
+            val categories = categoryRepository.getAllCategories().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data gudang", progress = 0.3f, currentStepIndex = 3, totalSteps = 10)
-            val gudang = warehouseRepository.getAllWarehouses().firstOrNull() ?: emptyList()
+            val warehouses = warehouseRepository.getAllWarehouses().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data product", progress = 0.4f, currentStepIndex = 4, totalSteps = 10)
-            val product = productRepository.getAllProducts().firstOrNull() ?: emptyList()
+            val products = productRepository.getAllProducts().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pemasok", progress = 0.5f, currentStepIndex = 5, totalSteps = 10)
-            val pemasok = supplierRepository.getAllSuppliers().firstOrNull() ?: emptyList()
+            val suppliers = supplierRepository.getAllSuppliers().firstOrNull() ?: emptyList()
 
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data penjualan", progress = 0.6f, currentStepIndex = 6, totalSteps = 10)
             val sales = saleRepository.getAllSales().firstOrNull() ?: emptyList()
@@ -121,18 +107,17 @@ class BackupServiceImpl @Inject constructor(
             // Step 2: Create backup data structure
             val createdAt = System.currentTimeMillis()
             val entities = BackupEntities(
-                users = pengguna,
-                categories = kategori,
-                warehouses = gudang,
-                products = product,
-                suppliers = pemasok,
+                users = users,
+                categories = categories,
+                warehouses = warehouses,
+                products = products,
+                suppliers = suppliers,
                 sales = sales,
                 saleItems = saleItems,
                 purchases = purchases,
                 purchaseItems = purchaseItems,
                 expenses = expenses
             )
->>>>>>> feat/ui-overhaul
 
             // 1. Prepare Checksum Calculation
             val digest = MessageDigest.getInstance("SHA-256")
@@ -370,24 +355,12 @@ class BackupServiceImpl @Inject constructor(
         }
     }
 
-    override suspend fun validateBackup(backupPath: String): Result<BackupValidationResult> = withContext(ioDispatcher) {
-        try {
-            val decryptedJson = decryptFile(backupPath)
+    override suspend fun validateBackup(backupPath: String): Result<BackupValidationResult> {
+        return try {
+            val decryptedJson = decryptFileAsync(backupPath)
             val backupData = json.decodeFromString<BackupData>(decryptedJson)
 
             val recordCounts = mapOf(
-<<<<<<< HEAD
-                "pengguna" to backupData.data.users.size,
-                "kategori" to backupData.data.categories.size,
-                "gudang" to backupData.data.warehouses.size,
-                "product" to backupData.data.products.size,
-                "pemasok" to backupData.data.suppliers.size,
-                "penjualan" to backupData.data.sales.size,
-                "itemPenjualan" to backupData.data.saleItems.size,
-                "pembelian" to backupData.data.purchases.size,
-                "itemPembelian" to backupData.data.purchaseItems.size,
-                "pengeluaran" to backupData.data.expenses.size
-=======
                 "users" to backupData.data.users.size,
                 "categories" to backupData.data.categories.size,
                 "warehouses" to backupData.data.warehouses.size,
@@ -398,7 +371,7 @@ class BackupServiceImpl @Inject constructor(
                 "purchases" to backupData.data.purchases.size,
                 "purchaseItems" to backupData.data.purchaseItems.size,
                 "expenses" to backupData.data.expenses.size
->>>>>>> feat/ui-overhaul
+            )
             )
 
 
@@ -518,6 +491,12 @@ class BackupServiceImpl @Inject constructor(
         val file = File(filePath)
         openBackupOutputStream(file).use { output ->
             output.write(data.toByteArray())
+        }
+    }
+
+    private suspend fun decryptFileAsync(filePath: String): String {
+        return withContext(ioDispatcher) {
+            decryptFile(filePath)
         }
     }
 
