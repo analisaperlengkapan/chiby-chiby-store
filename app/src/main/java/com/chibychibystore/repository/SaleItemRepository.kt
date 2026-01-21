@@ -126,4 +126,16 @@ class SaleItemRepository @Inject constructor(
             Result.failure(ChibyChibyException.DatabaseError("getProductSalesStats", e))
         }
     }
+
+    /**
+     * Calculate total COGS
+     */
+    suspend fun calculateTotalCogs(startDate: java.util.Date, endDate: java.util.Date): Result<Double> {
+        return try {
+            val total = saleItemDao.calculateTotalCogs(startDate, endDate) ?: 0.0
+            Result.success(total)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("calculateTotalCogs", e))
+        }
+    }
 }

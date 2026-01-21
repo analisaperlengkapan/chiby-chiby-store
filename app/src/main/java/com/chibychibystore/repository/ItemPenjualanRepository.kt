@@ -57,6 +57,7 @@ class ItemPenjualanRepository @Inject constructor(
     }
 
     /**
+<<<<<<< HEAD
      * Get sales stats by category in date range
      */
     suspend fun getSalesByCategory(startDate: java.util.Date, endDate: java.util.Date): Result<List<com.chibychibystore.data.model.KategoriPenjualanDto>> {
@@ -64,6 +65,16 @@ class ItemPenjualanRepository @Inject constructor(
             Result.success(itemPenjualanDao.getSalesByCategoryStats(startDate, endDate))
         } catch (e: Exception) {
             Result.failure(e)
+=======
+     * Calculate total COGS (Cost of Goods Sold)
+     */
+    suspend fun calculateTotalCogs(startDate: java.util.Date, endDate: java.util.Date): Result<Double> {
+        return try {
+            val total = itemPenjualanDao.calculateTotalCogs(startDate, endDate) ?: 0.0
+            Result.success(total)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("calculateTotalCogs", e))
+>>>>>>> origin/perf/optimize-reporting-cogs-15423304366030135863
         }
     }
 
