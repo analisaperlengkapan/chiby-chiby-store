@@ -61,6 +61,7 @@ class DashboardViewModel @Inject constructor(
                 val sevenDaysAgo = todayDate.minusDays(6)
 
                 // Parallel execution for dashboard metrics
+<<<<<<< HEAD
                 // Note: Using a properly formatted date string for services expected "yyyy-MM-dd"
                 // Assuming services handle "yyyy-MM-dd" correctly.
                 
@@ -88,6 +89,13 @@ class DashboardViewModel @Inject constructor(
                         errorMessage = null
                     )
                 }
+=======
+                val todaySalesDeferred = async { saleService.getTotalSalesByDateRange(today, today) }
+                val transactionCountDeferred = async { saleService.getSalesCountByDateRange(today, today) }
+                val lowStockDeferred = async { productRepository.getLowStockProducts().first() }
+                val recentSalesDeferred = async { saleService.getRecentSales(10) }
+                val salesTrendDeferred = async { reportingService.getSalesTrend(sevenDaysAgo, todayDate) }
+>>>>>>> feat/ui-overhaul
 
 
             } catch (e: Exception) {

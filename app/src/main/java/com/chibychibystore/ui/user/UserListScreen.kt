@@ -11,41 +11,46 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import kotlinx.coroutines.launch
-import com.chibychibystore.ui.navigation.Screen
-import com.chibychibystore.data.local.entity.Pengguna
+import androidx.navigation.NavController
+import com.chibychibystore.data.local.entity.User
 import com.chibychibystore.data.local.entity.Role
-import com.chibychibystore.ui.components.shared.*
-import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.UserManagementDialogs
+import com.chibychibystore.ui.components.shared.AppTopBar
+import com.chibychibystore.ui.components.shared.EmptyState
+import com.chibychibystore.ui.navigation.Screen
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserManagementScreen(
-    drawerState: DrawerState,
-    currentRoute: String,
-    onNavigateToRoute: (String) -> Unit,
+fun UserListScreen(
+    navController: NavController,
     viewModel: UserManagementViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val createUserFormState by viewModel.createUserFormState.collectAsState()
     val editUserFormState by viewModel.editUserFormState.collectAsState()
     val resetPasswordFormState by viewModel.resetPasswordFormState.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Manajemen Pengguna",
-                navigationIcon = Icons.Default.Menu,
-                onNavigationClick = { scope.launch { drawerState.open() } },
+                title = "Manajemen User",
                 actions = {
-                    IconButton(onClick = { viewModel.showCreateUserDialog() }) {
-                        Icon(Icons.Default.Add, contentDescription = "Tambah Pengguna")
+                    IconButton(
+                        onClick = { viewModel.showCreateUserDialog() }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Tambah User"
+                        )
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -62,7 +67,7 @@ fun UserManagementScreen(
                 OutlinedTextField(
                     value = uiState.searchQuery,
                     onValueChange = viewModel::onSearchQueryChange,
-                    placeholder = { Text("Cari pengguna...") },
+                    placeholder = { Text("Cari user...") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     modifier = Modifier.weight(1f),
                     singleLine = true
@@ -80,7 +85,9 @@ fun UserManagementScreen(
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier.width(120.dp)
+                            modifier = Modifier
+                                .width(140.dp)
+                                .menuAnchor()
                     )
                     ExposedDropdownMenu(
                         expanded = expanded,
@@ -93,7 +100,8 @@ fun UserManagementScreen(
                                 expanded = false
                             }
                         )
-                        Role.values().forEach { role ->
+                        val roles = remember { Role.values() }
+                        roles.forEach { role ->
                             DropdownMenuItem(
                                 text = { Text(role.name) },
                                 onClick = {
@@ -116,58 +124,50 @@ fun UserManagementScreen(
                 ) {
                     UserStatCard("Total", stats.totalUsers.toString(), Modifier.weight(1f))
                     UserStatCard("Owner", stats.owners.toString(), Modifier.weight(1f))
-                    UserStatCard("Manager", stats.managers.toString(), Modifier.weight(1f))
-                    UserStatCard("Cashier", stats.cashiers.toString(), Modifier.weight(1f))
+                    UserStatCard("Mgr", stats.managers.toString(), Modifier.weight(1f))
+                    UserStatCard("Kasir", stats.cashiers.toString(), Modifier.weight(1f))
                     UserStatCard("Warehouse", stats.warehouseStaff.toString(), Modifier.weight(1f))
                 }
             }
 
-            // Messages
-            uiState.errorMessage?.let { error ->
-                Snackbar(
-                    modifier = Modifier.padding(16.dp),
-                    action = {
-                        TextButton(onClick = viewModel::clearError) {
-                            Text("Tutup")
-                        }
-                    }
-                ) {
-                    Text(error)
-                }
-            }
-
-            uiState.successMessage?.let { success ->
-                Snackbar(
-                    modifier = Modifier.padding(16.dp),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) {
-                    Text(success)
-                }
-            }
-
-            // Users List
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(uiState.filteredUsers) { user ->
-                        UserCard(
-                            user = user,
-                            onEdit = { viewModel.showEditUserDialog(user) },
-                            onDelete = { viewModel.showDeleteUserDialog(user) },
-                            onResetPassword = { viewModel.showResetPasswordDialog(user) },
-                            onClick = { onNavigateToRoute(Screen.UserDetail.createRoute(user.id)) }
+            // Content
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when {
+                    uiState.isLoading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center)
                         )
+                    }
+                    uiState.filteredUsers.isEmpty() -> {
+                        EmptyState(
+                            icon = Icons.Default.Person,
+                            title = "Belum ada user",
+                            message = "Silakan tambah user baru atau ubah filter pencarian"
+                        )
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(
+                                items = uiState.filteredUsers,
+                                key = { it.id }
+                            ) { user ->
+                                UserListItem(
+                                    user = user,
+                                    onClick = {
+                                        navController.navigate(Screen.UserDetail.createRoute(user.id))
+                                    },
+                                    onEdit = { viewModel.showEditUserDialog(user) },
+                                    onDelete = { viewModel.showDeleteUserDialog(user) },
+                                    onResetPassword = { viewModel.showResetPasswordDialog(user) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -202,6 +202,32 @@ fun UserManagementScreen(
         onResetPasswordChange = viewModel::onResetPasswordChange,
         onResetPasswordConfirmChange = viewModel::onResetPasswordConfirmChange
     )
+
+    // Handle errors and success messages
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { error ->
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = error,
+                    duration = SnackbarDuration.Short,
+                    withDismissAction = true
+                )
+            }
+            viewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(uiState.successMessage) {
+        uiState.successMessage?.let { success ->
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    message = success,
+                    duration = SnackbarDuration.Short,
+                    withDismissAction = true
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -212,17 +238,17 @@ private fun UserStatCard(
 ) {
     Card(modifier = modifier) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = value,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -231,15 +257,24 @@ private fun UserStatCard(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun UserCard(
-    user: Pengguna,
+private fun UserListItem(
+    user: User,
+    onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onResetPassword: () -> Unit,
-    onClick: () -> Unit
+    onResetPassword: () -> Unit
 ) {
     Card(
-        onClick = onClick
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        ),
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier
@@ -247,34 +282,41 @@ private fun UserCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
                     text = user.username,
                     style = MaterialTheme.typography.titleMedium
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = user.role.name,
+                    text = "Role: ${user.role}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Dibuat: ${user.createdAt}",
-                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
+            // Action Buttons
             Row {
                 IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Edit",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
                 IconButton(onClick = onResetPassword) {
-                    Icon(Icons.Default.Lock, contentDescription = "Reset Password")
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = "Reset Password",
+                        tint = MaterialTheme.colorScheme.secondary
+                    )
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = "Hapus",
                         tint = MaterialTheme.colorScheme.error
                     )
                 }

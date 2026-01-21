@@ -18,6 +18,15 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.chibychibystore.ui.inventory.WarehouseUiState // Ensure this import exists or use FQN
+
+private data class StatusState(
+    val isLoading: Boolean,
+    val isTransferring: Boolean,
+    val error: String?,
+    val successMessage: String?
+)
+
 
 /**
  * UI State untuk Warehouse Screen
@@ -70,7 +79,9 @@ class WarehouseViewModel @Inject constructor(
     }
 
     // Combined UI State
+    // Combined UI State
     val uiState: StateFlow<WarehouseUiState> = combine(
+<<<<<<< HEAD
         _warehousesFlow,
         _warehouseStockFlow,
         _selectedWarehouseId,
@@ -87,14 +98,19 @@ class WarehouseViewModel @Inject constructor(
         val error = values[5] as String?
         val success = values[6] as String?
         
+=======
+        combine(_warehousesFlow, _warehouseStockFlow, _selectedWarehouseId) { w, p, s -> Triple(w, p, s) },
+        combine(_isLoading, _isTransferring, _error, _successMessage) { i, t, e, s -> StatusState(i, t, e, s) }
+    ) { (warehouses, products, selectedId), status ->
+>>>>>>> feat/ui-overhaul
         WarehouseUiState(
             warehouses = warehouses,
             selectedWarehouse = warehouses.find { it.id == selectedId },
             products = products,
-            isLoading = isLoading,
-            isTransferring = isTransferring,
-            error = error,
-            successMessage = success
+            isLoading = status.isLoading,
+            isTransferring = status.isTransferring,
+            error = status.error,
+            successMessage = status.successMessage
         )
     }.stateIn(
         scope = viewModelScope,

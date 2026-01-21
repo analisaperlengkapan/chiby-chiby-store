@@ -33,8 +33,13 @@ class WarehouseServiceImpl @Inject constructor(
             if (!authService.hasPermission("MANAGE_WAREHOUSES")) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengelola gudang"))
             }
+<<<<<<< HEAD
             
             val idResult = warehouseRepository.createGudang(gudang)
+=======
+            // Validasi input handled by repository
+            val idResult = warehouseRepository.createWarehouse(warehouse)
+>>>>>>> feat/ui-overhaul
             if (idResult is Result.Failure) return Result.failure(idResult.exception)
 
             val id = (idResult as Result.Success).data
@@ -55,9 +60,15 @@ class WarehouseServiceImpl @Inject constructor(
             if (!authService.hasPermission("MANAGE_WAREHOUSES")) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengupdate gudang"))
             }
+<<<<<<< HEAD
             val updateResult = warehouseRepository.updateGudang(gudang)
             if (updateResult is Result.Failure) return Result.failure(updateResult.exception)
             Result.success(gudang)
+=======
+            val updateResult = warehouseRepository.updateWarehouse(warehouse)
+            if (updateResult is Result.Failure) return Result.failure(updateResult.exception)
+            Result.success(warehouse)
+>>>>>>> feat/ui-overhaul
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -71,7 +82,11 @@ class WarehouseServiceImpl @Inject constructor(
             
             // Logic validation is handled in Repository
 
+<<<<<<< HEAD
             val deleteResult = warehouseRepository.deleteGudang(id)
+=======
+            val deleteResult = warehouseRepository.deleteWarehouse(id)
+>>>>>>> feat/ui-overhaul
             if (deleteResult is Result.Failure) return Result.failure(deleteResult.exception)
             Result.success(Unit)
         } catch (e: Exception) {
@@ -112,20 +127,38 @@ class WarehouseServiceImpl @Inject constructor(
             if (!authService.hasPermission("MANAGE_WAREHOUSES")) {
                 return Result.failure(Exception("Tidak memiliki izin untuk mengelola lokasi product"))
             }
+<<<<<<< HEAD
             
             val warehouseResult = warehouseRepository.getGudangById(gudangId)
+=======
+            // Validasi bahwa gudang exists
+            val warehouseResult = warehouseRepository.getWarehouseById(warehouseId)
+>>>>>>> feat/ui-overhaul
             if (warehouseResult is Result.Failure) {
                 return Result.failure(Exception("Gudang tidak ditemukan"))
             }
 
+<<<<<<< HEAD
             val productResult = productRepository.getProdukById(produkId)
             if (productResult is Result.Failure) {
                  return Result.failure(Exception("Produk tidak ditemukan"))
+=======
+            // Validasi bahwa product exists
+            val productResult = productRepository.getProductById(productId)
+            if (productResult is Result.Failure) {
+                 return Result.failure(Exception("Product tidak ditemukan"))
+>>>>>>> feat/ui-overhaul
             }
             val product = (productResult as Result.Success).data ?: return Result.failure(Exception("Produk tidak ditemukan"))
 
+<<<<<<< HEAD
             val updatedProduk = product.copy(warehouseId = gudangId)
             val updateResult = productRepository.updateProduk(updatedProduk)
+=======
+            // Update warehouseId product
+            val updatedProduct = product.copy(warehouseId = warehouseId)
+            val updateResult = productRepository.updateProduct(updatedProduct)
+>>>>>>> feat/ui-overhaul
             if (updateResult is Result.Failure) return Result.failure(updateResult.exception)
             Result.success(Unit)
         } catch (e: Exception) {
@@ -151,12 +184,21 @@ class WarehouseServiceImpl @Inject constructor(
                 return Result.failure(Exception("Gudang asal dan tujuan tidak boleh sama"))
             }
 
+<<<<<<< HEAD
             db.withTransaction {
                 val productResult = productRepository.getProdukById(produkId)
                 if (productResult is Result.Failure) {
                      throw Exception("Produk tidak ditemukan")
                 }
                 val product = (productResult as Result.Success).data ?: throw Exception("Produk tidak ditemukan")
+=======
+            // Get product
+            val productResult = productRepository.getProductById(productId)
+             if (productResult is Result.Failure) {
+                 return Result.failure(Exception("Product tidak ditemukan"))
+            }
+            val product = (productResult as Result.Success).data
+>>>>>>> feat/ui-overhaul
 
                 // Get source stock
                 val sourceStockResult = stokGudangRepository.getStock(produkId, dariGudangId)
@@ -170,6 +212,7 @@ class WarehouseServiceImpl @Inject constructor(
                     stokGudangRepository.insertOrUpdateStock(StokGudang(productId = produkId, warehouseId = dariGudangId, quantity = currentSourceQty))
                 }
 
+<<<<<<< HEAD
                 if (currentSourceQty < jumlah) {
                     throw Exception("Stok gudang asal tidak mencukupi")
                 }
@@ -185,6 +228,16 @@ class WarehouseServiceImpl @Inject constructor(
                 val newTargetQty = currentTargetQty + jumlah
 
                 stokGudangRepository.insertOrUpdateStock(StokGudang(productId = produkId, warehouseId = keGudangId, quantity = newTargetQty))
+=======
+            if (quantity == product.stockQuantity) {
+                // Move entire stock (change warehouse)
+                val updatedProduct = product.copy(warehouseId = toWarehouseId)
+                val updateResult = productRepository.updateProduct(updatedProduct)
+                if (updateResult is Result.Failure) return Result.failure(updateResult.exception)
+            } else {
+                // Partial transfer logic not fully supported due to unique barcode constraint
+                 return Result.failure(Exception("Transfer stok sebagian belum didukung karena batasan barcode unik. Silakan transfer seluruh stok."))
+>>>>>>> feat/ui-overhaul
             }
 
             Result.success(Unit)

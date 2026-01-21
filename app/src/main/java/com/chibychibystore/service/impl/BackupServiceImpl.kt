@@ -43,6 +43,7 @@ import javax.inject.Singleton
 @Singleton
 class BackupServiceImpl @Inject constructor(
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context,
+<<<<<<< HEAD
     private val userRepository: PenggunaRepository,
     private val categoryRepository: KategoriRepository,
     private val warehouseRepository: GudangRepository,
@@ -54,6 +55,18 @@ class BackupServiceImpl @Inject constructor(
     private val itemPembelianRepository: ItemPembelianRepository,
     private val expenseRepository: PengeluaranRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+=======
+    private val userRepository: UserRepository,
+    private val categoryRepository: CategoryRepository,
+    private val warehouseRepository: WarehouseRepository,
+    private val productRepository: ProductRepository,
+    private val supplierRepository: SupplierRepository,
+    private val saleRepository: SaleRepository,
+    private val saleItemRepository: SaleItemRepository,
+    private val purchaseRepository: PurchaseRepository,
+    private val purchaseItemRepository: PurchaseItemRepository,
+    private val expenseRepository: ExpenseRepository
+>>>>>>> feat/ui-overhaul
 ) : BackupService {
 
     private val json = Json { prettyPrint = true }
@@ -69,8 +82,57 @@ class BackupServiceImpl @Inject constructor(
         try {
             _backupProgress.value = BackupProgress(isInProgress = true, totalSteps = 10)
 
+<<<<<<< HEAD
             val createdAt = System.currentTimeMillis()
             tempFile = File.createTempFile("backup_data_part", ".json", context.cacheDir)
+=======
+            // Step 1: Gather all data
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengguna", progress = 0.1f, currentStepIndex = 1, totalSteps = 10)
+            val pengguna = userRepository.getAllUsers().firstOrNull() ?: emptyList()
+
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data kategori", progress = 0.2f, currentStepIndex = 2, totalSteps = 10)
+            val kategori = categoryRepository.getAllCategories().firstOrNull() ?: emptyList()
+
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data gudang", progress = 0.3f, currentStepIndex = 3, totalSteps = 10)
+            val gudang = warehouseRepository.getAllWarehouses().firstOrNull() ?: emptyList()
+
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data product", progress = 0.4f, currentStepIndex = 4, totalSteps = 10)
+            val product = productRepository.getAllProducts().firstOrNull() ?: emptyList()
+
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pemasok", progress = 0.5f, currentStepIndex = 5, totalSteps = 10)
+            val pemasok = supplierRepository.getAllSuppliers().firstOrNull() ?: emptyList()
+
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data penjualan", progress = 0.6f, currentStepIndex = 6, totalSteps = 10)
+            val sales = saleRepository.getAllSales().firstOrNull() ?: emptyList()
+
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item penjualan", progress = 0.7f, currentStepIndex = 7, totalSteps = 10)
+            val saleItems = saleItemRepository.getAllSaleItems().firstOrNull() ?: emptyList()
+
+            // Note: Need to fix pembelian repository reference
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pembelian", progress = 0.8f, currentStepIndex = 8, totalSteps = 10)
+            val purchases = purchaseRepository.getAllPurchases().firstOrNull() ?: emptyList()
+
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item pembelian", progress = 0.9f, currentStepIndex = 9, totalSteps = 10)
+            val purchaseItems = purchaseItemRepository.getAllPurchaseItems().firstOrNull() ?: emptyList()
+
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengeluaran", progress = 1.0f, currentStepIndex = 10, totalSteps = 10)
+            val expenses = expenseRepository.getAllExpenses().firstOrNull() ?: emptyList()
+
+            // Step 2: Create backup data structure
+            val createdAt = System.currentTimeMillis()
+            val entities = BackupEntities(
+                users = pengguna,
+                categories = kategori,
+                warehouses = gudang,
+                products = product,
+                suppliers = pemasok,
+                sales = sales,
+                saleItems = saleItems,
+                purchases = purchases,
+                purchaseItems = purchaseItems,
+                expenses = expenses
+            )
+>>>>>>> feat/ui-overhaul
 
             // 1. Prepare Checksum Calculation
             val digest = MessageDigest.getInstance("SHA-256")
@@ -314,6 +376,7 @@ class BackupServiceImpl @Inject constructor(
             val backupData = json.decodeFromString<BackupData>(decryptedJson)
 
             val recordCounts = mapOf(
+<<<<<<< HEAD
                 "pengguna" to backupData.data.users.size,
                 "kategori" to backupData.data.categories.size,
                 "gudang" to backupData.data.warehouses.size,
@@ -324,6 +387,18 @@ class BackupServiceImpl @Inject constructor(
                 "pembelian" to backupData.data.purchases.size,
                 "itemPembelian" to backupData.data.purchaseItems.size,
                 "pengeluaran" to backupData.data.expenses.size
+=======
+                "users" to backupData.data.users.size,
+                "categories" to backupData.data.categories.size,
+                "warehouses" to backupData.data.warehouses.size,
+                "products" to backupData.data.products.size,
+                "suppliers" to backupData.data.suppliers.size,
+                "sales" to backupData.data.sales.size,
+                "saleItems" to backupData.data.saleItems.size,
+                "purchases" to backupData.data.purchases.size,
+                "purchaseItems" to backupData.data.purchaseItems.size,
+                "expenses" to backupData.data.expenses.size
+>>>>>>> feat/ui-overhaul
             )
 
 

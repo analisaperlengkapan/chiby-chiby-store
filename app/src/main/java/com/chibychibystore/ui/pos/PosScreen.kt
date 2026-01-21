@@ -16,9 +16,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.navigation.NavController
+<<<<<<< HEAD
 import com.chibychibystore.data.local.entity.Produk
+=======
+import com.chibychibystore.ui.navigation.Screen
+import com.chibychibystore.ui.theme.Success
+import com.chibychibystore.data.local.entity.Product
+>>>>>>> feat/ui-overhaul
 import com.chibychibystore.ui.components.ChibyButton
 import com.chibychibystore.ui.components.ChibyCard
 import com.chibychibystore.ui.components.ChibyInput
@@ -42,6 +47,7 @@ fun PosScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val formatCurrency = rememberCurrencyFormatter()
 
+<<<<<<< HEAD
     // Listen for scan results from BarcodeScannerScreen
     val currentBackStackEntry = navController.currentBackStackEntry
     val savedStateHandle = currentBackStackEntry?.savedStateHandle
@@ -54,6 +60,8 @@ fun PosScreen(
         }
     }
 
+=======
+>>>>>>> feat/ui-overhaul
     ChibyScaffold(
         title = "Point of Sale",
         onNavigateUp = { navController.navigateUp() }
@@ -186,7 +194,11 @@ fun PosScreen(
 private fun ProductSearchPanel(
     searchResults: List<Produk>,
     isSearching: Boolean,
+<<<<<<< HEAD
     onProductClick: (Produk) -> Unit,
+=======
+    onProductClick: (Product) -> Unit,
+>>>>>>> feat/ui-overhaul
     formatCurrency: (Double) -> String
 ) {
     if (isSearching) {

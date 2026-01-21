@@ -3,11 +3,18 @@ package com.chibychibystore.service
 import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
+<<<<<<< HEAD
 import com.chibychibystore.repository.PengeluaranRepository
 import com.chibychibystore.repository.PenjualanRepository
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
+=======
+import com.chibychibystore.repository.ExpenseRepository
+import com.chibychibystore.repository.SaleRepository
+import java.time.LocalDate
+import kotlinx.coroutines.flow.first
+>>>>>>> feat/ui-overhaul
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,8 +24,13 @@ import javax.inject.Singleton
  */
 @Singleton
 class CashManagementService @Inject constructor(
+<<<<<<< HEAD
     private val penjualanRepository: PenjualanRepository,
     private val pengeluaranRepository: PengeluaranRepository
+=======
+    private val saleRepository: SaleRepository,
+    private val expenseRepository: ExpenseRepository
+>>>>>>> feat/ui-overhaul
 ) {
 
     /**
@@ -45,6 +57,7 @@ class CashManagementService @Inject constructor(
             val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
             val salesRevenue = sales.sumOf { it.totalAmount }
 
+<<<<<<< HEAD
             // Get approved expenses grouped by category to avoid in-memory filtering
             val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
 
@@ -57,6 +70,22 @@ class CashManagementService @Inject constructor(
             val inventoryPurchases = approvedExpenses
                 .filterKeys { it in KategoriPengeluaran.COGS_CATEGORIES }
                 .values.sum()
+=======
+            // Get operating expenses (cash outflows)
+            val startDateDate = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+            val endDateDate = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+
+            val expenses = expenseRepository.getExpensesByDateRange(startDateDate, endDateDate).first()
+            
+            val operatingExpenses = expenses
+                .filter { it.category in ExpenseCategory.OPERATING_EXPENSE_CATEGORIES }
+                .sumOf { it.amount }
+
+            // Get inventory purchases (COGS - cash outflows for inventory)
+            val inventoryPurchases = expenses
+                .filter { it.category in ExpenseCategory.COGS_CATEGORIES }
+                .sumOf { it.amount }
+>>>>>>> feat/ui-overhaul
 
             val operatingCashFlow = salesRevenue - operatingExpenses - inventoryPurchases
             Result.success(operatingCashFlow)
@@ -70,6 +99,7 @@ class CashManagementService @Inject constructor(
      */
     suspend fun calculateInvestingCashFlow(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
+<<<<<<< HEAD
             val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
 
@@ -80,6 +110,16 @@ class CashManagementService @Inject constructor(
             val equipmentExpenses = approvedExpenses
                 .filterKeys { it in KategoriPengeluaran.INVESTING_CATEGORIES }
                 .values.sum()
+=======
+            // Equipment purchases and store improvements
+            val startDateDate = java.util.Date.from(startDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())
+            val endDateDate = java.util.Date.from(endDate.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toInstant())
+
+            val equipmentExpenses = expenseRepository.getExpensesByDateRange(startDateDate, endDateDate).first()
+                .filter { it.category == ExpenseCategory.SUPPLIES_MAINTENANCE ||
+                         it.category == ExpenseCategory.DEPRECIATION }
+                .sumOf { it.amount }
+>>>>>>> feat/ui-overhaul
 
             val investingCashFlow = -equipmentExpenses
             Result.success(investingCashFlow)

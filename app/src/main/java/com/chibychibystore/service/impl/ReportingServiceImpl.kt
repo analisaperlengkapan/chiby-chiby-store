@@ -1,12 +1,41 @@
 package com.chibychibystore.service.impl
 
 import com.chibychibystore.data.model.Result
+<<<<<<< HEAD
 import com.chibychibystore.service.*
 import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.PembelianRepository
 import com.chibychibystore.repository.PengeluaranRepository
 import com.chibychibystore.repository.ProdukRepository
+=======
+import com.chibychibystore.service.AuthService
+import com.chibychibystore.service.FinancialReport
+import com.chibychibystore.service.GrossSalesReport
+import com.chibychibystore.service.InventoryReport
+import com.chibychibystore.service.ReportingService
+import com.chibychibystore.service.DailySalesReport
+import com.chibychibystore.service.MonthlySalesReport
+import com.chibychibystore.service.ProductSalesData
+import com.chibychibystore.service.LowStockProduct
+import com.chibychibystore.service.ProfitMarginReport
+import com.chibychibystore.service.NetProfitReport
+import com.chibychibystore.service.ProductSales
+import com.chibychibystore.service.CategorySales
+import com.chibychibystore.service.TrendData
+import com.chibychibystore.service.IncomeStatement
+import com.chibychibystore.service.CashFlow
+import com.chibychibystore.service.ExpenseReport
+import com.chibychibystore.service.BalanceSheet
+import com.chibychibystore.service.SalesMetrics
+import com.chibychibystore.service.CashManagementService
+import com.chibychibystore.service.BalanceSheetService
+import com.chibychibystore.repository.SaleItemRepository
+import com.chibychibystore.repository.SaleRepository
+import com.chibychibystore.repository.PurchaseRepository
+import com.chibychibystore.repository.ExpenseRepository
+import com.chibychibystore.repository.ProductRepository
+>>>>>>> feat/ui-overhaul
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import java.time.LocalDate
@@ -33,10 +62,19 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
         } else {
+<<<<<<< HEAD
             val totalPenjualan = saleRepository.getTotalCashReceipts(date, date).getOrNull() ?: 0.0
             val totalTransactions = saleRepository.getPenjualanCountByDateRange(date, date).getOrNull() ?: 0
             val avg = if (totalTransactions > 0) totalPenjualan / totalTransactions else 0.0
             Result.success(LaporanPenjualanHarian(date, totalPenjualan, totalTransactions, avg, emptyList()))
+=======
+            val dDate = date.toDate()
+            // Optimized to use DB aggregation for totalAmount (Cash Receipts)
+            val totalSales = saleRepository.getTotalCashReceipts(date, date).getOrNull() ?: 0.0
+            val totalTransactions = saleRepository.getSaleCountByDateRange(date, date).getOrNull() ?: 0
+            val avg = if (totalTransactions > 0) totalSales / totalTransactions else 0.0
+            Result.success(DailySalesReport(date, totalSales, totalTransactions, avg, emptyList()))
+>>>>>>> feat/ui-overhaul
         }
     } catch (e: Exception) {
         Result.failure(Exception("getDailySalesReport failed", e))
@@ -59,8 +97,14 @@ class ReportingServiceImpl @Inject constructor(
             val dStart = startDate.toDate()
             val dEnd = endDate.toDate()
 
+<<<<<<< HEAD
             val totalRevenue = saleRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
             val totalPengeluaran = expenseRepository.getTotalPengeluaranAmount(dStart, dEnd).getOrNull() ?: 0.0
+=======
+            // Use Revenue (Net Sales) for financial reporting
+            val totalRevenue = saleRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
+            val totalExpenses = expenseRepository.getTotalExpense(dStart, dEnd).getOrNull() ?: 0.0
+>>>>>>> feat/ui-overhaul
 
             val purchases = purchaseRepository.getPurchasesInDateRange(startDate, endDate)
             val totalCost = purchases.sumOf { it.totalAmount }
@@ -106,11 +150,19 @@ class ReportingServiceImpl @Inject constructor(
             val productsMap: Map<Long, com.chibychibystore.data.local.entity.Produk> = productRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
 
             val result = topProductsDto.map { dto ->
+<<<<<<< HEAD
                 DataPenjualanProduk(
                     produkId = dto.produkId,
                     namaProduk = productsMap[dto.produkId]?.name ?: "Unknown Produk",
                     jumlahTerjual = dto.jumlahTerjual,
                     totalPendapatan = dto.totalPendapatan
+=======
+                ProductSalesData(
+                    productId = dto.productId,
+                    productName = productsMap[dto.productId]?.name ?: "Unknown Product",
+                    quantitySold = dto.quantitySold.toInt(),
+                    totalRevenue = dto.totalRevenue
+>>>>>>> feat/ui-overhaul
                 )
             }
             Result.success(result)
@@ -148,8 +200,19 @@ class ReportingServiceImpl @Inject constructor(
             val totalPenjualan = saleRepository.getTotalCashReceipts(startDate, endDate).getOrNull() ?: 0.0
             val totalTransactions = saleRepository.getPenjualanCountNonRefunded(startDate, endDate).getOrNull() ?: 0
 
+<<<<<<< HEAD
             val avg = if (totalTransactions > 0) totalPenjualan / totalTransactions else 0.0
             Result.success(LaporanPenjualanKotor(totalPenjualan, totalTransactions, avg))
+=======
+            // Optimized using DB aggregation
+            val totalSales = saleRepository.getTotalCashReceipts(startDate, endDate).getOrNull() ?: 0.0
+
+            // Optimized count using DB query
+            val totalTransactions = saleRepository.getSaleCountNonRefunded(startDate, endDate).getOrNull() ?: 0
+
+            val avg = if (totalTransactions > 0) totalSales / totalTransactions else 0.0
+            Result.success(GrossSalesReport(totalSales, totalTransactions, avg))
+>>>>>>> feat/ui-overhaul
         }
     } catch (e: Exception) {
         Result.failure(Exception("getGrossSales failed", e))
@@ -159,8 +222,19 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission("VIEW_FINANCIAL_REPORTS")) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat margin keuntungan"))
         } else {
+<<<<<<< HEAD
             val revenue = saleRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
             val purchases = purchaseRepository.getPurchasesInDateRange(startDate, endDate)
+=======
+            val dStart = startDate.toDate()
+            val dEnd = endDate.toDate()
+
+            // For profit calculations, use Revenue (Net Sales excluding tax)
+            val revenue = saleRepository.getTotalRevenue(startDate, endDate).getOrNull() ?: 0.0
+
+            // Cost of goods sold is derived from purchases in the period (pembelian)
+            val purchases = purchaseRepository.getPurchasesByDateRange(dStart, dEnd).first()
+>>>>>>> feat/ui-overhaul
             val costOfGoods = purchases.sumOf { it.totalAmount }
 
             val grossProfit = revenue - costOfGoods
@@ -202,7 +276,12 @@ class ReportingServiceImpl @Inject constructor(
             val dStart = startDate.toDate()
             val dEnd = endDate.toDate()
 
+<<<<<<< HEAD
             val statsResult = saleItemRepository.getProdukPenjualansStats(dStart, dEnd)
+=======
+            // Optimized using single SQL query aggregation
+            val statsResult = saleItemRepository.getProductSalesStats(startDate, endDate)
+>>>>>>> feat/ui-overhaul
             val salesStats = statsResult.getOrNull() ?: emptyList()
 
             val productIds = salesStats.map { it.produkId }
@@ -236,8 +315,15 @@ class ReportingServiceImpl @Inject constructor(
             val dStart = startDate.toDate()
             val dEnd = endDate.toDate()
 
+<<<<<<< HEAD
             val statsResult = saleItemRepository.getSalesByCategory(dStart, dEnd)
             val salesStats = statsResult.getOrNull() ?: emptyList()
+=======
+            val byCategory = mutableMapOf<Long, Triple<Int, Double, Double>>()
+            val sales = saleRepository.getSalesInDateRange(startDate, endDate)
+            // Exclude refunded sales
+            val salesFiltered = sales.filter { !it.isRefunded }
+>>>>>>> feat/ui-overhaul
 
             val result = salesStats.map { stat ->
                 PenjualanKategori(
@@ -270,10 +356,20 @@ class ReportingServiceImpl @Inject constructor(
             val trend = mutableListOf<DataTren>()
             for (i in 0..days) {
                 val day = startDate.plusDays(i.toLong())
+<<<<<<< HEAD
                 val salesForDay = salesByDate[day] ?: emptyList()
                 val total = salesForDay.sumOf { it.totalAmount }
                 val tx = salesForDay.size
                 trend.add(DataTren(tanggal = day, penjualan = total, transaksi = tx))
+=======
+                val sales = saleRepository.getSalesInDateRange(day, day)
+                // Exclude refunded sales
+                val salesFiltered = sales.filter { !it.isRefunded }
+                val total = salesFiltered.sumOf { it.totalAmount }
+                val tx = salesFiltered.size
+                // Use default if no sales, but allow 0 sales for trend continuity if needed
+                trend.add(TrendData(date = day, sales = total, transactions = tx))
+>>>>>>> feat/ui-overhaul
             }
             Result.success(trend)
         }
@@ -285,6 +381,7 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission("VIEW_FINANCIAL_REPORTS")) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan laba rugi"))
         } else {
+<<<<<<< HEAD
             val start = date.withDayOfMonth(1)
             val end = date
 
@@ -296,6 +393,13 @@ class ReportingServiceImpl @Inject constructor(
             val productIds = salesFiltered.flatMap { it.items }.map { it.productId }.distinct()
             val productsMap: Map<Long, com.chibychibystore.data.local.entity.Produk> = productRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
 
+=======
+            val startOfMonth = date.withDayOfMonth(1)
+            val sales = saleRepository.getSalesInDateRange(startOfMonth, date)
+            // Exclude refunded sales
+            val salesFiltered = sales.filter { !it.isRefunded }
+            val revenue = salesFiltered.sumOf { it.totalAmount }
+>>>>>>> feat/ui-overhaul
             var cogs = 0.0
             salesFiltered.forEach { saleWithItems ->
                 saleWithItems.items.forEach { item ->
@@ -304,7 +408,11 @@ class ReportingServiceImpl @Inject constructor(
                     cogs += (prod?.costPrice ?: 0.0) * item.quantity
                 }
             }
+<<<<<<< HEAD
             val expenses = expenseRepository.getPengeluaransByDateRange(start.toDate(), end.toDate()).first()
+=======
+            val expenses = expenseRepository.getExpensesByDateRange(startOfMonth.toDate(), date.toDate()).first()
+>>>>>>> feat/ui-overhaul
             val operatingExpenses = expenses.sumOf { it.amount }
             val grossProfit = revenue - cogs
             val net = grossProfit - operatingExpenses

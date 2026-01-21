@@ -25,8 +25,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+<<<<<<< HEAD
 import com.chibychibystore.R
 import com.chibychibystore.data.local.entity.Produk
+=======
+import com.chibychibystore.data.local.entity.Product
+>>>>>>> feat/ui-overhaul
 import com.chibychibystore.ui.components.ChibyButton
 import com.chibychibystore.ui.components.ChibyCard
 import com.chibychibystore.ui.components.ChibyInput
@@ -36,8 +40,11 @@ import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.ui.theme.ChibyPinkPrimary
 import com.chibychibystore.ui.theme.Error
 import com.chibychibystore.ui.theme.Success
+<<<<<<< HEAD
 import java.text.NumberFormat
 import java.util.Locale
+=======
+>>>>>>> feat/ui-overhaul
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,8 +53,8 @@ fun InventoryScreen(
     viewModel: InventoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
 
+<<<<<<< HEAD
     // Listen for scanned barcode result
     val currentBackStackEntry = navController.currentBackStackEntry
     val savedStateHandle = currentBackStackEntry?.savedStateHandle
@@ -73,6 +80,8 @@ fun InventoryScreen(
         }
     }
 
+=======
+>>>>>>> feat/ui-overhaul
     ChibyScaffold(
         title = "Inventory",
         floatingActionButton = {
@@ -134,6 +143,7 @@ fun InventoryScreen(
             when {
                 isLoading -> LoadingIndicator("Memuat inventory...")
                 uiState.products.isEmpty() -> {
+<<<<<<< HEAD
                     EmptyInventoryState(onAddProduct = { navController.navigate(Screen.ProductAdd.route) })
                 }
                 else -> {
@@ -144,6 +154,20 @@ fun InventoryScreen(
                         }
                     )
                 }
+=======
+                    EmptyInventoryState(
+                        onAddProduct = { navController.navigate(Screen.ProductAdd.route) }
+                    )
+                }
+                else -> {
+                    ProductList(
+                        products = uiState.products,
+                        onProductClick = { product ->
+                            navController.navigate(Screen.ProductDetail.createRoute(product.id.toString()))
+                        }
+                    )
+                }
+>>>>>>> feat/ui-overhaul
             }
         }
     }
@@ -205,11 +229,14 @@ private fun ProductListItem(
     product: Produk,
     onClick: () -> Unit
 ) {
+<<<<<<< HEAD
     val priceFormatted = remember(product.sellingPrice) {
         val format = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
         format.format(product.sellingPrice)
     }
 
+=======
+>>>>>>> feat/ui-overhaul
     ChibyCard(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
@@ -228,6 +255,7 @@ private fun ProductListItem(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+<<<<<<< HEAD
                     if (!product.barcode.isNullOrBlank()) {
                         Text(
                             text = product.barcode ?: "",
@@ -252,6 +280,8 @@ private fun ProductListItem(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
+=======
+>>>>>>> feat/ui-overhaul
                 }
             }
 
@@ -264,6 +294,7 @@ private fun ProductListItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+<<<<<<< HEAD
                 Column {
                     Text(
                         text = "Harga Jual",
@@ -277,6 +308,17 @@ private fun ProductListItem(
                         color = ChibyPinkPrimary
                     )
                 }
+=======
+                Text(
+                    text = statusText,
+                    color = statusColor,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+>>>>>>> feat/ui-overhaul
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
@@ -293,4 +335,8 @@ private fun ProductListItem(
             }
         }
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> feat/ui-overhaul

@@ -54,7 +54,12 @@ class BalanceSheetService @Inject constructor(
      */
     suspend fun calculateInventoryValue(): Result<Double> {
         return try {
+<<<<<<< HEAD
             val products = produkRepository.getAllProduk().first()
+=======
+            // Get all products and calculate total inventory value
+            val products = productRepository.getAllProducts().first()
+>>>>>>> feat/ui-overhaul
             val inventoryValue = products.sumOf { product -> product.costPrice * product.stockQuantity }
 
             Result.success(inventoryValue)

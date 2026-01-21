@@ -1,6 +1,10 @@
 package com.chibychibystore.service
 
+<<<<<<< HEAD
 import com.chibychibystore.data.local.entity.Pemasok
+=======
+import com.chibychibystore.data.local.entity.Supplier
+>>>>>>> feat/ui-overhaul
 import com.chibychibystore.data.model.Result
 import kotlinx.coroutines.flow.Flow
 

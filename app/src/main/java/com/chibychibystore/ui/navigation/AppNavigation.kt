@@ -17,7 +17,6 @@ import com.chibychibystore.ui.barcode.BarcodeScannerScreen
 import com.chibychibystore.ui.barcode.BarcodePrintScreen
 import com.chibychibystore.ui.backup.BackupScreen
 import com.chibychibystore.ui.dashboard.DashboardScreen
-import com.chibychibystore.ui.user.UserManagementScreen
 import com.chibychibystore.ui.settings.SettingsScreen
 import com.chibychibystore.ui.reports.ReportsScreen
 import com.chibychibystore.ui.sales.SalesHistoryScreen
