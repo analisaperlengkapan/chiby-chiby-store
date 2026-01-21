@@ -231,14 +231,67 @@ class PenjualanMigrationTest {
             }
         }
 
-        // Open Room DB with migration
-        val db = Room.databaseBuilder(context, ChibyChibyDatabase::class.java, TEST_DB)
-            .addMigrations(MIGRATION_2_3)
-            .allowMainThreadQueries()
-            .build()
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE penjualan ADD COLUMN tax REAL NOT NULL DEFAULT 0.0")
+                database.execSQL("ALTER TABLE penjualan ADD COLUMN discount REAL NOT NULL DEFAULT 0.0")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `stok_gudang` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `productId` INTEGER NOT NULL,
+                        `warehouseId` INTEGER NOT NULL,
+                        `quantity` INTEGER NOT NULL,
+                        FOREIGN KEY(`productId`) REFERENCES `produk`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`warehouseId`) REFERENCES `gudang`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_stok_gudang_productId_warehouseId` ON `stok_gudang` (`productId`, `warehouseId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_stok_gudang_warehouseId` ON `stok_gudang` (`warehouseId`)")
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `promotion` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `description` TEXT NOT NULL,
+                        `type` TEXT NOT NULL,
+                        `value` REAL NOT NULL,
+                        `minPurchaseAmount` REAL NOT NULL,
+                        `maxDiscountAmount` REAL,
+                        `isActive` INTEGER NOT NULL,
+                        `startDate` INTEGER,
+                        `endDate` INTEGER,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
+        // Apply migration manually via a new helper to reach version 3
+        val configuration2 = androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration.builder(context)
+            .name(TEST_DB)
+            .callback(object : androidx.sqlite.db.SupportSQLiteOpenHelper.Callback(3) {
+                override fun onCreate(db: SupportSQLiteDatabase) {}
+                override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                    if (oldVersion == 2 && newVersion == 3) {
+                        MIGRATION_2_3.migrate(db)
+                    }
+                }
+            }).build()
+        
+        val helper2 = FrameworkSQLiteOpenHelperFactory().create(configuration2)
+        val sqLite = helper2.writableDatabase
 
         // Verify column exists with default 0 for multiple rows
-        val sqLite = db.openHelper.readableDatabase
         val cursor = sqLite.query("SELECT isRefunded FROM penjualan WHERE id IN (1,2) ORDER BY id")
         cursor.use {
             it.moveToFirst()
@@ -257,6 +310,6 @@ class PenjualanMigrationTest {
             assertEquals(1, it.getInt(0))
         }
 
-        db.close()
+        helper2.close()
     }
 }

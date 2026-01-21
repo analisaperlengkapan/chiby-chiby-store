@@ -29,12 +29,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.ArgumentMatchers.anyList
 import org.mockito.Mock
-import org.mockito.Mockito.`when`
-import org.mockito.Mockito.any
-import org.mockito.Mockito.verify
 import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.*
 import org.robolectric.RobolectricTestRunner
 import java.util.Date
 
@@ -59,11 +56,11 @@ class SaleServiceImplTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
 
         // Create an in-memory database to allow 'withTransaction' to work
-        db = Room.inMemoryDatabaseBuilder(
-            ApplicationProvider.getApplicationContext(),
-            ChibyChibyDatabase::class.java
-        ).allowMainThreadQueries().build()
-
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        db = Room.inMemoryDatabaseBuilder(context, ChibyChibyDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+            
         saleService = SaleServiceImpl(
             db,
             penjualanRepository,
@@ -101,6 +98,7 @@ class SaleServiceImplTest {
             id = 1L,
             name = "Test Product",
             sellingPrice = 1000.0,
+            costPrice = 800.0,
             stockQuantity = 5, // Less than requested 10 (Legacy)
             minStock = 5,
             barcode = "123",
@@ -115,8 +113,9 @@ class SaleServiceImplTest {
             quantity = 5 // Less than requested 10
         )
 
-        `when`(productRepository.getProductsByIds(listOf(1L))).thenReturn(Result.success(listOf(product)))
-        `when`(stokGudangRepository.getStocks(listOf(1L), 1L)).thenReturn(Result.success(listOf(stokGudang)))
+        whenever(productRepository.getProductsByIds(any())).thenReturn(Result.success(listOf(product)))
+        whenever(stokGudangRepository.getStocks(any(), any())).thenReturn(Result.success(listOf(stokGudang)))
+        whenever(promoService.calculateDiscount(any())).thenReturn(0.0)
 
         // Act
         val result = saleService.createPenjualan(sale, items)
@@ -141,11 +140,14 @@ class SaleServiceImplTest {
         val items = listOf(
             ItemPenjualan(saleId = 0, productId = 1L, quantity = 5, unitPrice = 1000.0, totalPrice = 5000.0)
         )
+        
+        whenever(promoService.calculateDiscount(any())).thenReturn(0.0)
 
         val product = Produk(
             id = 1L,
             name = "Test Product",
             sellingPrice = 1000.0,
+            costPrice = 800.0,
             stockQuantity = 10, // More than requested 5
             minStock = 5,
             barcode = "123",
@@ -160,10 +162,11 @@ class SaleServiceImplTest {
             quantity = 10 // More than requested 5
         )
 
-        `when`(productRepository.getProductsByIds(listOf(1L))).thenReturn(Result.success(listOf(product)))
-        `when`(stokGudangRepository.getStocks(listOf(1L), 1L)).thenReturn(Result.success(listOf(stokGudang)))
-        `when`(penjualanRepository.createPenjualan(any(), anyList())).thenReturn(Result.success(PenjualanWithItems(sale, items, emptyList())))
-        `when`(stokGudangRepository.adjustStock(1L, 1L, -5)).thenReturn(Result.success(Unit))
+        whenever(productRepository.getProductsByIds(any())).thenReturn(Result.success(listOf(product)))
+        whenever(stokGudangRepository.getStocks(any(), any())).thenReturn(Result.success(listOf(stokGudang)))
+        whenever(stokGudangRepository.adjustStock(any(), any(), any())).thenReturn(Result.success(Unit))
+        whenever(penjualanRepository.createPenjualan(any(), any())).thenReturn(Result.success(PenjualanWithItems(sale, items)))
+        whenever(promoService.calculateDiscount(any())).thenReturn(0.0)
 
         // Act
         val result = saleService.createPenjualan(sale, items)
@@ -172,3 +175,5 @@ class SaleServiceImplTest {
         assertTrue(result.isSuccess)
         verify(stokGudangRepository).adjustStock(1L, 1L, -5)
     }
+
+}

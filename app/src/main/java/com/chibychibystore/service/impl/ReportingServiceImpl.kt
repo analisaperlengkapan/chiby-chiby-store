@@ -103,7 +103,7 @@ class ReportingServiceImpl @Inject constructor(
             val topProductsDto = saleItemRepository.getTopSellingProduks(limit).getOrNull() ?: emptyList()
 
             val productIds = topProductsDto.map { it.produkId }
-            val productsMap = productRepository.getProdukByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+            val productsMap: Map<Long, com.chibychibystore.data.local.entity.Produk> = productRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
 
             val result = topProductsDto.map { dto ->
                 DataPenjualanProduk(
@@ -206,7 +206,7 @@ class ReportingServiceImpl @Inject constructor(
             val salesStats = statsResult.getOrNull() ?: emptyList()
 
             val productIds = salesStats.map { it.produkId }
-            val productsMap = productRepository.getProdukByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+            val productsMap: Map<Long, com.chibychibystore.data.local.entity.Produk> = productRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
 
             val result = salesStats.map { stat ->
                 val prod = productsMap[stat.produkId]
@@ -289,17 +289,18 @@ class ReportingServiceImpl @Inject constructor(
             val end = date
 
             val salesWithItems = saleRepository.getSalesWithItemsInDateRange(start, end)
-            val salesFiltered = salesWithItems.filter { !it.penjualan.isRefunded }
-            val revenue = salesFiltered.sumOf { it.penjualan.totalAmount }
+            val salesFiltered = salesWithItems.filter { !it.sale.isRefunded }
+            val revenue = salesFiltered.sumOf { it.sale.totalAmount }
 
             // Pre-fetch all products
             val productIds = salesFiltered.flatMap { it.items }.map { it.productId }.distinct()
-            val productsMap = productRepository.getProdukByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+            val productsMap: Map<Long, com.chibychibystore.data.local.entity.Produk> = productRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
 
             var cogs = 0.0
             salesFiltered.forEach { saleWithItems ->
                 saleWithItems.items.forEach { item ->
-                    val prod = productsMap[item.productId]
+                    val prodId: Long = item.productId
+                    val prod = productsMap[prodId]
                     cogs += (prod?.costPrice ?: 0.0) * item.quantity
                 }
             }

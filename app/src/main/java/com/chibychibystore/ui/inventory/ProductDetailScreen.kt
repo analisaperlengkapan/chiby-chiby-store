@@ -12,6 +12,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -41,21 +45,17 @@ fun ProductDetailScreen(
     // Listen for scanned barcode result
     val currentBackStackEntry = navController.currentBackStackEntry
     val savedStateHandle = currentBackStackEntry?.savedStateHandle
-    val scannedBarcode by savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState()
+    val scannedBarcode = savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState()?.value
 
     LaunchedEffect(scannedBarcode) {
-        scannedBarcode?.let { barcode ->
-            if (barcode.isNotBlank()) {
-                // We need to update the local product state, which is handled in Content via onProductChange
-                // But since scannedBarcode comes from navigation, we might not have direct access to 'editedProduct' state which is inside Content.
-                // However, ProductDetailScreen delegates state management to ViewModel helper updateLocalProduct
-                // So we can update it here if we have the current product.
-                uiState.product?.let { current ->
-                     viewModel.updateLocalProduct(current.copy(barcode = barcode))
-                }
-                // Clear the result
-                savedStateHandle?.remove<String>("scanned_barcode")
+        val barcode = scannedBarcode as? String
+        if (barcode != null && barcode.isNotBlank()) {
+            // We need to update the local product state ...
+            uiState.product?.let { current ->
+                 viewModel.updateLocalProduct(current.copy(barcode = barcode))
             }
+            // Clear the result
+            savedStateHandle?.remove<String>("scanned_barcode")
         }
     }
 

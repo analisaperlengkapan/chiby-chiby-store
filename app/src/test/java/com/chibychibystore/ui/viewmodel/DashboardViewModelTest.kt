@@ -3,8 +3,11 @@ package com.chibychibystore.ui.viewmodel
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.PaymentMethod
 import com.chibychibystore.data.local.entity.Produk
+import java.time.LocalDate
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.service.SaleService
+import com.chibychibystore.service.ReportingService
+import com.chibychibystore.ui.dashboard.DashboardViewModel
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -19,6 +22,7 @@ import org.junit.Test
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.*
 import java.util.Date
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -42,6 +46,9 @@ class DashboardViewModelTest {
     @Mock
     private lateinit var produkRepository: ProdukRepository
 
+    @Mock
+    private lateinit var reportingService: ReportingService
+
     private lateinit var viewModel: DashboardViewModel
 
     @Before
@@ -55,16 +62,16 @@ class DashboardViewModelTest {
         val sale1 = Penjualan(id = 1, saleDate = now, totalAmount = 100000.0, paymentMethod = PaymentMethod.CASH, cashierId = 1)
         val sale2 = Penjualan(id = 2, saleDate = now, totalAmount = 50000.0, paymentMethod = PaymentMethod.CASH, cashierId = 1)
 
-        Mockito.`when`(saleService.getSales(Mockito.anyString(), Mockito.anyString(), Mockito.isNull())).thenReturn(com.chibychibystore.data.model.Result.success(listOf(sale1, sale2)))
-        Mockito.`when`(saleService.getSales(Mockito.isNull(), Mockito.isNull(), Mockito.isNull())).thenReturn(com.chibychibystore.data.model.Result.success(listOf(sale1, sale2)))
+        whenever(saleService.getTotalPenjualanByRentangTanggal(any(), any())).thenReturn(com.chibychibystore.data.model.Result.success(150000.0))
+        whenever(saleService.getPenjualanCountByRentangTanggal(any(), any())).thenReturn(com.chibychibystore.data.model.Result.success(2))
+        whenever(saleService.getRecentPenjualan(any())).thenReturn(com.chibychibystore.data.model.Result.success(listOf(sale1, sale2)))
+        whenever(reportingService.getSalesTrend(any(), any())).thenReturn(com.chibychibystore.data.model.Result.success(emptyList()))
+        whenever(produkRepository.getLowStockProduk()).thenReturn(flowOf(listOf(Produk(name = "Low Stock", categoryId = 1, warehouseId = 1, costPrice = 1000.0, sellingPrice = 2000.0))))
 
-        val lowStock = listOf(Produk(id = 1, name = "Item A", barcode = "123", sellingPrice = 10000.0, costPrice = 8000.0, stockQuantity = 2, categoryId = 1, warehouseId = 1))
-        Mockito.`when`(produkRepository.getLowStockProduk()).thenReturn(flowOf(lowStock))
-
-        viewModel = DashboardViewModel(saleService, produkRepository)
+        viewModel = DashboardViewModel(saleService, reportingService, produkRepository)
 
         // Refresh to ensure data loaded
-        viewModel.refreshData()
+        viewModel.refresh()
 
         // Allow coroutines to complete
         advanceUntilIdle()
@@ -80,11 +87,11 @@ class DashboardViewModelTest {
 
     @Test
     fun `loadDashboardData handles service exception`() = runTest {
-        Mockito.`when`(saleService.getSales(Mockito.anyString(), Mockito.anyString(), Mockito.isNull())).thenThrow(RuntimeException("service failure"))
-        Mockito.`when`(produkRepository.getLowStockProduk()).thenReturn(flowOf(emptyList()))
+        whenever(saleService.getTotalPenjualanByRentangTanggal(any(), any())).thenThrow(RuntimeException("service failure"))
+        whenever(produkRepository.getLowStockProduk()).thenReturn(flowOf(emptyList()))
 
-        viewModel = DashboardViewModel(saleService, produkRepository)
-        viewModel.refreshData()
+        viewModel = DashboardViewModel(saleService, reportingService, produkRepository)
+        viewModel.refresh()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value

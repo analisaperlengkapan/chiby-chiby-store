@@ -24,10 +24,10 @@ class SaleServiceSpy(private val delegate: SaleService) : SaleService by delegat
         return invocationLatch.await(timeoutMs, TimeUnit.MILLISECONDS)
     }
 
-    override suspend fun createSale(sale: Penjualan, items: List<ItemPenjualan>): Result<PenjualanWithItems> {
+    override suspend fun createPenjualan(sale: Penjualan, items: List<ItemPenjualan>): Result<PenjualanWithItems> {
         _count.incrementAndGet()
         try {
-            return delegate.createSale(sale, items)
+            return delegate.createPenjualan(sale, items)
         } finally {
             // ensure latch is always counted down when the call completes
             invocationLatch.countDown()

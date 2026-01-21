@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.repository.*
 import com.chibychibystore.service.*
+import com.chibychibystore.service.impl.*
 import com.chibychibystore.testutils.TestDataBuilder
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -55,7 +56,7 @@ class FinancialServicesIntegrationTest : BaseTest() {
         authService = AuthServiceImpl(db.penggunaDao(), sessionRepository)
         expenseService = ExpenseServiceImpl(pengeluaranRepository)
         cashManagementService = CashManagementService(penjualanRepository, pengeluaranRepository)
-        balanceSheetService = BalanceSheetService(produkRepository, cashManagementService)
+        balanceSheetService = BalanceSheetService(produkRepository, pengeluaranRepository, cashManagementService)
         val itemPenjualanRepository = ItemPenjualanRepository(db.itemPenjualanDao())
         reportingService = ReportingServiceImpl(
             penjualanRepository,
@@ -116,7 +117,7 @@ class FinancialServicesIntegrationTest : BaseTest() {
 
         val createdExpenses = mutableListOf<com.chibychibystore.data.local.entity.Pengeluaran>()
         testExpenses.forEach { expense ->
-            val result = expenseService.createExpense(expense)
+            val result = expenseService.createPengeluaran(expense)
             if (result.isFailure) {
                 result.exceptionOrNull()?.printStackTrace()
             }
@@ -127,26 +128,27 @@ class FinancialServicesIntegrationTest : BaseTest() {
         assertEquals("Should create 3 expenses", TestDataBuilder.testExpenses.size, createdExpenses.size)
 
         val firstExpenseId = createdExpenses.first().id
-        val retrievedExpense = expenseService.getExpense(firstExpenseId)
+        val retrievedExpense = expenseService.getPengeluaran(firstExpenseId)
         assertTrue("Should retrieve expense", retrievedExpense.isSuccess)
         assertEquals("Expense amount should match", testExpenses.first().amount, retrievedExpense.getOrNull()?.amount)
 
         // Use a wider range to include seeded and newly created expenses (seeded are ~2 days ago)
         val startDate = LocalDate.now().minusDays(10)
         val endDate = LocalDate.now().plusDays(1)
-        val expensesInRangeRes = expenseService.getExpenses(startDate, endDate, null)
+        val expensesInRangeRes = expenseService.getPengeluarans(startDate, endDate, null)
         assertTrue("Should get expenses in range", expensesInRangeRes.isSuccess)
         val expensesInRange = expensesInRangeRes.getOrNull() ?: emptyList()
         assertTrue(expensesInRange.isNotEmpty())
 
         // Verify categories in results include RENT_LEASE
         val categoriesInResults = expensesInRange.map { it.category }.toSet()
-        assertTrue("Should include RENT_LEASE category", categoriesInResults.contains(com.chibychibystore.data.local.entity.ExpenseCategory.RENT_LEASE))
+        assertTrue("Should include RENT_LEASE category", categoriesInResults.contains(com.chibychibystore.data.local.entity.KategoriPengeluaran.RENT_LEASE))
 
-        val totalExpenses = expenseService.getTotalExpenses(startDate, endDate)
+        val totalExpenses = expenseService.getTotalPengeluarans(startDate, endDate)
         assertTrue("Should calculate total expenses", totalExpenses.isSuccess)
         // This expected includes both seeded and newly created expenses; check non-zero
-        assertTrue("Total should be positive", totalExpenses.getOrNull()!! > 0.0)
+        val totalAmount = totalExpenses.getOrNull() ?: 0.0
+        assertTrue("Total should be positive", totalAmount > 0.0)
     }
 
     @Test
@@ -196,7 +198,7 @@ class FinancialServicesIntegrationTest : BaseTest() {
 
         val report = expenseReport.getOrNull()
         assertNotNull("Expense report should not be null", report)
-        val byCategory = report?.get("expensesByCategory") as? Map<*, *>
+        val byCategory = report?.pengeluaranPerKategori
         assertTrue("Should have expenses by category", byCategory != null && byCategory.isNotEmpty())
     }
 }

@@ -11,6 +11,7 @@ import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.PromoService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.*
@@ -38,7 +39,7 @@ class PosViewModelTest {
     private lateinit var viewModel: PosViewModel
 
     @Before
-    fun setup() {
+    fun setup() = runBlocking {
         Dispatchers.setMain(testDispatcher)
         productService = mock()
         saleService = mock()
@@ -85,6 +86,7 @@ class PosViewModelTest {
         )
 
         viewModel.addProductToCart(product)
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals(1, state.cartItems.size)
@@ -111,6 +113,7 @@ class PosViewModelTest {
         )
 
         viewModel.addProductToCart(product)
+        testDispatcher.scheduler.advanceUntilIdle()
         viewModel.updateCartItemQuantity(product.id, 3)
 
         val state = viewModel.uiState.value
@@ -137,6 +140,7 @@ class PosViewModelTest {
         )
 
         viewModel.addProductToCart(product)
+        testDispatcher.scheduler.advanceUntilIdle()
         viewModel.setPaymentMethod("CASH")
 
         // Mock saleService.createPenjualan to return success with a Penjualan id
@@ -186,6 +190,7 @@ class PosViewModelTest {
         )
 
         viewModel.addProductToCart(product)
+        testDispatcher.scheduler.advanceUntilIdle()
         viewModel.processPayment()
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -248,6 +253,7 @@ class PosViewModelTest {
         )
 
         viewModel.addProductToCart(product)
+        testDispatcher.scheduler.advanceUntilIdle()
         whenever(saleService.createPenjualan(any(), any())).thenReturn(Result.success(com.chibychibystore.data.local.entity.PenjualanWithItems(Penjualan(saleDate = Date(), totalAmount = viewModel.uiState.value.total, paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.CASH, cashierId = 1L), emptyList())))
 
         viewModel.processPayment()
@@ -286,6 +292,7 @@ class PosViewModelTest {
         )
 
         viewModel.addProductToCart(product)
+        testDispatcher.scheduler.advanceUntilIdle()
         whenever(saleService.createPenjualan(any(), any())).thenReturn(Result.success(com.chibychibystore.data.local.entity.PenjualanWithItems(Penjualan(saleDate = Date(), totalAmount = viewModel.uiState.value.total, paymentMethod = com.chibychibystore.data.local.entity.PaymentMethod.CASH, cashierId = 1L), emptyList())))
 
         viewModel.processPayment()

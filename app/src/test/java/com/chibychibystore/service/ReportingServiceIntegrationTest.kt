@@ -10,6 +10,7 @@ import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.repository.PembelianRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.service.impl.ReportingServiceImpl
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.runner.RunWith
@@ -90,7 +91,7 @@ class ReportingServiceIntegrationTest : BaseTest() {
 
         // Purchase (cost)
         val pemasokId = db.pemasokDao().insertPemasok(com.chibychibystore.data.local.entity.Pemasok(name = "S1"))
-        val pembelian = com.chibychibystore.data.local.entity.Pembelian(purchaseDate = Date(), supplierId = pemasokId, totalAmount = 5000.0, createdBy = cashierId)
+        val pembelian = com.chibychibystore.data.local.entity.Pembelian(purchaseDate = Date(), supplierId = pemasokId, totalAmount = 5000.0, receivedBy = cashierId, invoiceNumber = "INV-TEST-001")
         val pembelianId = db.pembelianDao().insertPembelian(pembelian)
 
         val start = LocalDate.now().minusDays(1)
@@ -105,8 +106,8 @@ class ReportingServiceIntegrationTest : BaseTest() {
         val gross = grossRes.getOrNull()!!
         // gross is a Map<String, Any> in the current implementation
         println("[DEBUG] gross=$gross")
-        assertEquals(30000.0, gross["totalSales"] as Double, 0.001)
-        assertEquals(2, gross["totalTransactions"] as Int)
+        assertEquals(30000.0, gross.totalPenjualan, 0.001)
+        assertEquals(2, gross.totalTransaksi)
 
         // Refund one sale and verify gross sales excludes refunded sale
         val saleToRefund = db.penjualanDao().getPenjualanById(saleId1)!!
@@ -121,16 +122,16 @@ class ReportingServiceIntegrationTest : BaseTest() {
         val gross2 = grossAfterRefund.getOrNull()!!
         // gross2 is a Map<String, Any>
         println("[DEBUG] grossAfterRefund=$gross2")
-        assertEquals("Refunded sale should be excluded from gross sales", 20000.0, gross2["totalSales"] as Double, 0.001)
-        assertEquals(1, gross2["totalTransactions"] as Int)
+        assertEquals("Refunded sale should be excluded from gross sales", 20000.0, gross2.totalPenjualan, 0.001)
+        assertEquals(1, gross2.totalTransaksi)
 
         val profitRes = reportingService.getProfitMargin(start, end)
         assertTrue(profitRes.isSuccess)
         val profit = profitRes.getOrNull()!!
         // profit is a Map<String, Any>
-        assertEquals(30000.0, profit["revenue"] as Double, 0.001)
+        assertEquals(30000.0, profit.totalPendapatan, 0.001)
         // totalCost comes from purchases sum (in implementation: costOfGoodsSold)
-        assertEquals(5000.0, profit["costOfGoodsSold"] as Double, 0.001)
+        assertEquals(5000.0, profit.totalBiaya, 0.001)
 
     }
 
@@ -158,8 +159,8 @@ class ReportingServiceIntegrationTest : BaseTest() {
         // trends is a List<Map<String, Any>> in the current implementation
         // Expect grouping: 2025-01-01 -> 15000 (2 transactions), 2025-01-02 -> 7000 (1 transaction)
         assertEquals(2, trends.size)
-        val day1 = trends.first { (it["date"] as java.time.LocalDate) == java.time.LocalDate.of(2025, 1, 1) }
-        assertEquals(15000.0, day1["sales"] as Double, 0.001)
-        assertEquals(2, day1["transactions"] as Int)
+        val day1 = trends.first { it.tanggal == java.time.LocalDate.of(2025, 1, 1) }
+        assertEquals(15000.0, day1.penjualan, 0.001)
+        assertEquals(2, day1.transaksi)
     }
 }

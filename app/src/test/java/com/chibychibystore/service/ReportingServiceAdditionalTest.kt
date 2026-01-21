@@ -13,6 +13,7 @@ import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.MockitoAnnotations
 import java.time.LocalDate
+import com.chibychibystore.service.impl.ReportingServiceImpl
 
 class ReportingServiceAdditionalTest {
 
@@ -88,9 +89,9 @@ class ReportingServiceAdditionalTest {
 
         assertTrue(result.isSuccess)
         val data = result.getOrNull()
-        assertEquals(1000.0, data?.operatingCashFlow)
-        assertEquals(-200.0, data?.investingCashFlow)
-        assertEquals(0.0, data?.financingCashFlow)
-        assertEquals(800.0, data?.netCashFlow)
+        assertEquals(1000.0, data?.arusKasOperasional)
+        assertEquals(-200.0, data?.arusKasInvestasi)
+        assertEquals(0.0, data?.arusKasPendanaan)
+        assertEquals(800.0, data?.arusKasBersih)
     }
 }

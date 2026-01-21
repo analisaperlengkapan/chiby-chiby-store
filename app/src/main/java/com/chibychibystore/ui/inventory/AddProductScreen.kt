@@ -12,6 +12,10 @@ import androidx.compose.material.icons.filled.*
 // Using Icons.Filled.ArrowBack for navigation icon
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -54,7 +58,7 @@ fun AddProductScreen(
     // Listen for scanned barcode result
     val currentBackStackEntry = navController.currentBackStackEntry
     val savedStateHandle = currentBackStackEntry?.savedStateHandle
-    val scannedBarcode by savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState()
+    val scannedBarcode = savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState()?.value
 
     LaunchedEffect(scannedBarcode) {
         scannedBarcode?.let { barcode ->
@@ -124,6 +128,9 @@ fun AddProductScreen(
                 else -> {
                     AddProductContent(
                         product = editedProduct,
+                        navController = navController,
+                        viewModel = viewModel,
+                        scope = scope,
                         onProductChange = { updatedProduct ->
                             editedProduct = updatedProduct
                         }
@@ -151,6 +158,9 @@ fun AddProductScreen(
 @Composable
 private fun AddProductContent(
     product: Produk,
+    navController: NavController,
+    viewModel: ProductDetailViewModel,
+    scope: kotlinx.coroutines.CoroutineScope,
     onProductChange: (Produk) -> Unit
 ) {
     var editedProduct by remember { mutableStateOf(product) }

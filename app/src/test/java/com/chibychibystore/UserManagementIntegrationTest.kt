@@ -101,7 +101,7 @@ class UserManagementIntegrationTest : BaseTest() {
         assertTrue(res.isSuccess)
         val id = res.getOrNull()!!
 
-        val delRes = penggunaRepo.deletePengguna(id)
+        val delRes = penggunaRepo.deleteUser(id)
         assertTrue(delRes.isFailure)
     }
 }

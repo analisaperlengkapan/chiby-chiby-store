@@ -12,6 +12,10 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,7 +51,7 @@ fun InventoryScreen(
     // Listen for scanned barcode result
     val currentBackStackEntry = navController.currentBackStackEntry
     val savedStateHandle = currentBackStackEntry?.savedStateHandle
-    val scannedBarcode by savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState()
+    val scannedBarcode = savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState()?.value
 
     LaunchedEffect(scannedBarcode) {
         scannedBarcode?.let { barcode ->
@@ -126,8 +130,9 @@ fun InventoryScreen(
             }
 
             // Content Handling
+            val isLoading by viewModel.loading.collectAsState()
             when {
-                uiState.isLoading -> LoadingIndicator("Memuat inventory...")
+                isLoading -> LoadingIndicator("Memuat inventory...")
                 uiState.products.isEmpty() -> {
                     EmptyInventoryState(onAddProduct = { navController.navigate(Screen.ProductAdd.route) })
                 }

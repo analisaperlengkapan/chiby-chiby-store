@@ -13,26 +13,28 @@ import org.junit.Test
 
 class SaleServiceSpyTest {
     private class DelayedSaleService : SaleService {
-        override suspend fun createSale(sale: Penjualan, items: List<ItemPenjualan>): Result<PenjualanWithItems> {
+        override suspend fun createPenjualan(sale: Penjualan, items: List<ItemPenjualan>): Result<PenjualanWithItems> {
             delay(100)
             val created = PenjualanWithItems(sale.copy(totalAmount = items.sumOf { it.totalPrice }), items)
             return Result.success(created)
         }
 
-        // Minimal implementations for other interface members (not used in this unit test)
-        override suspend fun getSale(id: Long) = Result.success(null as PenjualanWithItems?)
-        override suspend fun getSales(startDate: String?, endDate: String?, cashierId: Long?) = Result.success(emptyList<com.chibychibystore.data.local.entity.Penjualan>())
-        override suspend fun searchSales(query: String) = Result.success(emptyList<com.chibychibystore.data.local.entity.Penjualan>())
-        override suspend fun updateSale(id: Long, sale: Penjualan) = Result.failure(Exception("not implemented"))
-        override suspend fun deleteSale(id: Long) = Result.failure(Exception("not implemented"))
-        override suspend fun refundSale(id: Long) = Result.failure(Exception("not implemented"))
-        override suspend fun cancelSale(id: Long) = Result.failure(Exception("not implemented"))
-        override suspend fun getTotalSalesByDateRange(startDate: String, endDate: String) = Result.success(0.0)
-        override fun observeSales() = kotlinx.coroutines.flow.flowOf<List<com.chibychibystore.data.local.entity.Penjualan>>(emptyList())
-        override fun observeSalesWithItems() = kotlinx.coroutines.flow.flowOf<List<com.chibychibystore.data.local.entity.PenjualanWithItems>>(emptyList())
-        override fun observeSalesByDateRange(startDate: String, endDate: String) = kotlinx.coroutines.flow.flowOf<List<com.chibychibystore.data.local.entity.Penjualan>>(emptyList())
-        override suspend fun printReceipt(saleId: Long, storeName: String, storeAddress: String, cashierName: String) = Result.failure(Exception("not implemented"))
-        override fun observeSalesWithItemsByDateRange(startDate: String, endDate: String) = kotlinx.coroutines.flow.flowOf<List<com.chibychibystore.data.local.entity.PenjualanWithItems>>(emptyList())
+        // Minimal implementations for other interface members
+        override suspend fun getPenjualanById(id: Long) = Result.success(null as PenjualanWithItems?)
+        override suspend fun getPenjualanByRentangTanggal(startDate: String?, endDate: String?, cashierId: Long?, query: String?) = Result.success(emptyList<Penjualan>())
+        override suspend fun getRecentPenjualan(limit: Int) = Result.success(emptyList<Penjualan>())
+        override suspend fun searchPenjualan(query: String) = Result.success(emptyList<Penjualan>())
+        override suspend fun updatePenjualan(id: Long, sale: Penjualan) = Result.failure(Exception("not implemented"))
+        override suspend fun deletePenjualan(id: Long) = Result.failure(Exception("not implemented"))
+        override suspend fun refundPenjualan(id: Long) = Result.failure(Exception("not implemented"))
+        override suspend fun cancelPenjualan(id: Long) = Result.failure(Exception("not implemented"))
+        override suspend fun getTotalPenjualanByRentangTanggal(startDate: String, endDate: String) = Result.success(0.0)
+        override suspend fun getPenjualanCountByRentangTanggal(startDate: String, endDate: String) = Result.success(0)
+        override fun observePenjualan() = kotlinx.coroutines.flow.flowOf<List<Penjualan>>(emptyList())
+        override fun observePenjualanWithItems() = kotlinx.coroutines.flow.flowOf<List<PenjualanWithItems>>(emptyList())
+        override fun observePenjualanFiltered(startDate: String, endDate: String, query: String?) = kotlinx.coroutines.flow.flowOf<List<Penjualan>>(emptyList())
+        override suspend fun cetakStruk(saleId: Long, storeName: String, storeAddress: String, cashierName: String) = Result.failure(Exception("not implemented"))
+        override fun observePenjualanWithItemsByRentangTanggal(startDate: String, endDate: String) = kotlinx.coroutines.flow.flowOf<List<PenjualanWithItems>>(emptyList())
     }
 
     @Test
@@ -46,7 +48,7 @@ class SaleServiceSpyTest {
         // Start invocation in background
         // Start invocation in background on a separate thread
         val thread = Thread {
-            runBlocking { spy.createSale(sale, listOf(item)) }
+            runBlocking { spy.createPenjualan(sale, listOf(item)) }
         }
         thread.start()
 

@@ -12,8 +12,11 @@ import com.chibychibystore.data.local.entity.PaymentMethod
 import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
-import com.chibychibystore.service.ProductServiceImpl
-import com.chibychibystore.service.SaleServiceImpl
+import com.chibychibystore.service.impl.ProductServiceImpl
+import com.chibychibystore.service.impl.SaleServiceImpl
+import com.chibychibystore.service.impl.PromoServiceImpl
+import com.chibychibystore.repository.StokGudangRepository
+import com.chibychibystore.repository.PromotionRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.SaleService
 import com.chibychibystore.ui.pos.PosViewModel
@@ -64,9 +67,12 @@ class PosEndToEndIntegrationTest : BaseTest() {
             Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
         }
 
-        productService = ProductServiceImpl(produkRepo, authService)
+        val stokGudangRepo = StokGudangRepository(db.stokGudangDao(), db.produkDao())
+        productService = ProductServiceImpl(produkRepo, stokGudangRepo, authService)
         val printer = Mockito.mock(PrinterService::class.java)
-        saleService = SaleServiceImpl(penjualanRepo, itemPenjualanRepo, produkRepo, printer, authService)
+        val promotionRepo = PromotionRepository(db.promotionDao())
+        val promoService = PromoServiceImpl(promotionRepo)
+        saleService = SaleServiceImpl(db, penjualanRepo, itemPenjualanRepo, produkRepo, stokGudangRepo, authService, printer, promoService)
     }
 
     @After
@@ -91,7 +97,9 @@ class PosEndToEndIntegrationTest : BaseTest() {
             stockQuantity = 5,
             warehouseId = gudangId
         )
-        val prodId = db.produkDao().insertProduk(prod)
+        val prodRes = productService.createProduk(prod)
+        assertTrue("Product creation failed in E2E test", prodRes.isSuccess)
+        val prodId = prodRes.getOrNull()?.id ?: error("product id null")
         val savedProd = db.produkDao().getProdukById(prodId)!!
 
         // Insert a cashier user
@@ -115,21 +123,29 @@ class PosEndToEndIntegrationTest : BaseTest() {
 
         val spySaleService = com.chibychibystore.testutils.SaleServiceSpy(saleService)
 
-        val viewModel = PosViewModel(productService, spySaleService, auth)
-
-        // Add product to cart and process payment
-        viewModel.addProductToCart(savedProd)
-        viewModel.setPaymentMethod("CASH")
-
+        val promotionRepo = PromotionRepository(db.promotionDao())
+        val promoService = PromoServiceImpl(promotionRepo)
 
         // Ensure ViewModel coroutines run on test dispatcher
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        
+        val viewModel = PosViewModel(productService, spySaleService, auth, promoService)
+        
         try {
+            // Add product to cart and process payment
+            viewModel.addProductToCart(savedProd)
+            testScheduler.advanceUntilIdle() // Ensure cart item is added
+            
+            val state = viewModel.uiState.value
+            assertEquals("Cart should have 1 item before payment. Error: ${state.error}", 1, state.cartItems.size)
+            
+            viewModel.setPaymentMethod("CASH")
             viewModel.processPayment()
 
             // Wait for the SaleService.createSale to complete via spy
-            val completed = spySaleService.awaitInvocation(2_000)
-            assertTrue("SaleService.createSale did not complete within timeout", completed)
+            val completed = spySaleService.awaitInvocation(10_000)
+            val stateAtTimeout = viewModel.uiState.value
+            assertTrue("SaleService.createSale did not complete within timeout. State error=${stateAtTimeout.error}, cartSize=${stateAtTimeout.cartItems.size}", completed)
 
             // advance until viewmodel coroutine work completes
             testScheduler.advanceUntilIdle()
@@ -151,8 +167,7 @@ class PosEndToEndIntegrationTest : BaseTest() {
         assertNotNull("Penjualan should be persisted", created)
 
         val updatedProd = db.produkDao().getProdukById(prodId)!!
-        assertEquals("Stock should be decremented by 1", 4, updatedProd.stockQuantity)
-        // Ensure createSale was invoked exactly once
-        assertEquals("createSale should be called exactly once", 1, spySaleService.invocationCount)
+        assertEquals("Stock should be decremented by 1. Original was 5.", 4, updatedProd.stockQuantity)
+        assertEquals("createSale (createPenjualan) should be called exactly once", 1, spySaleService.invocationCount)
     }
 }

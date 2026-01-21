@@ -6,11 +6,15 @@ import androidx.test.core.app.ApplicationProvider
 import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.local.entity.ItemPenjualan
 import com.chibychibystore.data.local.entity.Penjualan
+import com.chibychibystore.data.local.entity.PenjualanWithItems
 import com.chibychibystore.data.local.entity.PaymentMethod
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.StokGudangRepository
+import com.chibychibystore.service.PromoService
+import com.chibychibystore.service.impl.SaleServiceImpl
 import com.chibychibystore.service.printer.PrinterService
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.async
@@ -48,11 +52,22 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
         itemPenjualanRepo = ItemPenjualanRepository(db.itemPenjualanDao())
 
         val printerService = Mockito.mock(PrinterService::class.java)
+        val promoService = Mockito.mock(PromoService::class.java)
         val authService = Mockito.mock(AuthService::class.java)
         runBlocking {
             Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
         }
-        saleService = SaleServiceImpl(penjualanRepo, itemPenjualanRepo, produkRepo, printerService, authService)
+        val stokGudangRepo = StokGudangRepository(db.stokGudangDao(), db.produkDao())
+        saleService = SaleServiceImpl(
+            db,
+            penjualanRepo,
+            itemPenjualanRepo,
+            produkRepo,
+            stokGudangRepo,
+            authService,
+            printerService,
+            promoService
+        )
     }
 
     @After
@@ -81,17 +96,17 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
         // Create sale
         val sale = Penjualan(saleDate = Date(), totalAmount = 15000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
         val item = ItemPenjualan(saleId = 0, productId = prodId, quantity = 2, unitPrice = 15000.0, totalPrice = 30000.0)
-        val res = (saleService as SaleServiceImpl).createSale(sale, listOf(item))
+        val res = (saleService as SaleServiceImpl).createPenjualan(sale, listOf(item))
         assertTrue(res.isSuccess)
         val created = res.getOrNull()!!
-        val saleId = created.penjualan.id
+        val saleId = created.sale.id
 
         // After sale, stock decreased
         val afterSale = db.produkDao().getProdukById(prodId)!!
         assertEquals(3, afterSale.stockQuantity)
 
         // Refund sale: stock should be restored (3 + 2 = 5)
-        val refundRes = (saleService as SaleServiceImpl).refundSale(saleId)
+        val refundRes = (saleService as SaleServiceImpl).refundPenjualan(saleId)
         assertTrue(refundRes.isSuccess)
 
         val restored = db.produkDao().getProdukById(prodId)!!
@@ -114,19 +129,19 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
 
         val sale = Penjualan(saleDate = Date(), totalAmount = 4000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
         val item = ItemPenjualan(saleId = 0, productId = prodId, quantity = 2, unitPrice = 2000.0, totalPrice = 4000.0)
-        val res = (saleService as SaleServiceImpl).createSale(sale, listOf(item))
+        val res = (saleService as SaleServiceImpl).createPenjualan(sale, listOf(item))
         assertTrue(res.isSuccess)
-        val saleId = res.getOrNull()!!.penjualan.id
+        val saleId = res.getOrNull()!!.sale.id
 
         // Prepare two concurrent refund calls using executor to simulate race
         val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
         try {
             val f1 = executor.submit(java.util.concurrent.Callable<com.chibychibystore.data.model.Result<Unit>> {
                 // refundSale may perform suspend operations internally; runBlocking ensures it runs on this thread
-                runBlocking { (saleService as SaleServiceImpl).refundSale(saleId) }
+                runBlocking { (saleService as SaleServiceImpl).refundPenjualan(saleId) }
             })
             val f2 = executor.submit(java.util.concurrent.Callable<com.chibychibystore.data.model.Result<Unit>> {
-                runBlocking { (saleService as SaleServiceImpl).refundSale(saleId) }
+                runBlocking { (saleService as SaleServiceImpl).refundPenjualan(saleId) }
             })
 
             val r1 = f1.get()
@@ -162,16 +177,16 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
 
         val sale = Penjualan(saleDate = Date(), totalAmount = 4000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
         val item = ItemPenjualan(saleId = 0, productId = prodId, quantity = 2, unitPrice = 2000.0, totalPrice = 4000.0)
-        val res = (saleService as SaleServiceImpl).createSale(sale, listOf(item))
+        val res = (saleService as SaleServiceImpl).createPenjualan(sale, listOf(item))
         assertTrue(res.isSuccess)
-        val saleId = res.getOrNull()!!.penjualan.id
+        val saleId = res.getOrNull()!!.sale.id
 
         // Cancel sale
-        val cancelRes = (saleService as SaleServiceImpl).cancelSale(saleId)
+        val cancelRes = (saleService as SaleServiceImpl).cancelPenjualan(saleId)
         assertTrue(cancelRes.isSuccess)
 
         // Refund should fail because sale no longer exists
-        val refundRes = (saleService as SaleServiceImpl).refundSale(saleId)
+        val refundRes = (saleService as SaleServiceImpl).refundPenjualan(saleId)
         assertTrue(refundRes.isFailure)
     }
 
@@ -188,12 +203,12 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
         // Create sale
         val sale = Penjualan(saleDate = Date(), totalAmount = 6000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
         val item = ItemPenjualan(saleId = 0, productId = prodId, quantity = 2, unitPrice = 3000.0, totalPrice = 6000.0)
-        val createRes = (saleService as SaleServiceImpl).createSale(sale, listOf(item))
+        val createRes = (saleService as SaleServiceImpl).createPenjualan(sale, listOf(item))
         assertTrue(createRes.isSuccess)
-        val saleId = createRes.getOrNull()!!.penjualan.id
+        val saleId = createRes.getOrNull()!!.sale.id
 
         // Refund once
-        val firstRefund = (saleService as SaleServiceImpl).refundSale(saleId)
+        val firstRefund = (saleService as SaleServiceImpl).refundPenjualan(saleId)
         assertTrue(firstRefund.isSuccess)
         val afterFirst = db.produkDao().getProdukById(prodId)!!
         assertEquals(6, afterFirst.stockQuantity)
@@ -201,7 +216,7 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
         assertTrue("Sale should be marked as refunded after first refund", saleAfterRefund.isRefunded)
 
         // Second refund should be rejected (idempotency). Expect failure and stock unchanged
-        val secondRefund = (saleService as SaleServiceImpl).refundSale(saleId)
+        val secondRefund = (saleService as SaleServiceImpl).refundPenjualan(saleId)
         assertTrue("Second refund should fail to enforce idempotency", secondRefund.isFailure)
         val afterSecond = db.produkDao().getProdukById(prodId)!!
         assertEquals("Stock should not increase after repeated refund", 6, afterSecond.stockQuantity)
@@ -227,17 +242,17 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
 
         val sale = Penjualan(saleDate = Date(), totalAmount = 16000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
         val item = ItemPenjualan(saleId = 0, productId = prodId, quantity = 2, unitPrice = 8000.0, totalPrice = 16000.0)
-        val res = (saleService as SaleServiceImpl).createSale(sale, listOf(item))
+        val res = (saleService as SaleServiceImpl).createPenjualan(sale, listOf(item))
         assertTrue(res.isSuccess)
         val created = res.getOrNull()!!
-        val saleId = created.penjualan.id
+        val saleId = created.sale.id
 
         // After sale, stock decreased to 2
         val afterSale = db.produkDao().getProdukById(prodId)!!
         assertEquals(2, afterSale.stockQuantity)
 
         // Cancel sale
-        val cancelRes = (saleService as SaleServiceImpl).cancelSale(saleId)
+        val cancelRes = (saleService as SaleServiceImpl).cancelPenjualan(saleId)
         assertTrue(cancelRes.isSuccess)
 
         // Stock restored to 4
@@ -249,7 +264,7 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
         assertNull(fetched)
 
         // Items removed
-        val itemCount = db.itemPenjualanDao().getItemCountBySaleId(saleId)
+        val itemCount = db.itemPenjualanDao().getItemCountByPenjualanId(saleId)
         assertEquals(0, itemCount)
     }
 }

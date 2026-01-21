@@ -90,7 +90,7 @@ class RestoreServiceTest {
         `when`(penjualanRepository.createPenjualan(any(), any())).thenReturn(Result.success(1L))
         `when`(itemPenjualanRepository.createItemPenjualan(any())).thenReturn(Result.success(1L))
         `when`(expenseRepository.createPengeluaran(any())).thenReturn(Result.success(1L))
-        `when`(purchaseRepository.createPembelian(any())).thenReturn(Result.success(com.chibychibystore.data.local.entity.Pembelian(id=1L, supplierId = 1L, date = java.util.Date(), totalAmount = 1000.0)))
+        `when`(purchaseRepository.createPembelian(any())).thenReturn(Result.success(com.chibychibystore.data.local.entity.Pembelian(id=1L, supplierId = 1L, purchaseDate = java.util.Date(), totalAmount = 1000.0, invoiceNumber = "INV-RES-001")))
         `when`(purchaseItemRepository.createItemPembelian(any())).thenReturn(Result.success(1L))
 
         // When
@@ -119,7 +119,7 @@ class RestoreServiceTest {
         `when`(penjualanRepository.createPenjualan(any(), any())).thenReturn(Result.success(1L))
         `when`(itemPenjualanRepository.createItemPenjualan(any())).thenReturn(Result.success(1L))
         `when`(expenseRepository.createPengeluaran(any())).thenReturn(Result.success(1L))
-        `when`(purchaseRepository.createPembelian(any())).thenReturn(Result.success(com.chibychibystore.data.local.entity.Pembelian(id=1L, supplierId = 1L, date = java.util.Date(), totalAmount = 1000.0)))
+        `when`(purchaseRepository.createPembelian(any())).thenReturn(Result.success(com.chibychibystore.data.local.entity.Pembelian(id=1L, supplierId = 1L, purchaseDate = java.util.Date(), totalAmount = 1000.0, invoiceNumber = "INV-RES-001")))
         `when`(purchaseItemRepository.createItemPembelian(any())).thenReturn(Result.success(1L))
 
         // When

@@ -6,6 +6,7 @@ import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.local.entity.*
 import com.chibychibystore.repository.*
 import com.chibychibystore.service.*
+import com.chibychibystore.service.impl.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -42,6 +43,7 @@ class CompleteSystemIntegrationTest : BaseTest() {
     private lateinit var penjualanRepository: PenjualanRepository
     private lateinit var itemPenjualanRepository: ItemPenjualanRepository
     private lateinit var userSessionRepository: UserSessionRepository
+    private lateinit var stokGudangRepository: StokGudangRepository
     
     // Services
     private lateinit var authService: AuthService
@@ -59,19 +61,21 @@ class CompleteSystemIntegrationTest : BaseTest() {
 
         // Initialize repositories
         penggunaRepository = PenggunaRepository(database.penggunaDao())
-        kategoriRepository = KategoriRepository(database.kategoriDao())
-        gudangRepository = GudangRepository(database.gudangDao())
+        kategoriRepository = KategoriRepository(database.kategoriDao(), database.produkDao())
+        gudangRepository = GudangRepository(database.gudangDao(), database.produkDao())
         produkRepository = ProdukRepository(database.produkDao())
         penjualanRepository = PenjualanRepository(database.penjualanDao(), database.itemPenjualanDao())
         itemPenjualanRepository = ItemPenjualanRepository(database.itemPenjualanDao())
         userSessionRepository = UserSessionRepository(database.userSessionDao())
+        stokGudangRepository = StokGudangRepository(database.stokGudangDao(), database.produkDao())
 
         // Initialize services
         authService = AuthServiceImpl(database.penggunaDao(), userSessionRepository)
-        productService = ProductServiceImpl(produkRepository, authService)
-        warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, authService)
+        productService = ProductServiceImpl(produkRepository, stokGudangRepository, authService)
+        warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, stokGudangRepository, authService, database)
         val printerStub = com.chibychibystore.testutils.TestPrinterService()
-        saleService = SaleServiceImpl(penjualanRepository, itemPenjualanRepository, produkRepository, printerStub, authService)
+        val promoService = PromoServiceImpl(PromotionRepository(database.promotionDao()))
+        saleService = SaleServiceImpl(database, penjualanRepository, itemPenjualanRepository, produkRepository, stokGudangRepository, authService, printerStub, promoService)
     }
 
     @After
@@ -131,8 +135,8 @@ class CompleteSystemIntegrationTest : BaseTest() {
             capacity = 500,
             createdAt = Date()
         )
-        warehouseService.createWarehouse(gudangUtama)
-        warehouseService.createWarehouse(gudangCabang)
+        warehouseService.createGudang(gudangUtama)
+        warehouseService.createGudang(gudangCabang)
 
         // Verify gudang created
         val allGudang = gudangRepository.getAllGudang().first()
@@ -179,9 +183,9 @@ class CompleteSystemIntegrationTest : BaseTest() {
             createdAt = Date(),
             updatedAt = Date()
         )
-        productService.createProduct(laptop)
-        productService.createProduct(mouse)
-        productService.createProduct(keyboard)
+        productService.createProduk(laptop)
+        productService.createProduk(mouse)
+        productService.createProduk(keyboard)
 
         // Verify produk created
         val allProduk = produkRepository.getAllProduk().first()
@@ -228,7 +232,7 @@ class CompleteSystemIntegrationTest : BaseTest() {
 
         val saleHeader = Penjualan(saleDate = Date(), totalAmount = totalAmount, paymentMethod = PaymentMethod.CASH, cashierId = cashierUser!!.id)
 
-        val saleResult = saleService.createSale(
+        val saleResult = saleService.createPenjualan(
             sale = saleHeader,
             items = saleItems
         )
@@ -236,8 +240,8 @@ class CompleteSystemIntegrationTest : BaseTest() {
         assertTrue(saleResult.isSuccess)
         val sale = saleResult.getOrNull()
         assertNotNull(sale)
-        assertEquals(totalAmount, sale?.penjualan?.totalAmount)
-        println("[TEST] STEP 7: Sale created - done (saleId=${sale?.penjualan?.id})")
+        assertEquals(totalAmount, sale?.sale?.totalAmount)
+        println("[TEST] STEP 7: Sale created - done (saleId=${sale?.sale?.id})")
 
 
         // ===== STEP 8: Verify Stock Updated =====
@@ -251,11 +255,11 @@ class CompleteSystemIntegrationTest : BaseTest() {
 
         // ===== STEP 9: Check Sales History =====
         // Sales history via getSales
-        val salesHistoryResult = saleService.getSales()
+        val salesHistoryResult = saleService.getPenjualanByRentangTanggal()
         println("[TEST] STEP 9: Check Sales History - done")
         
         // ===== STEP 10: Check Low Stock Products =====
-        val lowStockResult = productService.getLowStockProducts()
+        val lowStockResult = productService.getLowStockProduks()
         assertTrue(lowStockResult.isSuccess)
         val lowStockProducts = lowStockResult.getOrNull()
         // Laptop should be in low stock (4 < minStok 2 is false, but close)
@@ -267,18 +271,18 @@ class CompleteSystemIntegrationTest : BaseTest() {
         authService.login("owner", "owner123")
         
         // Transfer 2 keyboards from Gudang Utama to Gudang Cabang
-        val transferResult = warehouseService.transferStock(
-            productId = 3L,
-            fromWarehouseId = 1L,
-            toWarehouseId = 2L,
-            quantity = 2
+        val transferResult = warehouseService.transferStok(
+            produkId = 3L,
+            dariGudangId = 1L,
+            keGudangId = 2L,
+            jumlah = 2
         )
         assertTrue(transferResult.isSuccess)
         println("[TEST] STEP 11: Stock transfer done")
 
         // ===== STEP 12: Verify Complete System State =====
         // All users exist
-        val allUsers = penggunaRepository.getAllPengguna().first()
+        val allUsers = penggunaRepository.getAllUsers().first()
         assertEquals(2, allUsers.size)
 
         // All categories exist

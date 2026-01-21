@@ -133,7 +133,21 @@ class ProductServiceImpl @Inject constructor(
                 return Result.failure(ChibyChibyException.PermissionError(Permissions.EDIT_INVENTORY))
             }
             val idLong = productId.toLongOrNull() ?: return Result.failure(ChibyChibyException.ValidationError("id", "ID Produk tidak valid"))
+            
+            val productResult = productRepository.getProdukById(idLong)
+            if (productResult is Result.Failure) return Result.failure(productResult.exception)
+            val product = (productResult as Result.Success).data ?: return Result.failure(Exception("Produk tidak ditemukan"))
+
+            // Update both tables
             productRepository.updateStock(idLong, newStock)
+            stokGudangRepository.insertOrUpdateStock(
+                StokGudang(
+                    productId = idLong,
+                    warehouseId = product.warehouseId,
+                    quantity = newStock
+                )
+            )
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

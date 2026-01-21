@@ -128,28 +128,43 @@ class PosViewModel @Inject constructor(
     }
 
     fun addProductToCart(product: Produk, quantity: Int = 1) {
-        updateState { currentState ->
-            val existingItem = currentState.cartItems.find { it.product.id == product.id }
-            
-            // Basic stock validation
-            val currentQtyInCart = existingItem?.quantity ?: 0
-            if (product.stockQuantity < currentQtyInCart + quantity) {
-                return@updateState currentState.copy(error = "Stok tidak mencukupi untuk ${product.name}")
-            }
+        val currentState = currentState
+        val existingItem = currentState.cartItems.find { it.product.id == product.id }
+        
+        // Basic stock validation
+        val currentQtyInCart = existingItem?.quantity ?: 0
+        if (product.stockQuantity < currentQtyInCart + quantity) {
+            updateState { it.copy(error = "Stok tidak mencukupi untuk ${product.name}") }
+            return
+        }
 
-            val updatedCartItems = if (existingItem != null) {
-                currentState.cartItems.map { item ->
-                    if (item.product.id == product.id) {
-                        item.updateQuantity(item.quantity + quantity)
-                    } else {
-                        item
-                    }
+        val updatedCartItems = if (existingItem != null) {
+            currentState.cartItems.map { item ->
+                if (item.product.id == product.id) {
+                    item.updateQuantity(item.quantity + quantity)
+                } else {
+                    item
                 }
-            } else {
-                currentState.cartItems + CartItem(product, quantity)
             }
+        } else {
+            currentState.cartItems + CartItem(product, quantity)
+        }
 
-            calculateNewState(currentState, updatedCartItems)
+        launchWithState {
+            val subtotal = updatedCartItems.sumOf { it.totalPrice }
+            val tax = subtotal * AppConstants.TAX_RATE
+            val discount = promoService.calculateDiscount(subtotal)
+            val total = subtotal + tax - discount
+            updateState {
+                it.copy(
+                    cartItems = updatedCartItems,
+                    subtotal = subtotal,
+                    tax = tax,
+                    discount = discount,
+                    total = maxOf(0.0, total),
+                    error = null
+                )
+            }
         }
     }
 
@@ -171,14 +186,44 @@ class PosViewModel @Inject constructor(
                     item
                 }
             }
-            calculateNewState(currentState, updatedCartItems)
+            launchWithState {
+                val subtotal = updatedCartItems.sumOf { it.totalPrice }
+                val tax = subtotal * AppConstants.TAX_RATE
+                val discount = promoService.calculateDiscount(subtotal)
+                val total = subtotal + tax - discount
+                updateState {
+                    it.copy(
+                        cartItems = updatedCartItems,
+                        subtotal = subtotal,
+                        tax = tax,
+                        discount = discount,
+                        total = maxOf(0.0, total)
+                    )
+                }
+            }
+            currentState
         }
     }
 
     fun removeCartItem(productId: Long) {
         updateState { currentState ->
             val updatedCartItems = currentState.cartItems.filter { it.product.id != productId }
-            calculateNewState(currentState, updatedCartItems)
+            launchWithState {
+                val subtotal = updatedCartItems.sumOf { it.totalPrice }
+                val tax = subtotal * AppConstants.TAX_RATE
+                val discount = promoService.calculateDiscount(subtotal)
+                val total = subtotal + tax - discount
+                updateState {
+                    it.copy(
+                        cartItems = updatedCartItems,
+                        subtotal = subtotal,
+                        tax = tax,
+                        discount = discount,
+                        total = maxOf(0.0, total)
+                    )
+                }
+            }
+            currentState
         }
     }
 
@@ -251,20 +296,6 @@ class PosViewModel @Inject constructor(
                 updateState { it.copy(isProcessingPayment = false, error = "Gagal memproses pembayaran: ${e.message}") }
             }
         }
-    }
-
-    private fun calculateNewState(currentState: PosUiState, items: List<CartItem>): PosUiState {
-        val subtotal = items.sumOf { it.totalPrice }
-        val tax = subtotal * AppConstants.TAX_RATE
-        val discount = promoService.calculateDiscount(subtotal)
-        val total = subtotal + tax - discount
-        return currentState.copy(
-            cartItems = items,
-            subtotal = subtotal,
-            tax = tax,
-            discount = discount,
-            total = maxOf(0.0, total)
-        )
     }
 
     fun clearError() {

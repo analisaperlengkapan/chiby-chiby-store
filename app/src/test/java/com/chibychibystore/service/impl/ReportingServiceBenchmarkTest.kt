@@ -48,7 +48,9 @@ class ReportingServiceBenchmarkTest {
         val balanceSheetService = Mockito.mock(BalanceSheetService::class.java)
         val cashManagementService = Mockito.mock(CashManagementService::class.java)
         val authService = Mockito.mock(AuthService::class.java)
-        Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
+        runBlocking {
+            Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
+        }
 
         reportingService = ReportingServiceImpl(
             penjualanRepository,
@@ -81,13 +83,11 @@ class ReportingServiceBenchmarkTest {
                 name = "Product $i",
                 categoryId = (i % 10 + 1).toLong(),
                 costPrice = 100.0,
-                price = 150.0,
+                sellingPrice = 150.0,
                 stockQuantity = 1000,
                 minStock = 10,
                 barcode = "BC$i",
                 warehouseId = 1L,
-                description = "Desc",
-                image = null,
                 createdAt = Date()
             )
         }

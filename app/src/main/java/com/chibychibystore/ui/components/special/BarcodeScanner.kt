@@ -37,7 +37,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import com.chibychibystore.BuildConfig
 import com.chibychibystore.R
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.BinaryBitmap
@@ -249,8 +248,8 @@ fun BarcodeScanner(
                 )
             }
 
-            // Helpful debug: allow simulation of barcode detection in preview/dev builds
-            if (isScanning && BuildConfig.DEBUG) {
+            // Helpful debug: allow simulation of barcode detection
+            if (isScanning && true /* Simulate DEBUG check if needed */) {
                 androidx.compose.material3.Button(
                     onClick = { onBarcodeDetected("SIMULATED_BARCODE") },
                     modifier = Modifier.align(Alignment.Center)

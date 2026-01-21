@@ -84,7 +84,7 @@ object TestDataBuilder {
     fun createTestExpense(
         id: Long = 0L,
         amount: Double = 50000.0,
-        category: ExpenseCategory = ExpenseCategory.UTILITIES,
+        category: KategoriPengeluaran = KategoriPengeluaran.UTILITIES,
         description: String = "Electricity bill",
         approvedBy: Long? = null,
         createdBy: Long = 1L
@@ -129,9 +129,9 @@ object TestDataBuilder {
     )
 
     val testExpenses = listOf(
-        createTestExpense(1L, 50000.0, ExpenseCategory.UTILITIES, "Electricity bill", null, 1L),
-        createTestExpense(2L, 25000.0, ExpenseCategory.SUPPLIES_MAINTENANCE, "Office supplies", null, 2L),
-        createTestExpense(3L, 200000.0, ExpenseCategory.RENT_LEASE, "Monthly rent", null, 1L)
+        createTestExpense(1L, 50000.0, KategoriPengeluaran.UTILITIES, "Electricity bill", null, 1L),
+        createTestExpense(2L, 25000.0, KategoriPengeluaran.SUPPLIES_MAINTENANCE, "Office supplies", null, 2L),
+        createTestExpense(3L, 200000.0, KategoriPengeluaran.RENT_LEASE, "Monthly rent", null, 1L)
     )
 
     object ExpectedCalculations {

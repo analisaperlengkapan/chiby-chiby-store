@@ -4,6 +4,7 @@ import com.chibychibystore.data.local.entity.*
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.*
 import com.chibychibystore.service.printer.PrinterService
+import com.chibychibystore.service.impl.*
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -27,6 +28,9 @@ class SecurityPermissionTest {
     @Mock lateinit var pembelianRepository: PembelianRepository
     @Mock lateinit var balanceSheetService: BalanceSheetService
     @Mock lateinit var cashManagementService: CashManagementService
+    @Mock lateinit var stokGudangRepository: StokGudangRepository
+    @Mock lateinit var promoService: PromoService
+    @Mock lateinit var db: com.chibychibystore.data.local.database.ChibyChibyDatabase
 
     private lateinit var productService: ProductService
     private lateinit var saleService: SaleService
@@ -37,13 +41,27 @@ class SecurityPermissionTest {
     fun setup() {
         MockitoAnnotations.openMocks(this)
         
-        productService = ProductServiceImpl(productRepository, authService)
-        saleService = SaleServiceImpl(saleRepository, itemPenjualanRepository, productRepository, printerService, authService)
-        warehouseService = WarehouseServiceImpl(warehouseRepository, productRepository, authService)
+        productService = ProductServiceImpl(productRepository, stokGudangRepository, authService)
+        saleService = SaleServiceImpl(
+            db,
+            saleRepository,
+            itemPenjualanRepository,
+            productRepository,
+            stokGudangRepository,
+            authService,
+            printerService,
+            promoService
+        )
+        warehouseService = WarehouseServiceImpl(warehouseRepository, productRepository, stokGudangRepository, authService, db)
         reportingService = ReportingServiceImpl(
-            saleRepository, itemPenjualanRepository, productRepository,
-            pengeluaranRepository, pembelianRepository, balanceSheetService,
-            cashManagementService, authService
+            saleRepository,
+            itemPenjualanRepository,
+            productRepository,
+            pengeluaranRepository,
+            pembelianRepository,
+            balanceSheetService,
+            cashManagementService,
+            authService
         )
     }
 
@@ -51,8 +69,8 @@ class SecurityPermissionTest {
     fun `productService createProduct should fail without EDIT_INVENTORY permission`() = runBlocking<Unit> {
         whenever(authService.hasPermission("EDIT_INVENTORY")).thenReturn(false)
         
-        val product = Produk(name = "Test", barcode = "123", categoryId = 1, costPrice = 10.0, sellingPrice = 20.0, stockQuantity = 10, warehouseId = 1)
-        val result = productService.createProduct(product)
+        val product = Produk(name = "Test", barcode = "123", categoryId = 1L, costPrice = 10.0, sellingPrice = 20.0, stockQuantity = 10, warehouseId = 1L)
+        val result = productService.createProduk(product)
         
         assertTrue("Expected failure for EDIT_INVENTORY", result.isFailure)
         assertTrue(result.exceptionOrNull()?.message?.contains("izin") == true)
@@ -62,8 +80,8 @@ class SecurityPermissionTest {
     fun `saleService createSale should fail without CREATE_SALES permission`() = runBlocking<Unit> {
         whenever(authService.hasPermission("CREATE_SALES")).thenReturn(false)
         
-        val sale = Penjualan(saleDate = Date(), totalAmount = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = 1)
-        val result = saleService.createSale(sale, emptyList())
+        val sale = Penjualan(saleDate = Date(), totalAmount = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = 1L)
+        val result = saleService.createPenjualan(sale, emptyList())
         
         assertTrue("Expected failure for CREATE_SALES", result.isFailure)
         assertTrue(result.exceptionOrNull()?.message?.contains("izin") == true)
@@ -74,7 +92,7 @@ class SecurityPermissionTest {
         whenever(authService.hasPermission("MANAGE_WAREHOUSES")).thenReturn(false)
         
         val warehouse = Gudang(name = "Test", location = "Loc", capacity = 100)
-        val result = warehouseService.createWarehouse(warehouse)
+        val result = warehouseService.createGudang(warehouse)
         
         assertTrue("Expected failure for MANAGE_WAREHOUSES", result.isFailure)
         assertTrue(result.exceptionOrNull()?.message?.contains("izin") == true)

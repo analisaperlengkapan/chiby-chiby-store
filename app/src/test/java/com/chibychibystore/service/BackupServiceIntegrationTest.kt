@@ -15,6 +15,9 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import com.chibychibystore.service.impl.BackupServiceImpl
+import com.chibychibystore.service.BackupInfo
+import com.chibychibystore.service.BackupValidationResult
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
@@ -35,7 +38,7 @@ class BackupServiceIntegrationTest : BaseTest() {
             context,
             PenggunaRepository(db.penggunaDao()),
             KategoriRepository(db.kategoriDao(), db.produkDao()),
-            GudangRepository(db.gudangDao()),
+            GudangRepository(db.gudangDao(), db.produkDao()),
             ProdukRepository(db.produkDao()),
             PemasokRepository(db.pemasokDao(), db.pembelianDao()),
             PenjualanRepository(db.penjualanDao(), db.itemPenjualanDao()),

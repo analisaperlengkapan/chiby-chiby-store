@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -63,28 +64,32 @@ class DashboardViewModel @Inject constructor(
                 // Note: Using a properly formatted date string for services expected "yyyy-MM-dd"
                 // Assuming services handle "yyyy-MM-dd" correctly.
                 
-                val todaySalesDeferred = async { saleService.getTotalPenjualanByRentangTanggal(today, today) }
-                val transactionCountDeferred = async { saleService.getPenjualanCountByRentangTanggal(today, today) }
-                val lowStockDeferred = async { produkRepository.getLowStockProduk().first() }
-                val recentSalesDeferred = async { saleService.getRecentPenjualan(10) }
-                val salesTrendDeferred = async { reportingService.getSalesTrend(sevenDaysAgo, todayDate) }
+                supervisorScope {
+                    val todaySalesDeferred = async { saleService.getTotalPenjualanByRentangTanggal(today, today) }
+                    val transactionCountDeferred = async { saleService.getPenjualanCountByRentangTanggal(today, today) }
+                    val lowStockDeferred = async { produkRepository.getLowStockProduk().first() }
+                    val recentSalesDeferred = async { saleService.getRecentPenjualan(10) }
+                    val salesTrendDeferred = async { reportingService.getSalesTrend(sevenDaysAgo, todayDate) }
 
-                // Await results
-                val todaySalesRes = todaySalesDeferred.await()
-                val transactionCountRes = transactionCountDeferred.await()
-                val lowStock = lowStockDeferred.await()
-                val recentSalesRes = recentSalesDeferred.await()
-                val salesTrendRes = salesTrendDeferred.await()
+                    // Await results
+                    val todaySalesRes = todaySalesDeferred.await()
+                    val transactionCountRes = transactionCountDeferred.await()
+                    val lowStock = lowStockDeferred.await()
+                    val recentSalesRes = recentSalesDeferred.await()
+                    val salesTrendRes = salesTrendDeferred.await()
 
-                _uiState.value = _uiState.value.copy(
-                    todaySales = todaySalesRes.getOrNull() ?: 0.0,
-                    todayTransactionCount = transactionCountRes.getOrNull() ?: 0,
-                    lowStockItems = lowStock,
-                    recentTransactions = recentSalesRes.getOrNull() ?: emptyList(),
-                    salesTrend = salesTrendRes.getOrNull() ?: emptyList(),
-                    isLoading = false,
-                    errorMessage = null
-                )
+                    _uiState.value = _uiState.value.copy(
+                        todaySales = todaySalesRes.getOrNull() ?: 0.0,
+                        todayTransactionCount = transactionCountRes.getOrNull() ?: 0,
+                        lowStockItems = lowStock,
+                        recentTransactions = recentSalesRes.getOrNull() ?: emptyList(),
+                        salesTrend = salesTrendRes.getOrNull() ?: emptyList(),
+                        isLoading = false,
+                        errorMessage = null
+                    )
+                }
+
+
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,

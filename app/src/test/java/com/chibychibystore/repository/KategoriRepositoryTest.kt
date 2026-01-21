@@ -106,7 +106,7 @@ class KategoriRepositoryTest {
         assertTrue(result.isFailure)
         val exception = result.exceptionOrNull()
         assertTrue(exception is ChibyChibyException.ValidationError)
-        assertEquals("Tidak dapat menghapus kategori yang masih memiliki produk", exception?.message)
+        assertEquals("Validasi gagal untuk id: Tidak dapat menghapus kategori yang masih memiliki produk", exception?.message)
         verify(kategoriDao, org.mockito.kotlin.never()).deleteKategoriById(1L)
     }
 }

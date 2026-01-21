@@ -6,7 +6,8 @@ import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.local.entity.*
 import com.chibychibystore.repository.*
 import com.chibychibystore.service.SaleService
-import com.chibychibystore.service.SaleServiceImpl
+import com.chibychibystore.service.impl.SaleServiceImpl
+import com.chibychibystore.service.impl.PromoServiceImpl
 import com.chibychibystore.testutils.TestDataBuilder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -38,6 +39,7 @@ class SalesModuleIntegrationTest : BaseTest() {
     private lateinit var itemPenjualanRepository: ItemPenjualanRepository
     private lateinit var produkRepository: ProdukRepository
     private lateinit var penggunaRepository: PenggunaRepository
+    private lateinit var productService: com.chibychibystore.service.ProductService
     private lateinit var saleService: SaleService
 
     @Before
@@ -60,12 +62,18 @@ class SalesModuleIntegrationTest : BaseTest() {
         runBlocking {
             Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
         }
+        val stokGudangRepository = StokGudangRepository(database.stokGudangDao(), database.produkDao())
+        val promoService = PromoServiceImpl(PromotionRepository(database.promotionDao()))
+        productService = com.chibychibystore.service.impl.ProductServiceImpl(produkRepository, stokGudangRepository, authService)
         saleService = SaleServiceImpl(
+            database,
             penjualanRepository,
             itemPenjualanRepository,
             produkRepository,
+            stokGudangRepository,
+            authService,
             printerStub,
-            authService
+            promoService
         )
     }
 
@@ -83,12 +91,8 @@ class SalesModuleIntegrationTest : BaseTest() {
             role = Role.CASHIER
         )
         val createUserRes = penggunaRepository.createPengguna(user)
+        assertTrue("User creation failed: ${createUserRes.exceptionOrNull()?.message}", createUserRes.isSuccess)
         println("createUserRes: $createUserRes")
-        if (createUserRes.isFailure) {
-            val ex = createUserRes.exceptionOrNull()
-            ex?.printStackTrace()
-            throw ex ?: AssertionError("createPengguna failed without exception")
-        }
         val userId = createUserRes.getOrNull() ?: error("user id null")
 
         // 2. Setup: Create products
@@ -99,18 +103,12 @@ class SalesModuleIntegrationTest : BaseTest() {
             val p1 = TestDataBuilder.createTestProduct(name = "Laptop", barcode = "LP001", costPrice = 5000000.0, sellingPrice = 7000000.0, stockQuantity = 10, categoryId = categoryId, warehouseId = warehouseId)
             val p2 = TestDataBuilder.createTestProduct(name = "Mouse", barcode = "MS001", costPrice = 50000.0, sellingPrice = 100000.0, stockQuantity = 50, categoryId = categoryId, warehouseId = warehouseId)
 
-        val p1Res = produkRepository.createProduk(p1)
-        if (p1Res.isFailure) {
-            p1Res.exceptionOrNull()?.printStackTrace()
-            throw p1Res.exceptionOrNull() ?: AssertionError("createProduk p1 failed without exception")
-        }
-        val p1Id = p1Res.getOrNull() ?: error("p1 id null")
-        val p2Res = produkRepository.createProduk(p2)
-        if (p2Res.isFailure) {
-            p2Res.exceptionOrNull()?.printStackTrace()
-            throw p2Res.exceptionOrNull() ?: AssertionError("createProduk p2 failed without exception")
-        }
-        val p2Id = p2Res.getOrNull() ?: error("p2 id null")
+        val p1Res = productService.createProduk(p1)
+        assertTrue("Product p1 creation failed: ${p1Res.exceptionOrNull()?.message}", p1Res.isSuccess)
+        val p1Id = p1Res.getOrNull()?.id ?: error("p1 id null")
+        val p2Res = productService.createProduk(p2)
+        assertTrue("Product p2 creation failed: ${p2Res.exceptionOrNull()?.message}", p2Res.isSuccess)
+        val p2Id = p2Res.getOrNull()?.id ?: error("p2 id null")
 
         // 3. Create sale items
         val saleItems = listOf(
@@ -140,19 +138,19 @@ class SalesModuleIntegrationTest : BaseTest() {
             cashierId = userId
         )
 
-        val saleResult = saleService.createSale(sale, saleItems)
+        val saleResult = saleService.createPenjualan(sale, saleItems)
 
         assertTrue(saleResult.isSuccess)
         val saleWithItems = saleResult.getOrNull()
         assertNotNull(saleWithItems)
 
         // 5. Verify sale data
-        assertEquals(14300000.0, saleWithItems?.penjualan?.totalAmount)
-        assertEquals(userId, saleWithItems?.penjualan?.cashierId)
+        assertEquals(14300000.0, saleWithItems?.sale?.totalAmount)
+        assertEquals(userId, saleWithItems?.sale?.cashierId)
 
         // 6. Verify stock was updated
-        val updatedProduk1 = produkRepository.getProduk(p1Id)
-        val updatedProduk2 = produkRepository.getProduk(p2Id)
+        val updatedProduk1 = produkRepository.getProdukById(p1Id).getOrNull()
+        val updatedProduk2 = produkRepository.getProdukById(p2Id).getOrNull()
 
         assertEquals(8, updatedProduk1?.stockQuantity)
         assertEquals(47, updatedProduk2?.stockQuantity)
@@ -186,7 +184,7 @@ class SalesModuleIntegrationTest : BaseTest() {
 
         val sale = Penjualan(saleDate = Date(), totalAmount = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = 1L)
 
-        val saleResult = saleService.createSale(sale, saleItems)
+        val saleResult = saleService.createPenjualan(sale, saleItems)
 
         // Should fail due to insufficient stock
         assertTrue(saleResult.isFailure)
@@ -197,7 +195,7 @@ class SalesModuleIntegrationTest : BaseTest() {
         // Create user
         val user = Pengguna(username = "cashier1", passwordHash = "hash", role = Role.CASHIER)
         val createUserRes = penggunaRepository.createPengguna(user)
-        assertTrue(createUserRes.isSuccess)
+        assertTrue("User creation failed in history test: ${createUserRes.exceptionOrNull()?.message}", createUserRes.isSuccess)
         val userId = createUserRes.getOrNull()!!
 
         // Create category and warehouse required by product
@@ -206,9 +204,9 @@ class SalesModuleIntegrationTest : BaseTest() {
 
         // Create product
         val p = TestDataBuilder.createTestProduct(name = "Laptop", stockQuantity = 100, categoryId = categoryId, warehouseId = warehouseId)
-        val pRes = produkRepository.createProduk(p)
-        assertTrue(pRes.isSuccess)
-        val pId = pRes.getOrNull()!!
+        val pRes = productService.createProduk(p)
+        assertTrue("Product creation failed in history test: ${pRes.exceptionOrNull()?.message}", pRes.isSuccess)
+        val pId = pRes.getOrNull()?.id ?: error("product id null")
 
         // Create multiple sales
         for (i in 1..3) {
@@ -224,16 +222,17 @@ class SalesModuleIntegrationTest : BaseTest() {
             )
 
             val sale = Penjualan(saleDate = Date(), totalAmount = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = userId)
-            saleService.createSale(sale, saleItems)
+            val result = saleService.createPenjualan(sale, saleItems)
+            assertTrue("Sale creation failed at iteration $i: ${result.exceptionOrNull()?.message}", result.isSuccess)
         }
 
         // Get sales history
-        val salesHistory = saleService.getSales()
+        val salesHistory = saleService.getPenjualanByRentangTanggal()
         assertTrue(salesHistory.isSuccess)
 
         val sales = salesHistory.getOrNull()
-        assertNotNull(sales)
-        assertEquals(3, sales?.size)
+        assertNotNull("Sales history should not be null", sales)
+        assertEquals("Should have exactly 3 sales in history. Found: ${sales?.size}", 3, sales?.size)
     }
 
     @Test

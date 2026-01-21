@@ -46,7 +46,7 @@ class WarehouseStockTrackingTest : BaseTest() {
             ChibyChibyDatabase::class.java
         ).allowMainThreadQueries().build()
 
-        gudangRepository = GudangRepository(database.gudangDao())
+        gudangRepository = GudangRepository(database.gudangDao(), database.produkDao())
         kategoriRepository = KategoriRepository(database.kategoriDao(), database.produkDao())
         produkRepository = ProdukRepository(database.produkDao())
         stokGudangRepository = StokGudangRepository(database.stokGudangDao(), database.produkDao())
@@ -62,16 +62,16 @@ class WarehouseStockTrackingTest : BaseTest() {
 
         // Setup users needed for logic
         runBlocking {
-            val user = Pengguna(id = 1L, username = "testuser", role = Role.ADMIN, passwordHash = "hash")
+            val user = Pengguna(id = 1L, username = "testuser", role = Role.OWNER, passwordHash = "hash")
             database.penggunaDao().insertPengguna(user)
-            database.userSessionDao().insertSession(UserSession(token = "test-token", userId = 1L, expiresAt = Date().time + 10000))
+            database.userSessionDao().insertSession(UserSession(userId = 1L))
         }
 
         warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, stokGudangRepository, authService, database)
         productService = ProductServiceImpl(produkRepository, stokGudangRepository, authService)
 
         val printerStub = com.chibychibystore.testutils.TestPrinterService()
-        val promoService = PromoServiceImpl(database.promoDao(), database.kategoriDao(), database.produkDao())
+        val promoService = PromoServiceImpl(PromotionRepository(database.promotionDao()))
 
         saleService = SaleServiceImpl(
             database,
@@ -97,7 +97,7 @@ class WarehouseStockTrackingTest : BaseTest() {
         val catId = kategoriRepository.createKategori(kategori).getOrNull()!!
 
         val gudang = Gudang(name = "Gudang Test", location = "Loc", capacity = 100)
-        val whId = warehouseService.createWarehouse(gudang).getOrNull()!!.id
+        val whId = warehouseService.createGudang(gudang).getOrNull()!!.id
 
         val initialStock = 10
         val produk = Produk(
@@ -110,7 +110,7 @@ class WarehouseStockTrackingTest : BaseTest() {
             createdAt = Date(),
             updatedAt = Date()
         )
-        val prodId = productService.createProduct(produk).getOrNull()!!.id
+        val prodId = productService.createProduk(produk).getOrNull()!!.id
 
         // Verify initial state
         val stockInitial = stokGudangRepository.getStock(prodId, whId).getOrNull()

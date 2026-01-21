@@ -54,17 +54,17 @@ class InventoryModuleIntegrationTest : BaseTest() {
         ).allowMainThreadQueries().build()
 
         // Setup repositories
-        gudangRepository = GudangRepository(database.gudangDao())
+        gudangRepository = GudangRepository(database.gudangDao(), database.produkDao())
         kategoriRepository = KategoriRepository(database.kategoriDao(), database.produkDao())
         produkRepository = ProdukRepository(database.produkDao())
-        stokGudangRepository = StokGudangRepository(database.stokGudangDao())
+        stokGudangRepository = StokGudangRepository(database.stokGudangDao(), database.produkDao())
 
         // Setup services
         val authService = Mockito.mock(com.chibychibystore.service.AuthService::class.java)
         runBlocking {
             Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
         }
-        warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, stokGudangRepository, authService)
+        warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, stokGudangRepository, authService, database)
         productService = ProductServiceImpl(produkRepository, stokGudangRepository, authService)
     }
 
@@ -89,7 +89,7 @@ class InventoryModuleIntegrationTest : BaseTest() {
             capacity = 1000,
             createdAt = Date()
         )
-        val createWarehouseResult = warehouseService.createWarehouse(gudang)
+        val createWarehouseResult = warehouseService.createGudang(gudang)
         assertTrue(createWarehouseResult.isSuccess)
 
         // 3. Create produk
@@ -106,7 +106,7 @@ class InventoryModuleIntegrationTest : BaseTest() {
             createdAt = Date(),
             updatedAt = Date()
         )
-        val createProductResult = productService.createProduct(produk)
+        val createProductResult = productService.createProduk(produk)
         assertTrue(createProductResult.isSuccess)
 
         // 4. Verify data integrity
@@ -126,15 +126,14 @@ class InventoryModuleIntegrationTest : BaseTest() {
         // 5. Update stok - use actual product id
         val createdProducts = produkRepository.getAllProduk().first()
         val existingProduct = createdProducts.firstOrNull() ?: error("No product found")
-        val updatedProduct = existingProduct.copy(stockQuantity = 15)
-        val updateRes = produkRepository.updateProduk(updatedProduct)
+        val updateRes = productService.updateStock(existingProduct.id.toString(), 15)
         assertTrue(updateRes.isSuccess)
 
         val retrievedProduct = produkRepository.getProdukById(existingProduct.id).getOrNull()
         assertEquals(15, retrievedProduct?.stockQuantity)
 
         // 6. Check warehouse stock
-        val warehouseStockResult = warehouseService.getWarehouseStock(1)
+        val warehouseStockResult = warehouseService.getStokGudang(1L)
         assertTrue(warehouseStockResult.isSuccess)
         val warehouseStock = warehouseStockResult.getOrNull()
         assertNotNull(warehouseStock)
@@ -160,8 +159,8 @@ class InventoryModuleIntegrationTest : BaseTest() {
             createdAt = Date()
         )
 
-        warehouseService.createWarehouse(gudang1)
-        warehouseService.createWarehouse(gudang2)
+        warehouseService.createGudang(gudang1)
+        warehouseService.createGudang(gudang2)
 
         val kategori = Kategori(
             id = 1L,
@@ -184,14 +183,14 @@ class InventoryModuleIntegrationTest : BaseTest() {
             createdAt = Date(),
             updatedAt = Date()
         )
-        productService.createProduct(produk)
+        productService.createProduk(produk)
 
         // Transfer 5 units from Gudang A to Gudang B
-        val transferResult = warehouseService.transferStock(
-            productId = 1,
-            fromWarehouseId = 1,
-            toWarehouseId = 2,
-            quantity = 5
+        val transferResult = warehouseService.transferStok(
+            produkId = 1L,
+            dariGudangId = 1L,
+            keGudangId = 2L,
+            jumlah = 5
         )
 
         assertTrue(transferResult.isSuccess)
@@ -223,7 +222,7 @@ class InventoryModuleIntegrationTest : BaseTest() {
             capacity = 1000,
             createdAt = Date()
         )
-        warehouseService.createWarehouse(gudang)
+        warehouseService.createGudang(gudang)
 
         // Create product with low stock
         val produk = Produk(
@@ -239,10 +238,10 @@ class InventoryModuleIntegrationTest : BaseTest() {
             createdAt = Date(),
             updatedAt = Date()
         )
-        productService.createProduct(produk)
+        productService.createProduk(produk)
 
         // Get low stock products
-        val lowStockResult = productService.getLowStockProducts()
+        val lowStockResult = productService.getLowStockProduks()
         assertTrue(lowStockResult.isSuccess)
 
         val lowStockProducts = lowStockResult.getOrNull()
@@ -269,7 +268,7 @@ class InventoryModuleIntegrationTest : BaseTest() {
             capacity = 1000,
             createdAt = Date()
         )
-        warehouseService.createWarehouse(gudang)
+        warehouseService.createGudang(gudang)
 
         val produk = Produk(
             id = 1L,
@@ -284,7 +283,7 @@ class InventoryModuleIntegrationTest : BaseTest() {
             createdAt = Date(),
             updatedAt = Date()
         )
-        productService.createProduct(produk)
+        productService.createProduk(produk)
 
         // Search by barcode
         val searchResult = produkRepository.getProdukByBarcode("LP001")

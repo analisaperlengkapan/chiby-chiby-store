@@ -37,7 +37,7 @@ class PenggunaRepositoryTest {
         whenever(mockPenggunaDao.getPenggunaById(1)).thenReturn(testUser)
 
         // When
-        val result = repository.getPenggunaById(1)
+        val result = repository.getUserById(1)
 
         // Then
         assertTrue(result.isSuccess)
@@ -50,7 +50,7 @@ class PenggunaRepositoryTest {
         whenever(mockPenggunaDao.getPenggunaById(999)).thenReturn(null)
 
         // When
-        val result = repository.getPenggunaById(999)
+        val result = repository.getUserById(999)
 
         // Then
         assertTrue(result.isFailure)
@@ -64,7 +64,7 @@ class PenggunaRepositoryTest {
         whenever(mockPenggunaDao.getPenggunaByUsername("testuser")).thenReturn(testUser)
 
         // When
-        val result = repository.getPenggunaByUsername("testuser")
+        val result = repository.getUserByUsername("testuser")
 
         // Then
         assertTrue(result.isSuccess)
@@ -127,7 +127,7 @@ class PenggunaRepositoryTest {
         whenever(mockPenggunaDao.getPenggunaByUsername("updateduser")).thenReturn(null)
 
         // When
-        val result = repository.updatePengguna(updatedUser)
+        val result = repository.updateUser(updatedUser)
 
         // Then
         assertTrue(result.isSuccess)
@@ -140,7 +140,7 @@ class PenggunaRepositoryTest {
         whenever(mockPenggunaDao.getPenggunaById(999)).thenReturn(null)
 
         // When
-        val result = repository.updatePengguna(updatedUser)
+        val result = repository.updateUser(updatedUser)
 
         // Then
         assertTrue(result.isFailure)
@@ -155,7 +155,7 @@ class PenggunaRepositoryTest {
         whenever(mockPenggunaDao.getAllPengguna()).thenReturn(flowOf(listOf(testUser, testUser.copy(id = 2, role = Role.OWNER))))
 
         // When
-        val result = repository.deletePengguna(1)
+        val result = repository.deleteUser(1)
 
         // Then
         assertTrue(result.isSuccess)
@@ -165,11 +165,11 @@ class PenggunaRepositoryTest {
     fun `deletePengguna with last owner should fail`() = runTest {
         // Given - only one owner exists
         val ownerUser = testUser.copy(role = Role.OWNER)
-        whenever(mockPenggunaDao.getPenggunaById(1)).thenReturn(ownerUser)
+        whenever(mockPenggunaDao.getPenggunaById(1L)).thenReturn(ownerUser)
         whenever(mockPenggunaDao.getAllPengguna()).thenReturn(flowOf(listOf(ownerUser)))
 
         // When
-        val result = repository.deletePengguna(1)
+        val result = repository.deleteUser(1)
 
         // Then
         assertTrue(result.isFailure)
@@ -183,7 +183,7 @@ class PenggunaRepositoryTest {
         whenever(mockPenggunaDao.getPenggunaCount()).thenReturn(5)
 
         // When
-        val result = repository.getPenggunaCount()
+        val result = repository.getUserCount()
 
         // Then
         assertTrue(result.isSuccess)

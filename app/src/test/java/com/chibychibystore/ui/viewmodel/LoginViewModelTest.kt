@@ -1,12 +1,8 @@
 package com.chibychibystore.ui.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import com.chibychibystore.usecase.AuthUseCases
-import com.chibychibystore.usecase.ChangePasswordUseCase
-import com.chibychibystore.usecase.CheckPermissionUseCase
-import com.chibychibystore.usecase.GetCurrentUserUseCase
-import com.chibychibystore.usecase.LoginUseCase
-import com.chibychibystore.usecase.LogoutUseCase
+import com.chibychibystore.service.AuthService
+import com.chibychibystore.ui.auth.LoginViewModel
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
 import kotlinx.coroutines.Dispatchers
@@ -34,23 +30,15 @@ class LoginViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
 
-    private lateinit var authUseCases: AuthUseCases
-    private lateinit var loginUseCase: LoginUseCase
+    private lateinit var authService: AuthService
     private lateinit var viewModel: LoginViewModel
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
 
-        loginUseCase = mock()
-        authUseCases = AuthUseCases(
-            login = loginUseCase,
-            logout = mock(),
-            changePassword = mock(),
-            getCurrentUser = mock(),
-            checkPermission = mock()
-        )
-        viewModel = LoginViewModel(authUseCases)
+        authService = mock()
+        viewModel = LoginViewModel(authService)
     }
 
     @After
@@ -120,7 +108,7 @@ class LoginViewModelTest {
             permissions = "[]"
         )
 
-        whenever(loginUseCase.invoke(username, password)).thenReturn(com.chibychibystore.data.model.Result.success(user))
+        whenever(authService.login(username, password)).thenReturn(com.chibychibystore.data.model.Result.success(user))
 
         viewModel.onUsernameChange(username)
         viewModel.onPasswordChange(password)
@@ -141,7 +129,7 @@ class LoginViewModelTest {
         val password = "wrongpass"
         val errorMessage = "Invalid credentials"
 
-        whenever(loginUseCase.invoke(username, password)).thenReturn(
+        whenever(authService.login(username, password)).thenReturn(
             com.chibychibystore.data.model.Result.failure(Exception(errorMessage))
         )
 

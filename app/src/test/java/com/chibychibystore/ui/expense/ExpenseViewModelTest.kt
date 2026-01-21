@@ -1,6 +1,6 @@
 package com.chibychibystore.ui.expense
 
-import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.service.ExpenseService
@@ -36,8 +36,8 @@ class ExpenseViewModelTest {
 
         // Mock successful response
         kotlinx.coroutines.runBlocking {
-            `when`(expenseService.getExpenses(anyOrNull(), anyOrNull(), anyOrNull()))
-                .thenReturn(Result.Success(emptyList()))
+            `when`(expenseService.getPengeluarans(anyOrNull(), anyOrNull(), anyOrNull()))
+                .thenReturn(Result.success(emptyList()))
         }
 
         viewModel = ExpenseViewModel(expenseService)
@@ -49,12 +49,13 @@ class ExpenseViewModelTest {
     }
 
     @Test
-    fun `setFilters updates uiState and reloads expenses`() = runTest {
+    fun `setDateRange and setCategory updates uiState and reloads expenses`() = runTest {
         val startDate = Date()
         val endDate = Date()
-        val category = ExpenseCategory.OPERATING_EXPENSE_CATEGORIES.first()
+        val category = KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES.first()
 
-        viewModel.setFilters(startDate, endDate, category)
+        viewModel.setDateRange(startDate, endDate)
+        viewModel.setCategory(category)
 
         val state = viewModel.uiState.first()
         assertEquals(startDate, state.startDate)
@@ -63,14 +64,16 @@ class ExpenseViewModelTest {
     }
 
     @Test
-    fun `resetFilters clears filters and reloads expenses`() = runTest {
+    fun `manual reset clears filters`() = runTest {
         // Set some filters first
         val startDate = Date()
-        val category = ExpenseCategory.OPERATING_EXPENSE_CATEGORIES.first()
-        viewModel.setFilters(startDate, startDate, category)
+        val category = KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES.first()
+        viewModel.setDateRange(startDate, startDate)
+        viewModel.setCategory(category)
 
-        // Reset
-        viewModel.resetFilters()
+        // Reset manually
+        viewModel.setCategory(null)
+        viewModel.setDateRange(null, null)
 
         val state = viewModel.uiState.first()
         assertEquals(null, state.startDate)
@@ -79,9 +82,9 @@ class ExpenseViewModelTest {
     }
 
     @Test
-    fun `setCategoryFilter updates only category`() = runTest {
-         val category = ExpenseCategory.INVENTORY_PURCHASES
-         viewModel.setCategoryFilter(category)
+    fun `setCategory updates only category`() = runTest {
+         val category = KategoriPengeluaran.INVENTORY_PURCHASES
+         viewModel.setCategory(category)
 
          val state = viewModel.uiState.first()
          assertEquals(category, state.selectedCategory)

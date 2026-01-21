@@ -13,8 +13,14 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.mockito.Mockito
 import java.util.Date
+import com.chibychibystore.service.impl.SaleServiceImpl
+import com.chibychibystore.repository.StokGudangRepository
+import com.chibychibystore.service.PromoService
+import com.chibychibystore.data.local.database.ChibyChibyDatabase
 
 class SaleServiceUnitTest {
+
+
 
     @Test
     fun refund_onAlreadyRefundedSale_returnsFailure() = runBlocking {
@@ -38,16 +44,29 @@ class SaleServiceUnitTest {
         val produkRepo = Mockito.mock(ProdukRepository::class.java)
         val printer = Mockito.mock(PrinterService::class.java)
         val authService = Mockito.mock(AuthService::class.java)
+        val db = Mockito.mock(ChibyChibyDatabase::class.java)
+        val stokGudangRepo = Mockito.mock(StokGudangRepository::class.java)
+        val promoService = Mockito.mock(PromoService::class.java)
+
         runBlocking {
             Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
         }
 
-        val service = SaleServiceImpl(penjualanRepo, itemRepo, produkRepo, printer, authService)
+        val service = SaleServiceImpl(
+            db,
+            penjualanRepo,
+            itemRepo,
+            produkRepo,
+            stokGudangRepo,
+            authService,
+            printer,
+            promoService
+        )
 
-        val res = service.refundSale(penjualanId)
+        val res = service.refundPenjualan(penjualanId)
         assertTrue(res.isFailure)
         val ex = res.exceptionOrNull()
         assertNotNull(ex)
-        assertTrue(ex!!.message!!.contains("sudah direfund"))
+        assertTrue(ex?.message?.contains("sudah direfund") == true)
     }
 }
