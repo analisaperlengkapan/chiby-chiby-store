@@ -5,6 +5,7 @@ import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.PenjualanWithItems
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.data.model.StockAdjustment
 import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.constant.AppConstants
@@ -100,15 +101,14 @@ class SaleServiceImpl @Inject constructor(
                 val result = penjualanRepository.createPenjualan(saleToSave, items)
 
                 if (result is Result.Success) {
-                     // If sale created, adjust stocks
-                     for (item in items) {
-                         val warehouseId = sale.warehouseId
-                         // Adjust stock in the specific warehouse
-                         val stockResult = stokGudangRepository.adjustStock(item.productId, warehouseId, -item.quantity)
-                         if (stockResult is Result.Failure) {
-                             throw stockResult.exception
-                         }
-                     }
+                    // Batch adjust stocks
+                    val adjustments = items.map {
+                        StockAdjustment(it.productId, sale.warehouseId, -it.quantity)
+                    }
+                    val stockResult = stokGudangRepository.adjustStockBatch(adjustments)
+                    if (stockResult is Result.Failure) {
+                        throw stockResult.exception
+                    }
                 } else if (result is Result.Failure) {
                     throw result.exception
                 }
@@ -186,13 +186,24 @@ class SaleServiceImpl @Inject constructor(
             penjualanRepository.updatePenjualan(updatedPenjualan)
 
             val warehouseId = saleWithItems.sale.warehouseId
+            val adjustments = mutableListOf<StockAdjustment>()
+            val fallbackItems = mutableListOf<ItemPenjualan>()
+
             saleWithItems.items.forEach { item ->
                 val productResult = productRepository.getProdukById(item.productId)
                 if (productResult is Result.Success && productResult.data != null) {
-                    stokGudangRepository.adjustStock(item.productId, warehouseId, item.quantity)
+                    adjustments.add(StockAdjustment(item.productId, warehouseId, item.quantity))
                 } else {
-                    productRepository.adjustStock(item.productId, item.quantity)
+                    fallbackItems.add(item)
                 }
+            }
+
+            if (adjustments.isNotEmpty()) {
+                stokGudangRepository.adjustStockBatch(adjustments)
+            }
+
+            fallbackItems.forEach { item ->
+                productRepository.adjustStock(item.productId, item.quantity)
             }
 
             Result.success(Unit)

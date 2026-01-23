@@ -5,6 +5,7 @@ import com.chibychibystore.data.local.dao.StokGudangDao
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.local.entity.StokGudang
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.data.model.StockAdjustment
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -68,6 +69,19 @@ class StokGudangRepository @Inject constructor(
             // Sync total stock in Produk table
             updateProductTotalStock(productId)
 
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun adjustStockBatch(adjustments: List<StockAdjustment>): Result<Unit> {
+        return try {
+            stokGudangDao.adjustStockBatch(adjustments)
+            val productIds = adjustments.map { it.productId }.distinct()
+            for (productId in productIds) {
+                updateProductTotalStock(productId)
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

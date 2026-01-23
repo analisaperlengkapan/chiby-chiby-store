@@ -3,6 +3,7 @@ package com.chibychibystore.data.local.dao
 import androidx.room.*
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.local.entity.StokGudang
+import com.chibychibystore.data.model.StockAdjustment
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -27,6 +28,13 @@ interface StokGudangDao {
 
     @Query("UPDATE stok_gudang SET quantity = quantity + :delta WHERE productId = :productId AND warehouseId = :warehouseId")
     suspend fun adjustStock(productId: Long, warehouseId: Long, delta: Int)
+
+    @Transaction
+    suspend fun adjustStockBatch(adjustments: List<StockAdjustment>) {
+        for (adj in adjustments) {
+            adjustStock(adj.productId, adj.warehouseId, adj.delta)
+        }
+    }
 
     @Query("DELETE FROM stok_gudang WHERE productId = :productId AND warehouseId = :warehouseId")
     suspend fun deleteStock(productId: Long, warehouseId: Long)
