@@ -6,48 +6,15 @@ import java.time.LocalDate
 
 /**
  * Interface untuk Reporting Service
- * 
- * Service ini menangani semua operasi pelaporan bisnis:
- * - Laporan penjualan harian/bulanan
- * - Laporan keuangan
- * - Laporan inventory
- * - Analisis performa
  */
 interface ReportingService {
     
-    /**
-     * Mendapatkan laporan penjualan harian
-     */
     suspend fun getDailySalesReport(date: LocalDate): Result<LaporanPenjualanHarian>
-    
-    /**
-     * Mendapatkan laporan penjualan bulanan
-     */
     suspend fun getMonthlySalesReport(year: Int, month: Int): Result<LaporanPenjualanBulanan>
-    
-    /**
-     * Mendapatkan laporan keuangan
-     */
     suspend fun getFinancialReport(startDate: LocalDate, endDate: LocalDate): Result<LaporanKeuangan>
-    
-    /**
-     * Mendapatkan laporan inventory
-     */
     suspend fun getInventoryReport(): Result<LaporanStok>
-    
-    /**
-     * Mendapatkan top selling products
-     */
     suspend fun getTopSellingProducts(limit: Int = 10): Result<List<DataPenjualanProduk>>
-    
-    /**
-     * Mendapatkan low stock products
-     */
     suspend fun getLowStockReport(): Result<List<ProdukStokRendah>>
-    
-    /**
-     * Observable untuk real-time sales metrics
-     */
     fun observeSalesMetrics(): Flow<MetrikPenjualan>
 
     // Additional helper reporting methods used by UI and PDF export
@@ -63,7 +30,7 @@ interface ReportingService {
     suspend fun getBalanceSheet(asOfDate: LocalDate): Result<NeracaSaldo>
 }
 
-// DTOs for Reporting
+// DTOs for Reporting (Indonesian)
 
 data class LaporanPenjualanKotor(
     val totalPenjualan: Double,
@@ -90,8 +57,8 @@ data class PenjualanProduk(
     val namaProduk: String,
     val jumlahTerjual: Int,
     val totalPendapatan: Double,
-    val totalBiaya: Double,
-    val laba: Double
+    val totalBiaya: Double = 0.0,
+    val laba: Double = 0.0
 )
 
 data class PenjualanKategori(
@@ -103,9 +70,6 @@ data class PenjualanKategori(
     val laba: Double
 )
 
-/**
- * Data class representing sales trend for a specific date.
- */
 data class DataTren(
     val tanggal: LocalDate,
     val penjualan: Double,
@@ -114,7 +78,7 @@ data class DataTren(
 
 data class LaporanLabaRugi(
     val pendapatan: Double,
-    val hargaPokokPenjualan: Double, // COGS
+    val hargaPokokPenjualan: Double,
     val labaKotor: Double,
     val bebanOperasional: Double,
     val labaBersih: Double
@@ -142,9 +106,6 @@ data class ArusKas(
     val periode: String? = null
 )
 
-/**
- * Data classes untuk basic reporting
- */
 data class LaporanPenjualanHarian(
     val tanggal: LocalDate,
     val totalPenjualan: Double,
@@ -181,19 +142,19 @@ data class LaporanStok(
     val rincianKategori: List<DataStokKategori>
 )
 
-data class DataPenjualanProduk(
-    val produkId: Long,
-    val namaProduk: String,
-    val jumlahTerjual: Int,
-    val totalPendapatan: Double
-)
-
 data class ProdukStokRendah(
     val produkId: Long,
     val namaProduk: String,
     val stokSaatIni: Int,
     val stokMinimal: Int,
     val jumlahPesanKembali: Int
+)
+
+data class DataPenjualanProduk(
+    val produkId: Long,
+    val namaProduk: String,
+    val jumlahTerjual: Int,
+    val totalPendapatan: Double
 )
 
 data class DataPenjualanHarian(
@@ -213,5 +174,5 @@ data class MetrikPenjualan(
     val penjualanHariIni: Double,
     val transaksiHariIni: Int,
     val penjualanBulanIni: Double,
-    val rataRataNilaiTransaksi: Double
+    val rataRataTransaksi: Double
 )

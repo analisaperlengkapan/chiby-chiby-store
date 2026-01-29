@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.chibychibystore.data.local.entity.User
+import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.ui.components.UserManagementDialogs
 import com.chibychibystore.ui.components.shared.AppTopBar
@@ -187,7 +187,7 @@ fun UserListScreen(
         onCreateUser = viewModel::createUser,
         onUpdateUser = viewModel::updateUser,
         onDeleteUser = viewModel::deleteUser,
-        onResetPassword = viewModel::resetUserPassword,
+        onResetPassword = viewModel::resetPassword, // Match VM method name
         onDismissCreate = viewModel::hideCreateUserDialog,
         onDismissEdit = viewModel::hideEditUserDialog,
         onDismissDelete = viewModel::hideDeleteUserDialog,
@@ -199,8 +199,8 @@ fun UserListScreen(
         onEditUsernameChange = viewModel::onEditUserUsernameChange,
         onEditRoleChange = viewModel::onEditUserRoleChange,
         onEditIsActiveChange = viewModel::onEditUserIsActiveChange,
-        onResetPasswordChange = viewModel::onResetPasswordChange,
-        onResetPasswordConfirmChange = viewModel::onResetPasswordConfirmChange
+        onResetPasswordChange = viewModel::onResetPasswordNewPasswordChange,
+        onResetPasswordConfirmChange = viewModel::onResetPasswordConfirmPasswordChange
     )
 
     // Handle errors and success messages
@@ -213,7 +213,7 @@ fun UserListScreen(
                     withDismissAction = true
                 )
             }
-            viewModel.clearError()
+            viewModel.clearMessages()
         }
     }
 
@@ -226,6 +226,7 @@ fun UserListScreen(
                     withDismissAction = true
                 )
             }
+            viewModel.clearMessages()
         }
     }
 }
@@ -258,7 +259,7 @@ private fun UserStatCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun UserListItem(
-    user: User,
+    user: Pengguna,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,

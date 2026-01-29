@@ -7,7 +7,6 @@ import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.PengeluaranRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
@@ -61,7 +60,6 @@ class ExpenseServiceImpl @Inject constructor(
             val startDateObj = Date.from(start.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val endDateObj = Date.from(end.atStartOfDay(ZoneId.systemDefault()).plusDays(1).minusNanos(1).toInstant())
 
-<<<<<<< HEAD
             val expenses = if (kategori != null) {
                 try {
                     val catEnum = KategoriPengeluaran.valueOf(kategori)
@@ -71,22 +69,9 @@ class ExpenseServiceImpl @Inject constructor(
                 }
             } else {
                 expenseRepository.getPengeluaransByDateRangeList(startDateObj, endDateObj)
-=======
-            val expenses = expenseRepository.getExpensesByDateRange(startDateObj, endDateObj).first()
-            
-            val filteredExpenses = if (category != null) {
-                try {
-                    val catEnum = ExpenseCategory.valueOf(category)
-                    expenses.filter { it.category == catEnum }
-                } catch (e: Exception) {
-                    expenses
-                }
-            } else {
-                expenses
->>>>>>> feat/ui-overhaul
             }
 
-            Result.success(filteredExpenses)
+            Result.success(expenses)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getPengeluarans", e))
         }
@@ -97,11 +82,7 @@ class ExpenseServiceImpl @Inject constructor(
             val startDateObj = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val endDateObj = Date.from(endDate.atStartOfDay(ZoneId.systemDefault()).plusDays(1).minusNanos(1).toInstant())
 
-<<<<<<< HEAD
             val total = expenseRepository.getTotalPengeluaranAmount(startDateObj, endDateObj).getOrNull() ?: 0.0
-=======
-            val total = expenseRepository.getTotalExpense(startDateObj, endDateObj).getOrNull() ?: 0.0
->>>>>>> feat/ui-overhaul
             Result.success(total)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getTotalPengeluarans", e))

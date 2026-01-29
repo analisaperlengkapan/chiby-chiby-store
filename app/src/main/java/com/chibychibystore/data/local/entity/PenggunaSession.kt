@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 import java.util.Date
 
 @Entity(tableName = "user_sessions")
-data class UserSession(
+data class PenggunaSession(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val userId: Long,

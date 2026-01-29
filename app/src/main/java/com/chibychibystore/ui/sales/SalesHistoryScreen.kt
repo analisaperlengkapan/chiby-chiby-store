@@ -16,11 +16,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.PaymentMethod
-<<<<<<< HEAD
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.PenjualanWithItems
-=======
->>>>>>> feat/ui-overhaul
 import com.chibychibystore.ui.components.*
 import com.chibychibystore.ui.components.shared.LoadingIndicator
 import com.chibychibystore.ui.theme.ChibyPinkPrimary
@@ -201,11 +198,7 @@ private fun EmptyState(icon: androidx.compose.ui.graphics.vector.ImageVector, ti
 
 @Composable
 private fun SaleItem(
-<<<<<<< HEAD
     sale: Penjualan,
-=======
-    sale: com.chibychibystore.data.local.entity.Sale,
->>>>>>> feat/ui-overhaul
     onClick: () -> Unit,
     dateFormat: SimpleDateFormat,
     currencyFormat: NumberFormat
@@ -235,11 +228,7 @@ private fun SaleItem(
                 }
 
                 Text(
-<<<<<<< HEAD
                     currencyFormat.format(sale.totalAmount),
-=======
-                    "Penjualan #${sale.id}",
->>>>>>> feat/ui-overhaul
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = ChibyPinkPrimary
@@ -281,11 +270,7 @@ private fun SaleItem(
 
 @Composable
 private fun ReceiptDialog(
-<<<<<<< HEAD
     saleWithItems: PenjualanWithItems,
-=======
-    saleWithItems: com.chibychibystore.data.local.entity.SaleWithItems,
->>>>>>> feat/ui-overhaul
     isPrinting: Boolean,
     onPrintReceipt: () -> Unit,
     onDismiss: () -> Unit,
@@ -299,15 +284,10 @@ private fun ReceiptDialog(
             Column {
                 Text("Tanggal: ${dateFormat.format(saleWithItems.sale.saleDate)}")
                 Text("Metode: ${saleWithItems.sale.paymentMethod.name}")
-<<<<<<< HEAD
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Produk:", fontWeight = FontWeight.Bold)
                 
-=======
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider()
->>>>>>> feat/ui-overhaul
                 LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
                     items(saleWithItems.items) { item ->
                         Row(

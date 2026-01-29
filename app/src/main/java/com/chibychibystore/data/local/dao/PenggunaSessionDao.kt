@@ -5,25 +5,25 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import com.chibychibystore.data.local.entity.UserSession
+import com.chibychibystore.data.local.entity.PenggunaSession
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface UserSessionDao {
+interface PenggunaSessionDao {
     @Query("SELECT * FROM user_sessions WHERE isActive = 1 ORDER BY loginTime DESC LIMIT 1")
-    suspend fun getActiveSession(): UserSession?
+    suspend fun getActiveSession(): PenggunaSession?
 
     @Query("SELECT * FROM user_sessions WHERE userId = :userId AND isActive = 1 ORDER BY loginTime DESC LIMIT 1")
-    suspend fun getActiveSessionForUser(userId: Long): UserSession?
+    suspend fun getActiveSessionForUser(userId: Long): PenggunaSession?
 
     @Query("SELECT * FROM user_sessions WHERE isActive = 1")
-    fun getAllActiveSessions(): Flow<List<UserSession>>
+    fun getAllActiveSessions(): Flow<List<PenggunaSession>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSession(session: UserSession): Long
+    suspend fun insertSession(session: PenggunaSession): Long
 
     @Update
-    suspend fun updateSession(session: UserSession)
+    suspend fun updateSession(session: PenggunaSession)
 
     @Query("UPDATE user_sessions SET isActive = 0 WHERE userId = :userId")
     suspend fun deactivateUserSessions(userId: Long)

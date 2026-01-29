@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -17,22 +18,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-<<<<<<< HEAD
 import com.chibychibystore.data.local.entity.Produk
-=======
 import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.ui.theme.Success
-import com.chibychibystore.data.local.entity.Product
->>>>>>> feat/ui-overhaul
 import com.chibychibystore.ui.components.ChibyButton
 import com.chibychibystore.ui.components.ChibyCard
 import com.chibychibystore.ui.components.ChibyInput
 import com.chibychibystore.ui.components.ChibyScaffold
 import com.chibychibystore.ui.components.shared.LoadingIndicator
-import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.ui.theme.ChibyPinkPrimary
 import com.chibychibystore.ui.theme.Error
-import com.chibychibystore.ui.theme.Success
 import com.chibychibystore.ui.theme.White
 import java.text.NumberFormat
 import java.util.Locale
@@ -47,7 +42,6 @@ fun PosScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val formatCurrency = rememberCurrencyFormatter()
 
-<<<<<<< HEAD
     // Listen for scan results from BarcodeScannerScreen
     val currentBackStackEntry = navController.currentBackStackEntry
     val savedStateHandle = currentBackStackEntry?.savedStateHandle
@@ -59,9 +53,6 @@ fun PosScreen(
             savedStateHandle?.remove<String>("scanned_barcode")
         }
     }
-
-=======
->>>>>>> feat/ui-overhaul
     ChibyScaffold(
         title = "Point of Sale",
         onNavigateUp = { navController.navigateUp() }
@@ -194,11 +185,7 @@ fun PosScreen(
 private fun ProductSearchPanel(
     searchResults: List<Produk>,
     isSearching: Boolean,
-<<<<<<< HEAD
     onProductClick: (Produk) -> Unit,
-=======
-    onProductClick: (Product) -> Unit,
->>>>>>> feat/ui-overhaul
     formatCurrency: (Double) -> String
 ) {
     if (isSearching) {

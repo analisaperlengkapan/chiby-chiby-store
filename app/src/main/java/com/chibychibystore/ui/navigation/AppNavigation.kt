@@ -24,6 +24,7 @@ import com.chibychibystore.ui.auth.LoginScreen
 import com.chibychibystore.ui.expense.ExpenseListScreen
 import com.chibychibystore.ui.expense.ExpenseDetailScreen
 import com.chibychibystore.ui.expense.ExpenseAddScreen
+import com.chibychibystore.ui.user.UserListScreen
 import com.chibychibystore.ui.user.UserDetailScreen
 import com.chibychibystore.ui.supplier.SupplierListScreen
 import javax.inject.Inject
@@ -201,17 +202,7 @@ fun AppNavigation(
 
         composable(Screen.UserList.route) {
             AuthGuard(authService = authService) {
-                UserManagementScreen(
-                    drawerState = drawerState,
-                    currentRoute = Screen.UserList.route,
-                    onNavigateToRoute = { route ->
-                        navController.navigate(route) {
-                            popUpTo(Screen.UserList.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
+                UserListScreen(navController = navController)
             }
         }
 

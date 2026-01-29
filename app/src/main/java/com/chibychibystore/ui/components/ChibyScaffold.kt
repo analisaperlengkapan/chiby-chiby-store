@@ -30,6 +30,7 @@ fun ChibyScaffold(
     actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
+    snackbarHost: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
     Scaffold(
@@ -60,16 +61,16 @@ fun ChibyScaffold(
             )
         },
         floatingActionButton = floatingActionButton,
-        bottomBar = bottomBar, // No change
-        containerColor = Neutral99 // No change
-    ) { paddingValues -> // No change
-        Box( // No change
-            modifier = Modifier // No change
-                .fillMaxSize() // No change
-                .background(Neutral99) // No change
-        ) { // No change
-            content(paddingValues) // No change
-        } // No change
-    } // No change
+        bottomBar = bottomBar,
+        snackbarHost = snackbarHost,
+        containerColor = Neutral99
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Neutral99)
+        ) {
+            content(paddingValues)
+        }
+    }
 }
-

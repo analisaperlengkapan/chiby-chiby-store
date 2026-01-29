@@ -1,7 +1,7 @@
 package com.chibychibystore.service.printer
 
-import com.chibychibystore.data.local.entity.SaleItem
-import com.chibychibystore.data.local.entity.SaleWithItems
+import com.chibychibystore.data.local.entity.ItemPenjualan
+import com.chibychibystore.data.local.entity.PenjualanWithItems
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -18,7 +18,7 @@ object ReceiptFormatter {
      * Format sale data untuk receipt printing
      */
     fun formatSaleForReceipt(
-        saleWithItems: SaleWithItems,
+        saleWithItems: PenjualanWithItems,
         storeName: String = "Chiby Chiby Store",
         storeAddress: String = "Jl. Example No. 123, Jakarta",
         cashierName: String = "Kasir"
@@ -34,7 +34,6 @@ object ReceiptFormatter {
 
         val subtotal = items.sumOf { it.totalPrice }
         val tax = saleWithItems.sale.tax
-        // Discount is calculated by PromoService and stored in the Penjualan entity
         val discount = saleWithItems.sale.discount
         val total = saleWithItems.sale.totalAmount
 

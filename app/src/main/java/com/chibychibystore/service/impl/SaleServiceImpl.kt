@@ -43,83 +43,11 @@ class SaleServiceImpl @Inject constructor(
             return Result.failure(Exception("Item penjualan tidak boleh kosong"))
         }
 
-<<<<<<< HEAD
         return try {
             db.withTransaction {
                 var calculatedSubtotal = 0.0
                 items.forEach { item ->
                     calculatedSubtotal += item.quantity * item.unitPrice
-=======
-        // 2. Validate calculations (ensure backend math matches frontend)
-        var calculatedSubtotal = 0.0
-        items.forEach { item ->
-            calculatedSubtotal += item.quantity * item.unitPrice
-        }
-
-        // Calculate expected total based on passed tax/discount vs calculated subtotal
-        val calculatedTax = calculatedSubtotal * AppConstants.TAX_RATE
-        val expectedTotal = calculatedSubtotal + calculatedTax - sale.discount
-
-        // Validation: Verify if the passed totalAmount matches our calculation
-        if (kotlin.math.abs(expectedTotal - sale.totalAmount) > 1.0) {
-            // Log discrepancy if needed
-        }
-
-        // Validate stock availability
-        val productIds = items.map { it.productId }.distinct()
-        val productsResult = productRepository.getProductByIds(productIds)
-        if (productsResult is Result.Failure) throw productsResult.exception
-        val productsMap = (productsResult as Result.Success).data.associateBy { it.id }
-
-        items.forEach { item ->
-            val product = productsMap[item.productId]
-                ?: throw Exception("Product dengan ID ${item.productId} tidak ditemukan")
-
-            if (product.stockQuantity < item.quantity) {
-                throw Exception("Stok tidak mencukupi untuk product: ${product.name}. Sisa: ${product.stockQuantity}, Diminta: ${item.quantity}")
-            }
-        }
-
-        // Update sale total amount and date
-        val finalTax = calculatedSubtotal * AppConstants.TAX_RATE
-        val finalTotal = kotlin.math.max(0.0, calculatedSubtotal + finalTax - sale.discount)
-
-        val saleToSave = sale.copy(
-            totalAmount = finalTotal,
-            tax = finalTax,
-            saleDate = Date()
-        )
-
-        // Run in transaction via Repository
-        return saleRepository.runInTransaction {
-            // 3. Save Sale Header
-            // createSale in repo returns SaleWithItems (which it shouldn't if it's just creating header?
-            // Wait, repo.createSale takes sale and items. It handles everything including transaction.)
-
-            // Actually, I updated SaleRepository.createSale to take Sale and List<SaleItem> and do everything.
-            // So I can just call that.
-
-            // However, SaleRepository.createSale might duplicate some logic or not check stock?
-            // SaleRepository.createSale inserts data. It does NOT update stock.
-            // So I should stick to manual steps here OR move stock update to Repository (but stock update is business logic involving ProductRepository).
-            // Business logic belongs in Service. So I keep stock update here.
-
-            // But wait, if I use `saleRepository.createSale` which inserts both, I need to call it.
-            // Let's check `SaleRepository.createSale` implementation again.
-            // It inserts Sale and Items. It does NOT update stock.
-
-            // So I can call `saleRepository.createSale` and then update stock.
-
-            val result = saleRepository.createSale(saleToSave, items)
-            val saleWithItems = (result as? Result.Success)?.data ?: throw (result as? Result.Failure)?.exception ?: Exception("Gagal membuat data penjualan")
-
-            // 5. Update Stock (Atomically for each item)
-            for (item in items) {
-                // Update Stock (Subtract)
-                val stockResult = productRepository.adjustStock(item.productId, -item.quantity)
-                if (stockResult is Result.Failure) {
-                    throw stockResult.exception
->>>>>>> feat/ui-overhaul
                 }
 
                 val finalTax = calculatedSubtotal * AppConstants.TAX_RATE
@@ -151,7 +79,7 @@ class SaleServiceImpl @Inject constructor(
                      val stockMap = if (stockResult is Result.Success) {
                          stockResult.data.associateBy { it.productId }
                      } else {
-                         throw stockResult.exceptionOrNull() ?: Exception("Gagal mengambil data stok")
+                         throw (stockResult as Result.Failure).exception
                      }
 
                      for ((productId, requiredQty) in requiredQuantities) {
@@ -257,7 +185,6 @@ class SaleServiceImpl @Inject constructor(
             val updatedPenjualan = saleWithItems.sale.copy(isRefunded = true)
             penjualanRepository.updatePenjualan(updatedPenjualan)
 
-<<<<<<< HEAD
             val warehouseId = saleWithItems.sale.warehouseId
             saleWithItems.items.forEach { item ->
                 val productResult = productRepository.getProdukById(item.productId)
@@ -265,17 +192,6 @@ class SaleServiceImpl @Inject constructor(
                     stokGudangRepository.adjustStock(item.productId, warehouseId, item.quantity)
                 } else {
                     productRepository.adjustStock(item.productId, item.quantity)
-=======
-            if (updateResult is Result.Failure) {
-                throw updateResult.exception
-            }
-
-            // Restore stock
-            saleWithItems.items.forEach { item ->
-                val stockResult = productRepository.adjustStock(item.productId, item.quantity)
-                if (stockResult is Result.Failure) {
-                    throw stockResult.exception
->>>>>>> feat/ui-overhaul
                 }
             }
 

@@ -1,7 +1,7 @@
 package com.chibychibystore.data.local.database
 
 import androidx.room.TypeConverter
-import com.chibychibystore.data.local.entity.ExpenseCategory
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.local.entity.PaymentMethod
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.data.local.entity.PromotionType
@@ -39,7 +39,6 @@ class Converters {
     }
 
     @TypeConverter
-<<<<<<< HEAD
     fun fromPromotionType(value: String?): PromotionType? {
         return value?.let { PromotionType.valueOf(it) }
     }
@@ -47,14 +46,15 @@ class Converters {
     @TypeConverter
     fun promotionTypeToString(type: PromotionType?): String? {
         return type?.name
-=======
-    fun fromExpenseCategory(value: String?): ExpenseCategory? {
-        return value?.let { ExpenseCategory.valueOf(it) }
     }
 
     @TypeConverter
-    fun expenseCategoryToString(category: ExpenseCategory?): String? {
+    fun fromKategoriPengeluaran(value: String?): KategoriPengeluaran? {
+        return value?.let { KategoriPengeluaran.valueOf(it) }
+    }
+
+    @TypeConverter
+    fun kategoriPengeluaranToString(category: KategoriPengeluaran?): String? {
         return category?.name
->>>>>>> feat/ui-overhaul
     }
 }

@@ -18,7 +18,7 @@ import com.chibychibystore.data.local.entity.*
         Penjualan::class,
         ItemPenjualan::class,
         Pengeluaran::class,
-        UserSession::class,
+        PenggunaSession::class,
         StokGudang::class,
         Promotion::class
     ],
@@ -37,7 +37,7 @@ abstract class ChibyChibyDatabase : RoomDatabase() {
     abstract fun penjualanDao(): PenjualanDao
     abstract fun itemPenjualanDao(): ItemPenjualanDao
     abstract fun pengeluaranDao(): PengeluaranDao
-    abstract fun userSessionDao(): UserSessionDao
+    abstract fun penggunaSessionDao(): PenggunaSessionDao
     abstract fun stokGudangDao(): StokGudangDao
     abstract fun promotionDao(): PromotionDao
 }

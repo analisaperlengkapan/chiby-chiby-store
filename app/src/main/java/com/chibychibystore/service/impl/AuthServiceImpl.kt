@@ -1,8 +1,8 @@
 package com.chibychibystore.service.impl
 
 import com.chibychibystore.service.AuthService
-import com.chibychibystore.repository.UserSessionRepository
-import com.chibychibystore.data.local.entity.UserSession
+import com.chibychibystore.repository.PenggunaSessionRepository
+import com.chibychibystore.data.local.entity.PenggunaSession
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.data.local.dao.PenggunaDao
@@ -17,7 +17,7 @@ import javax.inject.Singleton
 @Singleton
 class AuthServiceImpl @Inject constructor(
     private val penggunaDao: PenggunaDao,
-    private val userSessionRepository: UserSessionRepository
+    private val penggunaSessionRepository: PenggunaSessionRepository
 ) : AuthService {
 
     private var currentUser: Pengguna? = null
@@ -45,13 +45,13 @@ class AuthServiceImpl @Inject constructor(
 
             currentUser = user
 
-            val session = UserSession(
+            val session = PenggunaSession(
                 userId = user.id,
                 loginTime = java.util.Date(),
                 lastActivityTime = java.util.Date(),
                 isActive = true
             )
-            userSessionRepository.createSession(session)
+            penggunaSessionRepository.createSession(session)
 
             Result.success(user)
 
@@ -64,7 +64,7 @@ class AuthServiceImpl @Inject constructor(
         return try {
             val user = currentUser
             if (user != null) {
-                userSessionRepository.deactivateUserSessions(user.id)
+                penggunaSessionRepository.deactivateUserSessions(user.id)
             }
             currentUser = null
             Result.success(Unit)
@@ -131,7 +131,8 @@ class AuthServiceImpl @Inject constructor(
 
     override suspend fun initializeSession(): Result<Unit> {
         return try {
-            val activeSession = userSessionRepository.getActiveSession().getOrNull()
+            val activeSessionRes = penggunaSessionRepository.getActiveSession()
+            val activeSession = activeSessionRes.getOrNull()
             if (activeSession != null) {
                 val sessionAge = System.currentTimeMillis() - activeSession.loginTime.time
                 val maxSessionAge = 24 * 60 * 60 * 1000L // 24 hours
@@ -140,16 +141,16 @@ class AuthServiceImpl @Inject constructor(
                     val user = penggunaDao.getPenggunaById(activeSession.userId)
                     if (user != null) {
                         currentUser = user
-                        userSessionRepository.updateLastActivityTime(activeSession.id)
+                        penggunaSessionRepository.updateLastActivityTime(activeSession.id)
                     } else {
-                        userSessionRepository.deactivateUserSessions(activeSession.userId)
+                        penggunaSessionRepository.deactivateUserSessions(activeSession.userId)
                     }
                 } else {
-                    userSessionRepository.deactivateUserSessions(activeSession.userId)
+                    penggunaSessionRepository.deactivateUserSessions(activeSession.userId)
                 }
             }
 
-            userSessionRepository.cleanupOldSessions()
+            penggunaSessionRepository.cleanupOldSessions()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("initializeSession", e))
@@ -158,7 +159,7 @@ class AuthServiceImpl @Inject constructor(
 
     override suspend fun isSessionExpired(): Boolean {
         val user = currentUser ?: return true
-        val activeSession = userSessionRepository.getActiveSessionForUser(user.id).getOrNull()
+        val activeSession = penggunaSessionRepository.getActiveSessionForUser(user.id).getOrNull()
         if (activeSession == null) return true
 
         val sessionAge = System.currentTimeMillis() - activeSession.lastActivityTime.time
@@ -172,10 +173,10 @@ class AuthServiceImpl @Inject constructor(
             val user = currentUser
                 ?: return Result.failure(ChibyChibyException.AuthenticationError("Tidak ada user yang login"))
 
-            val activeSession = userSessionRepository.getActiveSessionForUser(user.id).getOrNull()
+            val activeSession = penggunaSessionRepository.getActiveSessionForUser(user.id).getOrNull()
                 ?: return Result.failure(ChibyChibyException.AuthenticationError("Session tidak ditemukan"))
 
-            userSessionRepository.updateLastActivityTime(activeSession.id)
+            penggunaSessionRepository.updateLastActivityTime(activeSession.id)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("extendSession", e))
@@ -184,7 +185,7 @@ class AuthServiceImpl @Inject constructor(
 
     override suspend fun forceLogoutAll(): Result<Unit> {
         return try {
-            userSessionRepository.deactivateAllSessions()
+            penggunaSessionRepository.deactivateAllSessions()
             currentUser = null
             Result.success(Unit)
         } catch (e: Exception) {
