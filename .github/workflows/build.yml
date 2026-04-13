@@ -52,7 +52,7 @@ jobs:
 
       - name: Comment PR with build status
         if: github.event_name == 'pull_request' && always()
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         continue-on-error: true
         with:
           script: |
