@@ -74,14 +74,36 @@ object DatabaseModule {
 
         val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
             override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-                // Ensure a warehouse with id=1 exists so existing pembelian rows have a valid FK target
-                // after we backfill warehouseId=1. If the table is empty or no row with id=1 exists,
-                // insert a default "Gudang Utama" row.
+                // Determine a valid default warehouse id to backfill into existing pembelian rows.
+                // We can't blindly INSERT OR IGNORE (1, 'Gudang Utama', ...) because the gudang.name
+                // unique index may already contain 'Gudang Utama' at a different id, which would
+                // silently fail and leave no row at id=1, breaking the FK we add below.
                 val now = System.currentTimeMillis()
-                database.execSQL(
-                    "INSERT OR IGNORE INTO gudang (id, name, location, capacity, createdAt) VALUES (1, 'Gudang Utama', NULL, 0, ?)",
-                    arrayOf<Any>(now)
-                )
+                var defaultWarehouseId: Long = 1L
+
+                val hasIdOne = database.query("SELECT id FROM gudang WHERE id = 1").use {
+                    it.moveToFirst()
+                }
+
+                if (!hasIdOne) {
+                    val existingId: Long? = database.query("SELECT id FROM gudang ORDER BY id LIMIT 1").use {
+                        if (it.moveToFirst()) it.getLong(0) else null
+                    }
+                    defaultWarehouseId = if (existingId != null) {
+                        // Reuse the smallest existing gudang id rather than introducing a new row,
+                        // since the name 'Gudang Utama' may already be taken at another id.
+                        existingId
+                    } else {
+                        // No gudang exists at all; safe to insert a default one.
+                        database.execSQL(
+                            "INSERT INTO gudang (name, location, capacity, createdAt) VALUES ('Gudang Utama', NULL, 0, ?)",
+                            arrayOf<Any>(now)
+                        )
+                        database.query("SELECT last_insert_rowid()").use {
+                            if (it.moveToFirst()) it.getLong(0) else 1L
+                        }
+                    }
+                }
 
                 // Create new table with warehouseId and correct indices/FKs
                 database.execSQL("""
@@ -102,10 +124,10 @@ object DatabaseModule {
                     )
                 """.trimIndent())
 
-                // Copy data from old table
+                // Copy data from old table, backfilling warehouseId to a valid existing gudang id.
                 database.execSQL("""
-                    INSERT INTO pembelian_new (id, purchaseDate, supplierId, invoiceNumber, totalAmount, notes, receivedBy, createdAt, updatedAt)
-                    SELECT id, purchaseDate, supplierId, invoiceNumber, totalAmount, notes, receivedBy, createdAt, updatedAt FROM pembelian
+                    INSERT INTO pembelian_new (id, purchaseDate, supplierId, warehouseId, invoiceNumber, totalAmount, notes, receivedBy, createdAt, updatedAt)
+                    SELECT id, purchaseDate, supplierId, $defaultWarehouseId, invoiceNumber, totalAmount, notes, receivedBy, createdAt, updatedAt FROM pembelian
                 """)
 
                 // Drop old table
