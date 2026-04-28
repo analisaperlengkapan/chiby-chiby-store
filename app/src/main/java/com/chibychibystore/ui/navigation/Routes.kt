@@ -11,6 +11,7 @@ object Routes {
     const val CASH_HISTORY = "cash_history"
     const val AUDIT_LIST = "audit_list"
     const val AUDIT_ADD = "audit_add"
+    const val PELANGGAN = "pelanggan"
     const val REPORTS = "reports"
     const val SETTINGS = "settings"
 }

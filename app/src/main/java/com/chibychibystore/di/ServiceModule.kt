@@ -100,6 +100,12 @@ abstract class ServiceModule {
         promoServiceImpl: PromoServiceImpl
     ): PromoService
 
+    @Binds
+    @Singleton
+    abstract fun bindPelangganService(
+        pelangganServiceImpl: PelangganServiceImpl
+    ): PelangganService
+
     companion object {
         @Provides
         @Singleton

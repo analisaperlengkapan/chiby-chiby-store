@@ -23,9 +23,10 @@ import com.chibychibystore.data.local.entity.*
         Promotion::class,
         Shift::class,
         StokOpname::class,
-        ItemStokOpname::class
+        ItemStokOpname::class,
+        Pelanggan::class
     ],
-    version = 10,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -45,4 +46,5 @@ abstract class ChibyChibyDatabase : RoomDatabase() {
     abstract fun promotionDao(): PromotionDao
     abstract fun shiftDao(): ShiftDao
     abstract fun inventoryAuditDao(): InventoryAuditDao
+    abstract fun pelangganDao(): PelangganDao
 }

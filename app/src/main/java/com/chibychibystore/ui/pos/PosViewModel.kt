@@ -60,7 +60,9 @@ data class PosUiState(
     val completedSaleId: Long? = null,
     val showReceiptDialog: Boolean = false,
     val isPrintingReceipt: Boolean = false,
-    val isScanning: Boolean = false
+    val isScanning: Boolean = false,
+    val selectedPelanggan: com.chibychibystore.data.local.entity.Pelanggan? = null,
+    val pelangganList: List<com.chibychibystore.data.local.entity.Pelanggan> = emptyList()
 ) : UiState
 
 /**
@@ -71,13 +73,27 @@ class PosViewModel @Inject constructor(
     private val productService: ProductService,
     private val saleService: SaleService,
     private val authService: AuthService,
-    private val promoService: PromoService
+    private val promoService: PromoService,
+    private val pelangganService: com.chibychibystore.service.PelangganService
 ) : BaseViewModel<PosUiState>(PosUiState()) {
 
     private val _searchQuery = MutableStateFlow("")
 
     init {
         setupSearch()
+        loadPelanggan()
+    }
+
+    private fun loadPelanggan() {
+        viewModelScope.launch {
+            pelangganService.ambilSemuaPelanggan().collect { list ->
+                updateState { it.copy(pelangganList = list) }
+            }
+        }
+    }
+
+    fun selectPelanggan(pelanggan: com.chibychibystore.data.local.entity.Pelanggan?) {
+        updateState { it.copy(selectedPelanggan = pelanggan) }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -271,7 +287,8 @@ class PosViewModel @Inject constructor(
                 discount = currentState.discount,
                 paymentMethod = try { PaymentMethod.valueOf(currentState.paymentMethod) } catch(e: Exception) { PaymentMethod.CASH },
                 cashierId = userId,
-                shiftId = openShift?.id
+                shiftId = openShift?.id,
+                pelangganId = currentState.selectedPelanggan?.id
             )
 
             val items = currentState.cartItems.map { cartItem ->

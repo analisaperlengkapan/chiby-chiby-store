@@ -16,6 +16,7 @@ import com.chibychibystore.ui.purchase.*
 import com.chibychibystore.ui.promotion.*
 import com.chibychibystore.ui.cash.*
 import com.chibychibystore.ui.audit.*
+import com.chibychibystore.ui.pelanggan.*
 import com.chibychibystore.ui.pos.PosScreen
 import com.chibychibystore.ui.barcode.BarcodeScannerScreen
 import com.chibychibystore.ui.barcode.BarcodePrintScreen
@@ -172,6 +173,28 @@ fun AppNavigation(
         composable(Screen.AuditAdd.route) {
             AuthGuard(authService = authService) {
                 AuditAddScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.PelangganList.route) {
+            AuthGuard(authService = authService) {
+                PelangganListScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.PelangganAdd.route) {
+            AuthGuard(authService = authService) {
+                PelangganAddEditScreen(navController = navController)
+            }
+        }
+
+        composable(
+            route = Screen.PelangganEdit.route,
+            arguments = listOf(navArgument("pelangganId") { type = NavType.LongType })
+        ) {
+            val pelangganId = it.arguments?.getLong("pelangganId") ?: 0L
+            AuthGuard(authService = authService) {
+                PelangganAddEditScreen(navController = navController, pelangganId = pelangganId)
             }
         }
 

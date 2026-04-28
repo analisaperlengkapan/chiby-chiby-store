@@ -40,6 +40,7 @@ class SaleServiceImpl @Inject constructor(
         sale: Penjualan,
         items: List<ItemPenjualan>
     ): Result<PenjualanWithItems> {
+        val pelangganId = sale.pelangganId
         if (items.isEmpty()) {
             return Result.failure(Exception("Item penjualan tidak boleh kosong"))
         }
@@ -101,6 +102,17 @@ class SaleServiceImpl @Inject constructor(
                 val result = penjualanRepository.createPenjualan(saleToSave, items)
 
                 if (result is Result.Success) {
+                    // Update Customer points if applicable
+                    if (pelangganId != null) {
+                        // 1 point per 10.000 spent
+                        val points = (finalTotal / 10000).toInt()
+                        if (points > 0) {
+                            db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
+                                db.pelangganDao().updatePelanggan(p.copy(point = p.point + points))
+                            }
+                        }
+                    }
+
                     // Batch adjust stocks
                     val adjustments = items.map {
                         StockAdjustment(it.productId, sale.warehouseId, -it.quantity)

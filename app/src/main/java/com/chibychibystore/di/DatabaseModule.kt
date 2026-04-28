@@ -185,12 +185,39 @@ object DatabaseModule {
             }
         }
 
+        val MIGRATION_10_11 = object : androidx.room.migration.Migration(10, 11) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `pelanggan` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `phone` TEXT,
+                        `email` TEXT,
+                        `address` TEXT,
+                        `point` INTEGER NOT NULL DEFAULT 0,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_pelanggan_name` ON `pelanggan` (`name`)")
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_pelanggan_phone` ON `pelanggan` (`phone`)")
+            }
+        }
+
+        val MIGRATION_11_12 = object : androidx.room.migration.Migration(11, 12) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Add pelangganId to penjualan table
+                database.execSQL("ALTER TABLE penjualan ADD COLUMN pelangganId INTEGER")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_penjualan_pelangganId` ON `penjualan` (`pelangganId`)")
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             ChibyChibyDatabase::class.java,
             "chiby_chiby_database"
         )
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -239,4 +266,7 @@ object DatabaseModule {
 
     @Provides
     fun provideInventoryAuditDao(database: ChibyChibyDatabase) = database.inventoryAuditDao()
+
+    @Provides
+    fun providePelangganDao(database: ChibyChibyDatabase) = database.pelangganDao()
 }

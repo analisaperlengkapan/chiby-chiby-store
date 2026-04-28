@@ -36,6 +36,7 @@ fun AppDrawer(
         DrawerNavItem("Manajemen Expense", Icons.Default.AccountBalanceWallet, Screen.ExpenseList.route),
         DrawerNavItem("Manajemen User", Icons.Default.Group, Screen.UserList.route),
         DrawerNavItem("Manajemen Promosi", Icons.Default.LocalOffer, Screen.PromotionList.route),
+        DrawerNavItem("Manajemen Pelanggan", Icons.Default.Person, Screen.PelangganList.route),
         DrawerNavItem("Manajemen Kas", Icons.Default.PointOfSale, Screen.CashShift.route),
         DrawerNavItem("Stok Opname", Icons.Default.FactCheck, Screen.AuditList.route),
         DrawerNavItem("Barcode Scanner", Icons.Default.QrCodeScanner, Screen.BarcodeScanner.route),
