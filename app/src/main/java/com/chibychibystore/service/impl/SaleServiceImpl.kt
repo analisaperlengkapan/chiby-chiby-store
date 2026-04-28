@@ -108,7 +108,7 @@ class SaleServiceImpl @Inject constructor(
                         val points = (finalTotal / 10000).toInt()
                         if (points > 0) {
                             db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
-                                db.pelangganDao().updatePelanggan(p.copy(point = p.point + points))
+                                db.pelangganDao().updatePelanggan(p.copy(point = p.point + points, updatedAt = Date()))
                             }
                         }
                     }

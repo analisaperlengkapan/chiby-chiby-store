@@ -8,6 +8,7 @@ import com.chibychibystore.data.local.entity.StokOpname
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.data.model.Result
+import com.chibychibystore.repository.StokGudangRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.InventoryAuditService
 import com.chibychibystore.service.ProductService
@@ -39,7 +40,8 @@ class AuditViewModel @Inject constructor(
     private val auditService: InventoryAuditService,
     private val productService: ProductService,
     private val warehouseService: WarehouseService,
-    private val authService: AuthService
+    private val authService: AuthService,
+    private val stokGudangRepository: StokGudangRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuditUiState())
@@ -82,12 +84,19 @@ class AuditViewModel @Inject constructor(
     fun startNewAudit(warehouseId: Long) {
         viewModelScope.launch {
              _uiState.update { it.copy(isLoading = true) }
-             // In a real app, we'd only load products belonging to this warehouse
-             val productsInWarehouse = _uiState.value.products // Simplified
-             val items = productsInWarehouse.map { product ->
+             val products = _uiState.value.products
+             // Look up the per-warehouse stock for each product so that the expected
+             // quantity reflects the stock in this warehouse (not the global total).
+             val stocksResult = stokGudangRepository.getStocks(products.map { it.id }, warehouseId)
+             val stockMap = if (stocksResult is Result.Success) {
+                 stocksResult.data.associate { it.productId to it.quantity }
+             } else {
+                 emptyMap()
+             }
+             val items = products.map { product ->
                  AuditItemInput(
                      product = product,
-                     expectedQuantity = product.stockQuantity
+                     expectedQuantity = stockMap[product.id] ?: 0
                  )
              }
              _auditItems.value = items
