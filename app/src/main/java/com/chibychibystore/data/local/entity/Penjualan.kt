@@ -22,6 +22,12 @@ import java.util.Date
             parentColumns = ["id"],
             childColumns = ["cashierId"],
             onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = Shift::class,
+            parentColumns = ["id"],
+            childColumns = ["shiftId"],
+            onDelete = ForeignKey.SET_NULL
         )
     ]
 )
@@ -35,6 +41,7 @@ data class Penjualan(
     val discount: Double = 0.0,
     val paymentMethod: PaymentMethod,
     val cashierId: Long,
+    val shiftId: Long? = null,
     // Warehouse where the sale occurred. Defaults to 1 for backward compatibility.
     val warehouseId: Long = 1,
     @Serializable(with = DateSerializer::class)

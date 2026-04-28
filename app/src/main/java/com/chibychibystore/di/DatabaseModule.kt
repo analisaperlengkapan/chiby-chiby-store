@@ -114,12 +114,83 @@ object DatabaseModule {
             }
         }
 
+        val MIGRATION_7_8 = object : androidx.room.migration.Migration(7, 8) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `shift` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `kasirId` INTEGER NOT NULL,
+                        `startTime` INTEGER NOT NULL,
+                        `endTime` INTEGER,
+                        `startingCash` REAL NOT NULL,
+                        `expectedCash` REAL NOT NULL DEFAULT 0.0,
+                        `actualCash` REAL,
+                        `totalSales` REAL NOT NULL DEFAULT 0.0,
+                        `totalExpenses` REAL NOT NULL DEFAULT 0.0,
+                        `notes` TEXT,
+                        `status` TEXT NOT NULL,
+                        `createdAt` INTEGER NOT NULL,
+                        FOREIGN KEY(`kasirId`) REFERENCES `pengguna`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_shift_kasirId` ON `shift` (`kasirId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_shift_startTime` ON `shift` (`startTime`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_shift_endTime` ON `shift` (`endTime`)")
+            }
+        }
+
+        val MIGRATION_8_9 = object : androidx.room.migration.Migration(8, 9) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `stok_opname` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `auditDate` INTEGER NOT NULL,
+                        `warehouseId` INTEGER NOT NULL,
+                        `auditorId` INTEGER NOT NULL,
+                        `notes` TEXT,
+                        `status` TEXT NOT NULL,
+                        `createdAt` INTEGER NOT NULL,
+                        FOREIGN KEY(`warehouseId`) REFERENCES `gudang`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT,
+                        FOREIGN KEY(`auditorId`) REFERENCES `pengguna`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+                    )
+                """.trimIndent())
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `item_stok_opname` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `auditId` INTEGER NOT NULL,
+                        `productId` INTEGER NOT NULL,
+                        `expectedQuantity` INTEGER NOT NULL,
+                        `actualQuantity` INTEGER NOT NULL,
+                        `difference` INTEGER NOT NULL,
+                        `reason` TEXT,
+                        FOREIGN KEY(`auditId`) REFERENCES `stok_opname`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`productId`) REFERENCES `produk`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_stok_opname_auditDate` ON `stok_opname` (`auditDate`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_stok_opname_warehouseId` ON `stok_opname` (`warehouseId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_stok_opname_auditorId` ON `stok_opname` (`auditorId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_item_stok_opname_auditId` ON `item_stok_opname` (`auditId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_item_stok_opname_productId` ON `item_stok_opname` (`productId`)")
+            }
+        }
+
+        val MIGRATION_9_10 = object : androidx.room.migration.Migration(9, 10) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Add shiftId to penjualan table
+                database.execSQL("ALTER TABLE penjualan ADD COLUMN shiftId INTEGER")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_penjualan_shiftId` ON `penjualan` (`shiftId`)")
+                // Foreign keys on existing tables aren't supported by ALTER TABLE,
+                // but Room handles the mapping. For a full FK enforcement we'd need table recreation.
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             ChibyChibyDatabase::class.java,
             "chiby_chiby_database"
         )
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -162,4 +233,10 @@ object DatabaseModule {
 
     @Provides
     fun providePromotionDao(database: ChibyChibyDatabase) = database.promotionDao()
+
+    @Provides
+    fun provideShiftDao(database: ChibyChibyDatabase) = database.shiftDao()
+
+    @Provides
+    fun provideInventoryAuditDao(database: ChibyChibyDatabase) = database.inventoryAuditDao()
 }

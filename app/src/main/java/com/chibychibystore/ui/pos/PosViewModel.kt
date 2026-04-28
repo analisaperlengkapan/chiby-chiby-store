@@ -261,13 +261,17 @@ class PosViewModel @Inject constructor(
             val currentUser = authService.getCurrentUser()
             val userId = currentUser?.id ?: 0L
 
+            // Check for open shift
+            val openShift = saleService.getOpenShift(userId).getOrNull()
+
             val sale = Penjualan(
                 saleDate = Date(),
                 totalAmount = currentState.total,
                 tax = currentState.tax,
                 discount = currentState.discount,
                 paymentMethod = try { PaymentMethod.valueOf(currentState.paymentMethod) } catch(e: Exception) { PaymentMethod.CASH },
-                cashierId = userId
+                cashierId = userId,
+                shiftId = openShift?.id
             )
 
             val items = currentState.cartItems.map { cartItem ->

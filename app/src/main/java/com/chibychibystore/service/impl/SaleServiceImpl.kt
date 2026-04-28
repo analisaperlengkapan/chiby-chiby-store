@@ -297,4 +297,13 @@ class SaleServiceImpl @Inject constructor(
     override fun observePenjualanWithItemsByRentangTanggal(startDate: String, endDate: String): Flow<List<PenjualanWithItems>> {
         return penjualanRepository.getPenjualanWithItemsByRentangTanggal(startDate, endDate)
     }
+
+    override suspend fun getOpenShift(kasirId: Long): Result<com.chibychibystore.data.local.entity.Shift?> {
+        return try {
+            val dbShift = db.shiftDao().getOpenShiftByKasir(kasirId)
+            Result.success(dbShift)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

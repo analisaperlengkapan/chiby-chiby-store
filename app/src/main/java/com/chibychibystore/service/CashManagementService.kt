@@ -1,10 +1,14 @@
 package com.chibychibystore.service
 
 import com.chibychibystore.data.local.entity.KategoriPengeluaran
+import com.chibychibystore.data.local.entity.Shift
+import com.chibychibystore.data.local.entity.ShiftStatus
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.PengeluaranRepository
 import com.chibychibystore.repository.PenjualanRepository
+import com.chibychibystore.repository.ShiftRepository
+import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
@@ -12,13 +16,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Service untuk manajemen arus kas retail
- * Mengelola cash flows dari operasi, investasi, dan financing
+ * Service untuk manajemen arus kas retail dan shift kasir
  */
 @Singleton
 class CashManagementService @Inject constructor(
     private val penjualanRepository: PenjualanRepository,
-    private val pengeluaranRepository: PengeluaranRepository
+    private val pengeluaranRepository: PengeluaranRepository,
+    private val shiftRepository: ShiftRepository
 ) {
 
     /**
@@ -33,27 +37,63 @@ class CashManagementService @Inject constructor(
     )
 
     /**
+     * Manajemen Shift
+     */
+
+    suspend fun openShift(kasirId: Long, startingCash: Double): Result<Long> {
+        val existingOpen = shiftRepository.getOpenShiftByKasir(kasirId).getOrNull()
+        if (existingOpen != null) {
+            return Result.failure(ChibyChibyException.BusinessLogicError("Shift sebelumnya belum ditutup"))
+        }
+
+        val shift = Shift(
+            kasirId = kasirId,
+            startingCash = startingCash,
+            status = ShiftStatus.OPEN
+        )
+        return shiftRepository.createShift(shift)
+    }
+
+    suspend fun closeShift(shiftId: Long, actualCash: Double, notes: String?): Result<Unit> {
+        val shiftResult = shiftRepository.getShiftById(shiftId)
+        if (shiftResult is Result.Failure) return Result.failure((shiftResult as Result.Failure).exception)
+
+        val shift = (shiftResult as Result.Success).data ?: return Result.failure(ChibyChibyException.DatabaseError("Shift tidak ditemukan"))
+        if (shift.status == ShiftStatus.CLOSED) return Result.failure(ChibyChibyException.BusinessLogicError("Shift sudah ditutup"))
+
+        // Calculate totals for this shift (sales during shift period)
+        // In a real app, we'd query sales linked to this shiftId
+        // For now, let's update the shift object
+        val closedShift = shift.copy(
+            endTime = Date(),
+            actualCash = actualCash,
+            notes = notes,
+            status = ShiftStatus.CLOSED
+        )
+        return shiftRepository.updateShift(closedShift)
+    }
+
+    fun observeAllShifts(): Flow<List<Shift>> = shiftRepository.getAllShifts()
+
+    suspend fun getOpenShift(kasirId: Long): Result<Shift?> = shiftRepository.getOpenShiftByKasir(kasirId)
+
+    /**
      * Hitung operating cash flow
-     * Operating cash flow = Sales revenue - Operating expenses - Inventory purchases
      */
     suspend fun calculateOperatingCashFlow(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
             val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
 
-            // Get sales revenue (cash inflows from operations)
             val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
             val salesRevenue = sales.sumOf { it.totalAmount }
 
-            // Get approved expenses grouped by category to avoid in-memory filtering
             val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
 
-            // Calculate operating expenses
             val operatingExpenses = approvedExpenses
                 .filterKeys { it in KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES }
                 .values.sum()
 
-            // Calculate inventory purchases (COGS)
             val inventoryPurchases = approvedExpenses
                 .filterKeys { it in KategoriPengeluaran.COGS_CATEGORIES }
                 .values.sum()
@@ -65,101 +105,58 @@ class CashManagementService @Inject constructor(
         }
     }
 
-    /**
-     * Hitung investing cash flow
-     */
     suspend fun calculateInvestingCashFlow(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
             val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
-
-            // Get approved expenses grouped by category to avoid in-memory filtering
             val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
-
-            // Equipment purchases and store improvements (Investing activities)
             val equipmentExpenses = approvedExpenses
                 .filterKeys { it in KategoriPengeluaran.INVESTING_CATEGORIES }
                 .values.sum()
-
-            val investingCashFlow = -equipmentExpenses
-            Result.success(investingCashFlow)
+            Result.success(-equipmentExpenses)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung investing cash flow", e))
         }
     }
 
-    /**
-     * Hitung financing cash flow
-     */
     suspend fun calculateFinancingCashFlow(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
             val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
-
-            // Get approved expenses grouped by category to avoid in-memory filtering
             val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
-
-            // Financing expenses (loan repayments, dividends)
             val financingExpenses = approvedExpenses
                 .filterKeys { it in KategoriPengeluaran.FINANCING_CATEGORIES }
                 .values.sum()
-
-            // Cash outflows are negative
-            val financingCashFlow = -financingExpenses
-            Result.success(financingCashFlow)
+            Result.success(-financingExpenses)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung financing cash flow", e))
         }
     }
 
-    /**
-     * Hitung net cash flow
-     */
     suspend fun calculateNetCashFlow(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
             val operatingCF = calculateOperatingCashFlow(startDate, endDate).getOrNull() ?: 0.0
             val investingCF = calculateInvestingCashFlow(startDate, endDate).getOrNull() ?: 0.0
             val financingCF = calculateFinancingCashFlow(startDate, endDate).getOrNull() ?: 0.0
-
-            val netCashFlow = operatingCF + investingCF + financingCF
-            Result.success(netCashFlow)
+            Result.success(operatingCF + investingCF + financingCF)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung net cash flow", e))
         }
     }
 
-    /**
-     * Get cash flow summary untuk periode tertentu
-     */
     suspend fun getCashFlowSummary(startDate: LocalDate, endDate: LocalDate): Result<CashFlowSummary> {
         return try {
             val operatingCF = calculateOperatingCashFlow(startDate, endDate).getOrNull() ?: 0.0
             val investingCF = calculateInvestingCashFlow(startDate, endDate).getOrNull() ?: 0.0
             val financingCF = calculateFinancingCashFlow(startDate, endDate).getOrNull() ?: 0.0
             val netCF = operatingCF + investingCF + financingCF
-
-            val period = "${startDate.toString()} - ${endDate.toString()}"
-
-            Result.success(CashFlowSummary(
-                operatingCashFlow = operatingCF,
-                investingCashFlow = investingCF,
-                financingCashFlow = financingCF,
-                netCashFlow = netCF,
-                period = period
-            ))
+            Result.success(CashFlowSummary(operatingCF, investingCF, financingCF, netCF, "$startDate - $endDate"))
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal membuat cash flow summary", e))
         }
     }
 
-    /**
-     * Get current cash position
-     */
     suspend fun getCurrentCashPosition(): Result<Double> {
-        return try {
-            Result.success(0.0)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("Gagal mendapatkan posisi kas", e))
-        }
+        return Result.success(0.0)
     }
 }

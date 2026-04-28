@@ -27,6 +27,10 @@ sealed class Screen(val route: String) {
     object PromotionEdit : Screen("promotions/{promotionId}/edit") {
         fun createRoute(promotionId: Long) = "promotions/$promotionId/edit"
     }
+    object CashShift : Screen("cash_shift")
+    object CashHistory : Screen("cash_history")
+    object AuditList : Screen("audit_list")
+    object AuditAdd : Screen("audit_add")
     object BarcodeScanner : Screen("barcode/scan")
     object BarcodePrint : Screen("barcode/print")
     object Reports : Screen("reports")

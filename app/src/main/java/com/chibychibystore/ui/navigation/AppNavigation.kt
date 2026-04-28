@@ -14,6 +14,8 @@ import com.chibychibystore.service.AuthService
 import com.chibychibystore.ui.inventory.*
 import com.chibychibystore.ui.purchase.*
 import com.chibychibystore.ui.promotion.*
+import com.chibychibystore.ui.cash.*
+import com.chibychibystore.ui.audit.*
 import com.chibychibystore.ui.pos.PosScreen
 import com.chibychibystore.ui.barcode.BarcodeScannerScreen
 import com.chibychibystore.ui.barcode.BarcodePrintScreen
@@ -146,6 +148,30 @@ fun AppNavigation(
         composable(Screen.PromotionList.route) {
             AuthGuard(authService = authService) {
                 PromotionListScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.CashShift.route) {
+            AuthGuard(authService = authService) {
+                ShiftScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.CashHistory.route) {
+            AuthGuard(authService = authService) {
+                ShiftHistoryScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.AuditList.route) {
+            AuthGuard(authService = authService) {
+                AuditListScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.AuditAdd.route) {
+            AuthGuard(authService = authService) {
+                AuditAddScreen(navController = navController)
             }
         }
 
