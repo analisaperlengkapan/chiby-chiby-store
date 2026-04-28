@@ -31,6 +31,7 @@ fun AppDrawer(
 ) {
     val drawerItems = listOf(
         DrawerNavItem("Point of Sale", Icons.Default.PointOfSale, Screen.Pos.route),
+        DrawerNavItem("Manajemen Pembelian", Icons.Default.ShoppingBag, Screen.PurchaseList.route),
         DrawerNavItem("Manajemen Warehouse", Icons.Default.Warehouse, Screen.WarehouseList.route),
         DrawerNavItem("Manajemen Expense", Icons.Default.AccountBalanceWallet, Screen.ExpenseList.route),
         DrawerNavItem("Manajemen User", Icons.Default.Group, Screen.UserList.route),

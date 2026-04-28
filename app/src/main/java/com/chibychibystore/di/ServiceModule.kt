@@ -48,6 +48,12 @@ abstract class ServiceModule {
 
     @Binds
     @Singleton
+    abstract fun bindPurchaseService(
+        purchaseServiceImpl: PurchaseServiceImpl
+    ): PurchaseService
+
+    @Binds
+    @Singleton
     abstract fun bindReportingService(
         reportingServiceImpl: ReportingServiceImpl
     ): ReportingService

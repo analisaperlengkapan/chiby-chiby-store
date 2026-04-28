@@ -5,6 +5,7 @@ object Routes {
     const val DASHBOARD = "dashboard"
     const val INVENTORY = "inventory"
     const val SALES = "sales"
+    const val PURCHASES = "purchases"
     const val REPORTS = "reports"
     const val SETTINGS = "settings"
 }

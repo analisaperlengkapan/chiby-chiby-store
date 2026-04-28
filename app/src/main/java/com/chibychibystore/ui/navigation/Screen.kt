@@ -20,6 +20,8 @@ sealed class Screen(val route: String) {
     object Pos : Screen("pos")
     object Sales : Screen("sales")
     object SalesHistory : Screen("sales/history")
+    object PurchaseList : Screen("purchases")
+    object PurchaseAdd : Screen("purchases/add")
     object BarcodeScanner : Screen("barcode/scan")
     object BarcodePrint : Screen("barcode/print")
     object Reports : Screen("reports")

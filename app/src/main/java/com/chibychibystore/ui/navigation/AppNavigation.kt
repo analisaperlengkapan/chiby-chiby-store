@@ -12,6 +12,7 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.ui.inventory.*
+import com.chibychibystore.ui.purchase.*
 import com.chibychibystore.ui.pos.PosScreen
 import com.chibychibystore.ui.barcode.BarcodeScannerScreen
 import com.chibychibystore.ui.barcode.BarcodePrintScreen
@@ -126,6 +127,18 @@ fun AppNavigation(
         composable(Screen.SalesHistory.route) {
             AuthGuard(authService = authService) {
                 SalesHistoryScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.PurchaseList.route) {
+            AuthGuard(authService = authService) {
+                PurchaseListScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.PurchaseAdd.route) {
+            AuthGuard(authService = authService) {
+                PurchaseAddScreen(navController = navController)
             }
         }
 
