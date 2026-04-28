@@ -6,6 +6,7 @@ object Routes {
     const val INVENTORY = "inventory"
     const val SALES = "sales"
     const val PURCHASES = "purchases"
+    const val PROMOTIONS = "promotions"
     const val REPORTS = "reports"
     const val SETTINGS = "settings"
 }

@@ -28,6 +28,14 @@ class PurchaseServiceImpl @Inject constructor(
         pembelian: Pembelian,
         items: List<ItemPembelian>
     ): Result<Pembelian> {
+        return createPembelianWithWarehouse(pembelian, items, pembelian.warehouseId)
+    }
+
+    override suspend fun createPembelianWithWarehouse(
+        pembelian: Pembelian,
+        items: List<ItemPembelian>,
+        warehouseId: Long
+    ): Result<Pembelian> {
         if (items.isEmpty()) {
             return Result.failure(Exception("Item pembelian tidak boleh kosong"))
         }
@@ -35,7 +43,7 @@ class PurchaseServiceImpl @Inject constructor(
         return try {
             db.withTransaction {
                 // 1. Create Purchase Header
-                val purchaseResult = pembelianRepository.createPembelian(pembelian)
+                val purchaseResult = pembelianRepository.createPembelian(pembelian.copy(warehouseId = warehouseId))
                 if (purchaseResult is Result.Failure) throw purchaseResult.exception
                 val createdPurchase = (purchaseResult as Result.Success).data
 
@@ -45,18 +53,8 @@ class PurchaseServiceImpl @Inject constructor(
                 if (itemsResult is Result.Failure) throw itemsResult.exception
 
                 // 3. Update Stock (Increase stock on purchase)
-                // We assume for now it goes to a default warehouse or we need to know which warehouse.
-                // Looking at Pembelian entity, it doesn't have warehouseId.
-                // But ItemPembelian also doesn't seem to have it?
-                // Let's check ItemPembelian entity.
-
-                // For now, let's just use the first warehouse or a default one if not specified.
-                // In a real scenario, Pembelian should probably have a warehouseId or each item does.
-                // Given current schema, I'll check if I can find where stock is usually updated.
-
                 val adjustments = items.map {
-                    // Need a warehouseId. Let's assume 1 (Main Warehouse) for now or find one.
-                    StockAdjustment(it.productId, 1L, it.quantity)
+                    StockAdjustment(it.productId, warehouseId, it.quantity)
                 }
                 val stockResult = stokGudangRepository.adjustStockBatch(adjustments)
                 if (stockResult is Result.Failure) throw stockResult.exception
@@ -96,10 +94,13 @@ class PurchaseServiceImpl @Inject constructor(
     override suspend fun deletePembelian(id: Long): Result<Unit> {
         return try {
             db.withTransaction {
-                // Should we reverse stock? Usually deleting a purchase might need stock reversal.
+                val purchaseResult = getPembelianById(id)
+                if (purchaseResult is Result.Failure) throw purchaseResult.exception
+                val purchase = (purchaseResult as Result.Success).data ?: throw Exception("Pembelian tidak ditemukan")
+
                 val items = itemPembelianRepository.getItemsByPurchaseId(id).first()
                 val adjustments = items.map {
-                    StockAdjustment(it.productId, 1L, -it.quantity)
+                    StockAdjustment(it.productId, purchase.warehouseId, -it.quantity)
                 }
                 stokGudangRepository.adjustStockBatch(adjustments)
 

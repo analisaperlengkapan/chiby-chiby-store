@@ -16,6 +16,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.local.entity.Pemasok
+import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.LoadingIndicator
 import java.text.NumberFormat
@@ -31,6 +32,7 @@ fun PurchaseAddScreen(
     val cart by viewModel.cart.collectAsState()
 
     var selectedSupplierId by remember { mutableStateOf(-1L) }
+    var selectedWarehouseId by remember { mutableStateOf(-1L) }
     var invoiceNumber by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
@@ -87,6 +89,36 @@ fun PurchaseAddScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Warehouse Selection
+            Text("Pilih Gudang Tujuan", style = MaterialTheme.typography.titleSmall)
+            var expandedWarehouse by remember { mutableStateOf(false) }
+            val selectedWarehouseName = uiState.warehouses.find { it.id == selectedWarehouseId }?.name ?: "Pilih Gudang"
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { expandedWarehouse = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(selectedWarehouseName)
+                }
+                DropdownMenu(
+                    expanded = expandedWarehouse,
+                    onDismissRequest = { expandedWarehouse = false }
+                ) {
+                    uiState.warehouses.forEach { warehouse ->
+                        DropdownMenuItem(
+                            text = { Text(warehouse.name) },
+                            onClick = {
+                                selectedWarehouseId = warehouse.id
+                                expandedWarehouse = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = invoiceNumber,
                 onValueChange = { invoiceNumber = it },
@@ -130,7 +162,7 @@ fun PurchaseAddScreen(
             val total = cart.sumOf { it.quantity * it.unitPrice }
             val currencyFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
 
-            Divider()
+            HorizontalDivider()
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Total", style = MaterialTheme.typography.titleLarge)
@@ -140,12 +172,12 @@ fun PurchaseAddScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { viewModel.createPurchase(selectedSupplierId, invoiceNumber, notes) },
+                onClick = { viewModel.createPurchase(selectedSupplierId, selectedWarehouseId, invoiceNumber, notes) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = selectedSupplierId != -1L && invoiceNumber.isNotBlank() && cart.isNotEmpty() && !uiState.isLoading
+                enabled = selectedSupplierId != -1L && selectedWarehouseId != -1L && invoiceNumber.isNotBlank() && cart.isNotEmpty() && !uiState.isLoading
             ) {
                 if (uiState.isLoading) {
-                    CircularProgressIndicator(size = 24.dp, color = MaterialTheme.colorScheme.onPrimary)
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                 } else {
                     Text("Simpan Pembelian")
                 }
@@ -264,14 +296,5 @@ fun ProductSelectionDialog(
                 Text("Batal")
             }
         }
-    )
-}
-
-@Composable
-fun CircularProgressIndicator(size: androidx.compose.ui.unit.Dp, color: androidx.compose.ui.graphics.Color) {
-    androidx.compose.material3.CircularProgressIndicator(
-        modifier = Modifier.size(size),
-        color = color,
-        strokeWidth = 2.dp
     )
 }

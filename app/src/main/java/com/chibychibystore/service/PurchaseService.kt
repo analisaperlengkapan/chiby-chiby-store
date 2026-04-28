@@ -13,6 +13,7 @@ interface PurchaseService {
     suspend fun createPembelian(pembelian: Pembelian, items: List<ItemPembelian>): Result<Pembelian>
     suspend fun getPembelianById(id: Long): Result<Pembelian?>
     suspend fun getPembelianInDateRange(startDate: LocalDate, endDate: LocalDate): Result<List<Pembelian>>
+    suspend fun createPembelianWithWarehouse(pembelian: Pembelian, items: List<ItemPembelian>, warehouseId: Long): Result<Pembelian>
     suspend fun deletePembelian(id: Long): Result<Unit>
     fun observeAllPurchases(): Flow<List<Pembelian>>
     suspend fun getItemsByPurchaseId(purchaseId: Long): Result<List<ItemPembelian>>

@@ -6,10 +6,12 @@ import com.chibychibystore.data.local.entity.ItemPembelian
 import com.chibychibystore.data.local.entity.Pembelian
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.local.entity.Pemasok
+import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.service.PurchaseService
 import com.chibychibystore.service.ProductService
 import com.chibychibystore.service.SupplierService
+import com.chibychibystore.service.WarehouseService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -22,7 +24,8 @@ data class PurchaseUiState(
     val error: String? = null,
     val isSuccess: Boolean = false,
     val suppliers: List<Pemasok> = emptyList(),
-    val products: List<Produk> = emptyList()
+    val products: List<Produk> = emptyList(),
+    val warehouses: List<Gudang> = emptyList()
 )
 
 data class CartItemPurchase(
@@ -35,7 +38,8 @@ data class CartItemPurchase(
 class PurchaseViewModel @Inject constructor(
     private val purchaseService: PurchaseService,
     private val productService: ProductService,
-    private val supplierService: SupplierService
+    private val supplierService: SupplierService,
+    private val warehouseService: WarehouseService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PurchaseUiState())
@@ -48,6 +52,7 @@ class PurchaseViewModel @Inject constructor(
         loadPurchases()
         loadSuppliers()
         loadProducts()
+        loadWarehouses()
     }
 
     private fun loadPurchases() {
@@ -79,6 +84,15 @@ class PurchaseViewModel @Inject constructor(
         }
     }
 
+    private fun loadWarehouses() {
+        viewModelScope.launch {
+            warehouseService.observeWarehouses()
+                .collect { list ->
+                    _uiState.update { it.copy(warehouses = list) }
+                }
+        }
+    }
+
     fun addToCart(product: Produk, quantity: Int, unitPrice: Double) {
         val currentCart = _cart.value.toMutableList()
         val existingIndex = currentCart.indexOfFirst { it.product.id == product.id }
@@ -95,7 +109,7 @@ class PurchaseViewModel @Inject constructor(
         _cart.value = _cart.value.filter { it.product.id != productId }
     }
 
-    fun createPurchase(supplierId: Long, invoiceNumber: String, notes: String?) {
+    fun createPurchase(supplierId: Long, warehouseId: Long, invoiceNumber: String, notes: String?) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val totalAmount = _cart.value.sumOf { it.quantity * it.unitPrice }
@@ -116,7 +130,7 @@ class PurchaseViewModel @Inject constructor(
                 )
             }
 
-            val result = purchaseService.createPembelian(pembelian, items)
+            val result = purchaseService.createPembelianWithWarehouse(pembelian, items, warehouseId)
             if (result is Result.Success) {
                 _uiState.update { it.copy(isLoading = false, isSuccess = true) }
                 _cart.value = emptyList()

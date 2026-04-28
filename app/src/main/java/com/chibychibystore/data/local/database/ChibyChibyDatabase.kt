@@ -22,7 +22,7 @@ import com.chibychibystore.data.local.entity.*
         StokGudang::class,
         Promotion::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

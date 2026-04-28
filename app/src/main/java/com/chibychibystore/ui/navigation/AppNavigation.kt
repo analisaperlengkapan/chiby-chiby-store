@@ -13,6 +13,7 @@ import androidx.navigation.navArgument
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.ui.inventory.*
 import com.chibychibystore.ui.purchase.*
+import com.chibychibystore.ui.promotion.*
 import com.chibychibystore.ui.pos.PosScreen
 import com.chibychibystore.ui.barcode.BarcodeScannerScreen
 import com.chibychibystore.ui.barcode.BarcodePrintScreen
@@ -139,6 +140,28 @@ fun AppNavigation(
         composable(Screen.PurchaseAdd.route) {
             AuthGuard(authService = authService) {
                 PurchaseAddScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.PromotionList.route) {
+            AuthGuard(authService = authService) {
+                PromotionListScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.PromotionAdd.route) {
+            AuthGuard(authService = authService) {
+                PromotionAddEditScreen(navController = navController)
+            }
+        }
+
+        composable(
+            route = Screen.PromotionEdit.route,
+            arguments = listOf(navArgument("promotionId") { type = NavType.LongType })
+        ) {
+            val promotionId = it.arguments?.getLong("promotionId") ?: 0L
+            AuthGuard(authService = authService) {
+                PromotionAddEditScreen(navController = navController, promotionId = promotionId)
             }
         }
 
