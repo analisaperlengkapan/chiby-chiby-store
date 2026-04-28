@@ -98,7 +98,12 @@ class PurchaseViewModel @Inject constructor(
         val existingIndex = currentCart.indexOfFirst { it.product.id == product.id }
         if (existingIndex >= 0) {
             val item = currentCart[existingIndex]
-            currentCart[existingIndex] = item.copy(quantity = item.quantity + quantity)
+            // Use the latest unit price entered by the user; if the prices differ, the most
+            // recent value wins so the displayed total reflects the user's intent.
+            currentCart[existingIndex] = item.copy(
+                quantity = item.quantity + quantity,
+                unitPrice = unitPrice
+            )
         } else {
             currentCart.add(CartItemPurchase(product, quantity, unitPrice))
         }

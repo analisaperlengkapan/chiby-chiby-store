@@ -103,7 +103,15 @@ fun PelangganAddEditScreen(
                 Spacer(modifier = Modifier.weight(1f))
 
                 Button(
-                    onClick = { viewModel.savePelanggan(pelangganId, name, phone, email, address) },
+                    onClick = {
+                        viewModel.savePelanggan(
+                            pelangganId,
+                            name,
+                            phone.ifBlank { null },
+                            email.ifBlank { null },
+                            address.ifBlank { null }
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = name.isNotBlank() && !uiState.isLoading
                 ) {

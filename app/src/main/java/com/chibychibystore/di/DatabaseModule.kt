@@ -74,6 +74,15 @@ object DatabaseModule {
 
         val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
             override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Ensure a warehouse with id=1 exists so existing pembelian rows have a valid FK target
+                // after we backfill warehouseId=1. If the table is empty or no row with id=1 exists,
+                // insert a default "Gudang Utama" row.
+                val now = System.currentTimeMillis()
+                database.execSQL(
+                    "INSERT OR IGNORE INTO gudang (id, name, location, capacity, createdAt) VALUES (1, 'Gudang Utama', NULL, 0, ?)",
+                    arrayOf<Any>(now)
+                )
+
                 // Create new table with warehouseId and correct indices/FKs
                 database.execSQL("""
                     CREATE TABLE IF NOT EXISTS `pembelian_new` (
@@ -206,8 +215,44 @@ object DatabaseModule {
 
         val MIGRATION_11_12 = object : androidx.room.migration.Migration(11, 12) {
             override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-                // Add pelangganId to penjualan table
-                database.execSQL("ALTER TABLE penjualan ADD COLUMN pelangganId INTEGER")
+                // Recreate penjualan table to add proper FK constraints for shiftId and pelangganId.
+                // SQLite ALTER TABLE cannot add FK constraints, so a full table recreation is required
+                // here so that Room's post-migration schema validation succeeds.
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `penjualan_new` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `saleDate` INTEGER NOT NULL,
+                        `totalAmount` REAL NOT NULL,
+                        `tax` REAL NOT NULL DEFAULT 0.0,
+                        `discount` REAL NOT NULL DEFAULT 0.0,
+                        `paymentMethod` TEXT NOT NULL,
+                        `cashierId` INTEGER NOT NULL,
+                        `shiftId` INTEGER,
+                        `pelangganId` INTEGER,
+                        `warehouseId` INTEGER NOT NULL DEFAULT 1,
+                        `createdAt` INTEGER NOT NULL,
+                        `isRefunded` INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY(`cashierId`) REFERENCES `pengguna`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`shiftId`) REFERENCES `shift`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL,
+                        FOREIGN KEY(`pelangganId`) REFERENCES `pelanggan`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                """.trimIndent())
+
+                // Copy existing data. pelangganId column does not yet exist on the old table here
+                // (MIGRATION_9_10 only added shiftId), so it's omitted from the SELECT and defaults to NULL.
+                database.execSQL("""
+                    INSERT INTO penjualan_new (id, saleDate, totalAmount, tax, discount, paymentMethod, cashierId, shiftId, warehouseId, createdAt, isRefunded)
+                    SELECT id, saleDate, totalAmount, tax, discount, paymentMethod, cashierId, shiftId, warehouseId, createdAt, isRefunded FROM penjualan
+                """)
+
+                database.execSQL("DROP TABLE penjualan")
+                database.execSQL("ALTER TABLE penjualan_new RENAME TO penjualan")
+
+                // Recreate all indices to match the entity definition.
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_penjualan_saleDate` ON `penjualan` (`saleDate`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_penjualan_cashierId_saleDate` ON `penjualan` (`cashierId`, `saleDate`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_penjualan_paymentMethod` ON `penjualan` (`paymentMethod`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_penjualan_shiftId` ON `penjualan` (`shiftId`)")
                 database.execSQL("CREATE INDEX IF NOT EXISTS `index_penjualan_pelangganId` ON `penjualan` (`pelangganId`)")
             }
         }

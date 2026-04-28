@@ -24,9 +24,12 @@ class InventoryAuditService @Inject constructor(
     suspend fun createAudit(audit: StokOpname, items: List<ItemStokOpname>): Result<Long> {
         return try {
             db.withTransaction {
-                val auditId = auditRepository.createAudit(audit).getOrNull() ?: throw Exception("Failed to create audit")
+                val createResult = auditRepository.createAudit(audit)
+                if (createResult is Result.Failure) throw createResult.exception
+                val auditId = (createResult as Result.Success).data
                 val itemsWithId = items.map { it.copy(auditId = auditId) }
-                auditRepository.insertAuditItems(itemsWithId)
+                val insertItemsResult = auditRepository.insertAuditItems(itemsWithId)
+                if (insertItemsResult is Result.Failure) throw insertItemsResult.exception
 
                 if (audit.status == AuditStatus.COMPLETED) {
                     // Adjust stock immediately if completed
@@ -43,13 +46,16 @@ class InventoryAuditService @Inject constructor(
     suspend fun completeAudit(auditId: Long): Result<Unit> {
         return try {
             db.withTransaction {
-                val audit = auditRepository.getAuditById(auditId).getOrNull() ?: throw Exception("Audit not found")
+                val getResult = auditRepository.getAuditById(auditId)
+                if (getResult is Result.Failure) throw getResult.exception
+                val audit = (getResult as Result.Success).data ?: throw Exception("Audit not found")
                 if (audit.status != AuditStatus.DRAFT) throw Exception("Only draft audits can be completed")
 
                 val items = auditRepository.getItemsByAuditId(auditId).firstOrNull() ?: emptyList()
                 applyStockAdjustments(items)
 
-                auditRepository.updateAudit(audit.copy(status = AuditStatus.COMPLETED))
+                val updateResult = auditRepository.updateAudit(audit.copy(status = AuditStatus.COMPLETED))
+                if (updateResult is Result.Failure) throw updateResult.exception
                 Result.success(Unit)
             }
         } catch (e: Exception) {

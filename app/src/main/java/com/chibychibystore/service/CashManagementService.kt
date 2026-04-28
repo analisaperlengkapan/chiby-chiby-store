@@ -41,7 +41,9 @@ class CashManagementService @Inject constructor(
      */
 
     suspend fun openShift(kasirId: Long, startingCash: Double): Result<Long> {
-        val existingOpen = shiftRepository.getOpenShiftByKasir(kasirId).getOrNull()
+        val existingResult = shiftRepository.getOpenShiftByKasir(kasirId)
+        if (existingResult is Result.Failure) return Result.failure(existingResult.exception)
+        val existingOpen = (existingResult as Result.Success).data
         if (existingOpen != null) {
             return Result.failure(ChibyChibyException.BusinessLogicError("Shift sebelumnya belum ditutup"))
         }

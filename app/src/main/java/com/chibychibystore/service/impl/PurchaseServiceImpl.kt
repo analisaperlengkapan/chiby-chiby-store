@@ -102,10 +102,14 @@ class PurchaseServiceImpl @Inject constructor(
                 val adjustments = items.map {
                     StockAdjustment(it.productId, purchase.warehouseId, -it.quantity)
                 }
-                stokGudangRepository.adjustStockBatch(adjustments)
+                val stockResult = stokGudangRepository.adjustStockBatch(adjustments)
+                if (stockResult is Result.Failure) throw stockResult.exception
 
-                itemPembelianRepository.deleteItemsByPurchaseId(id)
-                pembelianRepository.deletePembelian(id)
+                val deleteItemsResult = itemPembelianRepository.deleteItemsByPurchaseId(id)
+                if (deleteItemsResult is Result.Failure) throw deleteItemsResult.exception
+
+                val deletePurchaseResult = pembelianRepository.deletePembelian(id)
+                if (deletePurchaseResult is Result.Failure) throw deletePurchaseResult.exception
                 Result.success(Unit)
             }
         } catch (e: Exception) {
