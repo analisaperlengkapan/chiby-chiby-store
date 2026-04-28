@@ -41,6 +41,9 @@ fun PromotionAddEditScreen(
     var isActive by remember { mutableStateOf(true) }
     var startDate by remember { mutableStateOf<Date?>(null) }
     var endDate by remember { mutableStateOf<Date?>(null) }
+    // Preserve the original createdAt across edits so saving doesn't reset it
+    // to the current time (the Promotion entity defaults createdAt to Date()).
+    var originalCreatedAt by remember { mutableStateOf<Date?>(null) }
 
     var isLoadingInitial by remember { mutableStateOf(promotionId != 0L) }
 
@@ -60,6 +63,7 @@ fun PromotionAddEditScreen(
                 isActive = promo.isActive
                 startDate = promo.startDate
                 endDate = promo.endDate
+                originalCreatedAt = promo.createdAt
             }
             isLoadingInitial = false
         }
@@ -202,7 +206,9 @@ fun PromotionAddEditScreen(
                             maxDiscountAmount = maxDiscountAmount.toDoubleOrNull(),
                             isActive = isActive,
                             startDate = startDate,
-                            endDate = endDate
+                            endDate = endDate,
+                            createdAt = originalCreatedAt ?: Date(),
+                            updatedAt = Date()
                         )
                         viewModel.savePromotion(promo)
                     },
