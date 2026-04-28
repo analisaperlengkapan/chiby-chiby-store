@@ -66,18 +66,21 @@ class InventoryAuditService @Inject constructor(
 
     private suspend fun applyStockAdjustments(items: List<ItemStokOpname>, warehouseId: Long) {
         items.forEach { item ->
-            if (item.difference != 0) {
-                // Set warehouse-specific stock to the actual counted quantity. This also
-                // syncs the product's total stock via StokGudangRepository.
-                val result = stokGudangRepository.insertOrUpdateStock(
-                    StokGudang(
-                        productId = item.productId,
-                        warehouseId = warehouseId,
-                        quantity = item.actualQuantity
-                    )
+            // Always set warehouse-specific stock to the actual counted quantity, even when
+            // the recorded difference (actual - expected at audit-start) is zero. The expected
+            // quantity is a snapshot taken when the audit started; concurrent operations (e.g.
+            // sales) between starting and completing the audit may have moved the live stock
+            // away from both expected and actual. Writing actualQuantity unconditionally ensures
+            // the database reflects the physical count. This also syncs the product's total
+            // stock via StokGudangRepository.
+            val result = stokGudangRepository.insertOrUpdateStock(
+                StokGudang(
+                    productId = item.productId,
+                    warehouseId = warehouseId,
+                    quantity = item.actualQuantity
                 )
-                if (result is Result.Failure) throw result.exception
-            }
+            )
+            if (result is Result.Failure) throw result.exception
         }
     }
 
