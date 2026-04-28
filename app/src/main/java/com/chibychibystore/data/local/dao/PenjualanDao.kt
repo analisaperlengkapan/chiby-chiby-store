@@ -111,4 +111,10 @@ interface PenjualanDao {
 
     @Query("SELECT SUM(totalAmount) FROM penjualan WHERE isRefunded = 0 AND saleDate BETWEEN :startDate AND :endDate")
     suspend fun getTotalCashReceipts(startDate: Date, endDate: Date): Double?
+
+    @Query("SELECT COALESCE(SUM(totalAmount), 0) FROM penjualan WHERE isRefunded = 0 AND shiftId = :shiftId")
+    suspend fun getTotalSalesByShift(shiftId: Long): Double
+
+    @Query("SELECT COALESCE(SUM(totalAmount), 0) FROM penjualan WHERE isRefunded = 0 AND shiftId = :shiftId AND paymentMethod = :paymentMethod")
+    suspend fun getTotalSalesByShiftAndPaymentMethod(shiftId: Long, paymentMethod: PaymentMethod): Double
 }

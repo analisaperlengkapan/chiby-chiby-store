@@ -63,12 +63,23 @@ class CashManagementService @Inject constructor(
         val shift = (shiftResult as Result.Success).data ?: return Result.failure(ChibyChibyException.DatabaseError("Shift tidak ditemukan"))
         if (shift.status == ShiftStatus.CLOSED) return Result.failure(ChibyChibyException.BusinessLogicError("Shift sudah ditutup"))
 
-        // Calculate totals for this shift (sales during shift period)
-        // In a real app, we'd query sales linked to this shiftId
-        // For now, let's update the shift object
+        // Compute totals from sales linked to this shift so the shift's financial
+        // summary reflects reality. `totalSales` covers all non-refunded sales for
+        // the shift, while `expectedCash` is what the cash drawer *should* contain
+        // (starting cash + cash sales) for reconciliation against `actualCash`.
+        val totalSalesResult = penjualanRepository.getTotalSalesByShift(shiftId)
+        val totalSales = (totalSalesResult as? Result.Success)?.data ?: 0.0
+
+        val cashSalesResult = penjualanRepository.getTotalCashSalesByShift(shiftId)
+        val cashSales = (cashSalesResult as? Result.Success)?.data ?: 0.0
+
+        val expectedCash = shift.startingCash + cashSales
+
         val closedShift = shift.copy(
             endTime = Date(),
             actualCash = actualCash,
+            expectedCash = expectedCash,
+            totalSales = totalSales,
             notes = notes,
             status = ShiftStatus.CLOSED
         )

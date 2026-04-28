@@ -86,7 +86,7 @@ class PurchaseViewModel @Inject constructor(
 
     private fun loadWarehouses() {
         viewModelScope.launch {
-            warehouseService.observeWarehouses()
+            warehouseService.observeGudangs()
                 .collect { list ->
                     _uiState.update { it.copy(warehouses = list) }
                 }

@@ -275,4 +275,31 @@ class PenjualanRepository @Inject constructor(
     suspend fun updatePenjualan(id: Long, sale: Penjualan): Result<Unit> {
         return updatePenjualan(sale)
     }
+
+    /**
+     * Get total sales (non-refunded) linked to a given shift
+     */
+    suspend fun getTotalSalesByShift(shiftId: Long): Result<Double> {
+        return try {
+            Result.success(penjualanDao.getTotalSalesByShift(shiftId))
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getTotalSalesByShift", e))
+        }
+    }
+
+    /**
+     * Get total cash sales (non-refunded) linked to a given shift
+     */
+    suspend fun getTotalCashSalesByShift(shiftId: Long): Result<Double> {
+        return try {
+            Result.success(
+                penjualanDao.getTotalSalesByShiftAndPaymentMethod(
+                    shiftId,
+                    com.chibychibystore.data.local.entity.PaymentMethod.CASH
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getTotalCashSalesByShift", e))
+        }
+    }
 }

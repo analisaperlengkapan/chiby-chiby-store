@@ -237,6 +237,27 @@ object DatabaseModule {
 
         val MIGRATION_11_12 = object : androidx.room.migration.Migration(11, 12) {
             override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // The `warehouseId` column was added to the Penjualan entity at schema version 6
+                // without a corresponding SQL migration. Older databases (which migrated from v5
+                // through v6 prior to this column being declared on the entity) may therefore be
+                // missing the column on disk. Detect and add it before the full table recreation
+                // so that the subsequent `SELECT ... warehouseId ... FROM penjualan` does not
+                // reference a non-existent column.
+                val hasWarehouseId = database.query("PRAGMA table_info(`penjualan`)").use { cursor ->
+                    val nameIndex = cursor.getColumnIndex("name")
+                    var found = false
+                    while (cursor.moveToNext()) {
+                        if (cursor.getString(nameIndex) == "warehouseId") {
+                            found = true
+                            break
+                        }
+                    }
+                    found
+                }
+                if (!hasWarehouseId) {
+                    database.execSQL("ALTER TABLE penjualan ADD COLUMN warehouseId INTEGER NOT NULL DEFAULT 1")
+                }
+
                 // Recreate penjualan table to add proper FK constraints for shiftId and pelangganId.
                 // SQLite ALTER TABLE cannot add FK constraints, so a full table recreation is required
                 // here so that Room's post-migration schema validation succeeds.

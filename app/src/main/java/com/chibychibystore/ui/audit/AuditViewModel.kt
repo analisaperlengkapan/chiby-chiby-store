@@ -84,7 +84,12 @@ class AuditViewModel @Inject constructor(
     fun startNewAudit(warehouseId: Long) {
         viewModelScope.launch {
              _uiState.update { it.copy(isLoading = true) }
-             val products = _uiState.value.products
+             // Wait for products to be populated before building the audit lines. The
+             // products flow is started asynchronously in `init`, so a quick warehouse
+             // selection could otherwise race ahead and produce an empty audit (no items
+             // to count, allowing the user to "complete" an audit with zero entries).
+             val products = productService.observeProducts().first()
+             _uiState.update { it.copy(products = products) }
              // Look up the per-warehouse stock for each product so that the expected
              // quantity reflects the stock in this warehouse (not the global total).
              val stocksResult = stokGudangRepository.getStocks(products.map { it.id }, warehouseId)
