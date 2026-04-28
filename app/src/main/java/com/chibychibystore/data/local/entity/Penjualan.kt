@@ -14,7 +14,9 @@ import java.util.Date
     indices = [
         Index(value = ["saleDate"]),
         Index(value = ["cashierId", "saleDate"]),
-        Index(value = ["paymentMethod"])
+        Index(value = ["paymentMethod"]),
+        Index(value = ["shiftId"]),
+        Index(value = ["pelangganId"])
     ],
     foreignKeys = [
         ForeignKey(

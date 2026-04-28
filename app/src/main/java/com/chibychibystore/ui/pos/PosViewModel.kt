@@ -313,7 +313,8 @@ class PosViewModel @Inject constructor(
                         subtotal = 0.0,
                         tax = 0.0,
                         discount = 0.0,
-                        total = 0.0
+                        total = 0.0,
+                        selectedPelanggan = null
                     )
                 }
             }.onFailure { e ->

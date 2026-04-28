@@ -3,6 +3,7 @@ package com.chibychibystore.service.impl
 import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.local.entity.ItemPembelian
 import com.chibychibystore.data.local.entity.Pembelian
+import com.chibychibystore.data.local.entity.StokGudang
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.data.model.StockAdjustment
 import com.chibychibystore.repository.ItemPembelianRepository
@@ -52,7 +53,23 @@ class PurchaseServiceImpl @Inject constructor(
                 val itemsResult = itemPembelianRepository.createItemPembelianList(itemsWithId)
                 if (itemsResult is Result.Failure) throw itemsResult.exception
 
-                // 3. Update Stock (Increase stock on purchase)
+                // 3. Ensure a stok_gudang row exists for each (product, warehouse) pair so that
+                // the subsequent UPDATE-based adjustStock isn't a silent no-op for products that
+                // have never been stocked in this warehouse.
+                val productIds = items.map { it.productId }.distinct()
+                for (productId in productIds) {
+                    val existingResult = stokGudangRepository.getStock(productId, warehouseId)
+                    if (existingResult is Result.Failure) throw existingResult.exception
+                    val existing = (existingResult as Result.Success).data
+                    if (existing == null) {
+                        val seedResult = stokGudangRepository.insertOrUpdateStock(
+                            StokGudang(productId = productId, warehouseId = warehouseId, quantity = 0)
+                        )
+                        if (seedResult is Result.Failure) throw seedResult.exception
+                    }
+                }
+
+                // 4. Update Stock (Increase stock on purchase)
                 val adjustments = items.map {
                     StockAdjustment(it.productId, warehouseId, it.quantity)
                 }
