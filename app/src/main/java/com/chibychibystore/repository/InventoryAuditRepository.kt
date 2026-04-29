@@ -50,4 +50,37 @@ class InventoryAuditRepository @Inject constructor(
     }
 
     fun getItemsByAuditId(auditId: Long): Flow<List<ItemStokOpname>> = auditDao.getItemsByAuditId(auditId)
+
+    /**
+     * Snapshot of all audits, used by the backup pipeline. Distinct from
+     * [getAllAudits] which returns a Flow appropriate for UI observation.
+     */
+    suspend fun getAllAuditsList(): Result<List<StokOpname>> {
+        return try {
+            Result.success(auditDao.getAllAuditsList())
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getAllAuditsList", e))
+        }
+    }
+
+    /**
+     * Snapshot of all audit line items across every audit. Used by the backup
+     * pipeline so the audit trail is preserved across restore cycles.
+     */
+    suspend fun getAllAuditItems(): Result<List<ItemStokOpname>> {
+        return try {
+            Result.success(auditDao.getAllAuditItems())
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getAllAuditItems", e))
+        }
+    }
+
+    suspend fun insertAudits(audits: List<StokOpname>): Result<Unit> {
+        return try {
+            audits.forEach { auditDao.insertAudit(it) }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("insertAudits", e))
+        }
+    }
 }

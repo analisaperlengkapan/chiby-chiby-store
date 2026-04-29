@@ -24,4 +24,13 @@ interface InventoryAuditDao {
 
     @Query("SELECT * FROM item_stok_opname WHERE auditId = :auditId")
     fun getItemsByAuditId(auditId: Long): Flow<List<ItemStokOpname>>
+
+    // Used by backup to enumerate every audit-line across all audits in a single
+    // query. The per-audit Flow query above can't be reused for a full backup
+    // dump without iterating every audit and collecting its Flow.
+    @Query("SELECT * FROM item_stok_opname")
+    suspend fun getAllAuditItems(): List<ItemStokOpname>
+
+    @Query("SELECT * FROM stok_opname")
+    suspend fun getAllAuditsList(): List<StokOpname>
 }

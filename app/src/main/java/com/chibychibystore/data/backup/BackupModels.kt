@@ -44,5 +44,15 @@ data class BackupEntities(
     // shiftId / pelangganId foreign keys, so they MUST be restored before sales to
     // avoid FK violations and silent data loss.
     val shifts: List<Shift> = emptyList(),
-    val customers: List<Pelanggan> = emptyList()
+    val customers: List<Pelanggan> = emptyList(),
+    // Per-warehouse stock rows. Without these, a full restore (which calls
+    // clearAllTables) leaves `stok_gudang` empty while `Produk.stockQuantity`
+    // is restored from backup, breaking the consistency that
+    // PurchaseService / InventoryAuditService / sales rely on. Default to empty
+    // list for backward compatibility with older backup files.
+    val stocks: List<StokGudang> = emptyList(),
+    // Inventory audit history. Compliance/audit-trail data; preserved across
+    // backup/restore cycles. Default to empty for older backup files.
+    val audits: List<StokOpname> = emptyList(),
+    val auditItems: List<ItemStokOpname> = emptyList()
 )

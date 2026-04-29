@@ -42,6 +42,17 @@ interface StokGudangDao {
     @Query("SELECT SUM(quantity) FROM stok_gudang WHERE productId = :productId")
     suspend fun getTotalStock(productId: Long): Int?
 
+    // Snapshot of every per-warehouse stock row, used by the backup pipeline so
+    // that warehouse-level inventory survives a backup/restore cycle. Without
+    // this, restoring a backup leaves `stok_gudang` empty and `Produk.stockQuantity`
+    // (which IS restored) becomes inconsistent with the per-warehouse breakdown
+    // that purchases / sales / audits all rely on.
+    @Query("SELECT * FROM stok_gudang")
+    suspend fun getAllStocks(): List<StokGudang>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStocks(stocks: List<StokGudang>)
+
     // Return Produk but with stockQuantity mapped from StokGudang
     @Query("""
         SELECT p.id, p.name, p.barcode, p.categoryId, p.costPrice, p.sellingPrice,

@@ -109,4 +109,31 @@ class StokGudangRepository @Inject constructor(
     suspend fun getTotalStock(productId: Long): Int {
         return stokGudangDao.getTotalStock(productId) ?: 0
     }
+
+    /**
+     * Snapshot of every per-warehouse stock row, used by the backup pipeline.
+     */
+    suspend fun getAllStocks(): Result<List<StokGudang>> {
+        return try {
+            Result.success(stokGudangDao.getAllStocks())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Bulk-insert per-warehouse stock rows during restore. Uses REPLACE on
+     * conflict so re-running a restore is idempotent. Caller is responsible for
+     * resyncing `Produk.stockQuantity` if desired (the regular per-row
+     * [insertOrUpdateStock] does that automatically; this batch path skips it
+     * since restore already imports `Produk` rows from the backup).
+     */
+    suspend fun insertStocks(stocks: List<StokGudang>): Result<Unit> {
+        return try {
+            stokGudangDao.insertStocks(stocks)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
