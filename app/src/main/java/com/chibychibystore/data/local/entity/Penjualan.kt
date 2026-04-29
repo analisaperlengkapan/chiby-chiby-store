@@ -62,5 +62,6 @@ data class Penjualan(
 @Serializable
 enum class PaymentMethod {
     CASH,
-    CARD
+    CARD,
+    QRIS
 }

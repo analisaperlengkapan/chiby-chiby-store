@@ -1,5 +1,7 @@
 package com.chibychibystore.service
 
+import androidx.room.withTransaction
+import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.local.entity.Shift
 import com.chibychibystore.data.local.entity.ShiftStatus
@@ -20,6 +22,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class CashManagementService @Inject constructor(
+    private val db: ChibyChibyDatabase,
     private val penjualanRepository: PenjualanRepository,
     private val pengeluaranRepository: PengeluaranRepository,
     private val shiftRepository: ShiftRepository
@@ -57,39 +60,69 @@ class CashManagementService @Inject constructor(
     }
 
     suspend fun closeShift(shiftId: Long, actualCash: Double, notes: String?): Result<Unit> {
-        val shiftResult = shiftRepository.getShiftById(shiftId)
-        if (shiftResult is Result.Failure) return Result.failure((shiftResult as Result.Failure).exception)
+        return try {
+            // Wrap the read-compute-write sequence in a single transaction so that a
+            // concurrent sale being assigned to this shift between the totals query
+            // and the final update cannot cause `totalSales` / `expectedCash` to
+            // omit that sale.
+            db.withTransaction {
+                val shiftResult = shiftRepository.getShiftById(shiftId)
+                if (shiftResult is Result.Failure) throw shiftResult.exception
 
-        val shift = (shiftResult as Result.Success).data ?: return Result.failure(ChibyChibyException.DatabaseError("Shift tidak ditemukan"))
-        if (shift.status == ShiftStatus.CLOSED) return Result.failure(ChibyChibyException.BusinessLogicError("Shift sudah ditutup"))
+                val shift = (shiftResult as Result.Success).data
+                    ?: throw ChibyChibyException.DatabaseError("Shift tidak ditemukan")
+                if (shift.status == ShiftStatus.CLOSED) {
+                    throw ChibyChibyException.BusinessLogicError("Shift sudah ditutup")
+                }
 
-        // Compute totals from sales linked to this shift so the shift's financial
-        // summary reflects reality. `totalSales` covers all non-refunded sales for
-        // the shift, while `expectedCash` is what the cash drawer *should* contain
-        // (starting cash + cash sales) for reconciliation against `actualCash`.
-        // Propagate repository failures rather than silently defaulting to 0.0,
-        // since this is a financial reconciliation and a hidden DB error would
-        // produce a closed shift with bogus zeroed-out totals and a misleading
-        // cash discrepancy against `actualCash`.
-        val totalSalesResult = penjualanRepository.getTotalSalesByShift(shiftId)
-        if (totalSalesResult is Result.Failure) return Result.failure(totalSalesResult.exception)
-        val totalSales = (totalSalesResult as Result.Success).data
+                // Compute totals from sales linked to this shift so the shift's financial
+                // summary reflects reality. `totalSales` covers all non-refunded sales for
+                // the shift, while `expectedCash` is what the cash drawer *should* contain
+                // (starting cash + cash sales - cash expenses) for reconciliation against
+                // `actualCash`. Propagate repository failures rather than silently defaulting
+                // to 0.0, since this is a financial reconciliation and a hidden DB error
+                // would produce a closed shift with bogus zeroed-out totals and a misleading
+                // cash discrepancy against `actualCash`.
+                val totalSalesResult = penjualanRepository.getTotalSalesByShift(shiftId)
+                if (totalSalesResult is Result.Failure) throw totalSalesResult.exception
+                val totalSales = (totalSalesResult as Result.Success).data
 
-        val cashSalesResult = penjualanRepository.getTotalCashSalesByShift(shiftId)
-        if (cashSalesResult is Result.Failure) return Result.failure(cashSalesResult.exception)
-        val cashSales = (cashSalesResult as Result.Success).data
+                val cashSalesResult = penjualanRepository.getTotalCashSalesByShift(shiftId)
+                if (cashSalesResult is Result.Failure) throw cashSalesResult.exception
+                val cashSales = (cashSalesResult as Result.Success).data
 
-        val expectedCash = shift.startingCash + cashSales
+                // Approved expenses recorded between shift start and close. We exclude
+                // non-cash categories (e.g. DEPRECIATION) since those don't affect the
+                // physical cash drawer. `Pengeluaran` has no shift FK, so we approximate
+                // by time window — sufficient for single-cashier shifts.
+                val closeTime = Date()
+                val expensesByCategory =
+                    pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(
+                        shift.startTime,
+                        closeTime
+                    )
+                val totalExpenses = expensesByCategory
+                    .filterKeys { it !in KategoriPengeluaran.NON_CASH_CATEGORIES }
+                    .values.sum()
 
-        val closedShift = shift.copy(
-            endTime = Date(),
-            actualCash = actualCash,
-            expectedCash = expectedCash,
-            totalSales = totalSales,
-            notes = notes,
-            status = ShiftStatus.CLOSED
-        )
-        return shiftRepository.updateShift(closedShift)
+                val expectedCash = shift.startingCash + cashSales - totalExpenses
+
+                val closedShift = shift.copy(
+                    endTime = closeTime,
+                    actualCash = actualCash,
+                    expectedCash = expectedCash,
+                    totalSales = totalSales,
+                    totalExpenses = totalExpenses,
+                    notes = notes,
+                    status = ShiftStatus.CLOSED
+                )
+                val updateResult = shiftRepository.updateShift(closedShift)
+                if (updateResult is Result.Failure) throw updateResult.exception
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     fun observeAllShifts(): Flow<List<Shift>> = shiftRepository.getAllShifts()
