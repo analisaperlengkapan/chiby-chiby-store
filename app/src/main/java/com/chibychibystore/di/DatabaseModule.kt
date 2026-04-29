@@ -283,9 +283,20 @@ object DatabaseModule {
 
                 // Copy existing data. pelangganId column does not yet exist on the old table here
                 // (MIGRATION_9_10 only added shiftId), so it's omitted from the SELECT and defaults to NULL.
+                //
+                // Backfill `totalAmount` to the new semantics. Prior to this PR, the repository
+                // layer (PenjualanRepository.createPenjualan) overwrote totalAmount with the raw
+                // item subtotal, silently discarding tax and discount. Going forward the service
+                // layer persists `max(0, subtotal + tax - discount)` (the actual amount paid) so
+                // that aggregate queries like getTotalSalesByShift / getTotalRevenue and shift
+                // cash reconciliation produce correct results. Without this backfill, old rows
+                // would store the subtotal while new rows store the post-tax/discount total, and
+                // mixing them in a single SUM() would yield meaningless aggregates. Use MAX(0, …)
+                // to mirror the service-layer floor and avoid introducing negative totals if a
+                // legacy row had discount > subtotal + tax.
                 database.execSQL("""
                     INSERT INTO penjualan_new (id, saleDate, totalAmount, tax, discount, paymentMethod, cashierId, shiftId, warehouseId, createdAt, isRefunded)
-                    SELECT id, saleDate, totalAmount, tax, discount, paymentMethod, cashierId, shiftId, warehouseId, createdAt, isRefunded FROM penjualan
+                    SELECT id, saleDate, MAX(0, totalAmount + tax - discount), tax, discount, paymentMethod, cashierId, shiftId, warehouseId, createdAt, isRefunded FROM penjualan
                 """)
 
                 database.execSQL("DROP TABLE penjualan")
