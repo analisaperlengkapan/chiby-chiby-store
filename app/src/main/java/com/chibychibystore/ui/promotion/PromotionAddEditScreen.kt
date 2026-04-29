@@ -57,7 +57,18 @@ fun PromotionAddEditScreen(
                 name = promo.name
                 description = promo.description
                 type = promo.type
-                value = if (type == PromotionType.PERCENTAGE) (promo.value * 100).toInt().toString() else promo.value.toString()
+                value = if (type == PromotionType.PERCENTAGE) {
+                    // Display the percentage without truncating fractional values. A
+                    // previous `.toInt()` here silently dropped sub-percent precision
+                    // (e.g. 12.5% → "12"), so saving an unedited promotion would write
+                    // back 0.12 instead of the original 0.125 and quietly reduce the
+                    // customer's discount. Render whole percentages cleanly (10 not
+                    // 10.0) by checking if the value has no fractional part.
+                    val pct = promo.value * 100
+                    if (pct == pct.toLong().toDouble()) pct.toLong().toString() else pct.toString()
+                } else {
+                    promo.value.toString()
+                }
                 minPurchaseAmount = promo.minPurchaseAmount.toString()
                 maxDiscountAmount = promo.maxDiscountAmount?.toString() ?: ""
                 isActive = promo.isActive
