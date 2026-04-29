@@ -188,7 +188,19 @@ class CashManagementService @Inject constructor(
             if (revenueResult is Result.Failure) throw revenueResult.exception
             val salesRevenue = (revenueResult as Result.Success).data
 
-            val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
+            // Use the Result-returning variant so a transient DB error on the
+            // expense side propagates instead of silently returning an empty map.
+            // The non-Result variant (`getApprovedRingkasanPengeluaranPerKategori`)
+            // catches exceptions and returns `emptyMap()`, which would treat all
+            // expenses as zero and inflate operating cash flow to equal revenue.
+            // That asymmetry was previously masked because revenue was also
+            // computed from a non-throwing path; now that revenue throws on
+            // failure (above), expenses must do the same to avoid producing a
+            // misleading "successful" cash flow figure built on partial data.
+            val expensesResult = pengeluaranRepository
+                .getApprovedRingkasanPengeluaranPerKategoriResult(start, end)
+            if (expensesResult is Result.Failure) throw expensesResult.exception
+            val approvedExpenses = (expensesResult as Result.Success).data
 
             val operatingExpenses = approvedExpenses
                 .filterKeys { it in KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES }
