@@ -125,6 +125,8 @@ class RestoreServiceImpl @Inject constructor(
                 "gudang" to warehousesRestored,
                 "product" to productsRestored,
                 "pemasok" to suppliersRestored,
+                "shift" to shiftsRestored,
+                "pelanggan" to customersRestored,
                 "penjualan" to salesRestored,
                 "pembelian" to purchasesRestored,
                 "pengeluaran" to expensesRestored

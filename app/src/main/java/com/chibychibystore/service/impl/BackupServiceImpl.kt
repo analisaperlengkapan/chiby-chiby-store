@@ -68,7 +68,7 @@ class BackupServiceImpl @Inject constructor(
     override suspend fun createBackup(): Result<BackupInfo> = withContext(ioDispatcher) {
         var tempFile: File? = null
         try {
-            _backupProgress.value = BackupProgress(isInProgress = true, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, totalSteps = 12)
             
             val createdAt = System.currentTimeMillis()
             tempFile = File(context.cacheDir, "backup_temp_${createdAt}.json")
@@ -100,7 +100,7 @@ class BackupServiceImpl @Inject constructor(
             writer.beginObject()
 
             // Step 1: Users
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengguna", progress = 0.1f, currentStepIndex = 1, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengguna", progress = 1f / 12f, currentStepIndex = 1, totalSteps = 12)
             writer.name("users")
             writer.beginArray()
             val users = penggunaRepository.getAllUsers().firstOrNull() ?: emptyList()
@@ -109,7 +109,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 2: Categories
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data kategori", progress = 0.2f, currentStepIndex = 2, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data kategori", progress = 2f / 12f, currentStepIndex = 2, totalSteps = 12)
             writer.name("categories")
             writer.beginArray()
             val categories = kategoriRepository.getAllKategori().firstOrNull() ?: emptyList()
@@ -118,7 +118,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 3: Warehouses
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data gudang", progress = 0.3f, currentStepIndex = 3, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data gudang", progress = 3f / 12f, currentStepIndex = 3, totalSteps = 12)
             writer.name("warehouses")
             writer.beginArray()
             val warehouses = gudangRepository.getAllGudang().firstOrNull() ?: emptyList()
@@ -127,7 +127,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 4: Products
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data product", progress = 0.4f, currentStepIndex = 4, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data product", progress = 4f / 12f, currentStepIndex = 4, totalSteps = 12)
             writer.name("products")
             writer.beginArray()
             val products = produkRepository.getAllProduk().firstOrNull() ?: emptyList()
@@ -136,7 +136,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 5: Suppliers
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pemasok", progress = 0.5f, currentStepIndex = 5, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pemasok", progress = 5f / 12f, currentStepIndex = 5, totalSteps = 12)
             writer.name("suppliers")
             writer.beginArray()
             val suppliers = pemasokRepository.getAllPemasok().firstOrNull() ?: emptyList()
@@ -145,7 +145,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 6: Sales
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data penjualan", progress = 0.6f, currentStepIndex = 6, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data penjualan", progress = 6f / 12f, currentStepIndex = 6, totalSteps = 12)
             writer.name("sales")
             writer.beginArray()
             val sales = penjualanRepository.getAllPenjualan().firstOrNull() ?: emptyList()
@@ -154,7 +154,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 7: Sale Items
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item penjualan", progress = 0.7f, currentStepIndex = 7, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item penjualan", progress = 7f / 12f, currentStepIndex = 7, totalSteps = 12)
             writer.name("saleItems")
             writer.beginArray()
             val saleItems = itemPenjualanRepository.getAllSaleItems().firstOrNull() ?: emptyList()
@@ -163,7 +163,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 8: Purchases
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pembelian", progress = 0.8f, currentStepIndex = 8, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pembelian", progress = 8f / 12f, currentStepIndex = 8, totalSteps = 12)
             writer.name("purchases")
             writer.beginArray()
             val purchases = pembelianRepository.getAllPurchases().firstOrNull() ?: emptyList()
@@ -172,7 +172,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 9: Purchase Items
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item pembelian", progress = 0.9f, currentStepIndex = 9, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item pembelian", progress = 9f / 12f, currentStepIndex = 9, totalSteps = 12)
             writer.name("purchaseItems")
             writer.beginArray()
             val purchaseItems = itemPembelianRepository.getAllPurchaseItems().firstOrNull() ?: emptyList()
@@ -181,7 +181,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 10: Expenses
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengeluaran", progress = 1.0f, currentStepIndex = 10, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengeluaran", progress = 10f / 12f, currentStepIndex = 10, totalSteps = 12)
             writer.name("expenses")
             writer.beginArray()
             val expenses = pengeluaranRepository.getAllPengeluarans().firstOrNull() ?: emptyList()
@@ -191,6 +191,7 @@ class BackupServiceImpl @Inject constructor(
 
             // Step 11: Shifts (Penjualan FK target — must be in backup so restored sales
             // referencing shiftId don't fail FK validation and get silently dropped.)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data shift", progress = 11f / 12f, currentStepIndex = 11, totalSteps = 12)
             writer.name("shifts")
             writer.beginArray()
             val shifts = shiftRepository.getAllShifts().firstOrNull() ?: emptyList()
@@ -199,6 +200,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 12: Customers (Penjualan FK target via pelangganId.)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pelanggan", progress = 1.0f, currentStepIndex = 12, totalSteps = 12)
             writer.name("customers")
             writer.beginArray()
             val customers = pelangganRepository.getAllPelanggan().firstOrNull() ?: emptyList()
