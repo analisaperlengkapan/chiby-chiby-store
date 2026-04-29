@@ -104,13 +104,22 @@ class CashManagementService @Inject constructor(
                 if (cashSalesResult is Result.Failure) throw cashSalesResult.exception
                 val cashSales = (cashSalesResult as Result.Success).data
 
-                // Approved expenses recorded between shift start and close. Only operating
-                // expense categories drain the *physical cash drawer* during a shift —
-                // categories like INVENTORY_PURCHASES (COGS), EQUIPMENT (investing),
-                // LOAN_REPAYMENT/DIVIDEND (financing) are normally paid via bank transfer
-                // and shouldn't reduce expectedCash. DEPRECIATION (non-cash) likewise
-                // doesn't affect the drawer. Counting them here would deflate expectedCash
-                // and produce phantom cash discrepancies at shift close.
+                // Approved expenses recorded between shift start and close. We subtract
+                // every category EXCEPT NON_CASH_CATEGORIES (DEPRECIATION), because any
+                // approved expense recorded by this cashier during the shift could
+                // plausibly have been paid out of the physical cash drawer.
+                //
+                // The previous implementation only subtracted OPERATING_EXPENSE_CATEGORIES,
+                // excluding INVENTORY_PURCHASES (COGS), EQUIPMENT (investing) and
+                // LOAN_REPAYMENT/DIVIDEND (financing) on the assumption they're always
+                // paid via bank transfer. That assumption breaks for stores that pay
+                // suppliers, equipment vendors or loan installments in cash from the
+                // drawer: those cash outflows would not reduce expectedCash, creating a
+                // phantom surplus at shift close that could mask theft or skim. A false
+                // deficit (when these categories WERE paid by bank) is far easier to
+                // surface and explain than a hidden surplus, so the conservative default
+                // is to count them. Stores that need finer-grained tracking should add
+                // an explicit `paidFromCashDrawer` flag to `Pengeluaran` in a follow-up.
                 //
                 // `Pengeluaran` has no shift FK, so we approximate by time window. To
                 // avoid double-counting across two cashiers with overlapping shifts, we
@@ -128,7 +137,7 @@ class CashManagementService @Inject constructor(
                 if (expensesResult is Result.Failure) throw expensesResult.exception
                 val expensesByCategory = (expensesResult as Result.Success).data
                 val totalExpenses = expensesByCategory
-                    .filterKeys { it in KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES }
+                    .filterKeys { it !in KategoriPengeluaran.NON_CASH_CATEGORIES }
                     .values.sum()
 
                 val expectedCash = shift.startingCash + cashSales - totalExpenses

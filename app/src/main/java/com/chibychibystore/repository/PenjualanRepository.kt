@@ -177,7 +177,15 @@ class PenjualanRepository @Inject constructor(
     }
 
     /**
-     * Get total penjualan by date range
+     * Get total penjualan amount by date range.
+     *
+     * As of MIGRATION_11_12, `Penjualan.totalAmount` stores the post-tax/discount
+     * amount actually paid (subtotal + tax - discount, floored at 0). This method
+     * therefore returns gross cash flow INCLUDING tax — it is NOT net revenue.
+     * Use [getTotalRevenue] for tax-exclusive revenue figures, or
+     * [getTotalCashReceipts] for non-refunded gross cash inflows.
+     *
+     * Includes refunded sales; for non-refunded only, see [getTotalCashReceipts].
      */
     suspend fun getTotalPenjualanAmount(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
@@ -203,7 +211,13 @@ class PenjualanRepository @Inject constructor(
     }
 
     /**
-     * Get total cash receipts (non-refunded total amount)
+     * Get total cash receipts (non-refunded `SUM(totalAmount)`).
+     *
+     * As of MIGRATION_11_12, `totalAmount` is post-tax/discount, so this is the
+     * gross cash flow from sales (INCLUDING tax) — i.e. what the customer paid.
+     * Use [getTotalRevenue] for tax-exclusive revenue.
+     *
+     * Despite the name, this aggregates ALL payment methods, not just cash.
      */
     suspend fun getTotalCashReceipts(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
