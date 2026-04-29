@@ -67,11 +67,17 @@ class CashManagementService @Inject constructor(
         // summary reflects reality. `totalSales` covers all non-refunded sales for
         // the shift, while `expectedCash` is what the cash drawer *should* contain
         // (starting cash + cash sales) for reconciliation against `actualCash`.
+        // Propagate repository failures rather than silently defaulting to 0.0,
+        // since this is a financial reconciliation and a hidden DB error would
+        // produce a closed shift with bogus zeroed-out totals and a misleading
+        // cash discrepancy against `actualCash`.
         val totalSalesResult = penjualanRepository.getTotalSalesByShift(shiftId)
-        val totalSales = (totalSalesResult as? Result.Success)?.data ?: 0.0
+        if (totalSalesResult is Result.Failure) return Result.failure(totalSalesResult.exception)
+        val totalSales = (totalSalesResult as Result.Success).data
 
         val cashSalesResult = penjualanRepository.getTotalCashSalesByShift(shiftId)
-        val cashSales = (cashSalesResult as? Result.Success)?.data ?: 0.0
+        if (cashSalesResult is Result.Failure) return Result.failure(cashSalesResult.exception)
+        val cashSales = (cashSalesResult as Result.Success).data
 
         val expectedCash = shift.startingCash + cashSales
 
