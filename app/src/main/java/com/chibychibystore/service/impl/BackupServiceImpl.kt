@@ -214,10 +214,19 @@ class BackupServiceImpl @Inject constructor(
             // (clearAllTables + reinsert) leaves stok_gudang empty while
             // Produk.stockQuantity is repopulated from backup, breaking the
             // single-source-of-truth invariant for warehouse-level inventory.
+            //
+            // Propagate repository failures rather than silently coercing to an
+            // empty list: other backup steps use `Flow.firstOrNull() ?: emptyList()`
+            // which only yields empty on a genuinely empty table, but the stocks /
+            // audits / auditItems queries return `Result<...>` and a transient DB
+            // error would otherwise produce a structurally valid but data-incomplete
+            // backup file — silently losing all per-warehouse stock and audit trail.
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan stok gudang", progress = 13f / 15f, currentStepIndex = 13, totalSteps = 15)
             writer.name("stocks")
             writer.beginArray()
-            val stocks = (stokGudangRepository.getAllStocks() as? Result.Success)?.data ?: emptyList()
+            val stocksResult = stokGudangRepository.getAllStocks()
+            if (stocksResult is Result.Failure) throw stocksResult.exception
+            val stocks = (stocksResult as Result.Success).data
             stocks.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
             writer.endArray()
             writer.flush()
@@ -226,7 +235,9 @@ class BackupServiceImpl @Inject constructor(
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data audit", progress = 14f / 15f, currentStepIndex = 14, totalSteps = 15)
             writer.name("audits")
             writer.beginArray()
-            val audits = (inventoryAuditRepository.getAllAuditsList() as? Result.Success)?.data ?: emptyList()
+            val auditsResult = inventoryAuditRepository.getAllAuditsList()
+            if (auditsResult is Result.Failure) throw auditsResult.exception
+            val audits = (auditsResult as Result.Success).data
             audits.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
             writer.endArray()
             writer.flush()
@@ -235,7 +246,9 @@ class BackupServiceImpl @Inject constructor(
             _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item audit", progress = 1.0f, currentStepIndex = 15, totalSteps = 15)
             writer.name("auditItems")
             writer.beginArray()
-            val auditItems = (inventoryAuditRepository.getAllAuditItems() as? Result.Success)?.data ?: emptyList()
+            val auditItemsResult = inventoryAuditRepository.getAllAuditItems()
+            if (auditItemsResult is Result.Failure) throw auditItemsResult.exception
+            val auditItems = (auditItemsResult as Result.Success).data
             auditItems.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
             writer.endArray()
             writer.flush()

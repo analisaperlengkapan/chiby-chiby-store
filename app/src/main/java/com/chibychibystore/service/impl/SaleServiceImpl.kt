@@ -211,7 +211,16 @@ class SaleServiceImpl @Inject constructor(
                 }
 
                 val updatedPenjualan = saleWithItems.sale.copy(isRefunded = true)
-                penjualanRepository.updatePenjualan(updatedPenjualan)
+                // Check the update result and propagate any failure so the transaction
+                // rolls back. Without this check, a failed update (the repository
+                // catches DAO exceptions and returns Result.Failure rather than
+                // throwing — see PenjualanRepository.kt:153-160) would silently leave
+                // the sale NOT marked as refunded while still deducting loyalty points
+                // and restoring stock further down, producing a financially
+                // inconsistent state. Every other fallible call in this method is
+                // already checked; this is the only unchecked one.
+                val updateResult = penjualanRepository.updatePenjualan(updatedPenjualan)
+                if (updateResult is Result.Failure) throw updateResult.exception
 
                 // Reverse loyalty points awarded at sale time. Points are accrued in
                 // createPenjualan as `(finalTotal / 10000).toInt()`; mirror that exact
