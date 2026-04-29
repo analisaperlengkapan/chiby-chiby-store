@@ -344,7 +344,18 @@ class RestoreServiceImpl @Inject constructor(
 
     private suspend fun restorePenjualans(sales: List<Penjualan>, items: List<ItemPenjualan>): Int {
         if (sales.isEmpty()) return 0
-        
+
+        // NOTE on totalAmount semantics: pre-PR backups contain Penjualan rows where
+        // `totalAmount` was the raw item subtotal (the old PenjualanRepository.createPenjualan
+        // overwrote totalAmount with `items.sumOf { it.totalPrice }`, dropping tax/discount).
+        // The on-disk MIGRATION_11_12 backfills existing rows to the new "amount paid"
+        // semantics (`MAX(0, totalAmount + tax - discount)`), but data imported here from
+        // a pre-PR backup file bypasses that migration and keeps the old subtotal value.
+        // Mixing pre- and post-PR rows in `getTotalSalesByShift`, `getTotalRevenue`, and
+        // shift cash reconciliation will produce inconsistent aggregates. This is a narrow
+        // backward-compatibility edge case (only affects pre-PR backups restored on a
+        // post-PR app); we accept it rather than guess at semantics from the file alone.
+
         // Optimistic Batch Approach
         try {
             return database.withTransaction {

@@ -10,6 +10,7 @@ import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.ProductService
 import com.chibychibystore.service.PromoService
 import com.chibychibystore.service.SaleService
+import com.chibychibystore.service.WarehouseService
 import com.chibychibystore.ui.base.BaseViewModel
 import com.chibychibystore.ui.base.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -62,7 +63,16 @@ data class PosUiState(
     val isPrintingReceipt: Boolean = false,
     val isScanning: Boolean = false,
     val selectedPelanggan: com.chibychibystore.data.local.entity.Pelanggan? = null,
-    val pelangganList: List<com.chibychibystore.data.local.entity.Pelanggan> = emptyList()
+    val pelangganList: List<com.chibychibystore.data.local.entity.Pelanggan> = emptyList(),
+    // Warehouse the cashier is currently selling from. Defaults to 1L for backward
+    // compatibility with single-warehouse deployments and existing data; users with
+    // multiple warehouses can switch via the warehouse selector in the POS UI.
+    // The sale's warehouseId drives stock validation and inventory adjustment in
+    // SaleServiceImpl, so without this selector inventory added to non-default
+    // warehouses (via PurchaseServiceImpl.createPembelianWithWarehouse) could
+    // never be sold.
+    val selectedWarehouseId: Long = 1L,
+    val warehouses: List<com.chibychibystore.data.local.entity.Gudang> = emptyList()
 ) : UiState
 
 /**
@@ -74,7 +84,8 @@ class PosViewModel @Inject constructor(
     private val saleService: SaleService,
     private val authService: AuthService,
     private val promoService: PromoService,
-    private val pelangganService: com.chibychibystore.service.PelangganService
+    private val pelangganService: com.chibychibystore.service.PelangganService,
+    private val warehouseService: WarehouseService
 ) : BaseViewModel<PosUiState>(PosUiState()) {
 
     private val _searchQuery = MutableStateFlow("")
@@ -82,6 +93,7 @@ class PosViewModel @Inject constructor(
     init {
         setupSearch()
         loadPelanggan()
+        loadWarehouses()
     }
 
     private fun loadPelanggan() {
@@ -92,8 +104,32 @@ class PosViewModel @Inject constructor(
         }
     }
 
+    private fun loadWarehouses() {
+        viewModelScope.launch {
+            warehouseService.observeGudangs().collect { list ->
+                updateState { state ->
+                    // Auto-select the first available warehouse if the current
+                    // selection no longer exists (e.g. the default id=1L was
+                    // never created or was deleted), so the cashier doesn't get
+                    // stuck with an invalid warehouseId that would FK-fail at
+                    // sale creation.
+                    val newSelected = if (list.any { it.id == state.selectedWarehouseId }) {
+                        state.selectedWarehouseId
+                    } else {
+                        list.firstOrNull()?.id ?: state.selectedWarehouseId
+                    }
+                    state.copy(warehouses = list, selectedWarehouseId = newSelected)
+                }
+            }
+        }
+    }
+
     fun selectPelanggan(pelanggan: com.chibychibystore.data.local.entity.Pelanggan?) {
         updateState { it.copy(selectedPelanggan = pelanggan) }
+    }
+
+    fun selectWarehouse(warehouseId: Long) {
+        updateState { it.copy(selectedWarehouseId = warehouseId) }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -296,7 +332,13 @@ class PosViewModel @Inject constructor(
                 paymentMethod = try { PaymentMethod.valueOf(currentState.paymentMethod) } catch(e: Exception) { PaymentMethod.CASH },
                 cashierId = userId,
                 shiftId = openShift?.id,
-                pelangganId = currentState.selectedPelanggan?.id
+                pelangganId = currentState.selectedPelanggan?.id,
+                // Use the warehouse selected by the cashier rather than relying on
+                // the entity default of 1L. With multi-warehouse purchases now
+                // supported (see PurchaseServiceImpl.createPembelianWithWarehouse),
+                // hardcoding warehouseId here would make stock added to non-default
+                // warehouses unsellable through POS.
+                warehouseId = currentState.selectedWarehouseId
             )
 
             val items = currentState.cartItems.map { cartItem ->
