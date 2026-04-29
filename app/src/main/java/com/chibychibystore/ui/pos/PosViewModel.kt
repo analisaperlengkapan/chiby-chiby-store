@@ -132,7 +132,82 @@ class PosViewModel @Inject constructor(
     }
 
     fun selectWarehouse(warehouseId: Long) {
-        updateState { it.copy(selectedWarehouseId = warehouseId) }
+        // Re-validate any existing cart items against the newly selected warehouse's
+        // per-warehouse stock. Items added before the switch were validated against
+        // the previous warehouse (see addProductToCart / updateCartItemQuantity), so
+        // without this pass a cashier could carry over a cart that exceeds the new
+        // warehouse's stock and only discover the mismatch at payment time when
+        // SaleServiceImpl's per-warehouse validation rejects the sale.
+        //
+        // Strategy per item:
+        //   - If stock in the new warehouse is 0 or unavailable, drop the item.
+        //   - If stock is below the cart quantity, cap the cart quantity at the
+        //     available stock so the line stays in the cart but is sellable.
+        //   - Otherwise leave the line untouched.
+        //
+        // We surface a non-blocking message in `successMessage` (or `error` if
+        // every line had to be dropped) so the cashier sees what changed.
+        launchWithState {
+            val previousWarehouseId = currentState.selectedWarehouseId
+            if (previousWarehouseId == warehouseId) return@launchWithState
+
+            val items = currentState.cartItems
+            if (items.isEmpty()) {
+                updateState { it.copy(selectedWarehouseId = warehouseId) }
+                return@launchWithState
+            }
+
+            val adjustedItems = mutableListOf<CartItem>()
+            val droppedNames = mutableListOf<String>()
+            val cappedNames = mutableListOf<String>()
+
+            for (item in items) {
+                val stockResult = stokGudangRepository.getStock(item.product.id, warehouseId)
+                val available = if (stockResult is Result.Success) {
+                    stockResult.data?.quantity ?: 0
+                } else {
+                    0
+                }
+
+                when {
+                    available <= 0 -> droppedNames.add(item.product.name)
+                    available < item.quantity -> {
+                        adjustedItems.add(item.updateQuantity(available))
+                        cappedNames.add(item.product.name)
+                    }
+                    else -> adjustedItems.add(item)
+                }
+            }
+
+            val subtotal = adjustedItems.sumOf { it.totalPrice }
+            val tax = subtotal * AppConstants.TAX_RATE
+            val discount = promoService.calculateDiscount(subtotal)
+            val total = subtotal + tax - discount
+
+            val notice = buildString {
+                if (droppedNames.isNotEmpty()) {
+                    append("Item dihapus karena stok kosong di gudang ini: ")
+                    append(droppedNames.joinToString(", "))
+                }
+                if (cappedNames.isNotEmpty()) {
+                    if (isNotEmpty()) append(". ")
+                    append("Jumlah disesuaikan dengan stok gudang: ")
+                    append(cappedNames.joinToString(", "))
+                }
+            }.takeIf { it.isNotBlank() }
+
+            updateState {
+                it.copy(
+                    selectedWarehouseId = warehouseId,
+                    cartItems = adjustedItems,
+                    subtotal = subtotal,
+                    tax = tax,
+                    discount = discount,
+                    total = maxOf(0.0, total),
+                    successMessage = notice ?: it.successMessage
+                )
+            }
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
