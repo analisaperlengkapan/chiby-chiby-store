@@ -12,6 +12,11 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.ui.inventory.*
+import com.chibychibystore.ui.purchase.*
+import com.chibychibystore.ui.promotion.*
+import com.chibychibystore.ui.cash.*
+import com.chibychibystore.ui.audit.*
+import com.chibychibystore.ui.pelanggan.*
 import com.chibychibystore.ui.pos.PosScreen
 import com.chibychibystore.ui.barcode.BarcodeScannerScreen
 import com.chibychibystore.ui.barcode.BarcodePrintScreen
@@ -126,6 +131,86 @@ fun AppNavigation(
         composable(Screen.SalesHistory.route) {
             AuthGuard(authService = authService) {
                 SalesHistoryScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.PurchaseList.route) {
+            AuthGuard(authService = authService) {
+                PurchaseListScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.PurchaseAdd.route) {
+            AuthGuard(authService = authService) {
+                PurchaseAddScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.PromotionList.route) {
+            AuthGuard(authService = authService) {
+                PromotionListScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.CashShift.route) {
+            AuthGuard(authService = authService) {
+                ShiftScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.CashHistory.route) {
+            AuthGuard(authService = authService) {
+                ShiftHistoryScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.AuditList.route) {
+            AuthGuard(authService = authService) {
+                AuditListScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.AuditAdd.route) {
+            AuthGuard(authService = authService) {
+                AuditAddScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.PelangganList.route) {
+            AuthGuard(authService = authService) {
+                PelangganListScreen(navController = navController)
+            }
+        }
+
+        composable(Screen.PelangganAdd.route) {
+            AuthGuard(authService = authService) {
+                PelangganAddEditScreen(navController = navController)
+            }
+        }
+
+        composable(
+            route = Screen.PelangganEdit.route,
+            arguments = listOf(navArgument("pelangganId") { type = NavType.LongType })
+        ) {
+            val pelangganId = it.arguments?.getLong("pelangganId") ?: 0L
+            AuthGuard(authService = authService) {
+                PelangganAddEditScreen(navController = navController, pelangganId = pelangganId)
+            }
+        }
+
+        composable(Screen.PromotionAdd.route) {
+            AuthGuard(authService = authService) {
+                PromotionAddEditScreen(navController = navController)
+            }
+        }
+
+        composable(
+            route = Screen.PromotionEdit.route,
+            arguments = listOf(navArgument("promotionId") { type = NavType.LongType })
+        ) {
+            val promotionId = it.arguments?.getLong("promotionId") ?: 0L
+            AuthGuard(authService = authService) {
+                PromotionAddEditScreen(navController = navController, promotionId = promotionId)
             }
         }
 

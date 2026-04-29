@@ -52,7 +52,11 @@ class BackupServiceImpl @Inject constructor(
     private val itemPenjualanRepository: ItemPenjualanRepository,
     private val pembelianRepository: PembelianRepository,
     private val itemPembelianRepository: ItemPembelianRepository,
-    private val pengeluaranRepository: PengeluaranRepository
+    private val pengeluaranRepository: PengeluaranRepository,
+    private val shiftRepository: ShiftRepository,
+    private val pelangganRepository: PelangganRepository,
+    private val stokGudangRepository: StokGudangRepository,
+    private val inventoryAuditRepository: InventoryAuditRepository
 ) : BackupService {
 
     private val json = Json { prettyPrint = true }
@@ -66,7 +70,7 @@ class BackupServiceImpl @Inject constructor(
     override suspend fun createBackup(): Result<BackupInfo> = withContext(ioDispatcher) {
         var tempFile: File? = null
         try {
-            _backupProgress.value = BackupProgress(isInProgress = true, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, totalSteps = 15)
             
             val createdAt = System.currentTimeMillis()
             tempFile = File(context.cacheDir, "backup_temp_${createdAt}.json")
@@ -75,9 +79,16 @@ class BackupServiceImpl @Inject constructor(
             val digest = MessageDigest.getInstance("SHA-256")
 
             // 2. Construct the Prefix (Header) with empty checksum
+            //
+            // Backup format version "2.0" indicates that Penjualan.totalAmount stores the
+            // post-tax/discount amount actually paid (matching MIGRATION_11_12 semantics).
+            // Older "1.0" backups stored totalAmount = raw item subtotal; the restore
+            // pipeline detects version < "2.0" and applies the same backfill formula
+            // (`max(0, totalAmount + tax - discount)`) so legacy backups produce
+            // consistent aggregates after import.
             val initialMetadata = BackupMetadata(checksum = "")
             val headerJsonObject = buildJsonObject {
-                put("version", "1.0")
+                put("version", "2.0")
                 put("createdAt", createdAt)
                 put("metadata", jsonCompact.encodeToJsonElement(initialMetadata))
             }
@@ -98,7 +109,7 @@ class BackupServiceImpl @Inject constructor(
             writer.beginObject()
 
             // Step 1: Users
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengguna", progress = 0.1f, currentStepIndex = 1, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengguna", progress = 1f / 15f, currentStepIndex = 1, totalSteps = 15)
             writer.name("users")
             writer.beginArray()
             val users = penggunaRepository.getAllUsers().firstOrNull() ?: emptyList()
@@ -107,7 +118,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 2: Categories
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data kategori", progress = 0.2f, currentStepIndex = 2, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data kategori", progress = 2f / 15f, currentStepIndex = 2, totalSteps = 15)
             writer.name("categories")
             writer.beginArray()
             val categories = kategoriRepository.getAllKategori().firstOrNull() ?: emptyList()
@@ -116,7 +127,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 3: Warehouses
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data gudang", progress = 0.3f, currentStepIndex = 3, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data gudang", progress = 3f / 15f, currentStepIndex = 3, totalSteps = 15)
             writer.name("warehouses")
             writer.beginArray()
             val warehouses = gudangRepository.getAllGudang().firstOrNull() ?: emptyList()
@@ -125,7 +136,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 4: Products
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data product", progress = 0.4f, currentStepIndex = 4, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data product", progress = 4f / 15f, currentStepIndex = 4, totalSteps = 15)
             writer.name("products")
             writer.beginArray()
             val products = produkRepository.getAllProduk().firstOrNull() ?: emptyList()
@@ -134,7 +145,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 5: Suppliers
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pemasok", progress = 0.5f, currentStepIndex = 5, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pemasok", progress = 5f / 15f, currentStepIndex = 5, totalSteps = 15)
             writer.name("suppliers")
             writer.beginArray()
             val suppliers = pemasokRepository.getAllPemasok().firstOrNull() ?: emptyList()
@@ -143,7 +154,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 6: Sales
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data penjualan", progress = 0.6f, currentStepIndex = 6, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data penjualan", progress = 6f / 15f, currentStepIndex = 6, totalSteps = 15)
             writer.name("sales")
             writer.beginArray()
             val sales = penjualanRepository.getAllPenjualan().firstOrNull() ?: emptyList()
@@ -152,7 +163,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 7: Sale Items
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item penjualan", progress = 0.7f, currentStepIndex = 7, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item penjualan", progress = 7f / 15f, currentStepIndex = 7, totalSteps = 15)
             writer.name("saleItems")
             writer.beginArray()
             val saleItems = itemPenjualanRepository.getAllSaleItems().firstOrNull() ?: emptyList()
@@ -161,7 +172,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 8: Purchases
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pembelian", progress = 0.8f, currentStepIndex = 8, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pembelian", progress = 8f / 15f, currentStepIndex = 8, totalSteps = 15)
             writer.name("purchases")
             writer.beginArray()
             val purchases = pembelianRepository.getAllPurchases().firstOrNull() ?: emptyList()
@@ -170,7 +181,7 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 9: Purchase Items
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item pembelian", progress = 0.9f, currentStepIndex = 9, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item pembelian", progress = 9f / 15f, currentStepIndex = 9, totalSteps = 15)
             writer.name("purchaseItems")
             writer.beginArray()
             val purchaseItems = itemPembelianRepository.getAllPurchaseItems().firstOrNull() ?: emptyList()
@@ -179,12 +190,75 @@ class BackupServiceImpl @Inject constructor(
             writer.flush()
 
             // Step 10: Expenses
-            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengeluaran", progress = 1.0f, currentStepIndex = 10, totalSteps = 10)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pengeluaran", progress = 10f / 15f, currentStepIndex = 10, totalSteps = 15)
             writer.name("expenses")
             writer.beginArray()
             val expenses = pengeluaranRepository.getAllPengeluarans().firstOrNull() ?: emptyList()
             expenses.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
             writer.endArray()
+            writer.flush()
+
+            // Step 11: Shifts (Penjualan FK target — must be in backup so restored sales
+            // referencing shiftId don't fail FK validation and get silently dropped.)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data shift", progress = 11f / 15f, currentStepIndex = 11, totalSteps = 15)
+            writer.name("shifts")
+            writer.beginArray()
+            val shifts = shiftRepository.getAllShifts().firstOrNull() ?: emptyList()
+            shifts.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 12: Customers (Penjualan FK target via pelangganId.)
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data pelanggan", progress = 12f / 15f, currentStepIndex = 12, totalSteps = 15)
+            writer.name("customers")
+            writer.beginArray()
+            val customers = pelangganRepository.getAllPelanggan().firstOrNull() ?: emptyList()
+            customers.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 13: Per-warehouse stock rows. Without these, a full restore
+            // (clearAllTables + reinsert) leaves stok_gudang empty while
+            // Produk.stockQuantity is repopulated from backup, breaking the
+            // single-source-of-truth invariant for warehouse-level inventory.
+            //
+            // Propagate repository failures rather than silently coercing to an
+            // empty list: other backup steps use `Flow.firstOrNull() ?: emptyList()`
+            // which only yields empty on a genuinely empty table, but the stocks /
+            // audits / auditItems queries return `Result<...>` and a transient DB
+            // error would otherwise produce a structurally valid but data-incomplete
+            // backup file — silently losing all per-warehouse stock and audit trail.
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan stok gudang", progress = 13f / 15f, currentStepIndex = 13, totalSteps = 15)
+            writer.name("stocks")
+            writer.beginArray()
+            val stocksResult = stokGudangRepository.getAllStocks()
+            if (stocksResult is Result.Failure) throw stocksResult.exception
+            val stocks = (stocksResult as Result.Success).data
+            stocks.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 14: Inventory audit headers.
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan data audit", progress = 14f / 15f, currentStepIndex = 14, totalSteps = 15)
+            writer.name("audits")
+            writer.beginArray()
+            val auditsResult = inventoryAuditRepository.getAllAuditsList()
+            if (auditsResult is Result.Failure) throw auditsResult.exception
+            val audits = (auditsResult as Result.Success).data
+            audits.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 15: Inventory audit line items.
+            _backupProgress.value = BackupProgress(isInProgress = true, currentStep = "Mengumpulkan item audit", progress = 1.0f, currentStepIndex = 15, totalSteps = 15)
+            writer.name("auditItems")
+            writer.beginArray()
+            val auditItemsResult = inventoryAuditRepository.getAllAuditItems()
+            if (auditItemsResult is Result.Failure) throw auditItemsResult.exception
+            val auditItems = (auditItemsResult as Result.Success).data
+            auditItems.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
 
             // End "data" object
             writer.endObject()
@@ -206,10 +280,12 @@ class BackupServiceImpl @Inject constructor(
             val file = File(filePath)
             val outputStream = BufferedOutputStream(openBackupOutputStream(file))
 
-            // Re-construct prefix with REAL checksum
+            // Re-construct prefix with REAL checksum (keep version in sync with the
+            // initial header above — both must match or the checksum-over-prefix
+            // computation would mismatch the actually written prefix).
             val finalMetadata = initialMetadata.copy(checksum = checksum)
             val finalHeaderJsonObject = buildJsonObject {
-                put("version", "1.0")
+                put("version", "2.0")
                 put("createdAt", createdAt)
                 put("metadata", jsonCompact.encodeToJsonElement(finalMetadata))
             }
@@ -238,7 +314,7 @@ class BackupServiceImpl @Inject constructor(
                 filePath = filePath,
                 createdAt = createdAt,
                 sizeBytes = file.length(),
-                version = "1.0",
+                version = "2.0",
                 checksum = checksum
             )
 
@@ -319,7 +395,12 @@ class BackupServiceImpl @Inject constructor(
                 "saleItems" to backupData.data.saleItems.size,
                 "purchases" to backupData.data.purchases.size,
                 "purchaseItems" to backupData.data.purchaseItems.size,
-                "expenses" to backupData.data.expenses.size
+                "expenses" to backupData.data.expenses.size,
+                "shifts" to backupData.data.shifts.size,
+                "customers" to backupData.data.customers.size,
+                "stocks" to backupData.data.stocks.size,
+                "audits" to backupData.data.audits.size,
+                "auditItems" to backupData.data.auditItems.size
             )
 
             // Simplistic checksum validation for the scope of this refactor

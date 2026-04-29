@@ -14,7 +14,9 @@ import java.util.Date
     indices = [
         Index(value = ["saleDate"]),
         Index(value = ["cashierId", "saleDate"]),
-        Index(value = ["paymentMethod"])
+        Index(value = ["paymentMethod"]),
+        Index(value = ["shiftId"]),
+        Index(value = ["pelangganId"])
     ],
     foreignKeys = [
         ForeignKey(
@@ -22,6 +24,18 @@ import java.util.Date
             parentColumns = ["id"],
             childColumns = ["cashierId"],
             onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = Shift::class,
+            parentColumns = ["id"],
+            childColumns = ["shiftId"],
+            onDelete = ForeignKey.SET_NULL
+        ),
+        ForeignKey(
+            entity = Pelanggan::class,
+            parentColumns = ["id"],
+            childColumns = ["pelangganId"],
+            onDelete = ForeignKey.SET_NULL
         )
     ]
 )
@@ -35,6 +49,8 @@ data class Penjualan(
     val discount: Double = 0.0,
     val paymentMethod: PaymentMethod,
     val cashierId: Long,
+    val shiftId: Long? = null,
+    val pelangganId: Long? = null,
     // Warehouse where the sale occurred. Defaults to 1 for backward compatibility.
     val warehouseId: Long = 1,
     @Serializable(with = DateSerializer::class)
@@ -46,5 +62,6 @@ data class Penjualan(
 @Serializable
 enum class PaymentMethod {
     CASH,
-    CARD
+    CARD,
+    QRIS
 }

@@ -10,6 +10,7 @@ import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.constant.AppConstants
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.ShiftRepository
 import com.chibychibystore.repository.StokGudangRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.PromoService
@@ -31,6 +32,7 @@ class SaleServiceImpl @Inject constructor(
     private val itemPenjualanRepository: ItemPenjualanRepository,
     private val productRepository: ProdukRepository,
     private val stokGudangRepository: StokGudangRepository,
+    private val shiftRepository: ShiftRepository,
     private val authService: AuthService,
     private val printerService: PrinterService,
     private val promoService: PromoService
@@ -40,6 +42,7 @@ class SaleServiceImpl @Inject constructor(
         sale: Penjualan,
         items: List<ItemPenjualan>
     ): Result<PenjualanWithItems> {
+        val pelangganId = sale.pelangganId
         if (items.isEmpty()) {
             return Result.failure(Exception("Item penjualan tidak boleh kosong"))
         }
@@ -101,6 +104,17 @@ class SaleServiceImpl @Inject constructor(
                 val result = penjualanRepository.createPenjualan(saleToSave, items)
 
                 if (result is Result.Success) {
+                    // Update Customer points if applicable
+                    if (pelangganId != null) {
+                        // 1 point per 10.000 spent
+                        val points = (finalTotal / 10000).toInt()
+                        if (points > 0) {
+                            db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
+                                db.pelangganDao().updatePelanggan(p.copy(point = p.point + points, updatedAt = Date()))
+                            }
+                        }
+                    }
+
                     // Batch adjust stocks
                     val adjustments = items.map {
                         StockAdjustment(it.productId, sale.warehouseId, -it.quantity)
@@ -178,35 +192,79 @@ class SaleServiceImpl @Inject constructor(
 
     override suspend fun refundPenjualan(id: Long): Result<Unit> {
         return try {
-            val saleResult = getPenjualanById(id)
-            if (saleResult is Result.Failure) return Result.failure(saleResult.exception)
-            val saleWithItems = (saleResult as Result.Success).data ?: return Result.failure(Exception("Penjualan tidak ditemukan"))
+            // Wrap the refund in a single transaction so partial failures (e.g. stock
+            // adjustment fails after the sale is marked refunded) don't leave the
+            // database in an inconsistent state. The customer-points reversal added
+            // below also needs to be atomic with the rest of the refund — otherwise
+            // a failure between the points deduction and stock restore could keep
+            // points deducted while the refund is rolled back, or vice versa.
+            db.withTransaction {
+                val saleResult = getPenjualanById(id)
+                if (saleResult is Result.Failure) throw saleResult.exception
+                val saleWithItems = (saleResult as Result.Success).data
+                    ?: throw Exception("Penjualan tidak ditemukan")
 
-            val updatedPenjualan = saleWithItems.sale.copy(isRefunded = true)
-            penjualanRepository.updatePenjualan(updatedPenjualan)
-
-            val warehouseId = saleWithItems.sale.warehouseId
-            val adjustments = mutableListOf<StockAdjustment>()
-            val fallbackItems = mutableListOf<ItemPenjualan>()
-
-            saleWithItems.items.forEach { item ->
-                val productResult = productRepository.getProdukById(item.productId)
-                if (productResult is Result.Success && productResult.data != null) {
-                    adjustments.add(StockAdjustment(item.productId, warehouseId, item.quantity))
-                } else {
-                    fallbackItems.add(item)
+                if (saleWithItems.sale.isRefunded) {
+                    // Idempotent: refunding an already-refunded sale would otherwise
+                    // double-reverse loyalty points and stock.
+                    throw Exception("Penjualan sudah di-refund")
                 }
-            }
 
-            if (adjustments.isNotEmpty()) {
-                stokGudangRepository.adjustStockBatch(adjustments)
-            }
+                val updatedPenjualan = saleWithItems.sale.copy(isRefunded = true)
+                // Check the update result and propagate any failure so the transaction
+                // rolls back. Without this check, a failed update (the repository
+                // catches DAO exceptions and returns Result.Failure rather than
+                // throwing — see PenjualanRepository.kt:153-160) would silently leave
+                // the sale NOT marked as refunded while still deducting loyalty points
+                // and restoring stock further down, producing a financially
+                // inconsistent state. Every other fallible call in this method is
+                // already checked; this is the only unchecked one.
+                val updateResult = penjualanRepository.updatePenjualan(updatedPenjualan)
+                if (updateResult is Result.Failure) throw updateResult.exception
 
-            fallbackItems.forEach { item ->
-                productRepository.adjustStock(item.productId, item.quantity)
-            }
+                // Reverse loyalty points awarded at sale time. Points are accrued in
+                // createPenjualan as `(finalTotal / 10000).toInt()`; mirror that exact
+                // formula here so the reversal matches what was awarded. Without this,
+                // a customer keeps points from refunded sales — a financial leak.
+                val pelangganId = saleWithItems.sale.pelangganId
+                if (pelangganId != null) {
+                    val points = (saleWithItems.sale.totalAmount / 10000).toInt()
+                    if (points > 0) {
+                        db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
+                            // Floor at 0 in case the customer has already spent the
+                            // points earned from this sale.
+                            val newPoint = kotlin.math.max(0, p.point - points)
+                            db.pelangganDao().updatePelanggan(
+                                p.copy(point = newPoint, updatedAt = Date())
+                            )
+                        }
+                    }
+                }
 
-            Result.success(Unit)
+                val warehouseId = saleWithItems.sale.warehouseId
+                val adjustments = mutableListOf<StockAdjustment>()
+                val fallbackItems = mutableListOf<ItemPenjualan>()
+
+                saleWithItems.items.forEach { item ->
+                    val productResult = productRepository.getProdukById(item.productId)
+                    if (productResult is Result.Success && productResult.data != null) {
+                        adjustments.add(StockAdjustment(item.productId, warehouseId, item.quantity))
+                    } else {
+                        fallbackItems.add(item)
+                    }
+                }
+
+                if (adjustments.isNotEmpty()) {
+                    val stockResult = stokGudangRepository.adjustStockBatch(adjustments)
+                    if (stockResult is Result.Failure) throw stockResult.exception
+                }
+
+                fallbackItems.forEach { item ->
+                    productRepository.adjustStock(item.productId, item.quantity)
+                }
+
+                Result.success(Unit)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -296,5 +354,13 @@ class SaleServiceImpl @Inject constructor(
 
     override fun observePenjualanWithItemsByRentangTanggal(startDate: String, endDate: String): Flow<List<PenjualanWithItems>> {
         return penjualanRepository.getPenjualanWithItemsByRentangTanggal(startDate, endDate)
+    }
+
+    override suspend fun getOpenShift(kasirId: Long): Result<com.chibychibystore.data.local.entity.Shift?> {
+        // Delegate to ShiftRepository to keep shift access consistent with the rest
+        // of the codebase, instead of bypassing the repository layer with a direct
+        // DAO call. This ensures any future caching/logging added at the repository
+        // layer applies uniformly.
+        return shiftRepository.getOpenShiftByKasir(kasirId)
     }
 }

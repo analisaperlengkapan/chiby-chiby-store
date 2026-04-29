@@ -98,10 +98,15 @@ class PenjualanRepository @Inject constructor(
      */
     suspend fun createPenjualan(penjualan: Penjualan, items: List<ItemPenjualan>): Result<PenjualanWithItems> {
         return try {
-            val totalAmount = items.sumOf { it.totalPrice }
-            val penjualanWithTotal = penjualan.copy(totalAmount = totalAmount)
-
-            val penjualanId = penjualanDao.insertPenjualan(penjualanWithTotal)
+            // Persist the caller-supplied totalAmount as-is. The service layer is
+            // responsible for computing the final total (subtotal + tax - discount),
+            // and overriding it here with the raw item subtotal would silently drop
+            // tax and discount from the persisted sale. That breaks any downstream
+            // consumer that sums `totalAmount` to compute actual cash receipts —
+            // notably shift cash reconciliation (`getTotalSalesByShift` /
+            // `getTotalCashSalesByShift`), which would produce a misleading
+            // expected-vs-actual cash discrepancy at shift close.
+            val penjualanId = penjualanDao.insertPenjualan(penjualan)
 
             val itemsWithPenjualanId = items.map { it.copy(saleId = penjualanId) }
             itemPenjualanDao.insertItemPenjualanList(itemsWithPenjualanId)
@@ -172,7 +177,15 @@ class PenjualanRepository @Inject constructor(
     }
 
     /**
-     * Get total penjualan by date range
+     * Get total penjualan amount by date range.
+     *
+     * As of MIGRATION_11_12, `Penjualan.totalAmount` stores the post-tax/discount
+     * amount actually paid (subtotal + tax - discount, floored at 0). This method
+     * therefore returns gross cash flow INCLUDING tax — it is NOT net revenue.
+     * Use [getTotalRevenue] for tax-exclusive revenue figures, or
+     * [getTotalCashReceipts] for non-refunded gross cash inflows.
+     *
+     * Includes refunded sales; for non-refunded only, see [getTotalCashReceipts].
      */
     suspend fun getTotalPenjualanAmount(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
@@ -198,7 +211,13 @@ class PenjualanRepository @Inject constructor(
     }
 
     /**
-     * Get total cash receipts (non-refunded total amount)
+     * Get total cash receipts (non-refunded `SUM(totalAmount)`).
+     *
+     * As of MIGRATION_11_12, `totalAmount` is post-tax/discount, so this is the
+     * gross cash flow from sales (INCLUDING tax) — i.e. what the customer paid.
+     * Use [getTotalRevenue] for tax-exclusive revenue.
+     *
+     * Despite the name, this aggregates ALL payment methods, not just cash.
      */
     suspend fun getTotalCashReceipts(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
@@ -274,5 +293,32 @@ class PenjualanRepository @Inject constructor(
      */
     suspend fun updatePenjualan(id: Long, sale: Penjualan): Result<Unit> {
         return updatePenjualan(sale)
+    }
+
+    /**
+     * Get total sales (non-refunded) linked to a given shift
+     */
+    suspend fun getTotalSalesByShift(shiftId: Long): Result<Double> {
+        return try {
+            Result.success(penjualanDao.getTotalSalesByShift(shiftId))
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getTotalSalesByShift", e))
+        }
+    }
+
+    /**
+     * Get total cash sales (non-refunded) linked to a given shift
+     */
+    suspend fun getTotalCashSalesByShift(shiftId: Long): Result<Double> {
+        return try {
+            Result.success(
+                penjualanDao.getTotalSalesByShiftAndPaymentMethod(
+                    shiftId,
+                    com.chibychibystore.data.local.entity.PaymentMethod.CASH
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getTotalCashSalesByShift", e))
+        }
     }
 }

@@ -15,6 +15,7 @@ import java.util.Date
         Index(value = ["purchaseDate"]),
         Index(value = ["supplierId"]),
         Index(value = ["receivedBy"]),
+        Index(value = ["warehouseId"]),
         Index(value = ["invoiceNumber"], unique = true)
     ],
     foreignKeys = [
@@ -29,6 +30,12 @@ import java.util.Date
             parentColumns = ["id"],
             childColumns = ["receivedBy"],
             onDelete = ForeignKey.SET_NULL
+        ),
+        ForeignKey(
+            entity = Gudang::class,
+            parentColumns = ["id"],
+            childColumns = ["warehouseId"],
+            onDelete = ForeignKey.RESTRICT
         )
     ]
 )
@@ -38,6 +45,7 @@ data class Pembelian(
     @Serializable(with = DateSerializer::class)
     val purchaseDate: Date = Date(),
     val supplierId: Long,
+    val warehouseId: Long = 1, // Default to 1 for backward compatibility if needed
     val invoiceNumber: String,
     val totalAmount: Double,
     val notes: String? = null,

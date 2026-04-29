@@ -139,6 +139,8 @@ fun PosScreen(
                             onPaymentMethodChange = { viewModel.setPaymentMethod(it) },
                             onProcessPayment = { viewModel.processPayment() },
                             onClearCart = { viewModel.clearCart() },
+                            onPelangganSelected = { viewModel.selectPelanggan(it) },
+                            onWarehouseSelected = { viewModel.selectWarehouse(it) },
                             formatCurrency = formatCurrency
                         )
                     }
@@ -260,6 +262,8 @@ private fun CartAndPaymentPanel(
     onPaymentMethodChange: (String) -> Unit,
     onProcessPayment: () -> Unit,
     onClearCart: () -> Unit,
+    onPelangganSelected: (com.chibychibystore.data.local.entity.Pelanggan?) -> Unit,
+    onWarehouseSelected: (Long) -> Unit,
     formatCurrency: (Double) -> String
 ) {
     ChibyCard(
@@ -320,6 +324,78 @@ private fun CartAndPaymentPanel(
                             formatCurrency = formatCurrency,
                             onUpdateQuantity = { qty -> onUpdateQuantity(item.product.id, qty) },
                             onRemove = { onRemoveItem(item.product.id) }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Warehouse Selector. Only render when there is more than one warehouse
+            // configured — single-warehouse deployments don't benefit from the
+            // selector and the default selectedWarehouseId already points at the
+            // sole warehouse via the auto-select fallback in PosViewModel.
+            if (uiState.warehouses.size > 1) {
+                var expandedWarehouse by remember { mutableStateOf(false) }
+                val selectedWarehouseName = uiState.warehouses
+                    .find { it.id == uiState.selectedWarehouseId }?.name
+                    ?: "Pilih Gudang"
+                Text("Gudang", style = MaterialTheme.typography.titleSmall)
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { expandedWarehouse = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text(selectedWarehouseName)
+                    }
+                    DropdownMenu(
+                        expanded = expandedWarehouse,
+                        onDismissRequest = { expandedWarehouse = false }
+                    ) {
+                        uiState.warehouses.forEach { warehouse ->
+                            DropdownMenuItem(
+                                text = { Text(warehouse.name) },
+                                onClick = {
+                                    onWarehouseSelected(warehouse.id)
+                                    expandedWarehouse = false
+                                }
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Pelanggan Selector
+            var expandedPelanggan by remember { mutableStateOf(false) }
+            Text("Pelanggan", style = MaterialTheme.typography.titleSmall)
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { expandedPelanggan = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(uiState.selectedPelanggan?.name ?: "Pilih Pelanggan (Umum)")
+                }
+                DropdownMenu(
+                    expanded = expandedPelanggan,
+                    onDismissRequest = { expandedPelanggan = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Pelanggan Umum") },
+                        onClick = {
+                            onPelangganSelected(null)
+                            expandedPelanggan = false
+                        }
+                    )
+                    uiState.pelangganList.forEach { p ->
+                        DropdownMenuItem(
+                            text = { Text(p.name) },
+                            onClick = {
+                                onPelangganSelected(p)
+                                expandedPelanggan = false
+                            }
                         )
                     }
                 }

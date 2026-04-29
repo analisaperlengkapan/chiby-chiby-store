@@ -161,4 +161,51 @@ class PengeluaranRepository @Inject constructor(
             emptyMap()
         }
     }
+
+    /**
+     * Get approved pengeluaran summary grouped by category as a [Result], so callers
+     * that need to react to database failures (e.g. financial reconciliation in
+     * shift close) can propagate the error rather than silently treating a DB
+     * failure as "no expenses".
+     */
+    suspend fun getApprovedRingkasanPengeluaranPerKategoriResult(
+        startDate: Date,
+        endDate: Date
+    ): Result<Map<KategoriPengeluaran, Double>> {
+        return try {
+            Result.success(pengeluaranDao.getApprovedRingkasanPengeluaranPerKategori(startDate, endDate))
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getApprovedRingkasanPengeluaranPerKategori", e))
+        }
+    }
+
+    /**
+     * Cashier-scoped variant of the approved-expenses-by-category query, used by
+     * shift-close reconciliation. Restricting to a specific cashier (via
+     * `pengeluaran.createdBy`) avoids double-counting expenses across two cashiers
+     * whose shifts overlap in time. Returns a [Result] so callers can propagate
+     * database failures rather than silently zeroing expenses.
+     */
+    suspend fun getApprovedExpensesByCategoryForCashier(
+        cashierId: Long,
+        startDate: Date,
+        endDate: Date
+    ): Result<Map<KategoriPengeluaran, Double>> {
+        return try {
+            Result.success(
+                pengeluaranDao.getApprovedRingkasanPengeluaranPerKategoriByCashier(
+                    cashierId,
+                    startDate,
+                    endDate
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(
+                ChibyChibyException.DatabaseError(
+                    "getApprovedRingkasanPengeluaranPerKategoriByCashier",
+                    e
+                )
+            )
+        }
+    }
 }

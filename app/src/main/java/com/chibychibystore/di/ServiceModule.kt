@@ -48,6 +48,12 @@ abstract class ServiceModule {
 
     @Binds
     @Singleton
+    abstract fun bindPurchaseService(
+        purchaseServiceImpl: PurchaseServiceImpl
+    ): PurchaseService
+
+    @Binds
+    @Singleton
     abstract fun bindReportingService(
         reportingServiceImpl: ReportingServiceImpl
     ): ReportingService
@@ -93,6 +99,12 @@ abstract class ServiceModule {
     abstract fun bindPromoService(
         promoServiceImpl: PromoServiceImpl
     ): PromoService
+
+    @Binds
+    @Singleton
+    abstract fun bindPelangganService(
+        pelangganServiceImpl: PelangganServiceImpl
+    ): PelangganService
 
     companion object {
         @Provides

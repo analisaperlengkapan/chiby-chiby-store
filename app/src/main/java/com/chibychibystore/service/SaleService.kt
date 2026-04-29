@@ -36,4 +36,5 @@ interface SaleService {
         cashierName: String = "Kasir"
     ): Result<Unit>
     fun observePenjualanWithItemsByRentangTanggal(startDate: String, endDate: String): Flow<List<PenjualanWithItems>>
+    suspend fun getOpenShift(kasirId: Long): Result<com.chibychibystore.data.local.entity.Shift?>
 }

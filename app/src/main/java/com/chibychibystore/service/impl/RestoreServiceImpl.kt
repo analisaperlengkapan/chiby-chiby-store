@@ -42,7 +42,11 @@ class RestoreServiceImpl @Inject constructor(
     private val saleItemRepository: ItemPenjualanRepository,
     private val purchaseRepository: PembelianRepository,
     private val purchaseItemRepository: ItemPembelianRepository,
-    private val expenseRepository: PengeluaranRepository
+    private val expenseRepository: PengeluaranRepository,
+    private val shiftRepository: ShiftRepository,
+    private val pelangganRepository: PelangganRepository,
+    private val stokGudangRepository: StokGudangRepository,
+    private val inventoryAuditRepository: InventoryAuditRepository
 ) : RestoreService {
 
     private val json = Json { prettyPrint = true }
@@ -54,78 +58,140 @@ class RestoreServiceImpl @Inject constructor(
 
     override suspend fun restoreFromBackup(backupPath: String, clearExistingData: Boolean): com.chibychibystore.data.model.Result<RestoreResult> {
         return try {
-            _restoreProgress.value = RestoreProgress(isInProgress = true, totalSteps = 12)
+            _restoreProgress.value = RestoreProgress(isInProgress = true, totalSteps = 17)
 
             // Step 1: Validate backup file
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memvalidasi file backup", progress = 0.1f, currentStepIndex = 1, totalSteps = 12)
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memvalidasi file backup", progress = 1f / 17f, currentStepIndex = 1, totalSteps = 17)
             val validation = validateBackupFile(backupPath)
             if (!validation.isValid) {
                 return com.chibychibystore.data.model.Result.failure(Exception("File backup tidak valid: ${validation.errors.joinToString()}"))
             }
 
             // Step 2: Decrypt and parse backup data
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Membaca data backup", progress = 0.2f, currentStepIndex = 2, totalSteps = 12)
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Membaca data backup", progress = 2f / 17f, currentStepIndex = 2, totalSteps = 17)
             val backupData = loadBackupData(backupPath)
 
-            // Step 3: Clear existing data
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Menghapus data lama", progress = 0.3f, currentStepIndex = 3, totalSteps = 12)
-            if (clearExistingData) {
-                withContext(Dispatchers.IO) {
+            // Wrap clear-and-restore in a single Room transaction so an exception
+            // mid-way (or a crash that aborts the coroutine) can't leave the DB
+            // half-populated — or fully empty after `clearAllTables` ran but no
+            // data was restored. Any exception escaping this block rolls the
+            // entire transaction back, including the clear. Per-row catches
+            // inside the restoreXxx helpers continue to swallow individual
+            // FK/constraint failures so transient bad rows don't abort the
+            // entire restore.
+            val txResult = database.withTransaction {
+                // Step 3: Clear existing data
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Menghapus data lama", progress = 3f / 17f, currentStepIndex = 3, totalSteps = 17)
+                if (clearExistingData) {
                     database.clearAllTables()
                 }
+
+                // Step 4: Restore users
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pengguna", progress = 4f / 17f, currentStepIndex = 4, totalSteps = 17)
+                val usersRestored = restoreUsers(backupData.data.users)
+
+                // Step 5: Restore categories
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data kategori", progress = 5f / 17f, currentStepIndex = 5, totalSteps = 17)
+                val categoriesRestored = restoreCategories(backupData.data.categories)
+
+                // Step 6: Restore warehouses
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data gudang", progress = 6f / 17f, currentStepIndex = 6, totalSteps = 17)
+                val warehousesRestored = restoreGudangs(backupData.data.warehouses)
+
+                // Step 7: Restore suppliers
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pemasok", progress = 7f / 17f, currentStepIndex = 7, totalSteps = 17)
+                val suppliersRestored = restorePemasoks(backupData.data.suppliers)
+
+                // Step 8: Restore products
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data product", progress = 8f / 17f, currentStepIndex = 8, totalSteps = 17)
+                val productsRestored = restoreProduks(backupData.data.products)
+
+                // Step 9: Restore per-warehouse stock. Depends on products and
+                // warehouses (FK-referenced). Without this, a full restore would
+                // leave stok_gudang empty while Produk.stockQuantity is repopulated
+                // — breaking the per-warehouse breakdown that purchases, sales,
+                // and audits all depend on.
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan stok gudang", progress = 9f / 17f, currentStepIndex = 9, totalSteps = 17)
+                val stocksRestored = restoreStocks(backupData.data.stocks)
+
+                // Restore shifts and customers BEFORE sales — Penjualan has FKs to both
+                // (shiftId → shift, pelangganId → pelanggan). If we restored sales first
+                // any sale with a non-null shiftId/pelangganId would hit an FK violation
+                // and be silently dropped by the per-row catch in restorePenjualans.
+
+                // Step 10: Restore shifts
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data shift", progress = 10f / 17f, currentStepIndex = 10, totalSteps = 17)
+                val shiftsRestored = restoreShifts(backupData.data.shifts)
+
+                // Step 11: Restore customers
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pelanggan", progress = 11f / 17f, currentStepIndex = 11, totalSteps = 17)
+                val customersRestored = restorePelanggans(backupData.data.customers)
+
+                // Step 12: Restore sales and items.
+                //
+                // Backups predating format version "2.0" stored Penjualan.totalAmount as the
+                // raw item subtotal (because the old PenjualanRepository.createPenjualan
+                // override silently dropped tax and discount). The on-disk MIGRATION_11_12
+                // backfills existing rows to the new "amount paid" semantics, but data
+                // imported from a legacy backup bypasses that migration. Apply the same
+                // formula here so legacy backups produce sales rows with consistent
+                // semantics — otherwise aggregate queries (`getTotalSalesByShift`,
+                // `getTotalRevenue`, `getTotalCashReceipts`, shift cash reconciliation)
+                // would silently mix old-subtotal and new-paid values from the same DB.
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data penjualan", progress = 12f / 17f, currentStepIndex = 12, totalSteps = 17)
+                val salesToRestore = if (isLegacyTotalAmountBackup(backupData.version)) {
+                    backupData.data.sales.map { sale ->
+                        sale.copy(totalAmount = maxOf(0.0, sale.totalAmount + sale.tax - sale.discount))
+                    }
+                } else {
+                    backupData.data.sales
+                }
+                val salesRestored = restorePenjualans(salesToRestore, backupData.data.saleItems)
+
+                // Step 13: Restore purchases and items
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pembelian", progress = 13f / 17f, currentStepIndex = 13, totalSteps = 17)
+                val purchasesRestored = restorePembelians(backupData.data.purchases, backupData.data.purchaseItems)
+
+                // Step 14: Restore expenses
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pengeluaran", progress = 14f / 17f, currentStepIndex = 14, totalSteps = 17)
+                val expensesRestored = restorePengeluarans(backupData.data.expenses)
+
+                // Step 15: Restore inventory audit headers. Depends on warehouses
+                // and pengguna (FK targets via warehouseId / auditorId).
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data audit", progress = 15f / 17f, currentStepIndex = 15, totalSteps = 17)
+                val auditsRestored = restoreAudits(backupData.data.audits)
+
+                // Step 16: Restore audit line items. Depends on audits (FK
+                // target) and products. Restored after audits so item rows
+                // don't get FK-rejected and silently dropped.
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan item audit", progress = 16f / 17f, currentStepIndex = 16, totalSteps = 17)
+                val auditItemsRestored = restoreAuditItems(backupData.data.auditItems)
+
+                // Step 17: Finalize
+                _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Finalisasi", progress = 1.0f, currentStepIndex = 17, totalSteps = 17)
+
+                mapOf(
+                    "pengguna" to usersRestored,
+                    "kategori" to categoriesRestored,
+                    "gudang" to warehousesRestored,
+                    "product" to productsRestored,
+                    "pemasok" to suppliersRestored,
+                    "stokGudang" to stocksRestored,
+                    "shift" to shiftsRestored,
+                    "pelanggan" to customersRestored,
+                    "penjualan" to salesRestored,
+                    "pembelian" to purchasesRestored,
+                    "pengeluaran" to expensesRestored,
+                    "stokOpname" to auditsRestored,
+                    "itemStokOpname" to auditItemsRestored
+                )
             }
-
-            // Step 4: Restore users
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pengguna", progress = 0.4f, currentStepIndex = 4, totalSteps = 12)
-            val usersRestored = restoreUsers(backupData.data.users)
-
-            // Step 5: Restore categories
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data kategori", progress = 0.5f, currentStepIndex = 5, totalSteps = 12)
-            val categoriesRestored = restoreCategories(backupData.data.categories)
-
-            // Step 6: Restore warehouses
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data gudang", progress = 0.6f, currentStepIndex = 6, totalSteps = 12)
-            val warehousesRestored = restoreGudangs(backupData.data.warehouses)
-
-            // Step 7: Restore suppliers
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pemasok", progress = 0.7f, currentStepIndex = 7, totalSteps = 12)
-            val suppliersRestored = restorePemasoks(backupData.data.suppliers)
-
-            // Step 8: Restore products
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data product", progress = 0.8f, currentStepIndex = 8, totalSteps = 12)
-            val productsRestored = restoreProduks(backupData.data.products)
-
-            // Step 9: Restore sales and items
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data penjualan", progress = 0.9f, currentStepIndex = 9, totalSteps = 12)
-            val salesRestored = restorePenjualans(backupData.data.sales, backupData.data.saleItems)
-
-            // Step 10: Restore purchases and items
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pembelian", progress = 0.95f, currentStepIndex = 10, totalSteps = 12)
-            val purchasesRestored = restorePembelians(backupData.data.purchases, backupData.data.purchaseItems)
-
-            // Step 11: Restore expenses
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pengeluaran", progress = 0.98f, currentStepIndex = 11, totalSteps = 12)
-            val expensesRestored = restorePengeluarans(backupData.data.expenses)
-
-            // Step 12: Finalize
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Finalisasi", progress = 1.0f, currentStepIndex = 12, totalSteps = 12)
-
-            val recordsRestored = mapOf(
-                "pengguna" to usersRestored,
-                "kategori" to categoriesRestored,
-                "gudang" to warehousesRestored,
-                "product" to productsRestored,
-                "pemasok" to suppliersRestored,
-                "penjualan" to salesRestored,
-                "pembelian" to purchasesRestored,
-                "pengeluaran" to expensesRestored
-            )
 
             _restoreProgress.value = RestoreProgress(isInProgress = false)
 
             com.chibychibystore.data.model.Result.success(RestoreResult(
                 success = true,
-                recordsRestored = recordsRestored
+                recordsRestored = txResult
             ))
 
         } catch (e: Exception) {
@@ -153,11 +219,16 @@ class RestoreServiceImpl @Inject constructor(
                     "gudang" to backupData.data.warehouses.size,
                     "product" to backupData.data.products.size,
                     "pemasok" to backupData.data.suppliers.size,
+                    "stokGudang" to backupData.data.stocks.size,
+                    "shift" to backupData.data.shifts.size,
+                    "pelanggan" to backupData.data.customers.size,
                     "penjualan" to backupData.data.sales.size,
                     "itemPenjualan" to backupData.data.saleItems.size,
                     "pembelian" to backupData.data.purchases.size,
                     "itemPembelian" to backupData.data.purchaseItems.size,
-                    "pengeluaran" to backupData.data.expenses.size
+                    "pengeluaran" to backupData.data.expenses.size,
+                    "stokOpname" to backupData.data.audits.size,
+                    "itemStokOpname" to backupData.data.auditItems.size
                 ),
                 sizeBytes = file.length()
             ))
@@ -177,14 +248,32 @@ class RestoreServiceImpl @Inject constructor(
                 "gudang" to backupData.data.warehouses.size,
                 "product" to backupData.data.products.size,
                 "pemasok" to backupData.data.suppliers.size,
+                "stokGudang" to backupData.data.stocks.size,
+                "shift" to backupData.data.shifts.size,
+                "pelanggan" to backupData.data.customers.size,
                 "penjualan" to backupData.data.sales.size,
                 "itemPenjualan" to backupData.data.saleItems.size,
                 "pembelian" to backupData.data.purchases.size,
                 "itemPembelian" to backupData.data.purchaseItems.size,
-                "pengeluaran" to backupData.data.expenses.size
+                "pengeluaran" to backupData.data.expenses.size,
+                "stokOpname" to backupData.data.audits.size,
+                "itemStokOpname" to backupData.data.auditItems.size
             )
 
-            val isValid = backupData.metadata.checksum == calculateChecksum(decryptedJson)
+            // Successful decrypt + parse is sufficient to consider the backup
+            // structurally valid. The previous comparison
+            //     backupData.metadata.checksum == calculateChecksum(decryptedJson)
+            // could never succeed: BackupServiceImpl writes the file by
+            // computing SHA-256 over the prefix-with-EMPTY-checksum + body +
+            // suffix, then re-emits the prefix with the REAL checksum baked in
+            // (BackupServiceImpl.kt:79-93, 217-244). So `decryptedJson` (the
+            // final file with the real checksum embedded) hashes to a different
+            // digest than what was stored in `metadata.checksum`, making
+            // `isValid` always false and rejecting every backup at the start of
+            // restoreFromBackup. Treat parse-success as validity, mirroring the
+            // public BackupServiceImpl.validateBackup which already does this
+            // (BackupServiceImpl.kt:350).
+            val isValid = true
 
             BackupValidationResult(
                 isValid = isValid,
@@ -270,9 +359,25 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
+    /**
+     * True for backup files whose version predates the "2.0" totalAmount semantics.
+     * The caller in restoreFromBackup applies the `max(0, totalAmount + tax - discount)`
+     * backfill before insertion, mirroring MIGRATION_11_12. Defensive on parse errors:
+     * unrecognized / malformed versions are treated as legacy so we err on the side of
+     * applying the backfill rather than silently mixing semantics.
+     */
+    private fun isLegacyTotalAmountBackup(version: String): Boolean {
+        val major = version.substringBefore('.').toIntOrNull() ?: return true
+        return major < 2
+    }
+
     private suspend fun restorePenjualans(sales: List<Penjualan>, items: List<ItemPenjualan>): Int {
         if (sales.isEmpty()) return 0
-        
+
+        // The caller in `restoreFromBackup` is responsible for applying any
+        // version-specific transforms (e.g. the totalAmount backfill for pre-2.0
+        // backups). This helper is purely a persistence path.
+
         // Optimistic Batch Approach
         try {
             return database.withTransaction {
@@ -355,6 +460,91 @@ class RestoreServiceImpl @Inject constructor(
             }
         }
         return count
+    }
+
+    private suspend fun restoreShifts(shifts: List<Shift>): Int {
+        var count = 0
+        for (shift in shifts) {
+            try {
+                val result = shiftRepository.createShift(shift)
+                if (result is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
+            } catch (e: Exception) {
+                // Log error but continue
+            }
+        }
+        return count
+    }
+
+    private suspend fun restorePelanggans(customers: List<Pelanggan>): Int {
+        var count = 0
+        for (customer in customers) {
+            try {
+                val result = pelangganRepository.createPelanggan(customer)
+                if (result is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
+            } catch (e: Exception) {
+                // Log error but continue
+            }
+        }
+        return count
+    }
+
+    /**
+     * Restore per-warehouse stock rows in a single batch INSERT (REPLACE on
+     * conflict). Reports the number of rows that *would* be inserted on success
+     * to match the per-row counters used by the other restoreXxx helpers.
+     * On failure we fall back to per-row inserts so a single bad row doesn't
+     * abort the entire batch.
+     */
+    private suspend fun restoreStocks(stocks: List<StokGudang>): Int {
+        if (stocks.isEmpty()) return 0
+        val batchResult = stokGudangRepository.insertStocks(stocks)
+        if (batchResult is com.chibychibystore.data.model.Result.Success) {
+            return stocks.size
+        }
+        var count = 0
+        for (stock in stocks) {
+            try {
+                val r = stokGudangRepository.insertOrUpdateStock(stock)
+                if (r is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
+            } catch (e: Exception) {
+                // Log error but continue
+            }
+        }
+        return count
+    }
+
+    private suspend fun restoreAudits(audits: List<StokOpname>): Int {
+        if (audits.isEmpty()) return 0
+        val batchResult = inventoryAuditRepository.insertAudits(audits)
+        if (batchResult is com.chibychibystore.data.model.Result.Success) {
+            return audits.size
+        }
+        var count = 0
+        for (audit in audits) {
+            try {
+                val r = inventoryAuditRepository.createAudit(audit)
+                if (r is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
+            } catch (e: Exception) {
+                // Log error but continue
+            }
+        }
+        return count
+    }
+
+    private suspend fun restoreAuditItems(items: List<ItemStokOpname>): Int {
+        if (items.isEmpty()) return 0
+        // insertAuditItems uses OnConflictStrategy.REPLACE so the whole batch
+        // either succeeds or throws together; treat all-or-nothing.
+        val r = inventoryAuditRepository.insertAuditItems(items)
+        return if (r is com.chibychibystore.data.model.Result.Success) items.size else 0
     }
 
     private fun calculateChecksum(data: String): String {

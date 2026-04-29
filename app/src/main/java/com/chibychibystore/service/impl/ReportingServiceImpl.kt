@@ -266,7 +266,16 @@ class ReportingServiceImpl @Inject constructor(
             for (i in 0..days) {
                 val day = startDate.plusDays(i.toLong())
                 val sales = allSales.filter { it.saleDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate() == day && !it.isRefunded }
-                val total = sales.sumOf { it.totalAmount }
+                // Sum tax-exclusive net revenue per row (matching getTotalRevenue
+                // semantics) instead of `totalAmount`. As of MIGRATION_11_12,
+                // `totalAmount` is the post-tax/discount amount paid, so summing
+                // it directly here would silently shift the trend chart upward by
+                // the tax portion on every row — a misleading change for a
+                // visualization that previously showed pre-tax sales subtotals.
+                // The MAX(0, …) floor mirrors the floor applied to legacy rows by
+                // the migration when `discount > subtotal + tax`, so an extreme
+                // discount contributes 0 rather than a negative -tax value.
+                val total = sales.sumOf { maxOf(0.0, it.totalAmount - it.tax) }
                 val tx = sales.size
                 trend.add(DataTren(tanggal = day, penjualan = total, transaksi = tx))
             }

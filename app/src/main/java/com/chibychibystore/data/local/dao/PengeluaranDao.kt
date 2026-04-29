@@ -62,4 +62,16 @@ interface PengeluaranDao {
         startDate: Date,
         endDate: Date
     ): Map<@MapColumn(columnName = "category") KategoriPengeluaran, @MapColumn(columnName = "total") Double>
+
+    /**
+     * Approved expenses grouped by category, scoped to a specific cashier (creator)
+     * within a date window. Used by shift-close reconciliation so that expenses
+     * recorded by other cashiers during overlapping shifts aren't double-counted.
+     */
+    @Query("SELECT category, SUM(amount) as total FROM pengeluaran WHERE createdBy = :cashierId AND expenseDate BETWEEN :startDate AND :endDate AND approvedBy IS NOT NULL GROUP BY category")
+    suspend fun getApprovedRingkasanPengeluaranPerKategoriByCashier(
+        cashierId: Long,
+        startDate: Date,
+        endDate: Date
+    ): Map<@MapColumn(columnName = "category") KategoriPengeluaran, @MapColumn(columnName = "total") Double>
 }
