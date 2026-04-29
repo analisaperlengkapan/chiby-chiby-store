@@ -16,6 +16,13 @@ interface InventoryAuditDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertAudit(audit: StokOpname): Long
 
+    // Batch insert used by the restore pipeline. Uses REPLACE on conflict so
+    // re-running a restore is idempotent, and Room wraps the @Insert in a
+    // single transaction giving all-or-nothing semantics — a single bad row
+    // throws and rolls back the whole batch instead of leaving partial state.
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAudits(audits: List<StokOpname>)
+
     @Update
     suspend fun updateAudit(audit: StokOpname)
 

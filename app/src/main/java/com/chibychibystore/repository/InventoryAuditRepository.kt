@@ -77,7 +77,15 @@ class InventoryAuditRepository @Inject constructor(
 
     suspend fun insertAudits(audits: List<StokOpname>): Result<Unit> {
         return try {
-            audits.forEach { auditDao.insertAudit(it) }
+            // Use the DAO-level batch @Insert so Room wraps the inserts in a
+            // single implicit transaction. The previous per-row `forEach` loop
+            // could leave partial state when one row failed: rows already
+            // inserted within the outer restore transaction stayed, the call
+            // returned Result.Failure, and the per-row fallback in
+            // RestoreServiceImpl.restoreAudits then re-attempted the same IDs
+            // (hitting OnConflictStrategy.ABORT for the already-written rows
+            // and silently skipping them), under-reporting the restored count.
+            auditDao.insertAudits(audits)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("insertAudits", e))

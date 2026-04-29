@@ -6,6 +6,8 @@ import com.chibychibystore.data.local.entity.ItemPenjualan
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.local.entity.PaymentMethod
+import com.chibychibystore.data.model.Result
+import com.chibychibystore.repository.StokGudangRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.ProductService
 import com.chibychibystore.service.PromoService
@@ -85,7 +87,8 @@ class PosViewModel @Inject constructor(
     private val authService: AuthService,
     private val promoService: PromoService,
     private val pelangganService: com.chibychibystore.service.PelangganService,
-    private val warehouseService: WarehouseService
+    private val warehouseService: WarehouseService,
+    private val stokGudangRepository: StokGudangRepository
 ) : BaseViewModel<PosUiState>(PosUiState()) {
 
     private val _searchQuery = MutableStateFlow("")
@@ -178,28 +181,45 @@ class PosViewModel @Inject constructor(
     }
 
     fun addProductToCart(product: Produk, quantity: Int = 1) {
-        val currentState = currentState
-        val existingItem = currentState.cartItems.find { it.product.id == product.id }
-        
-        val currentQtyInCart = existingItem?.quantity ?: 0
-        if (product.stockQuantity < currentQtyInCart + quantity) {
-            updateState { it.copy(error = "Stok tidak mencukupi untuk ${product.name}") }
-            return
-        }
-
-        val updatedCartItems = if (existingItem != null) {
-            currentState.cartItems.map { item ->
-                if (item.product.id == product.id) {
-                    item.updateQuantity(item.quantity + quantity)
-                } else {
-                    item
-                }
-            }
-        } else {
-            currentState.cartItems + CartItem(product, quantity)
-        }
-
         launchWithState {
+            val currentState = currentState
+            val existingItem = currentState.cartItems.find { it.product.id == product.id }
+            val currentQtyInCart = existingItem?.quantity ?: 0
+
+            // Validate against per-warehouse stock rather than the global
+            // `product.stockQuantity` total. The sale will be created against
+            // `currentState.selectedWarehouseId` and SaleServiceImpl validates
+            // stock per-warehouse via stokGudangRepository.getStocks(...). Using
+            // the global total here would let a cashier add items to the cart
+            // that aren't actually available in the selected warehouse, only to
+            // get a stock error at payment time.
+            val stockResult = stokGudangRepository.getStock(
+                product.id,
+                currentState.selectedWarehouseId
+            )
+            val warehouseStock = if (stockResult is Result.Success) {
+                stockResult.data?.quantity ?: 0
+            } else {
+                0
+            }
+
+            if (warehouseStock < currentQtyInCart + quantity) {
+                updateState { it.copy(error = "Stok tidak mencukupi untuk ${product.name} di gudang ini") }
+                return@launchWithState
+            }
+
+            val updatedCartItems = if (existingItem != null) {
+                currentState.cartItems.map { item ->
+                    if (item.product.id == product.id) {
+                        item.updateQuantity(item.quantity + quantity)
+                    } else {
+                        item
+                    }
+                }
+            } else {
+                currentState.cartItems + CartItem(product, quantity)
+            }
+
             val subtotal = updatedCartItems.sumOf { it.totalPrice }
             val tax = subtotal * AppConstants.TAX_RATE
             val discount = promoService.calculateDiscount(subtotal)
@@ -223,20 +243,37 @@ class PosViewModel @Inject constructor(
             return
         }
 
-        val currentItems = currentState.cartItems
-        val updatedCartItems = currentItems.map { item ->
-            if (item.product.id == productId) {
-                if (item.product.stockQuantity < newQuantity) {
-                     updateState { it.copy(error = "Stok tidak mencukupi untuk ${item.product.name}") }
-                     return
-                }
-                item.updateQuantity(newQuantity)
-            } else {
-                item
-            }
-        }
-        
         launchWithState {
+            val currentItems = currentState.cartItems
+            val targetItem = currentItems.find { it.product.id == productId } ?: return@launchWithState
+
+            // Validate against per-warehouse stock for the same reason as in
+            // addProductToCart: the sale targets a specific warehouse and the
+            // service-layer validation is per-warehouse. Checking the global
+            // total here would mismatch the actual stock available for sale.
+            val stockResult = stokGudangRepository.getStock(
+                productId,
+                currentState.selectedWarehouseId
+            )
+            val warehouseStock = if (stockResult is Result.Success) {
+                stockResult.data?.quantity ?: 0
+            } else {
+                0
+            }
+
+            if (warehouseStock < newQuantity) {
+                updateState { it.copy(error = "Stok tidak mencukupi untuk ${targetItem.product.name} di gudang ini") }
+                return@launchWithState
+            }
+
+            val updatedCartItems = currentItems.map { item ->
+                if (item.product.id == productId) {
+                    item.updateQuantity(newQuantity)
+                } else {
+                    item
+                }
+            }
+
             val subtotal = updatedCartItems.sumOf { it.totalPrice }
             val tax = subtotal * AppConstants.TAX_RATE
             val discount = promoService.calculateDiscount(subtotal)
