@@ -206,6 +206,7 @@ class BackupServiceImpl @Inject constructor(
             val customers = pelangganRepository.getAllPelanggan().firstOrNull() ?: emptyList()
             customers.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
             writer.endArray()
+            writer.flush()
 
             // End "data" object
             writer.endObject()
@@ -340,7 +341,9 @@ class BackupServiceImpl @Inject constructor(
                 "saleItems" to backupData.data.saleItems.size,
                 "purchases" to backupData.data.purchases.size,
                 "purchaseItems" to backupData.data.purchaseItems.size,
-                "expenses" to backupData.data.expenses.size
+                "expenses" to backupData.data.expenses.size,
+                "shifts" to backupData.data.shifts.size,
+                "customers" to backupData.data.customers.size
             )
 
             // Simplistic checksum validation for the scope of this refactor

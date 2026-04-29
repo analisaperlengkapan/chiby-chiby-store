@@ -67,8 +67,11 @@ class PelangganServiceImpl @Inject constructor(
 
         val existing = (existingResult as Result.Success).data ?: return Result.failure(Exception("Pelanggan tidak ditemukan"))
 
+        // Floor at 0 to prevent negative point balances when callers pass a
+        // negative delta (e.g. for point redemption or adjustment) that would
+        // exceed the customer's current balance.
         val updated = existing.copy(
-            point = existing.point + point,
+            point = kotlin.math.max(0, existing.point + point),
             updatedAt = Date()
         )
         return pelangganRepository.updatePelanggan(updated)

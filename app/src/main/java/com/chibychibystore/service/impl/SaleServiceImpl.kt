@@ -10,6 +10,7 @@ import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.constant.AppConstants
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.ShiftRepository
 import com.chibychibystore.repository.StokGudangRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.PromoService
@@ -31,6 +32,7 @@ class SaleServiceImpl @Inject constructor(
     private val itemPenjualanRepository: ItemPenjualanRepository,
     private val productRepository: ProdukRepository,
     private val stokGudangRepository: StokGudangRepository,
+    private val shiftRepository: ShiftRepository,
     private val authService: AuthService,
     private val printerService: PrinterService,
     private val promoService: PromoService
@@ -346,11 +348,10 @@ class SaleServiceImpl @Inject constructor(
     }
 
     override suspend fun getOpenShift(kasirId: Long): Result<com.chibychibystore.data.local.entity.Shift?> {
-        return try {
-            val dbShift = db.shiftDao().getOpenShiftByKasir(kasirId)
-            Result.success(dbShift)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        // Delegate to ShiftRepository to keep shift access consistent with the rest
+        // of the codebase, instead of bypassing the repository layer with a direct
+        // DAO call. This ensures any future caching/logging added at the repository
+        // layer applies uniformly.
+        return shiftRepository.getOpenShiftByKasir(kasirId)
     }
 }

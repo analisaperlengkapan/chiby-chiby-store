@@ -44,6 +44,7 @@ data class StokOpname(
     val createdAt: Date = Date()
 )
 
+@Serializable
 enum class AuditStatus {
     DRAFT,
     COMPLETED,
