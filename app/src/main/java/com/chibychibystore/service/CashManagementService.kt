@@ -172,8 +172,21 @@ class CashManagementService @Inject constructor(
             val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
 
-            val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
-            val salesRevenue = sales.sumOf { it.totalAmount }
+            // Use `getTotalRevenue` (non-refunded, tax-exclusive) rather than summing
+            // `totalAmount` from `getSalesInDateRange`. Two reasons:
+            //   1. `getSalesInDateRange` has NO `isRefunded = 0` filter, so refunded
+            //      sales would inflate operating revenue even though the cash was
+            //      returned to the customer.
+            //   2. As of MIGRATION_11_12, `totalAmount` is post-tax (gross cash paid).
+            //      Including tax in operating revenue double-counts it against the
+            //      tax-exclusive expense categories below, producing an inflated
+            //      operating cash flow. Tax collected is a pass-through liability,
+            //      not operating revenue.
+            // Delegating to the DAO also avoids loading every Penjualan row into memory
+            // for what is just a SUM aggregation.
+            val revenueResult = penjualanRepository.getTotalRevenue(startDate, endDate)
+            if (revenueResult is Result.Failure) throw revenueResult.exception
+            val salesRevenue = (revenueResult as Result.Success).data
 
             val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
 
