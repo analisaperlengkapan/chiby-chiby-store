@@ -119,7 +119,15 @@ fun PromotionItem(
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 val valueText = if (promotion.type == PromotionType.PERCENTAGE) {
-                    "${(promotion.value * 100).toInt()}%"
+                    // Preserve fractional percentages so the list display matches the
+                    // value used by PromoServiceImpl.calculateDiscountForPromo (which
+                    // multiplies subtotal by promo.value). Truncating with .toInt()
+                    // here would render 12.5% as "12%", contradicting the edit screen
+                    // (PromotionAddEditScreen.kt:60-68) that shows the full precision
+                    // and confusing users about the actual discount applied.
+                    val pct = promotion.value * 100
+                    val pctText = if (pct == pct.toLong().toDouble()) pct.toLong().toString() else pct.toString()
+                    "$pctText%"
                 } else {
                     currencyFormat.format(promotion.value)
                 }
