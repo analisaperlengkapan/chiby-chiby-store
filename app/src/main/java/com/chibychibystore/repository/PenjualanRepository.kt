@@ -98,10 +98,15 @@ class PenjualanRepository @Inject constructor(
      */
     suspend fun createPenjualan(penjualan: Penjualan, items: List<ItemPenjualan>): Result<PenjualanWithItems> {
         return try {
-            val totalAmount = items.sumOf { it.totalPrice }
-            val penjualanWithTotal = penjualan.copy(totalAmount = totalAmount)
-
-            val penjualanId = penjualanDao.insertPenjualan(penjualanWithTotal)
+            // Persist the caller-supplied totalAmount as-is. The service layer is
+            // responsible for computing the final total (subtotal + tax - discount),
+            // and overriding it here with the raw item subtotal would silently drop
+            // tax and discount from the persisted sale. That breaks any downstream
+            // consumer that sums `totalAmount` to compute actual cash receipts —
+            // notably shift cash reconciliation (`getTotalSalesByShift` /
+            // `getTotalCashSalesByShift`), which would produce a misleading
+            // expected-vs-actual cash discrepancy at shift close.
+            val penjualanId = penjualanDao.insertPenjualan(penjualan)
 
             val itemsWithPenjualanId = items.map { it.copy(saleId = penjualanId) }
             itemPenjualanDao.insertItemPenjualanList(itemsWithPenjualanId)

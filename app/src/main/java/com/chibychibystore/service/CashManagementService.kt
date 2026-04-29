@@ -44,19 +44,32 @@ class CashManagementService @Inject constructor(
      */
 
     suspend fun openShift(kasirId: Long, startingCash: Double): Result<Long> {
-        val existingResult = shiftRepository.getOpenShiftByKasir(kasirId)
-        if (existingResult is Result.Failure) return Result.failure(existingResult.exception)
-        val existingOpen = (existingResult as Result.Success).data
-        if (existingOpen != null) {
-            return Result.failure(ChibyChibyException.BusinessLogicError("Shift sebelumnya belum ditutup"))
-        }
+        return try {
+            // Wrap the check-then-create in a single transaction so that two
+            // concurrent calls for the same `kasirId` cannot both pass the
+            // "no existing open shift" check and create duplicate open shifts.
+            // Duplicate open shifts would split sales between them and corrupt
+            // the financial reconciliation done at shift close.
+            db.withTransaction {
+                val existingResult = shiftRepository.getOpenShiftByKasir(kasirId)
+                if (existingResult is Result.Failure) throw existingResult.exception
+                val existingOpen = (existingResult as Result.Success).data
+                if (existingOpen != null) {
+                    throw ChibyChibyException.BusinessLogicError("Shift sebelumnya belum ditutup")
+                }
 
-        val shift = Shift(
-            kasirId = kasirId,
-            startingCash = startingCash,
-            status = ShiftStatus.OPEN
-        )
-        return shiftRepository.createShift(shift)
+                val shift = Shift(
+                    kasirId = kasirId,
+                    startingCash = startingCash,
+                    status = ShiftStatus.OPEN
+                )
+                val createResult = shiftRepository.createShift(shift)
+                if (createResult is Result.Failure) throw createResult.exception
+                Result.success((createResult as Result.Success).data)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     suspend fun closeShift(shiftId: Long, actualCash: Double, notes: String?): Result<Unit> {
