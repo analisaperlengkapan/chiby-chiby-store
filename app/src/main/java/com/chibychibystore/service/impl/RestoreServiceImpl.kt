@@ -56,21 +56,21 @@ class RestoreServiceImpl @Inject constructor(
 
     override suspend fun restoreFromBackup(backupPath: String, clearExistingData: Boolean): com.chibychibystore.data.model.Result<RestoreResult> {
         return try {
-            _restoreProgress.value = RestoreProgress(isInProgress = true, totalSteps = 12)
+            _restoreProgress.value = RestoreProgress(isInProgress = true, totalSteps = 14)
 
             // Step 1: Validate backup file
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memvalidasi file backup", progress = 0.1f, currentStepIndex = 1, totalSteps = 12)
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memvalidasi file backup", progress = 1f / 14f, currentStepIndex = 1, totalSteps = 14)
             val validation = validateBackupFile(backupPath)
             if (!validation.isValid) {
                 return com.chibychibystore.data.model.Result.failure(Exception("File backup tidak valid: ${validation.errors.joinToString()}"))
             }
 
             // Step 2: Decrypt and parse backup data
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Membaca data backup", progress = 0.2f, currentStepIndex = 2, totalSteps = 12)
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Membaca data backup", progress = 2f / 14f, currentStepIndex = 2, totalSteps = 14)
             val backupData = loadBackupData(backupPath)
 
             // Step 3: Clear existing data
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Menghapus data lama", progress = 0.3f, currentStepIndex = 3, totalSteps = 12)
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Menghapus data lama", progress = 3f / 14f, currentStepIndex = 3, totalSteps = 14)
             if (clearExistingData) {
                 withContext(Dispatchers.IO) {
                     database.clearAllTables()
@@ -78,46 +78,52 @@ class RestoreServiceImpl @Inject constructor(
             }
 
             // Step 4: Restore users
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pengguna", progress = 0.4f, currentStepIndex = 4, totalSteps = 12)
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pengguna", progress = 4f / 14f, currentStepIndex = 4, totalSteps = 14)
             val usersRestored = restoreUsers(backupData.data.users)
 
             // Step 5: Restore categories
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data kategori", progress = 0.5f, currentStepIndex = 5, totalSteps = 12)
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data kategori", progress = 5f / 14f, currentStepIndex = 5, totalSteps = 14)
             val categoriesRestored = restoreCategories(backupData.data.categories)
 
             // Step 6: Restore warehouses
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data gudang", progress = 0.6f, currentStepIndex = 6, totalSteps = 12)
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data gudang", progress = 6f / 14f, currentStepIndex = 6, totalSteps = 14)
             val warehousesRestored = restoreGudangs(backupData.data.warehouses)
 
             // Step 7: Restore suppliers
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pemasok", progress = 0.7f, currentStepIndex = 7, totalSteps = 12)
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pemasok", progress = 7f / 14f, currentStepIndex = 7, totalSteps = 14)
             val suppliersRestored = restorePemasoks(backupData.data.suppliers)
 
             // Step 8: Restore products
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data product", progress = 0.8f, currentStepIndex = 8, totalSteps = 12)
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data product", progress = 8f / 14f, currentStepIndex = 8, totalSteps = 14)
             val productsRestored = restoreProduks(backupData.data.products)
 
             // Restore shifts and customers BEFORE sales — Penjualan has FKs to both
             // (shiftId → shift, pelangganId → pelanggan). If we restored sales first
             // any sale with a non-null shiftId/pelangganId would hit an FK violation
             // and be silently dropped by the per-row catch in restorePenjualans.
+
+            // Step 9: Restore shifts
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data shift", progress = 9f / 14f, currentStepIndex = 9, totalSteps = 14)
             val shiftsRestored = restoreShifts(backupData.data.shifts)
+
+            // Step 10: Restore customers
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pelanggan", progress = 10f / 14f, currentStepIndex = 10, totalSteps = 14)
             val customersRestored = restorePelanggans(backupData.data.customers)
 
-            // Step 9: Restore sales and items
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data penjualan", progress = 0.9f, currentStepIndex = 9, totalSteps = 12)
+            // Step 11: Restore sales and items
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data penjualan", progress = 11f / 14f, currentStepIndex = 11, totalSteps = 14)
             val salesRestored = restorePenjualans(backupData.data.sales, backupData.data.saleItems)
 
-            // Step 10: Restore purchases and items
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pembelian", progress = 0.95f, currentStepIndex = 10, totalSteps = 12)
+            // Step 12: Restore purchases and items
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pembelian", progress = 12f / 14f, currentStepIndex = 12, totalSteps = 14)
             val purchasesRestored = restorePembelians(backupData.data.purchases, backupData.data.purchaseItems)
 
-            // Step 11: Restore expenses
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pengeluaran", progress = 0.98f, currentStepIndex = 11, totalSteps = 12)
+            // Step 13: Restore expenses
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pengeluaran", progress = 13f / 14f, currentStepIndex = 13, totalSteps = 14)
             val expensesRestored = restorePengeluarans(backupData.data.expenses)
 
-            // Step 12: Finalize
-            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Finalisasi", progress = 1.0f, currentStepIndex = 12, totalSteps = 12)
+            // Step 14: Finalize
+            _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Finalisasi", progress = 1.0f, currentStepIndex = 14, totalSteps = 14)
 
             val recordsRestored = mapOf(
                 "pengguna" to usersRestored,
