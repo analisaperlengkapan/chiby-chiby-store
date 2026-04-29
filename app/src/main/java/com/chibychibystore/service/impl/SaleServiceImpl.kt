@@ -190,35 +190,70 @@ class SaleServiceImpl @Inject constructor(
 
     override suspend fun refundPenjualan(id: Long): Result<Unit> {
         return try {
-            val saleResult = getPenjualanById(id)
-            if (saleResult is Result.Failure) return Result.failure(saleResult.exception)
-            val saleWithItems = (saleResult as Result.Success).data ?: return Result.failure(Exception("Penjualan tidak ditemukan"))
+            // Wrap the refund in a single transaction so partial failures (e.g. stock
+            // adjustment fails after the sale is marked refunded) don't leave the
+            // database in an inconsistent state. The customer-points reversal added
+            // below also needs to be atomic with the rest of the refund — otherwise
+            // a failure between the points deduction and stock restore could keep
+            // points deducted while the refund is rolled back, or vice versa.
+            db.withTransaction {
+                val saleResult = getPenjualanById(id)
+                if (saleResult is Result.Failure) throw saleResult.exception
+                val saleWithItems = (saleResult as Result.Success).data
+                    ?: throw Exception("Penjualan tidak ditemukan")
 
-            val updatedPenjualan = saleWithItems.sale.copy(isRefunded = true)
-            penjualanRepository.updatePenjualan(updatedPenjualan)
-
-            val warehouseId = saleWithItems.sale.warehouseId
-            val adjustments = mutableListOf<StockAdjustment>()
-            val fallbackItems = mutableListOf<ItemPenjualan>()
-
-            saleWithItems.items.forEach { item ->
-                val productResult = productRepository.getProdukById(item.productId)
-                if (productResult is Result.Success && productResult.data != null) {
-                    adjustments.add(StockAdjustment(item.productId, warehouseId, item.quantity))
-                } else {
-                    fallbackItems.add(item)
+                if (saleWithItems.sale.isRefunded) {
+                    // Idempotent: refunding an already-refunded sale would otherwise
+                    // double-reverse loyalty points and stock.
+                    throw Exception("Penjualan sudah di-refund")
                 }
-            }
 
-            if (adjustments.isNotEmpty()) {
-                stokGudangRepository.adjustStockBatch(adjustments)
-            }
+                val updatedPenjualan = saleWithItems.sale.copy(isRefunded = true)
+                penjualanRepository.updatePenjualan(updatedPenjualan)
 
-            fallbackItems.forEach { item ->
-                productRepository.adjustStock(item.productId, item.quantity)
-            }
+                // Reverse loyalty points awarded at sale time. Points are accrued in
+                // createPenjualan as `(finalTotal / 10000).toInt()`; mirror that exact
+                // formula here so the reversal matches what was awarded. Without this,
+                // a customer keeps points from refunded sales — a financial leak.
+                val pelangganId = saleWithItems.sale.pelangganId
+                if (pelangganId != null) {
+                    val points = (saleWithItems.sale.totalAmount / 10000).toInt()
+                    if (points > 0) {
+                        db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
+                            // Floor at 0 in case the customer has already spent the
+                            // points earned from this sale.
+                            val newPoint = kotlin.math.max(0, p.point - points)
+                            db.pelangganDao().updatePelanggan(
+                                p.copy(point = newPoint, updatedAt = Date())
+                            )
+                        }
+                    }
+                }
 
-            Result.success(Unit)
+                val warehouseId = saleWithItems.sale.warehouseId
+                val adjustments = mutableListOf<StockAdjustment>()
+                val fallbackItems = mutableListOf<ItemPenjualan>()
+
+                saleWithItems.items.forEach { item ->
+                    val productResult = productRepository.getProdukById(item.productId)
+                    if (productResult is Result.Success && productResult.data != null) {
+                        adjustments.add(StockAdjustment(item.productId, warehouseId, item.quantity))
+                    } else {
+                        fallbackItems.add(item)
+                    }
+                }
+
+                if (adjustments.isNotEmpty()) {
+                    val stockResult = stokGudangRepository.adjustStockBatch(adjustments)
+                    if (stockResult is Result.Failure) throw stockResult.exception
+                }
+
+                fallbackItems.forEach { item ->
+                    productRepository.adjustStock(item.productId, item.quantity)
+                }
+
+                Result.success(Unit)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
