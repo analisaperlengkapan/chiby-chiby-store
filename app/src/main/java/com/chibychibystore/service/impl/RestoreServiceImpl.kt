@@ -127,9 +127,26 @@ class RestoreServiceImpl @Inject constructor(
                 _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pelanggan", progress = 11f / 17f, currentStepIndex = 11, totalSteps = 17)
                 val customersRestored = restorePelanggans(backupData.data.customers)
 
-                // Step 12: Restore sales and items
+                // Step 12: Restore sales and items.
+                //
+                // Backups predating format version "2.0" stored Penjualan.totalAmount as the
+                // raw item subtotal (because the old PenjualanRepository.createPenjualan
+                // override silently dropped tax and discount). The on-disk MIGRATION_11_12
+                // backfills existing rows to the new "amount paid" semantics, but data
+                // imported from a legacy backup bypasses that migration. Apply the same
+                // formula here so legacy backups produce sales rows with consistent
+                // semantics — otherwise aggregate queries (`getTotalSalesByShift`,
+                // `getTotalRevenue`, `getTotalCashReceipts`, shift cash reconciliation)
+                // would silently mix old-subtotal and new-paid values from the same DB.
                 _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data penjualan", progress = 12f / 17f, currentStepIndex = 12, totalSteps = 17)
-                val salesRestored = restorePenjualans(backupData.data.sales, backupData.data.saleItems)
+                val salesToRestore = if (isLegacyTotalAmountBackup(backupData.version)) {
+                    backupData.data.sales.map { sale ->
+                        sale.copy(totalAmount = maxOf(0.0, sale.totalAmount + sale.tax - sale.discount))
+                    }
+                } else {
+                    backupData.data.sales
+                }
+                val salesRestored = restorePenjualans(salesToRestore, backupData.data.saleItems)
 
                 // Step 13: Restore purchases and items
                 _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data pembelian", progress = 13f / 17f, currentStepIndex = 13, totalSteps = 17)
@@ -342,19 +359,24 @@ class RestoreServiceImpl @Inject constructor(
         return count
     }
 
+    /**
+     * True for backup files whose version predates the "2.0" totalAmount semantics.
+     * The caller in restoreFromBackup applies the `max(0, totalAmount + tax - discount)`
+     * backfill before insertion, mirroring MIGRATION_11_12. Defensive on parse errors:
+     * unrecognized / malformed versions are treated as legacy so we err on the side of
+     * applying the backfill rather than silently mixing semantics.
+     */
+    private fun isLegacyTotalAmountBackup(version: String): Boolean {
+        val major = version.substringBefore('.').toIntOrNull() ?: return true
+        return major < 2
+    }
+
     private suspend fun restorePenjualans(sales: List<Penjualan>, items: List<ItemPenjualan>): Int {
         if (sales.isEmpty()) return 0
 
-        // NOTE on totalAmount semantics: pre-PR backups contain Penjualan rows where
-        // `totalAmount` was the raw item subtotal (the old PenjualanRepository.createPenjualan
-        // overwrote totalAmount with `items.sumOf { it.totalPrice }`, dropping tax/discount).
-        // The on-disk MIGRATION_11_12 backfills existing rows to the new "amount paid"
-        // semantics (`MAX(0, totalAmount + tax - discount)`), but data imported here from
-        // a pre-PR backup file bypasses that migration and keeps the old subtotal value.
-        // Mixing pre- and post-PR rows in `getTotalSalesByShift`, `getTotalRevenue`, and
-        // shift cash reconciliation will produce inconsistent aggregates. This is a narrow
-        // backward-compatibility edge case (only affects pre-PR backups restored on a
-        // post-PR app); we accept it rather than guess at semantics from the file alone.
+        // The caller in `restoreFromBackup` is responsible for applying any
+        // version-specific transforms (e.g. the totalAmount backfill for pre-2.0
+        // backups). This helper is purely a persistence path.
 
         // Optimistic Batch Approach
         try {

@@ -79,9 +79,16 @@ class BackupServiceImpl @Inject constructor(
             val digest = MessageDigest.getInstance("SHA-256")
 
             // 2. Construct the Prefix (Header) with empty checksum
+            //
+            // Backup format version "2.0" indicates that Penjualan.totalAmount stores the
+            // post-tax/discount amount actually paid (matching MIGRATION_11_12 semantics).
+            // Older "1.0" backups stored totalAmount = raw item subtotal; the restore
+            // pipeline detects version < "2.0" and applies the same backfill formula
+            // (`max(0, totalAmount + tax - discount)`) so legacy backups produce
+            // consistent aggregates after import.
             val initialMetadata = BackupMetadata(checksum = "")
             val headerJsonObject = buildJsonObject {
-                put("version", "1.0")
+                put("version", "2.0")
                 put("createdAt", createdAt)
                 put("metadata", jsonCompact.encodeToJsonElement(initialMetadata))
             }
@@ -273,10 +280,12 @@ class BackupServiceImpl @Inject constructor(
             val file = File(filePath)
             val outputStream = BufferedOutputStream(openBackupOutputStream(file))
 
-            // Re-construct prefix with REAL checksum
+            // Re-construct prefix with REAL checksum (keep version in sync with the
+            // initial header above — both must match or the checksum-over-prefix
+            // computation would mismatch the actually written prefix).
             val finalMetadata = initialMetadata.copy(checksum = checksum)
             val finalHeaderJsonObject = buildJsonObject {
-                put("version", "1.0")
+                put("version", "2.0")
                 put("createdAt", createdAt)
                 put("metadata", jsonCompact.encodeToJsonElement(finalMetadata))
             }
@@ -305,7 +314,7 @@ class BackupServiceImpl @Inject constructor(
                 filePath = filePath,
                 createdAt = createdAt,
                 sizeBytes = file.length(),
-                version = "1.0",
+                version = "2.0",
                 checksum = checksum
             )
 

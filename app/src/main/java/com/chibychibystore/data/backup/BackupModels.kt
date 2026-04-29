@@ -4,7 +4,19 @@ import com.chibychibystore.data.local.entity.*
 import kotlinx.serialization.Serializable
 
 /**
- * Root container for backup data
+ * Root container for backup data.
+ *
+ * Backup format versions:
+ *  - "1.0": Penjualan.totalAmount stored the raw item subtotal (the old
+ *    PenjualanRepository.createPenjualan overwrote the caller-supplied value).
+ *    Tax and discount were stored separately.
+ *  - "2.0": Penjualan.totalAmount stores the post-tax/discount amount actually
+ *    paid (`max(0, subtotal + tax - discount)`), matching MIGRATION_11_12.
+ *
+ * The default value reflects the legacy "1.0" semantics so that backup files
+ * written by older app versions (which don't include a `version` field) parse
+ * with the correct interpretation. RestoreServiceImpl uses this version to
+ * decide whether to apply the totalAmount backfill on import.
  */
 @Serializable
 data class BackupData(

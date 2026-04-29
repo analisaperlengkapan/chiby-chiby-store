@@ -97,6 +97,13 @@ interface PenjualanDao {
     @Query("SELECT COUNT(*) FROM penjualan WHERE isRefunded = 0 AND saleDate BETWEEN :startDate AND :endDate")
     suspend fun getPenjualanCountNonRefunded(startDate: Date, endDate: Date): Int
 
+    // Aggregate semantics: as of MIGRATION_11_12, `totalAmount` stores the
+    // post-tax/discount amount actually paid by the customer (subtotal + tax -
+    // discount, floored at 0). Aggregations below reflect this:
+    //   - getTotalPenjualanAmount / getTotalCashReceipts: gross cash flow (incl. tax)
+    //   - getTotalRevenue: net revenue (subtotal − discount, tax-exclusive)
+    // Pre-MIGRATION_11_12 rows stored the raw subtotal; the migration backfills
+    // them, so callers don't need to special-case legacy data on a migrated DB.
     @Query("SELECT SUM(totalAmount) FROM penjualan WHERE saleDate BETWEEN :startDate AND :endDate")
     suspend fun getTotalPenjualanAmount(startDate: Date, endDate: Date): Double?
 
