@@ -277,8 +277,16 @@ class PosViewModel @Inject constructor(
             val currentUser = authService.getCurrentUser()
             val userId = currentUser?.id ?: 0L
 
-            // Check for open shift
+            // Look up the cashier's open shift so the sale can be linked for shift
+            // reconciliation. If none is open, the sale still proceeds (so a cashier
+            // can serve customers even if they forgot to open a shift), but it will
+            // NOT be counted in any shift's totalSales/expectedCash. We surface this
+            // as a non-blocking warning in `successMessage` so the cashier knows to
+            // open a shift before the next transaction.
             val openShift = saleService.getOpenShift(userId).getOrNull()
+            val noShiftWarning = if (openShift == null) {
+                "Peringatan: Tidak ada shift aktif. Penjualan ini tidak akan tercatat dalam rekonsiliasi shift."
+            } else null
 
             val sale = Penjualan(
                 saleDate = Date(),
@@ -303,10 +311,15 @@ class PosViewModel @Inject constructor(
 
             val result = saleService.createPenjualan(sale, items)
             result.onSuccess { completedSale ->
+                val message = if (noShiftWarning != null) {
+                    "Pembayaran berhasil. $noShiftWarning"
+                } else {
+                    "Pembayaran berhasil"
+                }
                 updateState {
                     it.copy(
                         isProcessingPayment = false,
-                        successMessage = "Pembayaran berhasil",
+                        successMessage = message,
                         completedSaleId = completedSale.sale.id,
                         showReceiptDialog = true,
                         cartItems = emptyList(),

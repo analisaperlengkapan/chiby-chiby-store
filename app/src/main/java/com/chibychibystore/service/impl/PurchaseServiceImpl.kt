@@ -116,11 +116,33 @@ class PurchaseServiceImpl @Inject constructor(
                 val purchase = (purchaseResult as Result.Success).data ?: throw Exception("Pembelian tidak ditemukan")
 
                 val items = itemPembelianRepository.getItemsByPurchaseId(id).first()
+
+                // Pre-flight check: ensure we have enough stock in the warehouse to reverse
+                // the purchase. If items from this purchase have already been sold,
+                // `currentStock < quantityToReverse`, and a blind `-quantity` adjustment via
+                // `adjustStockBatch` would silently leave the warehouse with negative stock
+                // (no floor in DAO). Aggregate per product so multi-line purchases of the
+                // same product are validated correctly against a single stock row.
+                val totalsByProduct = items.groupBy { it.productId }
+                    .mapValues { (_, list) -> list.sumOf { it.quantity } }
+                for ((productId, totalToReverse) in totalsByProduct) {
+                    val stockResult = stokGudangRepository.getStock(productId, purchase.warehouseId)
+                    if (stockResult is Result.Failure) throw stockResult.exception
+                    val currentQty = (stockResult as Result.Success).data?.quantity ?: 0
+                    if (currentQty < totalToReverse) {
+                        throw Exception(
+                            "Tidak dapat menghapus pembelian: stok produk #$productId di gudang " +
+                                "tidak mencukupi (tersedia $currentQty, perlu mengembalikan $totalToReverse). " +
+                                "Sebagian item mungkin sudah terjual."
+                        )
+                    }
+                }
+
                 val adjustments = items.map {
                     StockAdjustment(it.productId, purchase.warehouseId, -it.quantity)
                 }
-                val stockResult = stokGudangRepository.adjustStockBatch(adjustments)
-                if (stockResult is Result.Failure) throw stockResult.exception
+                val adjustResult = stokGudangRepository.adjustStockBatch(adjustments)
+                if (adjustResult is Result.Failure) throw adjustResult.exception
 
                 val deleteItemsResult = itemPembelianRepository.deleteItemsByPurchaseId(id)
                 if (deleteItemsResult is Result.Failure) throw deleteItemsResult.exception

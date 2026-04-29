@@ -104,23 +104,31 @@ class CashManagementService @Inject constructor(
                 if (cashSalesResult is Result.Failure) throw cashSalesResult.exception
                 val cashSales = (cashSalesResult as Result.Success).data
 
-                // Approved expenses recorded between shift start and close. We exclude
-                // non-cash categories (e.g. DEPRECIATION) since those don't affect the
-                // physical cash drawer. `Pengeluaran` has no shift FK, so we approximate
-                // by time window — sufficient for single-cashier shifts.
+                // Approved expenses recorded between shift start and close. Only operating
+                // expense categories drain the *physical cash drawer* during a shift —
+                // categories like INVENTORY_PURCHASES (COGS), EQUIPMENT (investing),
+                // LOAN_REPAYMENT/DIVIDEND (financing) are normally paid via bank transfer
+                // and shouldn't reduce expectedCash. DEPRECIATION (non-cash) likewise
+                // doesn't affect the drawer. Counting them here would deflate expectedCash
+                // and produce phantom cash discrepancies at shift close.
+                //
+                // `Pengeluaran` has no shift FK, so we approximate by time window. To
+                // avoid double-counting across two cashiers with overlapping shifts, we
+                // additionally restrict the lookup to expenses *created by this shift's
+                // cashier*. This still imperfect (a cashier could record an expense
+                // outside their own shift window) but is closer to reality than the
+                // unconstrained time-window-only query.
                 val closeTime = Date()
-                // Use the Result-returning variant so a DB failure propagates instead of
-                // silently producing an empty map (which would zero out totalExpenses and
-                // inflate expectedCash). This matches the propagation done above for sales.
                 val expensesResult =
-                    pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategoriResult(
+                    pengeluaranRepository.getApprovedExpensesByCategoryForCashier(
+                        shift.kasirId,
                         shift.startTime,
                         closeTime
                     )
                 if (expensesResult is Result.Failure) throw expensesResult.exception
                 val expensesByCategory = (expensesResult as Result.Success).data
                 val totalExpenses = expensesByCategory
-                    .filterKeys { it !in KategoriPengeluaran.NON_CASH_CATEGORIES }
+                    .filterKeys { it in KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES }
                     .values.sum()
 
                 val expectedCash = shift.startingCash + cashSales - totalExpenses

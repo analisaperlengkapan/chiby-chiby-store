@@ -70,7 +70,7 @@ fun AuditAddScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(auditItems) { item ->
+                    items(auditItems, key = { it.product.id }) { item ->
                         AuditItemRow(
                             item = item,
                             onActualChange = { viewModel.updateActualQuantity(item.product.id, it) }
@@ -123,7 +123,14 @@ fun AuditItemRow(item: AuditItemInput, onActualChange: (Int) -> Unit) {
             ) {
                 Text("Sistem: ${item.expectedQuantity}", style = MaterialTheme.typography.bodySmall)
 
-                var textValue by remember { mutableStateOf(item.actualQuantity.toString()) }
+                // Key the remembered text on the product id so the field re-initializes
+                // if the parent ever swaps in a different product at this slot. We do
+                // NOT key on `item.actualQuantity` because that would clobber the user's
+                // in-progress edits whenever onActualChange fires and the parent emits
+                // a new AuditItemInput with the updated quantity.
+                var textValue by remember(item.product.id) {
+                    mutableStateOf(item.actualQuantity.toString())
+                }
 
                 OutlinedTextField(
                     value = textValue,
