@@ -96,11 +96,16 @@ class CashManagementService @Inject constructor(
                 // physical cash drawer. `Pengeluaran` has no shift FK, so we approximate
                 // by time window — sufficient for single-cashier shifts.
                 val closeTime = Date()
-                val expensesByCategory =
-                    pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(
+                // Use the Result-returning variant so a DB failure propagates instead of
+                // silently producing an empty map (which would zero out totalExpenses and
+                // inflate expectedCash). This matches the propagation done above for sales.
+                val expensesResult =
+                    pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategoriResult(
                         shift.startTime,
                         closeTime
                     )
+                if (expensesResult is Result.Failure) throw expensesResult.exception
+                val expensesByCategory = (expensesResult as Result.Success).data
                 val totalExpenses = expensesByCategory
                     .filterKeys { it !in KategoriPengeluaran.NON_CASH_CATEGORIES }
                     .values.sum()

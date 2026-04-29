@@ -44,6 +44,7 @@ data class Shift(
     val createdAt: Date = Date()
 )
 
+@Serializable
 enum class ShiftStatus {
     OPEN,
     CLOSED

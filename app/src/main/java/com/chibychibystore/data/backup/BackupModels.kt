@@ -38,5 +38,11 @@ data class BackupEntities(
     val saleItems: List<ItemPenjualan>,
     val purchases: List<Pembelian>,
     val purchaseItems: List<ItemPembelian>,
-    val expenses: List<Pengeluaran>
+    val expenses: List<Pengeluaran>,
+    // Default to empty list so older backup files (created before these tables existed)
+    // still deserialize successfully. Penjualan rows reference these tables via
+    // shiftId / pelangganId foreign keys, so they MUST be restored before sales to
+    // avoid FK violations and silent data loss.
+    val shifts: List<Shift> = emptyList(),
+    val customers: List<Pelanggan> = emptyList()
 )

@@ -52,7 +52,9 @@ class BackupServiceImpl @Inject constructor(
     private val itemPenjualanRepository: ItemPenjualanRepository,
     private val pembelianRepository: PembelianRepository,
     private val itemPembelianRepository: ItemPembelianRepository,
-    private val pengeluaranRepository: PengeluaranRepository
+    private val pengeluaranRepository: PengeluaranRepository,
+    private val shiftRepository: ShiftRepository,
+    private val pelangganRepository: PelangganRepository
 ) : BackupService {
 
     private val json = Json { prettyPrint = true }
@@ -184,6 +186,23 @@ class BackupServiceImpl @Inject constructor(
             writer.beginArray()
             val expenses = pengeluaranRepository.getAllPengeluarans().firstOrNull() ?: emptyList()
             expenses.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 11: Shifts (Penjualan FK target — must be in backup so restored sales
+            // referencing shiftId don't fail FK validation and get silently dropped.)
+            writer.name("shifts")
+            writer.beginArray()
+            val shifts = shiftRepository.getAllShifts().firstOrNull() ?: emptyList()
+            shifts.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
+            writer.endArray()
+            writer.flush()
+
+            // Step 12: Customers (Penjualan FK target via pelangganId.)
+            writer.name("customers")
+            writer.beginArray()
+            val customers = pelangganRepository.getAllPelanggan().firstOrNull() ?: emptyList()
+            customers.forEach { writer.jsonValue(jsonCompact.encodeToString(it)) }
             writer.endArray()
 
             // End "data" object

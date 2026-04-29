@@ -161,4 +161,21 @@ class PengeluaranRepository @Inject constructor(
             emptyMap()
         }
     }
+
+    /**
+     * Get approved pengeluaran summary grouped by category as a [Result], so callers
+     * that need to react to database failures (e.g. financial reconciliation in
+     * shift close) can propagate the error rather than silently treating a DB
+     * failure as "no expenses".
+     */
+    suspend fun getApprovedRingkasanPengeluaranPerKategoriResult(
+        startDate: Date,
+        endDate: Date
+    ): Result<Map<KategoriPengeluaran, Double>> {
+        return try {
+            Result.success(pengeluaranDao.getApprovedRingkasanPengeluaranPerKategori(startDate, endDate))
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getApprovedRingkasanPengeluaranPerKategori", e))
+        }
+    }
 }

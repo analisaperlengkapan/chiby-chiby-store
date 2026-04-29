@@ -42,7 +42,9 @@ class RestoreServiceImpl @Inject constructor(
     private val saleItemRepository: ItemPenjualanRepository,
     private val purchaseRepository: PembelianRepository,
     private val purchaseItemRepository: ItemPembelianRepository,
-    private val expenseRepository: PengeluaranRepository
+    private val expenseRepository: PengeluaranRepository,
+    private val shiftRepository: ShiftRepository,
+    private val pelangganRepository: PelangganRepository
 ) : RestoreService {
 
     private val json = Json { prettyPrint = true }
@@ -94,6 +96,13 @@ class RestoreServiceImpl @Inject constructor(
             // Step 8: Restore products
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data product", progress = 0.8f, currentStepIndex = 8, totalSteps = 12)
             val productsRestored = restoreProduks(backupData.data.products)
+
+            // Restore shifts and customers BEFORE sales — Penjualan has FKs to both
+            // (shiftId → shift, pelangganId → pelanggan). If we restored sales first
+            // any sale with a non-null shiftId/pelangganId would hit an FK violation
+            // and be silently dropped by the per-row catch in restorePenjualans.
+            val shiftsRestored = restoreShifts(backupData.data.shifts)
+            val customersRestored = restorePelanggans(backupData.data.customers)
 
             // Step 9: Restore sales and items
             _restoreProgress.value = RestoreProgress(isInProgress = true, currentStep = "Memulihkan data penjualan", progress = 0.9f, currentStepIndex = 9, totalSteps = 12)
@@ -347,6 +356,36 @@ class RestoreServiceImpl @Inject constructor(
         for (expense in expenses) {
             try {
                 val result = expenseRepository.createPengeluaran(expense)
+                if (result is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
+            } catch (e: Exception) {
+                // Log error but continue
+            }
+        }
+        return count
+    }
+
+    private suspend fun restoreShifts(shifts: List<Shift>): Int {
+        var count = 0
+        for (shift in shifts) {
+            try {
+                val result = shiftRepository.createShift(shift)
+                if (result is com.chibychibystore.data.model.Result.Success) {
+                    count++
+                }
+            } catch (e: Exception) {
+                // Log error but continue
+            }
+        }
+        return count
+    }
+
+    private suspend fun restorePelanggans(customers: List<Pelanggan>): Int {
+        var count = 0
+        for (customer in customers) {
+            try {
+                val result = pelangganRepository.createPelanggan(customer)
                 if (result is com.chibychibystore.data.model.Result.Success) {
                     count++
                 }
