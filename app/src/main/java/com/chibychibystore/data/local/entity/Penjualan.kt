@@ -56,7 +56,11 @@ data class Penjualan(
     @Serializable(with = DateSerializer::class)
     val createdAt: Date = Date(),
     // Whether this sale has been refunded. Default false for existing records.
-    val isRefunded: Boolean = false
+    val isRefunded: Boolean = false,
+    // Loyalty points used for discount in this sale.
+    val pointsRedeemed: Int = 0,
+    // Loyalty points earned from this sale.
+    val pointsEarned: Int = 0
 )
 
 @Serializable

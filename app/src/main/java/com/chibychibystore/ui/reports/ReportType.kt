@@ -13,5 +13,6 @@ enum class ReportType(val displayName: String) {
     INCOME_STATEMENT("Laporan Laba Rugi"),
     CASH_FLOW("Arus Kas"),
     EXPENSE_REPORT("Laporan Expense"),
-    BALANCE_SHEET("Laporan Neraca")
+    BALANCE_SHEET("Laporan Neraca"),
+    STOCK_MOVEMENT("Pergerakan Stok")
 }

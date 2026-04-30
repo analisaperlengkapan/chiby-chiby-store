@@ -46,6 +46,18 @@ class DashboardViewModel @Inject constructor(
 
     init {
         loadDashboardData()
+        observeMetrics()
+    }
+
+    private fun observeMetrics() {
+        viewModelScope.launch {
+            reportingService.observeSalesMetrics().collect { metrics ->
+                _uiState.value = _uiState.value.copy(
+                    todaySales = metrics.penjualanHariIni,
+                    todayTransactionCount = metrics.transaksiHariIni
+                )
+            }
+        }
     }
 
     /**
@@ -57,30 +69,20 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val todayDate = LocalDate.now()
-                val today = todayDate.toString() // yyyy-MM-dd
                 val sevenDaysAgo = todayDate.minusDays(6)
 
                 // Parallel execution for dashboard metrics
-                // Note: Using a properly formatted date string for services expected "yyyy-MM-dd"
-                // Assuming services handle "yyyy-MM-dd" correctly.
-                
                 supervisorScope {
-                    val todaySalesDeferred = async { saleService.getTotalPenjualanByRentangTanggal(today, today) }
-                    val transactionCountDeferred = async { saleService.getPenjualanCountByRentangTanggal(today, today) }
                     val lowStockDeferred = async { produkRepository.getLowStockProduk().first() }
                     val recentSalesDeferred = async { saleService.getRecentPenjualan(10) }
                     val salesTrendDeferred = async { reportingService.getSalesTrend(sevenDaysAgo, todayDate) }
 
                     // Await results
-                    val todaySalesRes = todaySalesDeferred.await()
-                    val transactionCountRes = transactionCountDeferred.await()
                     val lowStock = lowStockDeferred.await()
                     val recentSalesRes = recentSalesDeferred.await()
                     val salesTrendRes = salesTrendDeferred.await()
 
                     _uiState.value = _uiState.value.copy(
-                        todaySales = todaySalesRes.getOrNull() ?: 0.0,
-                        todayTransactionCount = transactionCountRes.getOrNull() ?: 0,
                         lowStockItems = lowStock,
                         recentTransactions = recentSalesRes.getOrNull() ?: emptyList(),
                         salesTrend = salesTrendRes.getOrNull() ?: emptyList(),

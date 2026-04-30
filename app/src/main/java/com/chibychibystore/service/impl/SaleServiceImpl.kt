@@ -100,18 +100,31 @@ class SaleServiceImpl @Inject constructor(
                     throw productsResult.exception
                 }
 
+                // Point awarding and deduction logic
+                var pointsEarned = 0
+                if (pelangganId != null) {
+                    pointsEarned = (finalTotal / AppConstants.POINT_AWARD_THRESHOLD).toInt()
+                }
+
+                val saleToSaveWithPoints = saleToSave.copy(
+                    pointsEarned = pointsEarned,
+                    // pointsRedeemed is already set in the sale object passed from ViewModel
+                )
+
                 // Create Sale (Persistence)
-                val result = penjualanRepository.createPenjualan(saleToSave, items)
+                val result = penjualanRepository.createPenjualan(saleToSaveWithPoints, items)
 
                 if (result is Result.Success) {
                     // Update Customer points if applicable
                     if (pelangganId != null) {
-                        // 1 point per 10.000 spent
-                        val points = (finalTotal / 10000).toInt()
-                        if (points > 0) {
-                            db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
-                                db.pelangganDao().updatePelanggan(p.copy(point = p.point + points, updatedAt = Date()))
-                            }
+                        db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
+                            val netPointsChange = pointsEarned - saleToSaveWithPoints.pointsRedeemed
+                            db.pelangganDao().updatePelanggan(
+                                p.copy(
+                                    point = kotlin.math.max(0, p.point + netPointsChange),
+                                    updatedAt = Date()
+                                )
+                            )
                         }
                     }
 
@@ -222,22 +235,17 @@ class SaleServiceImpl @Inject constructor(
                 val updateResult = penjualanRepository.updatePenjualan(updatedPenjualan)
                 if (updateResult is Result.Failure) throw updateResult.exception
 
-                // Reverse loyalty points awarded at sale time. Points are accrued in
-                // createPenjualan as `(finalTotal / 10000).toInt()`; mirror that exact
-                // formula here so the reversal matches what was awarded. Without this,
-                // a customer keeps points from refunded sales — a financial leak.
+                // Reverse loyalty points awarded/redeemed at sale time.
                 val pelangganId = saleWithItems.sale.pelangganId
                 if (pelangganId != null) {
-                    val points = (saleWithItems.sale.totalAmount / 10000).toInt()
-                    if (points > 0) {
-                        db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
-                            // Floor at 0 in case the customer has already spent the
-                            // points earned from this sale.
-                            val newPoint = kotlin.math.max(0, p.point - points)
-                            db.pelangganDao().updatePelanggan(
-                                p.copy(point = newPoint, updatedAt = Date())
-                            )
-                        }
+                    val pointsEarned = saleWithItems.sale.pointsEarned
+                    val pointsRedeemed = saleWithItems.sale.pointsRedeemed
+                    db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
+                        // Re-add redeemed points and remove earned points
+                        val newPoint = kotlin.math.max(0, p.point - pointsEarned + pointsRedeemed)
+                        db.pelangganDao().updatePelanggan(
+                            p.copy(point = newPoint, updatedAt = Date())
+                        )
                     }
                 }
 

@@ -46,7 +46,24 @@ class ReportingServiceImpl @Inject constructor(
         if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
             Result.failure(Exception("Tidak memiliki izin untuk melihat laporan penjualan"))
         } else {
-            Result.success(LaporanPenjualanBulanan(year, month, 0.0, 0, emptyList(), emptyList()))
+            val startDate = LocalDate.of(year, month, 1)
+            val endDate = startDate.withDayOfMonth(startDate.lengthOfMonth())
+
+            val sales = penjualanRepository.getSalesInDateRange(startDate, endDate)
+            val totalSales = sales.filter { !it.isRefunded }.sumOf { maxOf(0.0, it.totalAmount - it.tax) }
+            val totalTransactions = sales.count { !it.isRefunded }
+
+            val dailyMap = sales.filter { !it.isRefunded }.groupBy {
+                it.saleDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+            }.mapValues { (_, daySales) ->
+                DataPenjualanHarian(
+                    tanggal = daySales.first().saleDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),
+                    totalPenjualan = daySales.sumOf { maxOf(0.0, it.totalAmount - it.tax) },
+                    jumlahTransaksi = daySales.size
+                )
+            }.values.toList().sortedBy { it.tanggal }
+
+            Result.success(LaporanPenjualanBulanan(year, month, totalSales, totalTransactions, dailyMap, emptyList()))
         }
     } catch (e: Exception) {
         Result.failure(Exception("getMonthlySalesReport failed", e))
@@ -140,7 +157,20 @@ class ReportingServiceImpl @Inject constructor(
         Result.failure(Exception("getLowStockReport failed", e))
     }
 
-    override fun observeSalesMetrics() = flowOf(MetrikPenjualan(0.0, 0, 0.0, 0.0))
+    override fun observeSalesMetrics(): kotlinx.coroutines.flow.Flow<MetrikPenjualan> = kotlinx.coroutines.flow.flow {
+        while (true) {
+            val today = LocalDate.now()
+            val startOfMonth = today.withDayOfMonth(1)
+
+            val todaySales = penjualanRepository.getTotalRevenue(today, today).getOrNull() ?: 0.0
+            val todayTx = penjualanRepository.getPenjualanCountNonRefunded(today, today).getOrNull() ?: 0
+            val monthSales = penjualanRepository.getTotalRevenue(startOfMonth, today).getOrNull() ?: 0.0
+            val avgTx = if (todayTx > 0) todaySales / todayTx else 0.0
+
+            emit(MetrikPenjualan(todaySales, todayTx, monthSales, avgTx))
+            kotlinx.coroutines.delay(30000) // Update every 30 seconds
+        }
+    }
 
     override suspend fun getGrossSales(startDate: LocalDate, endDate: LocalDate): Result<LaporanPenjualanKotor> = try {
         if (!authService.hasPermission("VIEW_SALES_REPORTS")) {
@@ -356,5 +386,74 @@ class ReportingServiceImpl @Inject constructor(
         }
     } catch (e: Exception) {
         Result.failure(Exception("getBalanceSheet failed", e))
+    }
+
+    override suspend fun getStockMovementReport(startDate: LocalDate, endDate: LocalDate): Result<List<StockMovement>> = try {
+        if (!authService.hasPermission("VIEW_INVENTORY_REPORTS")) {
+            Result.failure(Exception("Tidak memiliki izin untuk melihat laporan pergerakan stok"))
+        } else {
+            val movements = mutableListOf<StockMovement>()
+            val warehouses = db.gudangDao().getAllGudang().first().associateBy { it.id }
+            val products = produkRepository.getAllProduk().first().associateBy { it.id }
+
+            // 1. Sales
+            val sales = penjualanRepository.getPenjualanWithItemsByRentangTanggal(startDate.toString(), endDate.toString()).first()
+            sales.forEach { saleWithItems ->
+                saleWithItems.items.forEach { item ->
+                    movements.add(StockMovement(
+                        date = saleWithItems.sale.saleDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),
+                        productId = item.productId,
+                        productName = products[item.productId]?.name ?: "Unknown Product",
+                        type = if (saleWithItems.sale.isRefunded) "REFUND" else "SALE",
+                        quantity = if (saleWithItems.sale.isRefunded) item.quantity else -item.quantity,
+                        warehouseName = warehouses[saleWithItems.sale.warehouseId]?.name ?: "Gudang Utama",
+                        referenceId = "S-${saleWithItems.sale.id}"
+                    ))
+                }
+            }
+
+            // 2. Purchases
+            val purchases = db.pembelianDao().getPembelianByRentangTanggal(startDate.toDate(), getEndDateWithTime(endDate)).first()
+            purchases.forEach { purchase ->
+                val items = db.itemPembelianDao().getItemsByPembelianId(purchase.id).first()
+                items.forEach { item ->
+                    movements.add(StockMovement(
+                        date = purchase.purchaseDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),
+                        productId = item.productId,
+                        productName = products[item.productId]?.name ?: "Unknown Product",
+                        type = "PURCHASE",
+                        quantity = item.quantity,
+                        warehouseName = warehouses[purchase.warehouseId]?.name ?: "Gudang Utama",
+                        referenceId = "P-${purchase.id}"
+                    ))
+                }
+            }
+
+            // 3. Audits (Completed)
+            val audits = db.inventoryAuditDao().getAllAuditsList().filter {
+                val date = it.auditDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+                (date.isAfter(startDate) || date.isEqual(startDate)) && (date.isBefore(endDate) || date.isEqual(endDate)) && it.status == com.chibychibystore.data.local.entity.AuditStatus.COMPLETED
+            }
+            audits.forEach { audit ->
+                val items = db.inventoryAuditDao().getAllAuditItems().filter { it.auditId == audit.id }
+                items.forEach { item ->
+                    if (item.difference != 0) {
+                        movements.add(StockMovement(
+                            date = audit.auditDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),
+                            productId = item.productId,
+                            productName = products[item.productId]?.name ?: "Unknown Product",
+                            type = "ADJUSTMENT",
+                            quantity = item.difference,
+                            warehouseName = warehouses[audit.warehouseId]?.name ?: "Gudang Utama",
+                            referenceId = "A-${audit.id}"
+                        ))
+                    }
+                }
+            }
+
+            Result.success(movements.sortedByDescending { it.date })
+        }
+    } catch (e: Exception) {
+        Result.failure(Exception("getStockMovementReport failed", e))
     }
 }

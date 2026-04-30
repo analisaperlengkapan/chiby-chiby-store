@@ -65,6 +65,8 @@ data class PosUiState(
     val isPrintingReceipt: Boolean = false,
     val isScanning: Boolean = false,
     val selectedPelanggan: com.chibychibystore.data.local.entity.Pelanggan? = null,
+    val pointsToRedeem: Int = 0,
+    val isRedeemingPoints: Boolean = false,
     val pelangganList: List<com.chibychibystore.data.local.entity.Pelanggan> = emptyList(),
     // Warehouse the cashier is currently selling from. Defaults to 1L for backward
     // compatibility with single-warehouse deployments and existing data; users with
@@ -128,7 +130,53 @@ class PosViewModel @Inject constructor(
     }
 
     fun selectPelanggan(pelanggan: com.chibychibystore.data.local.entity.Pelanggan?) {
-        updateState { it.copy(selectedPelanggan = pelanggan) }
+        updateState {
+            it.copy(
+                selectedPelanggan = pelanggan,
+                isRedeemingPoints = false,
+                pointsToRedeem = 0
+            )
+        }
+        recalculateTotals()
+    }
+
+    fun togglePointRedemption(redeem: Boolean) {
+        val pelanggan = currentState.selectedPelanggan ?: return
+        if (redeem && pelanggan.point <= 0) return
+
+        updateState { it.copy(isRedeemingPoints = redeem) }
+
+        if (redeem) {
+            // Calculate max points that can be redeemed based on subtotal
+            val maxDiscountNeeded = currentState.subtotal + currentState.tax
+            val pointsNeededForFullDiscount = (maxDiscountNeeded / AppConstants.POINT_REDEMPTION_VALUE).toInt()
+            val pointsToRedeem = minOf(pelanggan.point, pointsNeededForFullDiscount)
+            updateState { it.copy(pointsToRedeem = pointsToRedeem) }
+        } else {
+            updateState { it.copy(pointsToRedeem = 0) }
+        }
+        recalculateTotals()
+    }
+
+    private fun recalculateTotals() {
+        launchWithState {
+            val subtotal = currentState.cartItems.sumOf { it.totalPrice }
+            val tax = subtotal * AppConstants.TAX_RATE
+            val promoDiscount = promoService.calculateDiscount(subtotal)
+            val pointDiscount = currentState.pointsToRedeem * AppConstants.POINT_REDEMPTION_VALUE
+
+            val totalDiscount = promoDiscount + pointDiscount
+            val total = maxOf(0.0, subtotal + tax - totalDiscount)
+
+            updateState {
+                it.copy(
+                    subtotal = subtotal,
+                    tax = tax,
+                    discount = totalDiscount,
+                    total = total
+                )
+            }
+        }
     }
 
     fun selectWarehouse(warehouseId: Long) {
@@ -181,8 +229,10 @@ class PosViewModel @Inject constructor(
 
             val subtotal = adjustedItems.sumOf { it.totalPrice }
             val tax = subtotal * AppConstants.TAX_RATE
-            val discount = promoService.calculateDiscount(subtotal)
-            val total = subtotal + tax - discount
+            val promoDiscount = promoService.calculateDiscount(subtotal)
+            val pointDiscount = currentState.pointsToRedeem * AppConstants.POINT_REDEMPTION_VALUE
+            val totalDiscount = promoDiscount + pointDiscount
+            val total = subtotal + tax - totalDiscount
 
             val notice = buildString {
                 if (droppedNames.isNotEmpty()) {
@@ -202,7 +252,7 @@ class PosViewModel @Inject constructor(
                     cartItems = adjustedItems,
                     subtotal = subtotal,
                     tax = tax,
-                    discount = discount,
+                    discount = totalDiscount,
                     total = maxOf(0.0, total),
                     successMessage = notice ?: it.successMessage
                 )
@@ -297,14 +347,17 @@ class PosViewModel @Inject constructor(
 
             val subtotal = updatedCartItems.sumOf { it.totalPrice }
             val tax = subtotal * AppConstants.TAX_RATE
-            val discount = promoService.calculateDiscount(subtotal)
-            val total = subtotal + tax - discount
+            val promoDiscount = promoService.calculateDiscount(subtotal)
+            val pointDiscount = currentState.pointsToRedeem * AppConstants.POINT_REDEMPTION_VALUE
+            val totalDiscount = promoDiscount + pointDiscount
+            val total = subtotal + tax - totalDiscount
+
             updateState {
                 it.copy(
                     cartItems = updatedCartItems,
                     subtotal = subtotal,
                     tax = tax,
-                    discount = discount,
+                    discount = totalDiscount,
                     total = maxOf(0.0, total),
                     error = null
                 )
@@ -351,14 +404,17 @@ class PosViewModel @Inject constructor(
 
             val subtotal = updatedCartItems.sumOf { it.totalPrice }
             val tax = subtotal * AppConstants.TAX_RATE
-            val discount = promoService.calculateDiscount(subtotal)
-            val total = subtotal + tax - discount
+            val promoDiscount = promoService.calculateDiscount(subtotal)
+            val pointDiscount = currentState.pointsToRedeem * AppConstants.POINT_REDEMPTION_VALUE
+            val totalDiscount = promoDiscount + pointDiscount
+            val total = subtotal + tax - totalDiscount
+
             updateState {
                 it.copy(
                     cartItems = updatedCartItems,
                     subtotal = subtotal,
                     tax = tax,
-                    discount = discount,
+                    discount = totalDiscount,
                     total = maxOf(0.0, total)
                 )
             }
@@ -370,14 +426,17 @@ class PosViewModel @Inject constructor(
         launchWithState {
             val subtotal = updatedCartItems.sumOf { it.totalPrice }
             val tax = subtotal * AppConstants.TAX_RATE
-            val discount = promoService.calculateDiscount(subtotal)
-            val total = subtotal + tax - discount
+            val promoDiscount = promoService.calculateDiscount(subtotal)
+            val pointDiscount = currentState.pointsToRedeem * AppConstants.POINT_REDEMPTION_VALUE
+            val totalDiscount = promoDiscount + pointDiscount
+            val total = subtotal + tax - totalDiscount
+
             updateState {
                 it.copy(
                     cartItems = updatedCartItems,
                     subtotal = subtotal,
                     tax = tax,
-                    discount = discount,
+                    discount = totalDiscount,
                     total = maxOf(0.0, total)
                 )
             }
@@ -393,7 +452,9 @@ class PosViewModel @Inject constructor(
                 discount = 0.0,
                 total = 0.0,
                 error = null,
-                successMessage = null
+                successMessage = null,
+                pointsToRedeem = 0,
+                isRedeemingPoints = false
             )
         }
     }
@@ -450,7 +511,8 @@ class PosViewModel @Inject constructor(
                 // supported (see PurchaseServiceImpl.createPembelianWithWarehouse),
                 // hardcoding warehouseId here would make stock added to non-default
                 // warehouses unsellable through POS.
-                warehouseId = currentState.selectedWarehouseId
+                warehouseId = currentState.selectedWarehouseId,
+                pointsRedeemed = currentState.pointsToRedeem
             )
 
             val items = currentState.cartItems.map { cartItem ->
@@ -481,7 +543,9 @@ class PosViewModel @Inject constructor(
                         tax = 0.0,
                         discount = 0.0,
                         total = 0.0,
-                        selectedPelanggan = null
+                        selectedPelanggan = null,
+                        pointsToRedeem = 0,
+                        isRedeemingPoints = false
                     )
                 }
             }.onFailure { e ->
