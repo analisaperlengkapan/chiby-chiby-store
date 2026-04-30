@@ -123,8 +123,16 @@ class PosViewModel @Inject constructor(
                 }
                 // If the customer's available points dropped below the
                 // currently-displayed pointsToRedeem, recalculate to keep the
-                // discount in sync.
-                recalculateTotalsInternal()
+                // discount in sync. Guard with try/catch so a transient failure
+                // in promoService.calculateDiscount (called inside
+                // recalculateTotalsInternal) doesn't terminate the pelanggan
+                // collection flow — otherwise the cashier would stop seeing
+                // customer list updates for the rest of the ViewModel's life.
+                try {
+                    recalculateTotalsInternal()
+                } catch (e: Exception) {
+                    sendError(e)
+                }
             }
         }
     }
