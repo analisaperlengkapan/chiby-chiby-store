@@ -55,13 +55,44 @@ class SaleServiceImpl @Inject constructor(
                 }
 
                 val finalTax = calculatedSubtotal * AppConstants.TAX_RATE
-                val finalDiscount = promoService.calculateDiscount(calculatedSubtotal)
+                val promoDiscount = promoService.calculateDiscount(calculatedSubtotal)
+                // Cap redeemed points so the point discount can never exceed the
+                // remaining balance after promo discount. Without this cap, a sale
+                // could effectively credit the customer (negative total floored at
+                // zero) while still consuming all redeemed points.
+                val maxRedeemableByAmount = kotlin.math.max(
+                    0.0,
+                    calculatedSubtotal + finalTax - promoDiscount
+                ) / AppConstants.POINT_REDEMPTION_VALUE
+                // Also cap by the customer's actual current point balance from the
+                // database. The pointsRedeemed value comes from a (potentially stale)
+                // UI cache; without this DB-side check, a customer could redeem more
+                // points than they actually own, resulting in a financial loss.
+                // If there's no customer attached to the sale, no points can be
+                // redeemed — cap at 0. Defaulting to Int.MAX_VALUE here would let
+                // a sale with pelangganId == null still apply a point discount
+                // sourced from a stale UI state, granting a discount with no
+                // corresponding point balance to deduct from (financial loss).
+                val customerCurrentPoints = if (pelangganId == null) {
+                    0
+                } else if (sale.pointsRedeemed > 0) {
+                    db.pelangganDao().getPelangganById(pelangganId)?.point ?: 0
+                } else {
+                    Int.MAX_VALUE
+                }
+                val effectivePointsRedeemed = kotlin.math.min(
+                    kotlin.math.min(sale.pointsRedeemed, maxRedeemableByAmount.toInt()),
+                    customerCurrentPoints
+                )
+                val pointDiscount = effectivePointsRedeemed * AppConstants.POINT_REDEMPTION_VALUE
+                val finalDiscount = promoDiscount + pointDiscount
                 val finalTotal = kotlin.math.max(0.0, calculatedSubtotal + finalTax - finalDiscount)
 
                 val saleToSave = sale.copy(
                     totalAmount = finalTotal,
                     tax = finalTax,
                     discount = finalDiscount,
+                    pointsRedeemed = effectivePointsRedeemed,
                     saleDate = Date()
                 )
 
@@ -100,18 +131,33 @@ class SaleServiceImpl @Inject constructor(
                     throw productsResult.exception
                 }
 
+                // Point awarding logic: award points only on the amount the
+                // customer actually paid (i.e. after both promo and point
+                // discounts), so customers don't earn points on money they
+                // didn't spend.
+                var pointsEarned = 0
+                if (pelangganId != null) {
+                    pointsEarned = (finalTotal / AppConstants.POINT_AWARD_THRESHOLD).toInt()
+                }
+
+                val saleToSaveWithPoints = saleToSave.copy(
+                    pointsEarned = pointsEarned
+                )
+
                 // Create Sale (Persistence)
-                val result = penjualanRepository.createPenjualan(saleToSave, items)
+                val result = penjualanRepository.createPenjualan(saleToSaveWithPoints, items)
 
                 if (result is Result.Success) {
                     // Update Customer points if applicable
                     if (pelangganId != null) {
-                        // 1 point per 10.000 spent
-                        val points = (finalTotal / 10000).toInt()
-                        if (points > 0) {
-                            db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
-                                db.pelangganDao().updatePelanggan(p.copy(point = p.point + points, updatedAt = Date()))
-                            }
+                        db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
+                            val netPointsChange = pointsEarned - saleToSaveWithPoints.pointsRedeemed
+                            db.pelangganDao().updatePelanggan(
+                                p.copy(
+                                    point = kotlin.math.max(0, p.point + netPointsChange),
+                                    updatedAt = Date()
+                                )
+                            )
                         }
                     }
 
@@ -222,22 +268,17 @@ class SaleServiceImpl @Inject constructor(
                 val updateResult = penjualanRepository.updatePenjualan(updatedPenjualan)
                 if (updateResult is Result.Failure) throw updateResult.exception
 
-                // Reverse loyalty points awarded at sale time. Points are accrued in
-                // createPenjualan as `(finalTotal / 10000).toInt()`; mirror that exact
-                // formula here so the reversal matches what was awarded. Without this,
-                // a customer keeps points from refunded sales — a financial leak.
+                // Reverse loyalty points awarded/redeemed at sale time.
                 val pelangganId = saleWithItems.sale.pelangganId
                 if (pelangganId != null) {
-                    val points = (saleWithItems.sale.totalAmount / 10000).toInt()
-                    if (points > 0) {
-                        db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
-                            // Floor at 0 in case the customer has already spent the
-                            // points earned from this sale.
-                            val newPoint = kotlin.math.max(0, p.point - points)
-                            db.pelangganDao().updatePelanggan(
-                                p.copy(point = newPoint, updatedAt = Date())
-                            )
-                        }
+                    val pointsEarned = saleWithItems.sale.pointsEarned
+                    val pointsRedeemed = saleWithItems.sale.pointsRedeemed
+                    db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
+                        // Re-add redeemed points and remove earned points
+                        val newPoint = kotlin.math.max(0, p.point - pointsEarned + pointsRedeemed)
+                        db.pelangganDao().updatePelanggan(
+                            p.copy(point = newPoint, updatedAt = Date())
+                        )
                     }
                 }
 

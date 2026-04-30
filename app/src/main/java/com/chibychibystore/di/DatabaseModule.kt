@@ -311,12 +311,28 @@ object DatabaseModule {
             }
         }
 
+        val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Add pointsRedeemed and pointsEarned columns to penjualan table
+                database.execSQL("ALTER TABLE penjualan ADD COLUMN pointsRedeemed INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE penjualan ADD COLUMN pointsEarned INTEGER NOT NULL DEFAULT 0")
+                // Backfill pointsEarned for pre-existing sales using the legacy
+                // formula (totalAmount / 10000). Without this, refunding any sale
+                // created before the migration would reverse zero loyalty points,
+                // even though points were awarded at sale time — a silent regression.
+                database.execSQL(
+                    "UPDATE penjualan SET pointsEarned = CAST(totalAmount / 10000 AS INTEGER) " +
+                        "WHERE pelangganId IS NOT NULL AND isRefunded = 0"
+                )
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             ChibyChibyDatabase::class.java,
             "chiby_chiby_database"
         )
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
             .fallbackToDestructiveMigration()
             .build()
     }

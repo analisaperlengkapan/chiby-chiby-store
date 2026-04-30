@@ -23,6 +23,12 @@ import com.chibychibystore.ui.components.ChibyCard
 import com.chibychibystore.ui.components.ChibyInput
 
 import com.chibychibystore.ui.theme.ChibyPinkPrimary
+import com.chibychibystore.ui.theme.Error
+import com.chibychibystore.ui.theme.Success
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
 import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -131,6 +137,7 @@ fun ReportsScreen(
                         ReportType.CASH_FLOW -> CashFlowReportScreen(uiState.reportData as? ArusKas)
                         ReportType.EXPENSE_REPORT -> ExpenseReportScreen(uiState.reportData as? LaporanPengeluaran)
                         ReportType.BALANCE_SHEET -> BalanceSheetReportScreen(uiState.reportData as? NeracaSaldo)
+                        ReportType.STOCK_MOVEMENT -> StockMovementReportScreen(uiState.reportData as? List<StockMovement>)
                     }
                 }
             }
@@ -306,6 +313,45 @@ private fun GrossSalesReportScreen(data: LaporanPenjualanKotor?) {
             title = "Rata-rata per Transaksi",
             value = "Rp ${"%,.0f".format(data.rataRataTransaksi)}"
         )
+    }
+}
+
+@Composable
+private fun StockMovementReportScreen(data: List<StockMovement>?) {
+    if (data == null) return
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (data.isEmpty()) {
+            item {
+                Text("Tidak ada pergerakan stok dalam periode ini", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
+        } else {
+            items(data) { movement ->
+                ChibyCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(movement.productName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(
+                                "${movement.date} • ${movement.type} • ${movement.warehouseName}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text("Ref: ${movement.referenceId}", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text(
+                            text = if (movement.quantity > 0) "+${movement.quantity}" else movement.quantity.toString(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = if (movement.quantity > 0) Success else Error
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

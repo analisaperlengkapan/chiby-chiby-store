@@ -141,6 +141,7 @@ fun PosScreen(
                             onClearCart = { viewModel.clearCart() },
                             onPelangganSelected = { viewModel.selectPelanggan(it) },
                             onWarehouseSelected = { viewModel.selectWarehouse(it) },
+                            onPointRedemptionToggle = { viewModel.togglePointRedemption(it) },
                             formatCurrency = formatCurrency
                         )
                     }
@@ -264,6 +265,7 @@ private fun CartAndPaymentPanel(
     onClearCart: () -> Unit,
     onPelangganSelected: (com.chibychibystore.data.local.entity.Pelanggan?) -> Unit,
     onWarehouseSelected: (Long) -> Unit,
+    onPointRedemptionToggle: (Boolean) -> Unit,
     formatCurrency: (Double) -> String
 ) {
     ChibyCard(
@@ -324,6 +326,32 @@ private fun CartAndPaymentPanel(
                             formatCurrency = formatCurrency,
                             onUpdateQuantity = { qty -> onUpdateQuantity(item.product.id, qty) },
                             onRemove = { onRemoveItem(item.product.id) }
+                        )
+                    }
+                }
+            }
+
+            // Point Redemption
+            uiState.selectedPelanggan?.let { pelanggan ->
+                if (pelanggan.point > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("Tukar Poin (${pelanggan.point} tersedia)", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "Diskon: ${formatCurrency(uiState.pointsToRedeem * com.chibychibystore.constant.AppConstants.POINT_REDEMPTION_VALUE)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Success
+                            )
+                        }
+                        Switch(
+                            checked = uiState.isRedeemingPoints,
+                            onCheckedChange = onPointRedemptionToggle,
+                            colors = SwitchDefaults.colors(checkedThumbColor = ChibyPinkPrimary)
                         )
                     }
                 }

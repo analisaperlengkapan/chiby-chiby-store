@@ -28,6 +28,7 @@ interface ReportingService {
     suspend fun getCashFlow(startDate: LocalDate, endDate: LocalDate): Result<ArusKas>
     suspend fun getExpenseReport(startDate: LocalDate, endDate: LocalDate): Result<LaporanPengeluaran>
     suspend fun getBalanceSheet(asOfDate: LocalDate): Result<NeracaSaldo>
+    suspend fun getStockMovementReport(startDate: LocalDate, endDate: LocalDate): Result<List<StockMovement>>
 }
 
 // DTOs for Reporting (Indonesian)
@@ -175,4 +176,14 @@ data class MetrikPenjualan(
     val transaksiHariIni: Int,
     val penjualanBulanIni: Double,
     val rataRataTransaksi: Double
+)
+
+data class StockMovement(
+    val date: LocalDate,
+    val productId: Long,
+    val productName: String,
+    val type: String, // "PURCHASE", "SALE", "ADJUSTMENT", "REFUND"
+    val quantity: Int,
+    val warehouseName: String,
+    val referenceId: String
 )
