@@ -146,43 +146,84 @@ class PosViewModel @Inject constructor(
 
         updateState { it.copy(isRedeemingPoints = redeem) }
 
-        if (redeem) {
-            // Calculate max points that can be redeemed based on the amount
-            // remaining after the promo discount. Without subtracting the
-            // promo discount, customers would burn points covering an amount
-            // that's already been discounted, with no additional benefit.
-            val promoDiscount = promoService.calculateDiscount(currentState.subtotal)
-            val maxDiscountNeeded = maxOf(
-                0.0,
-                currentState.subtotal + currentState.tax - promoDiscount
-            )
-            val pointsNeededForFullDiscount = (maxDiscountNeeded / AppConstants.POINT_REDEMPTION_VALUE).toInt()
-            val pointsToRedeem = minOf(pelanggan.point, pointsNeededForFullDiscount)
-            updateState { it.copy(pointsToRedeem = pointsToRedeem) }
-        } else {
-            updateState { it.copy(pointsToRedeem = 0) }
+        launchWithState {
+            if (redeem) {
+                val pointsToRedeem = computePointsToRedeem(
+                    subtotal = currentState.subtotal,
+                    tax = currentState.tax,
+                    availablePoints = pelanggan.point
+                )
+                updateState { it.copy(pointsToRedeem = pointsToRedeem) }
+            } else {
+                updateState { it.copy(pointsToRedeem = 0) }
+            }
+            recalculateTotalsInternal()
         }
-        recalculateTotals()
+    }
+
+    /**
+     * Recomputes how many points should be redeemed given the current cart
+     * totals and the customer's available point balance. Used both by the
+     * initial toggle and by cart mutators (add / update / remove / warehouse
+     * switch) so that the displayed point discount stays in sync with the cart.
+     * Otherwise a previously-computed `pointsToRedeem` becomes stale as the
+     * cart changes and the discount displayed to the cashier no longer matches
+     * what the service layer will actually apply (see SaleServiceImpl's own
+     * re-cap against monetary amount and DB balance).
+     *
+     * Calculates max points that can be redeemed based on the amount remaining
+     * after the promo discount. Without subtracting the promo discount,
+     * customers would burn points covering an amount that's already been
+     * discounted, with no additional benefit.
+     */
+    private suspend fun computePointsToRedeem(
+        subtotal: Double,
+        tax: Double,
+        availablePoints: Int
+    ): Int {
+        val promoDiscount = promoService.calculateDiscount(subtotal)
+        val maxDiscountNeeded = maxOf(0.0, subtotal + tax - promoDiscount)
+        val pointsNeededForFullDiscount = (maxDiscountNeeded / AppConstants.POINT_REDEMPTION_VALUE).toInt()
+        return minOf(availablePoints, pointsNeededForFullDiscount)
     }
 
     private fun recalculateTotals() {
-        launchWithState {
-            val subtotal = currentState.cartItems.sumOf { it.totalPrice }
-            val tax = subtotal * AppConstants.TAX_RATE
-            val promoDiscount = promoService.calculateDiscount(subtotal)
-            val pointDiscount = currentState.pointsToRedeem * AppConstants.POINT_REDEMPTION_VALUE
+        launchWithState { recalculateTotalsInternal() }
+    }
 
-            val totalDiscount = promoDiscount + pointDiscount
-            val total = maxOf(0.0, subtotal + tax - totalDiscount)
+    private suspend fun recalculateTotalsInternal() {
+        val subtotal = currentState.cartItems.sumOf { it.totalPrice }
+        val tax = subtotal * AppConstants.TAX_RATE
+        val promoDiscount = promoService.calculateDiscount(subtotal)
 
-            updateState {
-                it.copy(
-                    subtotal = subtotal,
-                    tax = tax,
-                    discount = totalDiscount,
-                    total = total
-                )
+        // Re-cap pointsToRedeem against the latest cart totals so the displayed
+        // point discount cannot exceed the new remaining balance. Without this,
+        // shrinking the cart after opting into redemption would keep the old
+        // (larger) pointsToRedeem, and removing items would show a discount
+        // larger than the remaining subtotal+tax-promoDiscount.
+        val pointsToRedeem = if (currentState.isRedeemingPoints) {
+            val pelanggan = currentState.selectedPelanggan
+            if (pelanggan != null) {
+                computePointsToRedeem(subtotal, tax, pelanggan.point)
+            } else {
+                0
             }
+        } else {
+            0
+        }
+
+        val pointDiscount = pointsToRedeem * AppConstants.POINT_REDEMPTION_VALUE
+        val totalDiscount = promoDiscount + pointDiscount
+        val total = maxOf(0.0, subtotal + tax - totalDiscount)
+
+        updateState {
+            it.copy(
+                subtotal = subtotal,
+                tax = tax,
+                discount = totalDiscount,
+                total = total,
+                pointsToRedeem = pointsToRedeem
+            )
         }
     }
 
@@ -234,13 +275,6 @@ class PosViewModel @Inject constructor(
                 }
             }
 
-            val subtotal = adjustedItems.sumOf { it.totalPrice }
-            val tax = subtotal * AppConstants.TAX_RATE
-            val promoDiscount = promoService.calculateDiscount(subtotal)
-            val pointDiscount = currentState.pointsToRedeem * AppConstants.POINT_REDEMPTION_VALUE
-            val totalDiscount = promoDiscount + pointDiscount
-            val total = subtotal + tax - totalDiscount
-
             val notice = buildString {
                 if (droppedNames.isNotEmpty()) {
                     append("Item dihapus karena stok kosong di gudang ini: ")
@@ -257,13 +291,13 @@ class PosViewModel @Inject constructor(
                 it.copy(
                     selectedWarehouseId = warehouseId,
                     cartItems = adjustedItems,
-                    subtotal = subtotal,
-                    tax = tax,
-                    discount = totalDiscount,
-                    total = maxOf(0.0, total),
                     successMessage = notice ?: it.successMessage
                 )
             }
+            // Recompute subtotal/tax/discount/total and re-cap pointsToRedeem
+            // against the adjusted cart so the displayed point discount matches
+            // the new cart contents.
+            recalculateTotalsInternal()
         }
     }
 
@@ -352,23 +386,13 @@ class PosViewModel @Inject constructor(
                 currentState.cartItems + CartItem(product, quantity)
             }
 
-            val subtotal = updatedCartItems.sumOf { it.totalPrice }
-            val tax = subtotal * AppConstants.TAX_RATE
-            val promoDiscount = promoService.calculateDiscount(subtotal)
-            val pointDiscount = currentState.pointsToRedeem * AppConstants.POINT_REDEMPTION_VALUE
-            val totalDiscount = promoDiscount + pointDiscount
-            val total = subtotal + tax - totalDiscount
-
             updateState {
                 it.copy(
                     cartItems = updatedCartItems,
-                    subtotal = subtotal,
-                    tax = tax,
-                    discount = totalDiscount,
-                    total = maxOf(0.0, total),
                     error = null
                 )
             }
+            recalculateTotalsInternal()
         }
     }
 
@@ -409,44 +433,16 @@ class PosViewModel @Inject constructor(
                 }
             }
 
-            val subtotal = updatedCartItems.sumOf { it.totalPrice }
-            val tax = subtotal * AppConstants.TAX_RATE
-            val promoDiscount = promoService.calculateDiscount(subtotal)
-            val pointDiscount = currentState.pointsToRedeem * AppConstants.POINT_REDEMPTION_VALUE
-            val totalDiscount = promoDiscount + pointDiscount
-            val total = subtotal + tax - totalDiscount
-
-            updateState {
-                it.copy(
-                    cartItems = updatedCartItems,
-                    subtotal = subtotal,
-                    tax = tax,
-                    discount = totalDiscount,
-                    total = maxOf(0.0, total)
-                )
-            }
+            updateState { it.copy(cartItems = updatedCartItems) }
+            recalculateTotalsInternal()
         }
     }
 
     fun removeCartItem(productId: Long) {
         val updatedCartItems = currentState.cartItems.filter { it.product.id != productId }
         launchWithState {
-            val subtotal = updatedCartItems.sumOf { it.totalPrice }
-            val tax = subtotal * AppConstants.TAX_RATE
-            val promoDiscount = promoService.calculateDiscount(subtotal)
-            val pointDiscount = currentState.pointsToRedeem * AppConstants.POINT_REDEMPTION_VALUE
-            val totalDiscount = promoDiscount + pointDiscount
-            val total = subtotal + tax - totalDiscount
-
-            updateState {
-                it.copy(
-                    cartItems = updatedCartItems,
-                    subtotal = subtotal,
-                    tax = tax,
-                    discount = totalDiscount,
-                    total = maxOf(0.0, total)
-                )
-            }
+            updateState { it.copy(cartItems = updatedCartItems) }
+            recalculateTotalsInternal()
         }
     }
 

@@ -68,7 +68,14 @@ class SaleServiceImpl @Inject constructor(
                 // database. The pointsRedeemed value comes from a (potentially stale)
                 // UI cache; without this DB-side check, a customer could redeem more
                 // points than they actually own, resulting in a financial loss.
-                val customerCurrentPoints = if (pelangganId != null && sale.pointsRedeemed > 0) {
+                // If there's no customer attached to the sale, no points can be
+                // redeemed — cap at 0. Defaulting to Int.MAX_VALUE here would let
+                // a sale with pelangganId == null still apply a point discount
+                // sourced from a stale UI state, granting a discount with no
+                // corresponding point balance to deduct from (financial loss).
+                val customerCurrentPoints = if (pelangganId == null) {
+                    0
+                } else if (sale.pointsRedeemed > 0) {
                     db.pelangganDao().getPelangganById(pelangganId)?.point ?: 0
                 } else {
                     Int.MAX_VALUE
