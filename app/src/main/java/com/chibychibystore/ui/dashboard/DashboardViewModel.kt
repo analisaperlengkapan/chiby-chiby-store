@@ -76,16 +76,28 @@ class DashboardViewModel @Inject constructor(
                     val lowStockDeferred = async { produkRepository.getLowStockProduk().first() }
                     val recentSalesDeferred = async { saleService.getRecentPenjualan(10) }
                     val salesTrendDeferred = async { reportingService.getSalesTrend(sevenDaysAgo, todayDate) }
+                    // Also fetch the first metrics value alongside the initial
+                    // load so todaySales/todayTransactionCount are populated by
+                    // the time isLoading flips to false. Without this, there's
+                    // a brief window where the dashboard shows isLoading=false
+                    // with metrics still at 0 until observeMetrics() emits its
+                    // first value.
+                    val initialMetricsDeferred = async {
+                        runCatching { reportingService.observeSalesMetrics().first() }.getOrNull()
+                    }
 
                     // Await results
                     val lowStock = lowStockDeferred.await()
                     val recentSalesRes = recentSalesDeferred.await()
                     val salesTrendRes = salesTrendDeferred.await()
+                    val initialMetrics = initialMetricsDeferred.await()
 
                     _uiState.value = _uiState.value.copy(
                         lowStockItems = lowStock,
                         recentTransactions = recentSalesRes.getOrNull() ?: emptyList(),
                         salesTrend = salesTrendRes.getOrNull() ?: emptyList(),
+                        todaySales = initialMetrics?.penjualanHariIni ?: _uiState.value.todaySales,
+                        todayTransactionCount = initialMetrics?.transaksiHariIni ?: _uiState.value.todayTransactionCount,
                         isLoading = false,
                         errorMessage = null
                     )

@@ -173,8 +173,13 @@ class ReportingServiceImpl @Inject constructor(
                 val avgTx = if (todayTx > 0) todaySales / todayTx else 0.0
                 MetrikPenjualan(todaySales, todayTx, monthSales, avgTx)
             } catch (e: Exception) {
-                // On transient errors, keep emitting last-known-good values rather
-                // than terminating the flow and freezing the dashboard.
+                // Re-throw CancellationException so coroutine cancellation
+                // propagates correctly. Catching it here would briefly delay
+                // cancellation (until the next emit/delay suspend point) and
+                // mask cooperative cancellation semantics. All other transient
+                // errors fall through to keep emitting last-known-good values
+                // rather than terminating the flow and freezing the dashboard.
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 last
             }
             last = next

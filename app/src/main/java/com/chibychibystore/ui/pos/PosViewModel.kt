@@ -104,7 +104,27 @@ class PosViewModel @Inject constructor(
     private fun loadPelanggan() {
         viewModelScope.launch {
             pelangganService.ambilSemuaPelanggan().collect { list ->
-                updateState { it.copy(pelangganList = list) }
+                updateState { state ->
+                    // Refresh selectedPelanggan from the latest list so the
+                    // displayed point balance stays accurate as other flows
+                    // (e.g. another POS session, refunds) mutate the customer's
+                    // points. Without this, the cashier could see (and quote)
+                    // a stale higher point balance, while the service layer
+                    // re-reads from DB and silently caps redemption at the
+                    // actual balance — leading to a mismatch between the total
+                    // shown to the customer and what's actually charged.
+                    val refreshed = state.selectedPelanggan?.let { current ->
+                        list.find { it.id == current.id }
+                    }
+                    state.copy(
+                        pelangganList = list,
+                        selectedPelanggan = refreshed
+                    )
+                }
+                // If the customer's available points dropped below the
+                // currently-displayed pointsToRedeem, recalculate to keep the
+                // discount in sync.
+                recalculateTotalsInternal()
             }
         }
     }
@@ -179,10 +199,11 @@ class PosViewModel @Inject constructor(
     private suspend fun computePointsToRedeem(
         subtotal: Double,
         tax: Double,
-        availablePoints: Int
+        availablePoints: Int,
+        promoDiscount: Double? = null
     ): Int {
-        val promoDiscount = promoService.calculateDiscount(subtotal)
-        val maxDiscountNeeded = maxOf(0.0, subtotal + tax - promoDiscount)
+        val effectivePromoDiscount = promoDiscount ?: promoService.calculateDiscount(subtotal)
+        val maxDiscountNeeded = maxOf(0.0, subtotal + tax - effectivePromoDiscount)
         val pointsNeededForFullDiscount = (maxDiscountNeeded / AppConstants.POINT_REDEMPTION_VALUE).toInt()
         return minOf(availablePoints, pointsNeededForFullDiscount)
     }
@@ -204,7 +225,9 @@ class PosViewModel @Inject constructor(
         val pointsToRedeem = if (currentState.isRedeemingPoints) {
             val pelanggan = currentState.selectedPelanggan
             if (pelanggan != null) {
-                computePointsToRedeem(subtotal, tax, pelanggan.point)
+                // Pass the already-computed promoDiscount to avoid querying the
+                // promo service twice for the same subtotal.
+                computePointsToRedeem(subtotal, tax, pelanggan.point, promoDiscount)
             } else {
                 0
             }
