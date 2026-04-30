@@ -327,12 +327,22 @@ object DatabaseModule {
             }
         }
 
+        val MIGRATION_13_15 = object : androidx.room.migration.Migration(13, 15) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Add imagePath column to produk table to support product images.
+                // Version 14 was skipped; this migration covers 13 -> 15 directly so
+                // existing users upgrading don't fall through to fallbackToDestructiveMigration
+                // and lose all data.
+                database.execSQL("ALTER TABLE produk ADD COLUMN imagePath TEXT")
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             ChibyChibyDatabase::class.java,
             "chiby_chiby_database"
         )
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_15)
             .fallbackToDestructiveMigration()
             .build()
     }
