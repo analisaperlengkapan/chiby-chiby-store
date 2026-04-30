@@ -51,6 +51,10 @@ class ProductServiceImpl @Inject constructor(
         }
     }
 
+    override suspend fun getProductsByIds(ids: List<Long>): Result<List<Produk>> {
+        return productRepository.getProductsByIds(ids)
+    }
+
     override suspend fun updateProduk(produk: Produk): Result<Produk> {
         return try {
             if (!authService.hasPermission(Permissions.EDIT_INVENTORY)) {

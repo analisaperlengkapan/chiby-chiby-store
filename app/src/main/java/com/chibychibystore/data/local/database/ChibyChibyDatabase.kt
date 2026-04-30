@@ -26,7 +26,7 @@ import com.chibychibystore.data.local.entity.*
         ItemStokOpname::class,
         Pelanggan::class
     ],
-    version = 13,
+    version = 15,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

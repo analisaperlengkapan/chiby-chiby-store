@@ -44,6 +44,7 @@ data class Produk(
     val stockQuantity: Int = 0,
     val warehouseId: Long,
     val minStock: Int = 0,
+    val imagePath: String? = null,
     @Serializable(with = DateSerializer::class)
     val createdAt: Date = Date(),
     @Serializable(with = DateSerializer::class)

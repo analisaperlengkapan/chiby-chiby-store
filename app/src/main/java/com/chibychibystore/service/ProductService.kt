@@ -26,4 +26,5 @@ interface ProductService {
     fun observeSearchProduks(query: String): Flow<List<Produk>>
     fun observeLowStockProduks(): Flow<List<Produk>>
     suspend fun getProductByBarcode(barcode: String): Result<Produk?>
+    suspend fun getProductsByIds(ids: List<Long>): Result<List<Produk>>
 }

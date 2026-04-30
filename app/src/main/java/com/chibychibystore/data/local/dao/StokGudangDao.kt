@@ -57,7 +57,7 @@ interface StokGudangDao {
     @Query("""
         SELECT p.id, p.name, p.barcode, p.categoryId, p.costPrice, p.sellingPrice,
                s.quantity as stockQuantity,
-               p.warehouseId, p.minStock, p.createdAt, p.updatedAt
+               p.warehouseId, p.minStock, p.imagePath, p.createdAt, p.updatedAt
         FROM produk p
         INNER JOIN stok_gudang s ON p.id = s.productId
         WHERE s.warehouseId = :warehouseId
