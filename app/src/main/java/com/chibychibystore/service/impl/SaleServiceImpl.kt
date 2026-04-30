@@ -64,9 +64,18 @@ class SaleServiceImpl @Inject constructor(
                     0.0,
                     calculatedSubtotal + finalTax - promoDiscount
                 ) / AppConstants.POINT_REDEMPTION_VALUE
+                // Also cap by the customer's actual current point balance from the
+                // database. The pointsRedeemed value comes from a (potentially stale)
+                // UI cache; without this DB-side check, a customer could redeem more
+                // points than they actually own, resulting in a financial loss.
+                val customerCurrentPoints = if (pelangganId != null && sale.pointsRedeemed > 0) {
+                    db.pelangganDao().getPelangganById(pelangganId)?.point ?: 0
+                } else {
+                    Int.MAX_VALUE
+                }
                 val effectivePointsRedeemed = kotlin.math.min(
-                    sale.pointsRedeemed,
-                    maxRedeemableByAmount.toInt()
+                    kotlin.math.min(sale.pointsRedeemed, maxRedeemableByAmount.toInt()),
+                    customerCurrentPoints
                 )
                 val pointDiscount = effectivePointsRedeemed * AppConstants.POINT_REDEMPTION_VALUE
                 val finalDiscount = promoDiscount + pointDiscount

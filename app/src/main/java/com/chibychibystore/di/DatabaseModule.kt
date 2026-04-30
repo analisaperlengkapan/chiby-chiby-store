@@ -316,6 +316,14 @@ object DatabaseModule {
                 // Add pointsRedeemed and pointsEarned columns to penjualan table
                 database.execSQL("ALTER TABLE penjualan ADD COLUMN pointsRedeemed INTEGER NOT NULL DEFAULT 0")
                 database.execSQL("ALTER TABLE penjualan ADD COLUMN pointsEarned INTEGER NOT NULL DEFAULT 0")
+                // Backfill pointsEarned for pre-existing sales using the legacy
+                // formula (totalAmount / 10000). Without this, refunding any sale
+                // created before the migration would reverse zero loyalty points,
+                // even though points were awarded at sale time — a silent regression.
+                database.execSQL(
+                    "UPDATE penjualan SET pointsEarned = CAST(totalAmount / 10000 AS INTEGER) " +
+                        "WHERE pelangganId IS NOT NULL AND isRefunded = 0"
+                )
             }
         }
 
