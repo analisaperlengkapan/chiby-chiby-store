@@ -1,10 +1,12 @@
 package com.chibychibystore.service.impl
 
+import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.service.*
 import com.chibychibystore.repository.*
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.catch
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
@@ -20,7 +22,8 @@ class ReportingServiceImpl @Inject constructor(
     private val pembelianRepository: PembelianRepository,
     private val balanceSheetService: BalanceSheetService,
     private val cashManagementService: CashManagementService,
-    private val authService: AuthService
+    private val authService: AuthService,
+    private val db: ChibyChibyDatabase
 ) : ReportingService {
 
     private fun LocalDate.toDate(): Date = Date.from(this.atStartOfDay(ZoneId.systemDefault()).toInstant())
@@ -158,16 +161,24 @@ class ReportingServiceImpl @Inject constructor(
     }
 
     override fun observeSalesMetrics(): kotlinx.coroutines.flow.Flow<MetrikPenjualan> = kotlinx.coroutines.flow.flow {
+        var last = MetrikPenjualan(0.0, 0, 0.0, 0.0)
         while (true) {
-            val today = LocalDate.now()
-            val startOfMonth = today.withDayOfMonth(1)
+            val next = try {
+                val today = LocalDate.now()
+                val startOfMonth = today.withDayOfMonth(1)
 
-            val todaySales = penjualanRepository.getTotalRevenue(today, today).getOrNull() ?: 0.0
-            val todayTx = penjualanRepository.getPenjualanCountNonRefunded(today, today).getOrNull() ?: 0
-            val monthSales = penjualanRepository.getTotalRevenue(startOfMonth, today).getOrNull() ?: 0.0
-            val avgTx = if (todayTx > 0) todaySales / todayTx else 0.0
-
-            emit(MetrikPenjualan(todaySales, todayTx, monthSales, avgTx))
+                val todaySales = penjualanRepository.getTotalRevenue(today, today).getOrNull() ?: 0.0
+                val todayTx = penjualanRepository.getPenjualanCountNonRefunded(today, today).getOrNull() ?: 0
+                val monthSales = penjualanRepository.getTotalRevenue(startOfMonth, today).getOrNull() ?: 0.0
+                val avgTx = if (todayTx > 0) todaySales / todayTx else 0.0
+                MetrikPenjualan(todaySales, todayTx, monthSales, avgTx)
+            } catch (e: Exception) {
+                // On transient errors, keep emitting last-known-good values rather
+                // than terminating the flow and freezing the dashboard.
+                last
+            }
+            last = next
+            emit(next)
             kotlinx.coroutines.delay(30000) // Update every 30 seconds
         }
     }
@@ -434,8 +445,11 @@ class ReportingServiceImpl @Inject constructor(
                 val date = it.auditDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
                 (date.isAfter(startDate) || date.isEqual(startDate)) && (date.isBefore(endDate) || date.isEqual(endDate)) && it.status == com.chibychibystore.data.local.entity.AuditStatus.COMPLETED
             }
+            // Load all audit items once and group by auditId, instead of
+            // re-fetching the entire table for each audit (O(N*M) → O(N+M)).
+            val allAuditItemsByAudit = db.inventoryAuditDao().getAllAuditItems().groupBy { it.auditId }
             audits.forEach { audit ->
-                val items = db.inventoryAuditDao().getAllAuditItems().filter { it.auditId == audit.id }
+                val items = allAuditItemsByAudit[audit.id] ?: emptyList()
                 items.forEach { item ->
                     if (item.difference != 0) {
                         movements.add(StockMovement(
