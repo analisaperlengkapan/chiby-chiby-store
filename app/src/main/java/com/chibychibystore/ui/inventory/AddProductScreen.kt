@@ -19,10 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -176,9 +176,23 @@ private fun AddProductContent(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
-            // In a real app, you'd copy this file to internal storage
-            // For now, we'll just store the string URI
-            editedProduct = editedProduct.copy(imagePath = it.toString())
+            // Copy the picked image into app-internal storage so the path
+            // remains accessible after the temporary content URI permission
+            // is revoked (e.g. after process death / app restart).
+            try {
+                val imagesDir = java.io.File(context.filesDir, "product_images").apply {
+                    if (!exists()) mkdirs()
+                }
+                val destFile = java.io.File(imagesDir, "product_${System.currentTimeMillis()}.jpg")
+                context.contentResolver.openInputStream(it)?.use { input ->
+                    java.io.FileOutputStream(destFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                editedProduct = editedProduct.copy(imagePath = destFile.absolutePath)
+            } catch (e: Exception) {
+                // If copying fails, leave imagePath unchanged.
+            }
         }
     }
 
