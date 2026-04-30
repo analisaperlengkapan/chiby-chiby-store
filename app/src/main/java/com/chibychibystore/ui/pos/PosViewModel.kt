@@ -147,8 +147,15 @@ class PosViewModel @Inject constructor(
         updateState { it.copy(isRedeemingPoints = redeem) }
 
         if (redeem) {
-            // Calculate max points that can be redeemed based on subtotal
-            val maxDiscountNeeded = currentState.subtotal + currentState.tax
+            // Calculate max points that can be redeemed based on the amount
+            // remaining after the promo discount. Without subtracting the
+            // promo discount, customers would burn points covering an amount
+            // that's already been discounted, with no additional benefit.
+            val promoDiscount = promoService.calculateDiscount(currentState.subtotal)
+            val maxDiscountNeeded = maxOf(
+                0.0,
+                currentState.subtotal + currentState.tax - promoDiscount
+            )
             val pointsNeededForFullDiscount = (maxDiscountNeeded / AppConstants.POINT_REDEMPTION_VALUE).toInt()
             val pointsToRedeem = minOf(pelanggan.point, pointsNeededForFullDiscount)
             updateState { it.copy(pointsToRedeem = pointsToRedeem) }

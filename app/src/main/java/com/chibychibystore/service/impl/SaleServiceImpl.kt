@@ -55,13 +55,28 @@ class SaleServiceImpl @Inject constructor(
                 }
 
                 val finalTax = calculatedSubtotal * AppConstants.TAX_RATE
-                val finalDiscount = promoService.calculateDiscount(calculatedSubtotal)
+                val promoDiscount = promoService.calculateDiscount(calculatedSubtotal)
+                // Cap redeemed points so the point discount can never exceed the
+                // remaining balance after promo discount. Without this cap, a sale
+                // could effectively credit the customer (negative total floored at
+                // zero) while still consuming all redeemed points.
+                val maxRedeemableByAmount = kotlin.math.max(
+                    0.0,
+                    calculatedSubtotal + finalTax - promoDiscount
+                ) / AppConstants.POINT_REDEMPTION_VALUE
+                val effectivePointsRedeemed = kotlin.math.min(
+                    sale.pointsRedeemed,
+                    maxRedeemableByAmount.toInt()
+                )
+                val pointDiscount = effectivePointsRedeemed * AppConstants.POINT_REDEMPTION_VALUE
+                val finalDiscount = promoDiscount + pointDiscount
                 val finalTotal = kotlin.math.max(0.0, calculatedSubtotal + finalTax - finalDiscount)
 
                 val saleToSave = sale.copy(
                     totalAmount = finalTotal,
                     tax = finalTax,
                     discount = finalDiscount,
+                    pointsRedeemed = effectivePointsRedeemed,
                     saleDate = Date()
                 )
 
@@ -100,15 +115,17 @@ class SaleServiceImpl @Inject constructor(
                     throw productsResult.exception
                 }
 
-                // Point awarding and deduction logic
+                // Point awarding logic: award points only on the amount the
+                // customer actually paid (i.e. after both promo and point
+                // discounts), so customers don't earn points on money they
+                // didn't spend.
                 var pointsEarned = 0
                 if (pelangganId != null) {
                     pointsEarned = (finalTotal / AppConstants.POINT_AWARD_THRESHOLD).toInt()
                 }
 
                 val saleToSaveWithPoints = saleToSave.copy(
-                    pointsEarned = pointsEarned,
-                    // pointsRedeemed is already set in the sale object passed from ViewModel
+                    pointsEarned = pointsEarned
                 )
 
                 // Create Sale (Persistence)
