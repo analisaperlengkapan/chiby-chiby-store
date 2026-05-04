@@ -475,4 +475,78 @@ class ReportingServiceImpl @Inject constructor(
     } catch (e: Exception) {
         Result.failure(Exception("getStockMovementReport failed", e))
     }
+
+    override suspend fun getPeriodicPerformanceSummary(startDate: LocalDate, endDate: LocalDate): Result<List<PeriodicPerformance>> = try {
+        if (!authService.hasPermission("VIEW_FINANCIAL_REPORTS")) {
+            Result.failure(Exception("Tidak memiliki izin untuk melihat ringkasan performa"))
+        } else {
+            val results = mutableListOf<PeriodicPerformance>()
+            val days = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate).toInt()
+
+            // Determine if we should aggregate by Day, Month, or Year
+            val aggregateBy = when {
+                days <= 31 -> "DAY"
+                days <= 365 -> "MONTH"
+                else -> "YEAR"
+            }
+
+            val expenses = pengeluaranRepository.getPengeluaransByDateRangeList(startDate.toDate(), getEndDateWithTime(endDate))
+
+            // COGS needs to be calculated per sale item
+            val salesWithItems = penjualanRepository.getSalesWithItemsInDateRange(startDate, endDate).filter { !it.sale.isRefunded }
+
+            // Cache product cost prices for accurate COGS calculation
+            val productIds = salesWithItems.flatMap { it.items.map { item -> item.productId } }.distinct()
+            val productsMap = produkRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+
+            val groupedSales = when (aggregateBy) {
+                "DAY" -> salesWithItems.groupBy { it.sale.saleDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().toString() }
+                "MONTH" -> salesWithItems.groupBy {
+                    val date = it.sale.saleDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+                    "${date.year}-${"%02d".format(date.monthValue)}"
+                }
+                else -> salesWithItems.groupBy { it.sale.saleDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year.toString() }
+            }
+
+            val groupedExpenses = when (aggregateBy) {
+                "DAY" -> expenses.groupBy { it.expenseDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().toString() }
+                "MONTH" -> expenses.groupBy {
+                    val date = it.expenseDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+                    "${date.year}-${"%02d".format(date.monthValue)}"
+                }
+                else -> expenses.groupBy { it.expenseDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().year.toString() }
+            }
+
+            val periods = (groupedSales.keys + groupedExpenses.keys).distinct().sorted()
+
+            periods.forEach { period ->
+                val periodSalesItems = groupedSales[period] ?: emptyList()
+                val periodExpenses = groupedExpenses[period] ?: emptyList()
+
+                val totalRevenue = periodSalesItems.sumOf { maxOf(0.0, it.sale.totalAmount - it.sale.tax) }
+
+                // Calculate accurate COGS based on product cost price at the time of reporting
+                val totalCogs = periodSalesItems.sumOf { saleWithItems ->
+                    saleWithItems.items.sumOf { item ->
+                        val costPrice = productsMap[item.productId]?.costPrice ?: item.unitPrice // Fallback to unitPrice if product info missing
+                        item.quantity * costPrice
+                    }
+                }
+
+                val opExpenses = periodExpenses.sumOf { it.amount }
+                val netProfit = totalRevenue - totalCogs - opExpenses
+
+                results.add(PeriodicPerformance(
+                    period = period,
+                    sales = totalRevenue,
+                    netProfit = netProfit,
+                    transactionCount = periodSalesItems.size
+                ))
+            }
+
+            Result.success(results)
+        }
+    } catch (e: Exception) {
+        Result.failure(Exception("getPeriodicPerformanceSummary failed", e))
+    }
 }
