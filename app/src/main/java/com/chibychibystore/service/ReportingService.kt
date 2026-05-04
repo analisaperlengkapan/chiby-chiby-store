@@ -29,6 +29,7 @@ interface ReportingService {
     suspend fun getExpenseReport(startDate: LocalDate, endDate: LocalDate): Result<LaporanPengeluaran>
     suspend fun getBalanceSheet(asOfDate: LocalDate): Result<NeracaSaldo>
     suspend fun getStockMovementReport(startDate: LocalDate, endDate: LocalDate): Result<List<StockMovement>>
+    suspend fun getPeriodicPerformanceSummary(startDate: LocalDate, endDate: LocalDate): Result<List<PeriodicPerformance>>
 }
 
 // DTOs for Reporting (Indonesian)
@@ -186,4 +187,11 @@ data class StockMovement(
     val quantity: Int,
     val warehouseName: String,
     val referenceId: String
+)
+
+data class PeriodicPerformance(
+    val period: String, // "2025-12-12" or "2025-12" or "2025"
+    val sales: Double,
+    val netProfit: Double,
+    val transactionCount: Int
 )

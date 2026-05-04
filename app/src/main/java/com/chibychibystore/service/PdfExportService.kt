@@ -300,6 +300,30 @@ constructor(
         }
     }
 
+    /** Export Periodic Summary Report to PDF */
+    suspend fun exportPeriodicSummaryReport(startDate: LocalDate, endDate: LocalDate): Result<String> = withContext(ioDispatcher) {
+        try {
+            val reportData = reportingService.getPeriodicPerformanceSummary(startDate, endDate)
+            when (reportData) {
+                is Result.Success -> {
+                    val fileName =
+                            "Laporan_Ringkasan_Performa_${startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}_${endDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"))}.pdf"
+                    val filePath = createPdfFile(fileName)
+                    createPeriodicSummaryPdf(filePath, reportData.data, startDate, endDate)
+                    Result.success(filePath)
+                }
+                is Result.Failure ->
+                        Result.failure(
+                                Exception(
+                                        "Gagal mendapatkan data laporan: ${reportData.exception.message}"
+                                )
+                        )
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception("Gagal export PDF: ${e.message}"))
+        }
+    }
+
     private fun createGrossSalesPdf(
             filePath: String,
             data: LaporanPenjualanKotor,
@@ -326,6 +350,41 @@ constructor(
             summaryTable.addCell(createCell("Rp ${"%,.0f".format(data.rataRataTransaksi)}"))
 
             document.add(summaryTable as com.itextpdf.layout.element.IBlockElement)
+            addFooter(document)
+        } finally {
+            document.close()
+        }
+    }
+
+    private fun createPeriodicSummaryPdf(
+            filePath: String,
+            data: List<PeriodicPerformance>,
+            startDate: LocalDate,
+            endDate: LocalDate
+    ) {
+        val writer = PdfWriter(filePath)
+        val pdf = PdfDocument(writer)
+        val document = Document(pdf)
+
+        try {
+            addHeader(document, "Laporan Ringkasan Performa", startDate, endDate)
+
+            val table = Table(UnitValue.createPercentArray(floatArrayOf(25f, 25f, 25f, 25f)))
+            table.setWidth(UnitValue.createPercentValue(100f))
+
+            table.addCell(createHeaderCell("Periode"))
+            table.addCell(createHeaderCell("Penjualan"))
+            table.addCell(createHeaderCell("Net Profit"))
+            table.addCell(createHeaderCell("Transaksi"))
+
+            data.forEach { perf ->
+                table.addCell(createDataCell(perf.period))
+                table.addCell(createDataCell("Rp ${"%,.0f".format(perf.sales)}"))
+                table.addCell(createDataCell("Rp ${"%,.0f".format(perf.netProfit)}"))
+                table.addCell(createDataCell("${perf.transactionCount}"))
+            }
+
+            document.add(table as com.itextpdf.layout.element.IBlockElement)
             addFooter(document)
         } finally {
             document.close()

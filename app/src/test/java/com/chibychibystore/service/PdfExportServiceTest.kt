@@ -1,11 +1,8 @@
 package com.chibychibystore.service
 
 import android.content.Context
-import com.chibychibystore.data.Result
-import com.chibychibystore.data.model.Penjualan
-import com.chibychibystore.data.model.ItemPenjualan
-import com.chibychibystore.data.model.Produk
-import com.chibychibystore.data.model.Pengeluaran
+import com.chibychibystore.data.model.Result
+import com.chibychibystore.service.PeriodicPerformance
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -64,14 +61,14 @@ class PdfExportServiceTest {
         val endDate = LocalDate.of(2025, 1, 31)
 
         `when`(reportingService.getGrossSales(startDate, endDate))
-            .thenReturn(Result.Error(Exception("Database error")))
+            .thenReturn(Result.failure(Exception("Database error")))
 
         // When
         val result = pdfExportService.exportGrossSalesReport(startDate, endDate)
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertEquals("Database error", error.exception.message)
     }
 
@@ -333,5 +330,39 @@ class PdfExportServiceTest {
             "inventoryValue" to 800000.0,
             "date" to LocalDate.of(2025, 1, 31)
         )
+    }
+
+    // ── exportPeriodicSummaryReport tests ────────────────────────────────────
+
+    @Test
+    fun `exportPeriodicSummaryReport should create PDF file successfully`() = runTest {
+        val startDate = LocalDate.of(2025, 1, 1)
+        val endDate = LocalDate.of(2025, 1, 31)
+        val mockData = listOf(
+            PeriodicPerformance(period = "2025-01-01", sales = 10000.0, netProfit = 1500.0, transactionCount = 3)
+        )
+
+        `when`(reportingService.getPeriodicPerformanceSummary(startDate, endDate))
+            .thenReturn(Result.success(mockData))
+
+        val result = pdfExportService.exportPeriodicSummaryReport(startDate, endDate)
+
+        assertTrue(result is Result.Success)
+        val filePath = (result as Result.Success).data
+        assertTrue(filePath.contains("Laporan_Ringkasan_Performa"))
+        assertTrue(filePath.contains("pdf"))
+    }
+
+    @Test
+    fun `exportPeriodicSummaryReport should propagate failure when service returns error`() = runTest {
+        val startDate = LocalDate.of(2025, 1, 1)
+        val endDate = LocalDate.of(2025, 1, 31)
+
+        `when`(reportingService.getPeriodicPerformanceSummary(startDate, endDate))
+            .thenReturn(Result.failure(Exception("Service error")))
+
+        val result = pdfExportService.exportPeriodicSummaryReport(startDate, endDate)
+
+        assertTrue(result is Result.Failure)
     }
 }

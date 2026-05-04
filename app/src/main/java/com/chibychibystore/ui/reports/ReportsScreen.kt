@@ -138,6 +138,7 @@ fun ReportsScreen(
                         ReportType.EXPENSE_REPORT -> ExpenseReportScreen(uiState.reportData as? LaporanPengeluaran)
                         ReportType.BALANCE_SHEET -> BalanceSheetReportScreen(uiState.reportData as? NeracaSaldo)
                         ReportType.STOCK_MOVEMENT -> StockMovementReportScreen(uiState.reportData as? List<StockMovement>)
+                        ReportType.PERIODIC_SUMMARY -> PeriodicSummaryReportScreen(uiState.reportData as? List<PeriodicPerformance>)
                     }
                 }
             }
@@ -531,6 +532,45 @@ private fun ExpenseReportScreen(data: LaporanPengeluaran?) {
                 data = chartData,
                 title = "Pengeluaran per Kategori"
             )
+        }
+    }
+}
+
+@Composable
+private fun PeriodicSummaryReportScreen(data: List<PeriodicPerformance>?) {
+    if (data == null) return
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (data.isEmpty()) {
+            item {
+                Text("Tidak ada data untuk periode ini", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            }
+        } else {
+            items(data) { perf ->
+                ChibyCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(perf.period, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column {
+                                Text("Penjualan", style = MaterialTheme.typography.bodySmall)
+                                Text("Rp ${"%,.0f".format(perf.sales)}", fontWeight = FontWeight.Medium)
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("Net Profit", style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    "Rp ${"%,.0f".format(perf.netProfit)}",
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (perf.netProfit >= 0) Success else Error
+                                )
+                            }
+                        }
+                        Text("${perf.transactionCount} transaksi", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+            }
         }
     }
 }

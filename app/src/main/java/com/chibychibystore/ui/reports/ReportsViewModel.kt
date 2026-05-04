@@ -89,6 +89,7 @@ class ReportsViewModel @Inject constructor(
                         val asOfDate = currentState.endDate ?: LocalDate.now()
                         pdfExportService.exportBalanceSheet(asOfDate)
                     }
+                    ReportType.PERIODIC_SUMMARY -> pdfExportService.exportPeriodicSummaryReport(startDate, endDate)
                     ReportType.STOCK_MOVEMENT -> {
                         // Stock movement PDF export not yet implemented in service
                         Result.failure(Exception("Export PDF untuk pergerakan stok belum tersedia"))
@@ -202,6 +203,12 @@ class ReportsViewModel @Inject constructor(
                     }
                     ReportType.STOCK_MOVEMENT -> {
                         when (val res = reportingService.getStockMovementReport(startDate, endDate)) {
+                            is Result.Success -> _uiState.update { it.copy(reportData = res.data, isLoading = false) }
+                            is Result.Failure -> _uiState.update { it.copy(error = res.exception.message, isLoading = false) }
+                        }
+                    }
+                    ReportType.PERIODIC_SUMMARY -> {
+                        when (val res = reportingService.getPeriodicPerformanceSummary(startDate, endDate)) {
                             is Result.Success -> _uiState.update { it.copy(reportData = res.data, isLoading = false) }
                             is Result.Failure -> _uiState.update { it.copy(error = res.exception.message, isLoading = false) }
                         }
