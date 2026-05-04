@@ -1,6 +1,13 @@
 package com.chibychibystore.service.impl
 
 import com.chibychibystore.constant.Permissions
+import com.chibychibystore.data.local.database.ChibyChibyDatabase
+import com.chibychibystore.data.local.entity.ItemPenjualan
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
+import com.chibychibystore.data.local.entity.PaymentMethod
+import com.chibychibystore.data.local.entity.Penjualan
+import com.chibychibystore.data.local.entity.PenjualanWithItems
+import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.data.model.ProdukTerpopulerDto
@@ -17,6 +24,9 @@ import org.junit.Test
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.*
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Date
 
 class ReportingServiceImplTest {
 
@@ -28,6 +38,7 @@ class ReportingServiceImplTest {
     @Mock private lateinit var balanceSheetService: BalanceSheetService
     @Mock private lateinit var cashManagementService: CashManagementService
     @Mock private lateinit var authService: AuthService
+    @Mock private lateinit var db: ChibyChibyDatabase
 
     private lateinit var reportingService: ReportingServiceImpl
 
@@ -42,9 +53,13 @@ class ReportingServiceImplTest {
             pembelianRepository,
             balanceSheetService,
             cashManagementService,
-            authService
+            authService,
+            db
         )
     }
+
+    private fun localDateToDate(date: LocalDate): Date =
+        Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant())
 
     @Test
     fun `getInventoryReport should return failure when no permission`() = runBlocking {
@@ -96,5 +111,167 @@ class ReportingServiceImplTest {
         assertEquals(1, list.size)
         assertEquals("Test Product", list[0].namaProduk)
         assertEquals(50, list[0].jumlahTerjual)
+    }
+
+    // ── getPeriodicPerformanceSummary tests ──────────────────────────────────
+
+    @Test
+    fun `getPeriodicPerformanceSummary returns failure when no permission`() = runBlocking {
+        whenever(authService.hasPermission("VIEW_FINANCIAL_REPORTS")).thenReturn(false)
+        val result = reportingService.getPeriodicPerformanceSummary(
+            LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 15)
+        )
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `getPeriodicPerformanceSummary aggregates by DAY when range is 31 days or less`() = runBlocking {
+        val startDate = LocalDate.of(2025, 1, 1)
+        val endDate = LocalDate.of(2025, 1, 15)   // 14 days — DAY bucket
+        whenever(authService.hasPermission("VIEW_FINANCIAL_REPORTS")).thenReturn(true)
+
+        val saleDate = localDateToDate(startDate)
+        val sale = Penjualan(
+            id = 1L, saleDate = saleDate, totalAmount = 11000.0, tax = 1000.0,
+            paymentMethod = PaymentMethod.CASH, cashierId = 1L
+        )
+        val item = ItemPenjualan(id = 1L, saleId = 1L, productId = 1L, quantity = 2, unitPrice = 5500.0, totalPrice = 11000.0)
+        val saleWithItems = PenjualanWithItems(sale = sale, items = listOf(item))
+
+        whenever(pengeluaranRepository.getPengeluaransByDateRangeList(any(), any())).thenReturn(emptyList())
+        whenever(penjualanRepository.getSalesWithItemsInDateRange(startDate, endDate)).thenReturn(listOf(saleWithItems))
+        val product = Produk(id = 1L, name = "P", sellingPrice = 5500.0, costPrice = 4000.0, stockQuantity = 10, minStock = 1, barcode = "B1", categoryId = 1L, warehouseId = 1L)
+        whenever(produkRepository.getProductsByIds(listOf(1L))).thenReturn(Result.success(listOf(product)))
+
+        val result = reportingService.getPeriodicPerformanceSummary(startDate, endDate)
+
+        assertTrue(result.isSuccess)
+        val list = (result as Result.Success).data
+        assertEquals(1, list.size)
+        // Period key should be full date (DAY aggregation): "2025-01-01"
+        assertEquals("2025-01-01", list[0].period)
+        assertEquals(1, list[0].transactionCount)
+    }
+
+    @Test
+    fun `getPeriodicPerformanceSummary aggregates by MONTH when range is 32 to 365 days`() = runBlocking {
+        val startDate = LocalDate.of(2025, 1, 1)
+        val endDate = LocalDate.of(2025, 6, 1)   // ~150 days — MONTH bucket
+        whenever(authService.hasPermission("VIEW_FINANCIAL_REPORTS")).thenReturn(true)
+
+        val saleDate = localDateToDate(LocalDate.of(2025, 2, 14))
+        val sale = Penjualan(id = 1L, saleDate = saleDate, totalAmount = 5000.0, tax = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = 1L)
+        val saleWithItems = PenjualanWithItems(sale = sale, items = emptyList())
+
+        whenever(pengeluaranRepository.getPengeluaransByDateRangeList(any(), any())).thenReturn(emptyList())
+        whenever(penjualanRepository.getSalesWithItemsInDateRange(startDate, endDate)).thenReturn(listOf(saleWithItems))
+        whenever(produkRepository.getProductsByIds(emptyList())).thenReturn(Result.success(emptyList()))
+
+        val result = reportingService.getPeriodicPerformanceSummary(startDate, endDate)
+
+        assertTrue(result.isSuccess)
+        val list = (result as Result.Success).data
+        assertEquals(1, list.size)
+        // Period key should be "YYYY-MM" (MONTH aggregation)
+        assertEquals("2025-02", list[0].period)
+    }
+
+    @Test
+    fun `getPeriodicPerformanceSummary aggregates by YEAR when range exceeds 365 days`() = runBlocking {
+        val startDate = LocalDate.of(2023, 1, 1)
+        val endDate = LocalDate.of(2025, 1, 1)   // ~730 days — YEAR bucket
+        whenever(authService.hasPermission("VIEW_FINANCIAL_REPORTS")).thenReturn(true)
+
+        val saleDate = localDateToDate(LocalDate.of(2024, 6, 15))
+        val sale = Penjualan(id = 1L, saleDate = saleDate, totalAmount = 8000.0, tax = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = 1L)
+        val saleWithItems = PenjualanWithItems(sale = sale, items = emptyList())
+
+        whenever(pengeluaranRepository.getPengeluaransByDateRangeList(any(), any())).thenReturn(emptyList())
+        whenever(penjualanRepository.getSalesWithItemsInDateRange(startDate, endDate)).thenReturn(listOf(saleWithItems))
+        whenever(produkRepository.getProductsByIds(emptyList())).thenReturn(Result.success(emptyList()))
+
+        val result = reportingService.getPeriodicPerformanceSummary(startDate, endDate)
+
+        assertTrue(result.isSuccess)
+        val list = (result as Result.Success).data
+        assertEquals(1, list.size)
+        // Period key should be "YYYY" (YEAR aggregation)
+        assertEquals("2024", list[0].period)
+    }
+
+    @Test
+    fun `getPeriodicPerformanceSummary calculates revenue excluding tax`() = runBlocking {
+        val startDate = LocalDate.of(2025, 1, 1)
+        val endDate = LocalDate.of(2025, 1, 15)
+        whenever(authService.hasPermission("VIEW_FINANCIAL_REPORTS")).thenReturn(true)
+
+        val saleDate = localDateToDate(startDate)
+        val sale = Penjualan(id = 1L, saleDate = saleDate, totalAmount = 11000.0, tax = 1000.0, paymentMethod = PaymentMethod.CASH, cashierId = 1L)
+        val saleWithItems = PenjualanWithItems(sale = sale, items = emptyList())
+
+        whenever(pengeluaranRepository.getPengeluaransByDateRangeList(any(), any())).thenReturn(emptyList())
+        whenever(penjualanRepository.getSalesWithItemsInDateRange(startDate, endDate)).thenReturn(listOf(saleWithItems))
+        whenever(produkRepository.getProductsByIds(emptyList())).thenReturn(Result.success(emptyList()))
+
+        val result = reportingService.getPeriodicPerformanceSummary(startDate, endDate)
+
+        assertTrue(result.isSuccess)
+        val summary = (result as Result.Success).data[0]
+        // Revenue must exclude tax: 11000 - 1000 = 10000
+        assertEquals(10000.0, summary.sales, 0.001)
+    }
+
+    @Test
+    fun `getPeriodicPerformanceSummary uses costPrice for COGS and falls back to zero when product missing`() = runBlocking {
+        val startDate = LocalDate.of(2025, 1, 1)
+        val endDate = LocalDate.of(2025, 1, 15)
+        whenever(authService.hasPermission("VIEW_FINANCIAL_REPORTS")).thenReturn(true)
+
+        val saleDate = localDateToDate(startDate)
+        val sale = Penjualan(id = 1L, saleDate = saleDate, totalAmount = 10000.0, tax = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = 1L)
+        // productId=99 will not be in the products map
+        val item = ItemPenjualan(id = 1L, saleId = 1L, productId = 99L, quantity = 2, unitPrice = 5000.0, totalPrice = 10000.0)
+        val saleWithItems = PenjualanWithItems(sale = sale, items = listOf(item))
+
+        whenever(pengeluaranRepository.getPengeluaransByDateRangeList(any(), any())).thenReturn(emptyList())
+        whenever(penjualanRepository.getSalesWithItemsInDateRange(startDate, endDate)).thenReturn(listOf(saleWithItems))
+        // Product 99 is not in the result — simulates a deleted product
+        whenever(produkRepository.getProductsByIds(listOf(99L))).thenReturn(Result.success(emptyList()))
+
+        val result = reportingService.getPeriodicPerformanceSummary(startDate, endDate)
+
+        assertTrue(result.isSuccess)
+        val summary = (result as Result.Success).data[0]
+        // COGS should fall back to 0 (not unitPrice), so netProfit == revenue
+        assertEquals(10000.0, summary.sales, 0.001)
+        assertEquals(10000.0, summary.netProfit, 0.001)
+    }
+
+    @Test
+    fun `getPeriodicPerformanceSummary only includes OPERATING_EXPENSE_CATEGORIES in net profit`() = runBlocking {
+        val startDate = LocalDate.of(2025, 1, 1)
+        val endDate = LocalDate.of(2025, 1, 15)
+        whenever(authService.hasPermission("VIEW_FINANCIAL_REPORTS")).thenReturn(true)
+
+        val saleDate = localDateToDate(startDate)
+        val sale = Penjualan(id = 1L, saleDate = saleDate, totalAmount = 10000.0, tax = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = 1L)
+        val saleWithItems = PenjualanWithItems(sale = sale, items = emptyList())
+
+        val expenseDate = localDateToDate(startDate)
+        val operatingExpense = Pengeluaran(id = 1L, expenseDate = expenseDate, category = KategoriPengeluaran.RENT_LEASE, amount = 500.0, createdBy = 1L)
+        val inventoryExpense = Pengeluaran(id = 2L, expenseDate = expenseDate, category = KategoriPengeluaran.INVENTORY_PURCHASES, amount = 3000.0, createdBy = 1L)
+        val dividendExpense = Pengeluaran(id = 3L, expenseDate = expenseDate, category = KategoriPengeluaran.DIVIDEND, amount = 2000.0, createdBy = 1L)
+
+        whenever(pengeluaranRepository.getPengeluaransByDateRangeList(any(), any()))
+            .thenReturn(listOf(operatingExpense, inventoryExpense, dividendExpense))
+        whenever(penjualanRepository.getSalesWithItemsInDateRange(startDate, endDate)).thenReturn(listOf(saleWithItems))
+        whenever(produkRepository.getProductsByIds(emptyList())).thenReturn(Result.success(emptyList()))
+
+        val result = reportingService.getPeriodicPerformanceSummary(startDate, endDate)
+
+        assertTrue(result.isSuccess)
+        val summary = (result as Result.Success).data[0]
+        // Only RENT_LEASE (500) should reduce net profit; INVENTORY_PURCHASES and DIVIDEND must be excluded
+        assertEquals(10000.0 - 500.0, summary.netProfit, 0.001)
     }
 }

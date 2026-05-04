@@ -1,6 +1,7 @@
 package com.chibychibystore.service.impl
 
 import com.chibychibystore.data.local.database.ChibyChibyDatabase
+import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.service.*
 import com.chibychibystore.repository.*
@@ -528,12 +529,14 @@ class ReportingServiceImpl @Inject constructor(
                 // Calculate accurate COGS based on product cost price at the time of reporting
                 val totalCogs = periodSalesItems.sumOf { saleWithItems ->
                     saleWithItems.items.sumOf { item ->
-                        val costPrice = productsMap[item.productId]?.costPrice ?: item.unitPrice // Fallback to unitPrice if product info missing
+                        val costPrice = productsMap[item.productId]?.costPrice ?: 0.0 // Fallback to 0.0 if product is deleted/missing
                         item.quantity * costPrice
                     }
                 }
 
-                val opExpenses = periodExpenses.sumOf { it.amount }
+                val opExpenses = periodExpenses
+                    .filter { it.category in KategoriPengeluaran.OPERATING_EXPENSE_CATEGORIES }
+                    .sumOf { it.amount }
                 val netProfit = totalRevenue - totalCogs - opExpenses
 
                 results.add(PeriodicPerformance(
