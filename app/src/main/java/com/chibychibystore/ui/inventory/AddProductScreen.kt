@@ -16,8 +16,14 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -164,6 +170,31 @@ private fun AddProductContent(
     onProductChange: (Produk) -> Unit
 ) {
     var editedProduct by remember { mutableStateOf(product) }
+    val context = LocalContext.current
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            // Copy the picked image into app-internal storage so the path
+            // remains accessible after the temporary content URI permission
+            // is revoked (e.g. after process death / app restart).
+            try {
+                val imagesDir = java.io.File(context.filesDir, "product_images").apply {
+                    if (!exists()) mkdirs()
+                }
+                val destFile = java.io.File(imagesDir, "product_${System.currentTimeMillis()}.jpg")
+                context.contentResolver.openInputStream(it)?.use { input ->
+                    java.io.FileOutputStream(destFile).use { output ->
+                        input.copyTo(output)
+                    }
+                    editedProduct = editedProduct.copy(imagePath = destFile.absolutePath)
+                }
+            } catch (e: Exception) {
+                // If copying fails, leave imagePath unchanged.
+            }
+        }
+    }
 
     // Update edited product when product changes
     LaunchedEffect(product) {
@@ -177,6 +208,57 @@ private fun AddProductContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Image Section
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Foto Produk",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { imagePickerLauncher.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (editedProduct.imagePath != null) {
+                        // In a real app, use Coil or Glide to load the image
+                        Icon(
+                            Icons.Default.Image,
+                            contentDescription = "Foto Produk",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.AddAPhoto,
+                            contentDescription = "Tambah Foto",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (editedProduct.imagePath != null) {
+                    TextButton(onClick = { editedProduct = editedProduct.copy(imagePath = null) }) {
+                        Text("Hapus Foto", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        }
+
         // Basic Information Section
         Card(
             modifier = Modifier.fillMaxWidth()
