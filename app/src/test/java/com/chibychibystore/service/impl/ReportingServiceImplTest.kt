@@ -38,6 +38,8 @@ class ReportingServiceImplTest {
     @Mock private lateinit var balanceSheetService: BalanceSheetService
     @Mock private lateinit var cashManagementService: CashManagementService
     @Mock private lateinit var authService: AuthService
+    // db is required by the ReportingServiceImpl constructor (used in getStockMovementReport);
+    // it is not exercised by the tests below but must be provided for instantiation.
     @Mock private lateinit var db: ChibyChibyDatabase
 
     private lateinit var reportingService: ReportingServiceImpl
@@ -60,6 +62,11 @@ class ReportingServiceImplTest {
 
     private fun localDateToDate(date: LocalDate): Date =
         Date.from(date.atStartOfDay(ZoneId.systemDefault()).toInstant())
+
+    companion object {
+        /** Product ID that is intentionally absent from the products map, simulating a deleted product. */
+        private const val MISSING_PRODUCT_ID = 99L
+    }
 
     @Test
     fun `getInventoryReport should return failure when no permission`() = runBlocking {
@@ -127,7 +134,7 @@ class ReportingServiceImplTest {
     @Test
     fun `getPeriodicPerformanceSummary aggregates by DAY when range is 31 days or less`() = runBlocking {
         val startDate = LocalDate.of(2025, 1, 1)
-        val endDate = LocalDate.of(2025, 1, 15)   // 14 days — DAY bucket
+        val endDate = LocalDate.of(2025, 1, 15)   // 14 days between → DAY bucket (range ≤ 31)
         whenever(authService.hasPermission("VIEW_FINANCIAL_REPORTS")).thenReturn(true)
 
         val saleDate = localDateToDate(startDate)
@@ -229,14 +236,14 @@ class ReportingServiceImplTest {
 
         val saleDate = localDateToDate(startDate)
         val sale = Penjualan(id = 1L, saleDate = saleDate, totalAmount = 10000.0, tax = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = 1L)
-        // productId=99 will not be in the products map
-        val item = ItemPenjualan(id = 1L, saleId = 1L, productId = 99L, quantity = 2, unitPrice = 5000.0, totalPrice = 10000.0)
+        // MISSING_PRODUCT_ID will not be in the products map, simulating a deleted product
+        val item = ItemPenjualan(id = 1L, saleId = 1L, productId = MISSING_PRODUCT_ID, quantity = 2, unitPrice = 5000.0, totalPrice = 10000.0)
         val saleWithItems = PenjualanWithItems(sale = sale, items = listOf(item))
 
         whenever(pengeluaranRepository.getPengeluaransByDateRangeList(any(), any())).thenReturn(emptyList())
         whenever(penjualanRepository.getSalesWithItemsInDateRange(startDate, endDate)).thenReturn(listOf(saleWithItems))
-        // Product 99 is not in the result — simulates a deleted product
-        whenever(produkRepository.getProductsByIds(listOf(99L))).thenReturn(Result.success(emptyList()))
+        // Product MISSING_PRODUCT_ID is not in the result — simulates a deleted product
+        whenever(produkRepository.getProductsByIds(listOf(MISSING_PRODUCT_ID))).thenReturn(Result.success(emptyList()))
 
         val result = reportingService.getPeriodicPerformanceSummary(startDate, endDate)
 
