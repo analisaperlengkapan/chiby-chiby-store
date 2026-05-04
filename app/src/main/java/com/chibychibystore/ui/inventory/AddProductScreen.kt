@@ -188,8 +188,8 @@ private fun AddProductContent(
                     java.io.FileOutputStream(destFile).use { output ->
                         input.copyTo(output)
                     }
+                    editedProduct = editedProduct.copy(imagePath = destFile.absolutePath)
                 }
-                editedProduct = editedProduct.copy(imagePath = destFile.absolutePath)
             } catch (e: Exception) {
                 // If copying fails, leave imagePath unchanged.
             }
