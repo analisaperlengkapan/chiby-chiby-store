@@ -35,5 +35,7 @@ data class ItemPenjualan(
     val productId: Long,
     val quantity: Int,
     val unitPrice: Double,
-    val totalPrice: Double
+    val totalPrice: Double,
+    // Store cost price at the time of sale for accurate historical COGS reporting
+    val costPrice: Double = 0.0
 )

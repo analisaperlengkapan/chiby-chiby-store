@@ -39,7 +39,8 @@ class SupplierServiceImpl @Inject constructor(
             val supplier = Pemasok(
                 name = nama,
                 address = alamat,
-                contact = telepon
+                contact = telepon,
+                email = email
             )
 
             supplierRepository.createPemasok(supplier)
@@ -64,7 +65,8 @@ class SupplierServiceImpl @Inject constructor(
             val supplier = existing.copy(
                 name = nama,
                 address = alamat,
-                contact = telepon
+                contact = telepon,
+                email = email
             )
             val updateResult = supplierRepository.updatePemasok(supplier)
             if (updateResult is Result.Failure) return Result.failure(updateResult.exception)

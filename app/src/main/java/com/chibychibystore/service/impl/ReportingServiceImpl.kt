@@ -6,6 +6,8 @@ import com.chibychibystore.data.model.Result
 import com.chibychibystore.service.*
 import com.chibychibystore.repository.*
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.catch
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
@@ -43,11 +45,7 @@ class ReportingServiceImpl @Inject constructor(
             val topProducts = topProductsResult.getOrNull() ?: emptyList()
 
             val productIds = topProducts.map { it.produkId }
-            val productsMap = if (productIds.isEmpty()) {
-                emptyMap()
-            } else {
-                produkRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
-            }
+            val productsMap = produkRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
 
             val topProductsDto = topProducts.map { dto ->
                 DataPenjualanProduk(
@@ -89,11 +87,7 @@ class ReportingServiceImpl @Inject constructor(
             val topProducts = topProductsResult.getOrNull() ?: emptyList()
 
             val productIds = topProducts.map { it.produkId }
-            val productsMap = if (productIds.isEmpty()) {
-                emptyMap()
-            } else {
-                produkRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
-            }
+            val productsMap = produkRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
 
             val topProductsDto = topProducts.map { dto ->
                 DataPenjualanProduk(
@@ -142,18 +136,15 @@ class ReportingServiceImpl @Inject constructor(
             val lowStockCount = produkRepository.countLowStock().getOrNull() ?: 0
             val outOfStockCount = produkRepository.countOutOfStock().getOrNull() ?: 0
 
-            val stokSummaryResult = produkRepository.getStokSummaryPerKategori()
-            if (stokSummaryResult is Result.Failure) throw stokSummaryResult.exception
-            val stokSummaries = (stokSummaryResult as Result.Success).data
-
+            val allProducts = produkRepository.getAllProduk().first()
             val categories = db.kategoriDao().getAllKategori().first().associateBy { it.id }
 
-            val rincianKategori = stokSummaries.map { summary ->
+            val rincianKategori = allProducts.groupBy { it.categoryId }.map { (catId, prods) ->
                 DataStokKategori(
-                    kategoriId = summary.categoryId,
-                    namaKategori = categories[summary.categoryId]?.name ?: "Kategori ${summary.categoryId}",
-                    jumlahProduk = summary.jumlahProduk,
-                    totalNilai = summary.totalNilai
+                    kategoriId = catId,
+                    namaKategori = categories[catId]?.name ?: "Kategori $catId",
+                    jumlahProduk = prods.size,
+                    totalNilai = prods.sumOf { it.costPrice * it.stockQuantity }
                 )
             }
 
@@ -311,8 +302,7 @@ class ReportingServiceImpl @Inject constructor(
 
             val result = salesStats.map { stat ->
                 val prod = productsMap[stat.produkId]
-                val costPrice = prod?.costPrice ?: 0.0
-                val totalCost = costPrice * stat.jumlahTerjual
+                val totalCost = stat.totalBiaya
                 val profit = stat.totalPendapatan - totalCost
 
                 PenjualanProduk(
@@ -578,11 +568,10 @@ class ReportingServiceImpl @Inject constructor(
 
                 val totalRevenue = periodSalesItems.sumOf { maxOf(0.0, it.sale.totalAmount - it.sale.tax) }
 
-                // Calculate accurate COGS based on product cost price at the time of reporting
+                // Calculate accurate historical COGS based on stored cost price
                 val totalCogs = periodSalesItems.sumOf { saleWithItems ->
                     saleWithItems.items.sumOf { item ->
-                        val costPrice = productsMap[item.productId]?.costPrice ?: 0.0 // Fallback to 0.0 if product is deleted/missing
-                        item.quantity * costPrice
+                        item.quantity * item.costPrice
                     }
                 }
 

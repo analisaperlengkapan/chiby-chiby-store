@@ -8,13 +8,6 @@ import androidx.room.Update
 import com.chibychibystore.data.local.entity.Produk
 import kotlinx.coroutines.flow.Flow
 
-/** Lightweight aggregation result for inventory-by-category reporting. */
-data class KategoriStokSummary(
-    val categoryId: Long,
-    val jumlahProduk: Int,
-    val totalNilai: Double
-)
-
 @Dao
 interface ProdukDao {
     @Query("SELECT * FROM produk ORDER BY name ASC")
@@ -85,8 +78,4 @@ interface ProdukDao {
 
     @Query("SELECT SUM(stockQuantity * costPrice) FROM produk")
     suspend fun getTotalInventoryValue(): Double?
-
-    /** Aggregated per-category stock summary – avoids loading all product rows. */
-    @Query("SELECT categoryId, COUNT(*) AS jumlahProduk, SUM(stockQuantity * costPrice) AS totalNilai FROM produk GROUP BY categoryId")
-    suspend fun getStokSummaryPerKategori(): List<KategoriStokSummary>
 }

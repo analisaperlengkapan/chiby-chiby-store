@@ -682,8 +682,8 @@ constructor(
     }
 
     private fun createPdfFile(fileName: String): String {
-        val downloadsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-            ?: context.filesDir
+        val downloadsDir =
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         val file = File(downloadsDir, fileName)
         return file.absolutePath
     }

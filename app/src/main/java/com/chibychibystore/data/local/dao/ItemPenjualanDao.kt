@@ -32,14 +32,25 @@ interface ItemPenjualanDao {
     @Query("SELECT COUNT(*) FROM item_penjualan WHERE saleId = :saleId")
     suspend fun getItemCountByPenjualanId(saleId: Long): Int
 
-    @Query("SELECT productId as produkId, SUM(quantity) as jumlahTerjual, SUM(totalPrice) as totalPendapatan FROM item_penjualan GROUP BY productId ORDER BY jumlahTerjual DESC LIMIT :limit")
+    @Query("""
+        SELECT
+            productId as produkId,
+            SUM(quantity) as jumlahTerjual,
+            SUM(totalPrice) as totalPendapatan,
+            SUM(quantity * costPrice) as totalBiaya
+        FROM item_penjualan
+        GROUP BY productId
+        ORDER BY jumlahTerjual DESC
+        LIMIT :limit
+    """)
     suspend fun getProdukTerpopuler(limit: Int): List<ProdukTerpopulerDto>
 
     @Query("""
         SELECT
             ip.productId as produkId,
             SUM(ip.quantity) as jumlahTerjual,
-            SUM(ip.totalPrice) as totalPendapatan
+            SUM(ip.totalPrice) as totalPendapatan,
+            SUM(ip.quantity * ip.costPrice) as totalBiaya
         FROM item_penjualan ip
         JOIN penjualan p ON ip.saleId = p.id
         WHERE p.saleDate BETWEEN :startDate AND :endDate
@@ -54,7 +65,7 @@ interface ItemPenjualanDao {
             k.name as namaKategori,
             SUM(ip.quantity) as jumlahTerjual,
             SUM(ip.totalPrice) as totalPendapatan,
-            SUM(ip.quantity * p.costPrice) as totalBiaya
+            SUM(ip.quantity * ip.costPrice) as totalBiaya
         FROM item_penjualan ip
         JOIN penjualan s ON ip.saleId = s.id
         JOIN produk p ON ip.productId = p.id
@@ -66,10 +77,9 @@ interface ItemPenjualanDao {
     suspend fun getSalesByCategoryStats(startDate: java.util.Date, endDate: java.util.Date): List<KategoriPenjualanDto>
 
     @Query("""
-        SELECT SUM(ip.quantity * p.costPrice)
+        SELECT SUM(ip.quantity * ip.costPrice)
         FROM item_penjualan ip
         JOIN penjualan s ON ip.saleId = s.id
-        JOIN produk p ON ip.productId = p.id
         WHERE s.saleDate BETWEEN :startDate AND :endDate
         AND s.isRefunded = 0
     """)
