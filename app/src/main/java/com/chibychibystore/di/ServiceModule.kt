@@ -84,6 +84,24 @@ abstract class ServiceModule {
 
     @Binds
     @Singleton
+    abstract fun bindCashManagementService(
+        cashManagementServiceImpl: CashManagementServiceImpl
+    ): CashManagementService
+
+    @Binds
+    @Singleton
+    abstract fun bindBalanceSheetService(
+        balanceSheetServiceImpl: BalanceSheetServiceImpl
+    ): BalanceSheetService
+
+    @Binds
+    @Singleton
+    abstract fun bindInventoryAuditService(
+        inventoryAuditServiceImpl: InventoryAuditServiceImpl
+    ): InventoryAuditService
+
+    @Binds
+    @Singleton
     abstract fun bindPrinterService(
         printerServiceImpl: PrinterServiceImpl
     ): PrinterService
@@ -99,6 +117,12 @@ abstract class ServiceModule {
     abstract fun bindPromoService(
         promoServiceImpl: PromoServiceImpl
     ): PromoService
+
+    @Binds
+    @Singleton
+    abstract fun bindPdfExportService(
+        pdfExportServiceImpl: PdfExportServiceImpl
+    ): PdfExportService
 
     @Binds
     @Singleton

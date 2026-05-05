@@ -20,6 +20,7 @@ data class Pemasok(
     val name: String,
     val contact: String? = null,
     val address: String? = null,
+    val email: String? = null,
     @Serializable(with = DateSerializer::class)
     val createdAt: Date = Date()
 )

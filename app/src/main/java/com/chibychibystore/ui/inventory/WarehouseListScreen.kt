@@ -180,7 +180,10 @@ private fun WarehouseSummaryHeader(
                 )
             }
 
-            VerticalDivider()
+            androidx.compose.material3.VerticalDivider(
+                modifier = Modifier.height(40.dp),
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -330,12 +333,3 @@ private fun WarehouseEmptyState(
     }
 }
 
-@Composable
-private fun VerticalDivider() {
-    Box(
-        modifier = Modifier
-            .width(1.dp)
-            .height(40.dp)
-            .background(MaterialTheme.colorScheme.outlineVariant)
-    )
-}

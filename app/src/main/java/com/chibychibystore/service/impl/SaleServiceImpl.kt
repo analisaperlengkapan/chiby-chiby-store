@@ -96,7 +96,6 @@ class SaleServiceImpl @Inject constructor(
                     saleDate = Date()
                 )
 
-                // Bulk fetch products for validation
                 val productIds = items.map { it.productId }.distinct()
                 val productsResult = productRepository.getProductsByIds(productIds)
 
@@ -104,11 +103,9 @@ class SaleServiceImpl @Inject constructor(
                      val products = productsResult.data ?: emptyList()
                      val productMap = products.associateBy { it.id }
 
-                     // Group items by product to handle duplicates (if any)
                      val requiredQuantities = items.groupBy { it.productId }
                          .mapValues { (_, group) -> group.sumOf { it.quantity } }
 
-                     // Validate total required quantity against stock
                      val warehouseId = sale.warehouseId
                      val stockResult = stokGudangRepository.getStocks(requiredQuantities.keys.toList(), warehouseId)
                      val stockMap = if (stockResult is Result.Success) {
@@ -127,53 +124,61 @@ class SaleServiceImpl @Inject constructor(
                              throw IllegalStateException("Stok tidak mencukupi untuk ${product.name} di Gudang $warehouseId. Tersedia: $currentStock, Dibutuhkan: $requiredQty")
                          }
                      }
-                } else if (productsResult is Result.Failure) {
-                    throw productsResult.exception
-                }
 
+                    var pointsEarned = 0
                 // Point awarding logic: award points only on the amount the
                 // customer actually paid (i.e. after both promo and point
                 // discounts), so customers don't earn points on money they
                 // didn't spend.
-                var pointsEarned = 0
-                if (pelangganId != null) {
-                    pointsEarned = (finalTotal / AppConstants.POINT_AWARD_THRESHOLD).toInt()
-                }
-
-                val saleToSaveWithPoints = saleToSave.copy(
-                    pointsEarned = pointsEarned
-                )
-
-                // Create Sale (Persistence)
-                val result = penjualanRepository.createPenjualan(saleToSaveWithPoints, items)
-
-                if (result is Result.Success) {
-                    // Update Customer points if applicable
                     if (pelangganId != null) {
-                        db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
-                            val netPointsChange = pointsEarned - saleToSaveWithPoints.pointsRedeemed
-                            db.pelangganDao().updatePelanggan(
-                                p.copy(
-                                    point = kotlin.math.max(0, p.point + netPointsChange),
-                                    updatedAt = Date()
+                        pointsEarned = (finalTotal / AppConstants.POINT_AWARD_THRESHOLD).toInt()
+                    }
+
+                    val saleToSaveWithPoints = saleToSave.copy(
+                        pointsEarned = pointsEarned
+                    )
+
+                    // Hydrate items with current cost price before persistence
+                    val hydratedItems = items.map { item ->
+                        val prod = productMap[item.productId]
+                        item.copy(costPrice = prod?.costPrice ?: 0.0)
+                    }
+
+                    // Create Sale (Persistence)
+                    val result = penjualanRepository.createPenjualan(saleToSaveWithPoints, hydratedItems)
+
+                    if (result is Result.Success) {
+                        // Update Customer points if applicable
+                        if (pelangganId != null) {
+                            db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
+                                val netPointsChange = pointsEarned - saleToSaveWithPoints.pointsRedeemed
+                                db.pelangganDao().updatePelanggan(
+                                    p.copy(
+                                        point = kotlin.math.max(0, p.point + netPointsChange),
+                                        updatedAt = Date()
+                                    )
                                 )
-                            )
+                            }
                         }
+
+                        // Batch adjust stocks
+                        val adjustments = hydratedItems.map {
+                            StockAdjustment(it.productId, sale.warehouseId, -it.quantity)
+                        }
+                        val stockAdjResult = stokGudangRepository.adjustStockBatch(adjustments)
+                        if (stockAdjResult is Result.Failure) {
+                            throw stockAdjResult.exception
+                        }
+                    } else if (result is Result.Failure) {
+                        throw result.exception
                     }
 
-                    // Batch adjust stocks
-                    val adjustments = items.map {
-                        StockAdjustment(it.productId, sale.warehouseId, -it.quantity)
-                    }
-                    val stockResult = stokGudangRepository.adjustStockBatch(adjustments)
-                    if (stockResult is Result.Failure) {
-                        throw stockResult.exception
-                    }
-                } else if (result is Result.Failure) {
-                    throw result.exception
+                    result
+                } else if (productsResult is Result.Failure) {
+                    throw productsResult.exception
+                } else {
+                    Result.failure(Exception("Failed to fetch products for validation"))
                 }
-
-                result
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -238,12 +243,6 @@ class SaleServiceImpl @Inject constructor(
 
     override suspend fun refundPenjualan(id: Long): Result<Unit> {
         return try {
-            // Wrap the refund in a single transaction so partial failures (e.g. stock
-            // adjustment fails after the sale is marked refunded) don't leave the
-            // database in an inconsistent state. The customer-points reversal added
-            // below also needs to be atomic with the rest of the refund — otherwise
-            // a failure between the points deduction and stock restore could keep
-            // points deducted while the refund is rolled back, or vice versa.
             db.withTransaction {
                 val saleResult = getPenjualanById(id)
                 if (saleResult is Result.Failure) throw saleResult.exception
@@ -251,30 +250,18 @@ class SaleServiceImpl @Inject constructor(
                     ?: throw Exception("Penjualan tidak ditemukan")
 
                 if (saleWithItems.sale.isRefunded) {
-                    // Idempotent: refunding an already-refunded sale would otherwise
-                    // double-reverse loyalty points and stock.
                     throw Exception("Penjualan sudah di-refund")
                 }
 
                 val updatedPenjualan = saleWithItems.sale.copy(isRefunded = true)
-                // Check the update result and propagate any failure so the transaction
-                // rolls back. Without this check, a failed update (the repository
-                // catches DAO exceptions and returns Result.Failure rather than
-                // throwing — see PenjualanRepository.kt:153-160) would silently leave
-                // the sale NOT marked as refunded while still deducting loyalty points
-                // and restoring stock further down, producing a financially
-                // inconsistent state. Every other fallible call in this method is
-                // already checked; this is the only unchecked one.
                 val updateResult = penjualanRepository.updatePenjualan(updatedPenjualan)
                 if (updateResult is Result.Failure) throw updateResult.exception
 
-                // Reverse loyalty points awarded/redeemed at sale time.
                 val pelangganId = saleWithItems.sale.pelangganId
                 if (pelangganId != null) {
                     val pointsEarned = saleWithItems.sale.pointsEarned
                     val pointsRedeemed = saleWithItems.sale.pointsRedeemed
                     db.pelangganDao().getPelangganById(pelangganId)?.let { p ->
-                        // Re-add redeemed points and remove earned points
                         val newPoint = kotlin.math.max(0, p.point - pointsEarned + pointsRedeemed)
                         db.pelangganDao().updatePelanggan(
                             p.copy(point = newPoint, updatedAt = Date())
@@ -352,7 +339,6 @@ class SaleServiceImpl @Inject constructor(
         val sale = saleWithItems.sale
         val items = saleWithItems.items
 
-        // Fetch product details for names
         val productIds = items.map { it.productId }.distinct()
         val productsResult = productRepository.getProductsByIds(productIds)
         val productMap = if (productsResult is Result.Success) {
@@ -398,10 +384,6 @@ class SaleServiceImpl @Inject constructor(
     }
 
     override suspend fun getOpenShift(kasirId: Long): Result<com.chibychibystore.data.local.entity.Shift?> {
-        // Delegate to ShiftRepository to keep shift access consistent with the rest
-        // of the codebase, instead of bypassing the repository layer with a direct
-        // DAO call. This ensures any future caching/logging added at the repository
-        // layer applies uniformly.
         return shiftRepository.getOpenShiftByKasir(kasirId)
     }
 }

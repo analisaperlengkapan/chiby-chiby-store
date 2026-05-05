@@ -40,7 +40,23 @@ class ReportingServiceImpl @Inject constructor(
             val totalSales = penjualanRepository.getTotalCashReceipts(date, date).getOrNull() ?: 0.0
             val totalTransactions = penjualanRepository.getPenjualanCountByDateRange(date, date).getOrNull() ?: 0
             val avg = if (totalTransactions > 0) totalSales / totalTransactions else 0.0
-            Result.success(LaporanPenjualanHarian(date, totalSales, totalTransactions, avg, emptyList()))
+
+            val topProductsResult = itemPenjualanRepository.getProdukPenjualansStats(date.toDate(), getEndDateWithTime(date))
+            val topProducts = topProductsResult.getOrNull() ?: emptyList()
+
+            val productIds = topProducts.map { it.produkId }
+            val productsMap = produkRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+
+            val topProductsDto = topProducts.map { dto ->
+                DataPenjualanProduk(
+                    produkId = dto.produkId,
+                    namaProduk = productsMap[dto.produkId]?.name ?: "Unknown Product",
+                    jumlahTerjual = dto.jumlahTerjual,
+                    totalPendapatan = dto.totalPendapatan
+                )
+            }
+
+            Result.success(LaporanPenjualanHarian(date, totalSales, totalTransactions, avg, topProductsDto))
         }
     } catch (e: Exception) {
         Result.failure(Exception("getDailySalesReport failed", e))
@@ -67,7 +83,22 @@ class ReportingServiceImpl @Inject constructor(
                 )
             }.values.toList().sortedBy { it.tanggal }
 
-            Result.success(LaporanPenjualanBulanan(year, month, totalSales, totalTransactions, dailyMap, emptyList()))
+            val topProductsResult = itemPenjualanRepository.getProdukPenjualansStats(startDate.toDate(), getEndDateWithTime(endDate))
+            val topProducts = topProductsResult.getOrNull() ?: emptyList()
+
+            val productIds = topProducts.map { it.produkId }
+            val productsMap = produkRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+
+            val topProductsDto = topProducts.map { dto ->
+                DataPenjualanProduk(
+                    produkId = dto.produkId,
+                    namaProduk = productsMap[dto.produkId]?.name ?: "Unknown Product",
+                    jumlahTerjual = dto.jumlahTerjual,
+                    totalPendapatan = dto.totalPendapatan
+                )
+            }
+
+            Result.success(LaporanPenjualanBulanan(year, month, totalSales, totalTransactions, dailyMap, topProductsDto))
         }
     } catch (e: Exception) {
         Result.failure(Exception("getMonthlySalesReport failed", e))
@@ -105,12 +136,24 @@ class ReportingServiceImpl @Inject constructor(
             val lowStockCount = produkRepository.countLowStock().getOrNull() ?: 0
             val outOfStockCount = produkRepository.countOutOfStock().getOrNull() ?: 0
 
+            val allProducts = produkRepository.getAllProduk().first()
+            val categories = db.kategoriDao().getAllKategori().first().associateBy { it.id }
+
+            val rincianKategori = allProducts.groupBy { it.categoryId }.map { (catId, prods) ->
+                DataStokKategori(
+                    kategoriId = catId,
+                    namaKategori = categories[catId]?.name ?: "Kategori $catId",
+                    jumlahProduk = prods.size,
+                    totalNilai = prods.sumOf { it.costPrice * it.stockQuantity }
+                )
+            }
+
             Result.success(LaporanStok(
                 totalProduk = totalProducts,
                 totalNilai = totalValue,
                 stokRendahCount = lowStockCount,
                 stokHabisCount = outOfStockCount,
-                rincianKategori = emptyList()
+                rincianKategori = rincianKategori
             ))
         }
     } catch (e: Exception) {
@@ -259,8 +302,7 @@ class ReportingServiceImpl @Inject constructor(
 
             val result = salesStats.map { stat ->
                 val prod = productsMap[stat.produkId]
-                val costPrice = prod?.costPrice ?: 0.0
-                val totalCost = costPrice * stat.jumlahTerjual
+                val totalCost = stat.totalBiaya
                 val profit = stat.totalPendapatan - totalCost
 
                 PenjualanProduk(
@@ -526,11 +568,10 @@ class ReportingServiceImpl @Inject constructor(
 
                 val totalRevenue = periodSalesItems.sumOf { maxOf(0.0, it.sale.totalAmount - it.sale.tax) }
 
-                // Calculate accurate COGS based on product cost price at the time of reporting
+                // Calculate accurate historical COGS based on stored cost price
                 val totalCogs = periodSalesItems.sumOf { saleWithItems ->
                     saleWithItems.items.sumOf { item ->
-                        val costPrice = productsMap[item.productId]?.costPrice ?: 0.0 // Fallback to 0.0 if product is deleted/missing
-                        item.quantity * costPrice
+                        item.quantity * item.costPrice
                     }
                 }
 

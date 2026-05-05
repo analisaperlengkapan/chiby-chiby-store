@@ -337,12 +337,40 @@ object DatabaseModule {
             }
         }
 
+        val MIGRATION_15_16 = object : androidx.room.migration.Migration(15, 16) {
+            override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
+                // Add email column to pemasok table
+                database.execSQL("ALTER TABLE pemasok ADD COLUMN email TEXT")
+
+                // Add costPrice column to item_penjualan table
+                database.execSQL("ALTER TABLE item_penjualan ADD COLUMN costPrice REAL NOT NULL DEFAULT 0.0")
+
+                // Backfill historical cost prices from the produk table.
+                // For each item_penjualan, we fetch the current cost price of its product.
+                // While not perfectly accurate for very old sales (if cost prices changed),
+                // it is significantly better than defaulting to 0.0 or the selling price.
+                database.execSQL("""
+                    UPDATE item_penjualan
+                    SET costPrice = (
+                        SELECT costPrice
+                        FROM produk
+                        WHERE produk.id = item_penjualan.productId
+                    )
+                    WHERE EXISTS (
+                        SELECT 1
+                        FROM produk
+                        WHERE produk.id = item_penjualan.productId
+                    )
+                """)
+            }
+        }
+
         return Room.databaseBuilder(
             context,
             ChibyChibyDatabase::class.java,
             "chiby_chiby_database"
         )
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_15)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_15, MIGRATION_15_16)
             .fallbackToDestructiveMigration()
             .build()
     }
