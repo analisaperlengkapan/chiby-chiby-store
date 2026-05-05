@@ -11,6 +11,7 @@ import com.chibychibystore.repository.PengeluaranRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ShiftRepository
 import com.chibychibystore.service.CashManagementService
+import com.chibychibystore.util.Permissions
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.ZoneId
@@ -29,6 +30,16 @@ class CashManagementServiceImpl @Inject constructor(
 
     override suspend fun openShift(kasirId: Long, startingCash: Double): Result<Long> {
         return try {
+            if (startingCash < 0) {
+                return Result.failure(ChibyChibyException.ValidationError("startingCash", "Jumlah kas awal tidak boleh negatif"))
+            }
+
+            val currentUser = authService.getCurrentUser()
+                ?: return Result.failure(ChibyChibyException.BusinessLogicError("Pengguna belum login"))
+            if (currentUser.id != kasirId && !authService.hasPermission(Permissions.MANAGE_SHIFTS)) {
+                return Result.failure(ChibyChibyException.PermissionError(Permissions.MANAGE_SHIFTS))
+            }
+
             db.withTransaction {
                 val existingResult = shiftRepository.getOpenShiftByKasir(kasirId)
                 if (existingResult is Result.Failure) throw existingResult.exception
@@ -53,6 +64,13 @@ class CashManagementServiceImpl @Inject constructor(
 
     override suspend fun closeShift(shiftId: Long, actualCash: Double, notes: String?): Result<Unit> {
         return try {
+            if (actualCash < 0) {
+                return Result.failure(ChibyChibyException.ValidationError("actualCash", "Jumlah kas aktual tidak boleh negatif"))
+            }
+
+            val currentUser = authService.getCurrentUser()
+                ?: return Result.failure(ChibyChibyException.BusinessLogicError("Pengguna belum login"))
+
             db.withTransaction {
                 val shiftResult = shiftRepository.getShiftById(shiftId)
                 if (shiftResult is Result.Failure) throw shiftResult.exception
@@ -61,6 +79,10 @@ class CashManagementServiceImpl @Inject constructor(
                     ?: throw ChibyChibyException.DatabaseError("Shift tidak ditemukan")
                 if (shift.status == ShiftStatus.CLOSED) {
                     throw ChibyChibyException.BusinessLogicError("Shift sudah ditutup")
+                }
+
+                if (shift.kasirId != currentUser.id && !authService.hasPermission(Permissions.MANAGE_SHIFTS)) {
+                    throw ChibyChibyException.PermissionError(Permissions.MANAGE_SHIFTS)
                 }
 
                 val totalSalesResult = penjualanRepository.getTotalSalesByShift(shiftId)
@@ -141,7 +163,9 @@ class CashManagementServiceImpl @Inject constructor(
         return try {
             val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
-            val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
+            val expensesResult = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategoriResult(start, end)
+            if (expensesResult is Result.Failure) throw expensesResult.exception
+            val approvedExpenses = (expensesResult as Result.Success).data
             val equipmentExpenses = approvedExpenses
                 .filterKeys { it in KategoriPengeluaran.INVESTING_CATEGORIES }
                 .values.sum()
@@ -155,7 +179,9 @@ class CashManagementServiceImpl @Inject constructor(
         return try {
             val start = Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
             val end = Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
-            val approvedExpenses = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategori(start, end)
+            val expensesResult = pengeluaranRepository.getApprovedRingkasanPengeluaranPerKategoriResult(start, end)
+            if (expensesResult is Result.Failure) throw expensesResult.exception
+            val approvedExpenses = (expensesResult as Result.Success).data
             val financingExpenses = approvedExpenses
                 .filterKeys { it in KategoriPengeluaran.FINANCING_CATEGORIES }
                 .values.sum()
@@ -167,10 +193,20 @@ class CashManagementServiceImpl @Inject constructor(
 
     override suspend fun calculateNetCashFlow(startDate: LocalDate, endDate: LocalDate): Result<Double> {
         return try {
-            val operatingCF = calculateOperatingCashFlow(startDate, endDate).getOrNull() ?: 0.0
-            val investingCF = calculateInvestingCashFlow(startDate, endDate).getOrNull() ?: 0.0
-            val financingCF = calculateFinancingCashFlow(startDate, endDate).getOrNull() ?: 0.0
-            Result.success(operatingCF + investingCF + financingCF)
+            val operatingResult = calculateOperatingCashFlow(startDate, endDate)
+            if (operatingResult is Result.Failure) return operatingResult
+
+            val investingResult = calculateInvestingCashFlow(startDate, endDate)
+            if (investingResult is Result.Failure) return investingResult
+
+            val financingResult = calculateFinancingCashFlow(startDate, endDate)
+            if (financingResult is Result.Failure) return financingResult
+
+            Result.success(
+                (operatingResult as Result.Success).data +
+                (investingResult as Result.Success).data +
+                (financingResult as Result.Success).data
+            )
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung net cash flow", e))
         }
@@ -178,9 +214,18 @@ class CashManagementServiceImpl @Inject constructor(
 
     override suspend fun getCashFlowSummary(startDate: LocalDate, endDate: LocalDate): Result<CashManagementService.CashFlowSummary> {
         return try {
-            val operatingCF = calculateOperatingCashFlow(startDate, endDate).getOrNull() ?: 0.0
-            val investingCF = calculateInvestingCashFlow(startDate, endDate).getOrNull() ?: 0.0
-            val financingCF = calculateFinancingCashFlow(startDate, endDate).getOrNull() ?: 0.0
+            val operatingResult = calculateOperatingCashFlow(startDate, endDate)
+            if (operatingResult is Result.Failure) return operatingResult
+
+            val investingResult = calculateInvestingCashFlow(startDate, endDate)
+            if (investingResult is Result.Failure) return investingResult
+
+            val financingResult = calculateFinancingCashFlow(startDate, endDate)
+            if (financingResult is Result.Failure) return financingResult
+
+            val operatingCF = (operatingResult as Result.Success).data
+            val investingCF = (investingResult as Result.Success).data
+            val financingCF = (financingResult as Result.Success).data
             val netCF = operatingCF + investingCF + financingCF
             Result.success(CashManagementService.CashFlowSummary(operatingCF, investingCF, financingCF, netCF, "$startDate - $endDate"))
         } catch (e: Exception) {

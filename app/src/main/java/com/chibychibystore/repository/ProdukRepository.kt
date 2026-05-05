@@ -1,5 +1,6 @@
 package com.chibychibystore.repository
 
+import com.chibychibystore.data.local.dao.KategoriStokSummary
 import com.chibychibystore.data.local.dao.ProdukDao
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.model.Result
@@ -252,6 +253,18 @@ class ProdukRepository @Inject constructor(
             Result.success(count)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("countOutOfStock", e))
+        }
+    }
+
+    /**
+     * Returns per-category stock aggregation (count + value) computed by the database,
+     * avoiding the need to load all product rows into memory.
+     */
+    suspend fun getStokSummaryPerKategori(): Result<List<KategoriStokSummary>> {
+        return try {
+            Result.success(produkDao.getStokSummaryPerKategori())
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getStokSummaryPerKategori", e))
         }
     }
 }

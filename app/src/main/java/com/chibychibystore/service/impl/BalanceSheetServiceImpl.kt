@@ -6,7 +6,6 @@ import com.chibychibystore.repository.PengeluaranRepository
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.service.BalanceSheetService
 import com.chibychibystore.service.CashManagementService
-import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
@@ -23,12 +22,12 @@ class BalanceSheetServiceImpl @Inject constructor(
     override suspend fun calculateTotalAssets(asOfDate: LocalDate): Result<Double> {
         return try {
             val inventoryValueResult = calculateInventoryValue()
-            val inventoryValue = inventoryValueResult.getOrNull() ?: 0.0
+            if (inventoryValueResult is Result.Failure) return inventoryValueResult
 
-            val cashBalance = cashManagementService.get().getCurrentCashPosition().getOrNull() ?: 0.0
+            val cashResult = cashManagementService.get().getCurrentCashPosition()
+            if (cashResult is Result.Failure) return cashResult
 
-            val totalAssets = cashBalance + inventoryValue
-
+            val totalAssets = (cashResult as Result.Success).data + (inventoryValueResult as Result.Success).data
             Result.success(totalAssets)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung total assets", e))
@@ -37,11 +36,7 @@ class BalanceSheetServiceImpl @Inject constructor(
 
     override suspend fun calculateInventoryValue(): Result<Double> {
         return try {
-            val productsFlow = produkRepository.getAllProduk()
-            val products = productsFlow.first()
-            val inventoryValue = products.sumOf { product -> product.costPrice * product.stockQuantity }
-
-            Result.success(inventoryValue)
+            produkRepository.getTotalInventoryValue()
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung nilai inventory", e))
         }
@@ -62,10 +57,13 @@ class BalanceSheetServiceImpl @Inject constructor(
 
     override suspend fun calculateEquity(asOfDate: LocalDate): Result<Double> {
         return try {
-            val assets = calculateTotalAssets(asOfDate).getOrNull() ?: 0.0
-            val liabilities = calculateTotalLiabilities(asOfDate).getOrNull() ?: 0.0
+            val assetsResult = calculateTotalAssets(asOfDate)
+            if (assetsResult is Result.Failure) return assetsResult
 
-            val equity = assets - liabilities
+            val liabilitiesResult = calculateTotalLiabilities(asOfDate)
+            if (liabilitiesResult is Result.Failure) return liabilitiesResult
+
+            val equity = (assetsResult as Result.Success).data - (liabilitiesResult as Result.Success).data
             Result.success(equity)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("Gagal menghitung equity", e))
@@ -74,18 +72,28 @@ class BalanceSheetServiceImpl @Inject constructor(
 
     override suspend fun generateBalanceSheet(asOfDate: LocalDate): Result<BalanceSheetService.BalanceSheetData> {
         return try {
-            val assets = calculateTotalAssets(asOfDate).getOrNull() ?: 0.0
-            val liabilities = calculateTotalLiabilities(asOfDate).getOrNull() ?: 0.0
+            val assetsResult = calculateTotalAssets(asOfDate)
+            if (assetsResult is Result.Failure) return assetsResult
+
+            val liabilitiesResult = calculateTotalLiabilities(asOfDate)
+            if (liabilitiesResult is Result.Failure) return liabilitiesResult
+
+            val inventoryResult = calculateInventoryValue()
+            if (inventoryResult is Result.Failure) return inventoryResult
+
+            val cashResult = cashManagementService.get().getCurrentCashPosition()
+            if (cashResult is Result.Failure) return cashResult
+
+            val assets = (assetsResult as Result.Success).data
+            val liabilities = (liabilitiesResult as Result.Success).data
             val equity = assets - liabilities
-            val inventoryValue = calculateInventoryValue().getOrNull() ?: 0.0
-            val cashBalance = cashManagementService.get().getCurrentCashPosition().getOrNull() ?: 0.0
 
             Result.success(BalanceSheetService.BalanceSheetData(
                 assets = assets,
                 liabilities = liabilities,
                 equity = equity,
-                inventoryValue = inventoryValue,
-                cashBalance = cashBalance,
+                inventoryValue = (inventoryResult as Result.Success).data,
+                cashBalance = (cashResult as Result.Success).data,
                 asOfDate = asOfDate
             ))
         } catch (e: Exception) {

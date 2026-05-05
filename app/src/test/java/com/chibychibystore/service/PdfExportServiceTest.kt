@@ -3,6 +3,7 @@ package com.chibychibystore.service
 import android.content.Context
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.service.PeriodicPerformance
+import com.chibychibystore.service.impl.PdfExportServiceImpl
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -27,7 +28,7 @@ class PdfExportServiceTest {
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        pdfExportService = PdfExportService(context, reportingService, UnconfinedTestDispatcher())
+        pdfExportService = PdfExportServiceImpl(context, reportingService, UnconfinedTestDispatcher())
     }
 
     @Test

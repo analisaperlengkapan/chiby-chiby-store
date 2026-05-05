@@ -6,8 +6,6 @@ import com.chibychibystore.data.model.Result
 import com.chibychibystore.service.*
 import com.chibychibystore.repository.*
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.catch
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
@@ -45,7 +43,11 @@ class ReportingServiceImpl @Inject constructor(
             val topProducts = topProductsResult.getOrNull() ?: emptyList()
 
             val productIds = topProducts.map { it.produkId }
-            val productsMap = produkRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+            val productsMap = if (productIds.isEmpty()) {
+                emptyMap()
+            } else {
+                produkRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+            }
 
             val topProductsDto = topProducts.map { dto ->
                 DataPenjualanProduk(
@@ -87,7 +89,11 @@ class ReportingServiceImpl @Inject constructor(
             val topProducts = topProductsResult.getOrNull() ?: emptyList()
 
             val productIds = topProducts.map { it.produkId }
-            val productsMap = produkRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+            val productsMap = if (productIds.isEmpty()) {
+                emptyMap()
+            } else {
+                produkRepository.getProductsByIds(productIds).getOrNull()?.associateBy { it.id } ?: emptyMap()
+            }
 
             val topProductsDto = topProducts.map { dto ->
                 DataPenjualanProduk(
@@ -136,15 +142,18 @@ class ReportingServiceImpl @Inject constructor(
             val lowStockCount = produkRepository.countLowStock().getOrNull() ?: 0
             val outOfStockCount = produkRepository.countOutOfStock().getOrNull() ?: 0
 
-            val allProducts = produkRepository.getAllProduk().first()
+            val stokSummaryResult = produkRepository.getStokSummaryPerKategori()
+            if (stokSummaryResult is Result.Failure) throw stokSummaryResult.exception
+            val stokSummaries = (stokSummaryResult as Result.Success).data
+
             val categories = db.kategoriDao().getAllKategori().first().associateBy { it.id }
 
-            val rincianKategori = allProducts.groupBy { it.categoryId }.map { (catId, prods) ->
+            val rincianKategori = stokSummaries.map { summary ->
                 DataStokKategori(
-                    kategoriId = catId,
-                    namaKategori = categories[catId]?.name ?: "Kategori $catId",
-                    jumlahProduk = prods.size,
-                    totalNilai = prods.sumOf { it.costPrice * it.stockQuantity }
+                    kategoriId = summary.categoryId,
+                    namaKategori = categories[summary.categoryId]?.name ?: "Kategori ${summary.categoryId}",
+                    jumlahProduk = summary.jumlahProduk,
+                    totalNilai = summary.totalNilai
                 )
             }
 

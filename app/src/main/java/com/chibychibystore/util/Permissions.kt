@@ -20,6 +20,9 @@ object Permissions {
     // Financial
     const val VIEW_FINANCIAL_REPORTS = "VIEW_FINANCIAL_REPORTS"
 
+    // Shift Management
+    const val MANAGE_SHIFTS = "MANAGE_SHIFTS"
+
     // User Management
     const val MANAGE_USERS = "MANAGE_USERS"
 }
