@@ -2,16 +2,9 @@ package com.chibychibystore.ui.purchase
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.ItemPembelian
-import com.chibychibystore.data.local.entity.Pembelian
-import com.chibychibystore.data.local.entity.Produk
-import com.chibychibystore.data.local.entity.Pemasok
-import com.chibychibystore.data.local.entity.Gudang
+import com.chibychibystore.data.local.entity.*
 import com.chibychibystore.data.model.Result
-import com.chibychibystore.service.PurchaseService
-import com.chibychibystore.service.ProductService
-import com.chibychibystore.service.SupplierService
-import com.chibychibystore.service.WarehouseService
+import com.chibychibystore.service.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -20,33 +13,34 @@ import javax.inject.Inject
 
 data class PurchaseUiState(
     val purchases: List<Pembelian> = emptyList(),
-    val isLoading: Boolean = false,
-    val error: String? = null,
-    val isSuccess: Boolean = false,
     val suppliers: List<Pemasok> = emptyList(),
     val products: List<Produk> = emptyList(),
-    val warehouses: List<Gudang> = emptyList()
+    val warehouses: List<Gudang> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val isSuccess: Boolean = false
 )
 
-data class CartItemPurchase(
+data class PurchaseItemInput(
     val product: Produk,
-    var quantity: Int,
-    var unitPrice: Double
+    var quantity: Int = 1,
+    var costPrice: Double = product.costPrice
 )
 
 @HiltViewModel
 class PurchaseViewModel @Inject constructor(
     private val purchaseService: PurchaseService,
-    private val productService: ProductService,
     private val supplierService: SupplierService,
-    private val warehouseService: WarehouseService
+    private val productService: ProductService,
+    private val warehouseService: WarehouseService,
+    private val authService: AuthService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PurchaseUiState())
     val uiState: StateFlow<PurchaseUiState> = _uiState.asStateFlow()
 
-    private val _cart = MutableStateFlow<List<CartItemPurchase>>(emptyList())
-    val cart: StateFlow<List<CartItemPurchase>> = _cart.asStateFlow()
+    private val _purchaseItems = MutableStateFlow<List<PurchaseItemInput>>(emptyList())
+    val purchaseItems: StateFlow<List<PurchaseItemInput>> = _purchaseItems.asStateFlow()
 
     init {
         loadPurchases()
@@ -77,7 +71,7 @@ class PurchaseViewModel @Inject constructor(
 
     private fun loadProducts() {
         viewModelScope.launch {
-            productService.observeProducts()
+            productService.observeProduks()
                 .collect { list ->
                     _uiState.update { it.copy(products = list) }
                 }
@@ -93,52 +87,64 @@ class PurchaseViewModel @Inject constructor(
         }
     }
 
-    fun addToCart(product: Produk, quantity: Int, unitPrice: Double) {
-        val currentCart = _cart.value.toMutableList()
-        val existingIndex = currentCart.indexOfFirst { it.product.id == product.id }
-        if (existingIndex >= 0) {
-            val item = currentCart[existingIndex]
-            // Use the latest unit price entered by the user; if the prices differ, the most
-            // recent value wins so the displayed total reflects the user's intent.
-            currentCart[existingIndex] = item.copy(
-                quantity = item.quantity + quantity,
-                unitPrice = unitPrice
-            )
+    fun addItem(product: Produk) {
+        val current = _purchaseItems.value.toMutableList()
+        val index = current.indexOfFirst { it.product.id == product.id }
+        if (index >= 0) {
+            current[index] = current[index].copy(quantity = current[index].quantity + 1)
         } else {
-            currentCart.add(CartItemPurchase(product, quantity, unitPrice))
+            current.add(PurchaseItemInput(product))
         }
-        _cart.value = currentCart
+        _purchaseItems.value = current
     }
 
-    fun removeFromCart(productId: Long) {
-        _cart.value = _cart.value.filter { it.product.id != productId }
+    fun removeItem(productId: Long) {
+        _purchaseItems.value = _purchaseItems.value.filter { it.product.id != productId }
     }
 
-    fun createPurchase(supplierId: Long, warehouseId: Long, invoiceNumber: String, notes: String?) {
+    fun updateItemQuantity(productId: Long, quantity: Int) {
+        val current = _purchaseItems.value.toMutableList()
+        val index = current.indexOfFirst { it.product.id == productId }
+        if (index >= 0) {
+            current[index] = current[index].copy(quantity = quantity)
+            _purchaseItems.value = current
+        }
+    }
+
+    fun savePurchase(pemasokId: Long, warehouseId: Long, invoiceNumber: String, notes: String?) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val totalAmount = _cart.value.sumOf { it.quantity * it.unitPrice }
+            val buyer = authService.getCurrentUser()
+            if (buyer == null) {
+                _uiState.update { it.copy(isLoading = false, error = "User not logged in") }
+                return@launch
+            }
+
+            val totalAmount = _purchaseItems.value.sumOf { it.quantity * it.costPrice }
             val pembelian = Pembelian(
-                supplierId = supplierId,
+                supplierId = pemasokId,
+                warehouseId = warehouseId,
+                receivedBy = buyer.id,
                 invoiceNumber = invoiceNumber,
+                purchaseDate = Date(),
                 totalAmount = totalAmount,
-                notes = notes,
-                purchaseDate = Date()
+                notes = notes
             )
-            val items = _cart.value.map {
+
+            val items = _purchaseItems.value.map { input ->
                 ItemPembelian(
-                    purchaseId = 0, // Will be set in service
-                    productId = it.product.id,
-                    quantity = it.quantity,
-                    unitPrice = it.unitPrice,
-                    totalPrice = it.quantity * it.unitPrice
+                    purchaseId = 0,
+                    productId = input.product.id,
+                    quantity = input.quantity,
+                    unitPrice = input.costPrice,
+                    totalPrice = input.quantity * input.costPrice
                 )
             }
 
-            val result = purchaseService.createPembelianWithWarehouse(pembelian, items, warehouseId)
+            val result = purchaseService.createPembelian(pembelian, items)
             if (result is Result.Success) {
                 _uiState.update { it.copy(isLoading = false, isSuccess = true) }
-                _cart.value = emptyList()
+                _purchaseItems.value = emptyList()
             } else {
                 _uiState.update { it.copy(isLoading = false, error = (result as Result.Failure).exception.message) }
             }

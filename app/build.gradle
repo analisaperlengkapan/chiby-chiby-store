@@ -1,37 +1,21 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'org.jetbrains.kotlin.plugin.compose'
-    id 'kotlin-kapt'
+    id 'com.google.devtools.ksp'
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'com.google.dagger.hilt.android'
-    id 'jacoco'
-    // OWASP dependency-check plugin enables `dependencyCheckAnalyze` task for this module
-    id 'org.owasp.dependencycheck'
-    id 'com.github.ben-manes.versions'
 }
-
-jacoco {
-    toolVersion = "0.8.10"
-}
-
 android {
     namespace 'com.chibychibystore'
-    compileSdk 36
-
+    compileSdk 35
     defaultConfig {
         applicationId "com.chibychibystore"
-        minSdk 23
+        minSdk 24
         targetSdk 35
         versionCode 1
         versionName "1.0"
-
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary true
-        }
     }
-
     buildTypes {
         release {
             minifyEnabled false
@@ -39,220 +23,72 @@ android {
         }
     }
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
-        coreLibraryDesugaringEnabled true
     }
     kotlinOptions {
         jvmTarget = '17'
     }
     buildFeatures {
         compose true
+        buildConfig true
     }
-    packagingOptions {
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.5.14'
+    }
+    packaging {
         resources {
-            excludes += '/META-INF/{AL2.0,LGPL2.1}'
-            excludes += '/META-INF/NOTICE.md'
-            excludes += '/META-INF/LICENSE.md'
-        }
-    }
-
-    sourceSets {
-        test {
-            java {
-                exclude '**/ui/screens/**'
-                exclude '**/ui/inventory/**'
-                exclude '**/ui/sales/**'
-                exclude '**/ui/components/**'
-                exclude '**/service/WarehouseServiceTest.*'
-                exclude '**/service/UserManagementServiceTest.*'
-                exclude '**/service/SaleServiceTest.*'
-                exclude '**/service/RestoreServiceTest.*'
-                exclude '**/service/ReportingServiceTest.*'
-                exclude '**/service/ProductServiceTest.*'
-                exclude '**/service/ExpenseServiceTest.*'
-                exclude '**/service/PdfExportServiceTest.*'
-                exclude '**/service/CashManagementServiceTest.*'
-                exclude '**/service/DataSeedingServiceTest.*'
-                exclude '**/service/BackupServiceTest.*'
-                exclude '**/service/BalanceSheetServiceTest.*'
-                exclude '**/data/local/dao/PenggunaDaoTest.*'
-                exclude '**/data/local/dao/ProdukDaoTest.*'
-                exclude '**/service/AuthServiceTest.*'
-                exclude '**/ui/viewmodel/SettingsViewModelTest.*'
-            }
-            kotlin {
-                exclude '**/ui/screens/**'
-                exclude '**/ui/inventory/**'
-                exclude '**/ui/sales/**'
-                exclude '**/ui/components/**'
-                exclude '**/service/WarehouseServiceTest.*'
-                exclude '**/service/UserManagementServiceTest.*'
-                exclude '**/service/SaleServiceTest.*'
-                exclude '**/service/RestoreServiceTest.*'
-                exclude '**/service/ReportingServiceTest.*'
-                exclude '**/service/ProductServiceTest.*'
-                exclude '**/service/ExpenseServiceTest.*'
-                exclude '**/service/PdfExportServiceTest.*'
-                exclude '**/service/CashManagementServiceTest.*'
-                exclude '**/service/DataSeedingServiceTest.*'
-                exclude '**/service/BackupServiceTest.*'
-                exclude '**/service/BalanceSheetServiceTest.*'
-                exclude '**/data/local/dao/PenggunaDaoTest.*'
-                exclude '**/data/local/dao/ProdukDaoTest.*'
-                exclude '**/service/AuthServiceTest.*'
-                exclude '**/ui/viewmodel/SettingsViewModelTest.*'
-            }
+            pickFirsts += 'META-INF/native-image/reflect-config.json'
+            pickFirsts += 'META-INF/native-image/resource-config.json'
+            pickFirsts += 'META-INF/native-image/native-image.properties'
         }
     }
 }
-
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-    if (name.toLowerCase().contains('unittest')) {
-        exclude('**/ui/screens/**')
-        exclude('**/ui/inventory/**')
-        exclude('**/ui/sales/**')
-        exclude('**/ui/components/**')
-        exclude('**/service/WarehouseServiceTest.*')
-        exclude('**/service/UserManagementServiceTest.*')
-        exclude('**/service/SaleServiceTest.*')
-        exclude('**/service/RestoreServiceTest.*')
-        exclude('**/service/ReportingServiceTest.*')
-        exclude('**/service/ProductServiceTest.*')
-        exclude('**/service/ExpenseServiceTest.*')
-        exclude('**/service/PdfExportServiceTest.*')
-        exclude('**/service/CashManagementServiceTest.*')
-        exclude('**/service/DataSeedingServiceTest.*')
-        exclude('**/service/BackupServiceTest.*')
-        exclude('**/service/BalanceSheetServiceTest.*')
-        exclude('**/data/local/dao/PenggunaDaoTest.*')
-        exclude('**/data/local/dao/ProdukDaoTest.*')
-        exclude('**/service/AuthServiceTest.*')
-        exclude('**/ui/viewmodel/SettingsViewModelTest.*')
-    }
-}
-
-tasks.withType(JavaCompile).configureEach {
-    if (name.toLowerCase().contains('unittest')) {
-        exclude('**/ui/screens/**')
-        exclude('**/ui/inventory/**')
-        exclude('**/ui/sales/**')
-        exclude('**/ui/components/**')
-        exclude('**/service/WarehouseServiceTest.*')
-        exclude('**/service/UserManagementServiceTest.*')
-        exclude('**/service/SaleServiceTest.*')
-        exclude('**/service/RestoreServiceTest.*')
-        exclude('**/service/ReportingServiceTest.*')
-        exclude('**/service/ProductServiceTest.*')
-        exclude('**/service/ExpenseServiceTest.*')
-        exclude('**/service/PdfExportServiceTest.*')
-        exclude('**/service/CashManagementServiceTest.*')
-        exclude('**/service/DataSeedingServiceTest.*')
-        exclude('**/service/BackupServiceTest.*')
-        exclude('**/service/BalanceSheetServiceTest.*')
-        exclude('**/data/local/dao/PenggunaDaoTest.*')
-        exclude('**/data/local/dao/ProdukDaoTest.*')
-        exclude('**/service/AuthServiceTest.*')
-        exclude('**/ui/viewmodel/SettingsViewModelTest.*')
-    }
-}
-
 dependencies {
-    // Enable desugaring for java.time APIs on lower API levels
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
-    implementation 'androidx.core:core-ktx:1.17.0'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.10.0'
-    implementation 'androidx.activity:activity-compose:1.12.2'
-    implementation platform('androidx.compose:compose-bom:2026.01.00')
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.2'
+    implementation 'androidx.activity:activity-compose:1.9.0'
+    implementation platform('androidx.compose:compose-bom:2024.06.00')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.ui:ui-graphics'
     implementation 'androidx.compose.ui:ui-tooling-preview'
     implementation 'androidx.compose.material3:material3'
     implementation 'androidx.compose.material:material-icons-extended'
-    
-    // Compose Navigation
-    implementation 'androidx.navigation:navigation-compose:2.9.6'
-    
-    // Compose LiveData integration
+    implementation 'androidx.navigation:navigation-compose:2.7.7'
     implementation 'androidx.compose.runtime:runtime-livedata'
-    
-    // Room database
-    implementation 'androidx.room:room-runtime:2.8.4'
-    implementation 'androidx.room:room-ktx:2.8.4'
-    kapt 'androidx.room:room-compiler:2.8.4'
-    
-    // Hilt dependency injection
-    implementation 'com.google.dagger:hilt-android:2.59'
-    kapt 'com.google.dagger:hilt-compiler:2.59'
-    implementation 'androidx.hilt:hilt-navigation-compose:1.3.0'
-    
-    // ZXing barcode
-    implementation 'com.google.zxing:core:3.5.4'
+    implementation 'androidx.room:room-runtime:2.6.1'
+    implementation 'androidx.room:room-ktx:2.6.1'
+    ksp 'androidx.room:room-compiler:2.6.1'
+    implementation 'com.google.dagger:hilt-android:2.51.1'
+    ksp 'com.google.dagger:hilt-compiler:2.51.1'
+    implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
+    implementation 'com.google.zxing:core:3.5.3'
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
-    
-    // CameraX
-    def camerax_version = "1.5.2"
-    implementation "androidx.camera:camera-core:${camerax_version}"
-    implementation "androidx.camera:camera-camera2:${camerax_version}"
-    implementation "androidx.camera:camera-lifecycle:${camerax_version}"
-    implementation "androidx.camera:camera-view:${camerax_version}"
-
-    // Bluetooth printing
+    implementation "androidx.camera:camera-core:1.3.4"
+    implementation "androidx.camera:camera-camera2:1.3.4"
+    implementation "androidx.camera:camera-lifecycle:1.3.4"
+    implementation "androidx.camera:camera-view:1.3.4"
     implementation 'com.github.DantSu:ESCPOS-ThermalPrinter-Android:3.4.0'
-    
-    // Encryption
-    // Use the stable version of security-crypto
-    implementation 'androidx.security:security-crypto:1.1.0'
-
-    // Force a newer Gson version (override transitive gson 2.8.9 from tink) to address known issues
-    implementation 'com.google.code.gson:gson:2.13.2'
-
-    // Update Mockito to the latest stable 5.x to pick up fixes
-    testImplementation 'org.mockito:mockito-core:5.21.0'    
-    // JSON serialization
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0'
-    
-    // PDF generation
-    implementation 'com.itextpdf:itext7-core:9.5.0'
-    // Force a newer Gson version (override transitive gson 2.8.9 from tink) to address known issues
-    implementation 'com.google.code.gson:gson:2.13.2'
-    
-    // Testing
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+    implementation 'com.itextpdf:itext7-core:8.0.4'
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:5.21.0'
-    testImplementation 'org.mockito.kotlin:mockito-kotlin:6.2.2'
+    testImplementation 'org.mockito:mockito-core:5.12.0'
+    testImplementation 'org.mockito.kotlin:mockito-kotlin:5.3.1'
     testImplementation 'androidx.arch.core:core-testing:2.2.0'
-    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
-    testImplementation 'org.robolectric:robolectric:4.16.1'
-    testImplementation 'androidx.room:room-testing:2.8.4'
-    testImplementation 'androidx.test:core:1.7.0'
-    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
-    androidTestImplementation platform('androidx.compose:compose-bom:2026.01.00')
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1'
+    testImplementation 'org.robolectric:robolectric:4.12.1'
+    testImplementation 'androidx.room:room-testing:2.6.1'
+    testImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
-    // Additional androidTest dependencies to support integration and Hilt tests
-    androidTestImplementation 'app.cash.turbine:turbine:1.2.1'
-    androidTestImplementation 'com.google.dagger:hilt-android-testing:2.59'
-    kaptAndroidTest 'com.google.dagger:hilt-compiler:2.59'
-    androidTestImplementation 'org.mockito:mockito-android:5.21.0'
-    androidTestImplementation 'androidx.arch.core:core-testing:2.2.0'
-    androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
-    androidTestImplementation 'androidx.test:core:1.7.0'
+    androidTestImplementation 'app.cash.turbine:turbine:1.1.0'
+    androidTestImplementation 'com.google.dagger:hilt-android-testing:2.51.1'
+    kspAndroidTest 'com.google.dagger:hilt-compiler:2.51.1'
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
-}
-
-// JaCoCo test report task
-tasks.register("jacocoTestReport", org.gradle.testing.jacoco.tasks.JacocoReport) {
-    dependsOn("testDebugUnitTest")
-    reports {
-        xml.required.set(true)
-        html.required.set(true)
-    }
-    def fileFilter = ["**/R.class", "**/R\$*.class", "**/*\$ViewInjector*.*", "**/*\$ViewBinder*.*"]
-    def debugTree = fileTree(dir: "$buildDir/intermediates/javac/debug/classes", excludes: fileFilter)
-    def kotlinDebugTree = fileTree(dir: "$buildDir/tmp/kotlin-classes/debug", excludes: fileFilter)
-    classDirectories.setFrom(files([debugTree, kotlinDebugTree]))
-    sourceDirectories.setFrom(files(["src/main/java", "src/main/kotlin"]))
-    executionData.setFrom(files("$buildDir/jacoco/testDebugUnitTest.exec"))
 }

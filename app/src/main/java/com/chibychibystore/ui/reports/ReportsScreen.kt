@@ -177,7 +177,7 @@ private fun ReportTypeSelector(
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
-            containerColor = MaterialTheme.colorScheme.surface
+
         ) {
             ReportType.values().forEach { type ->
                 DropdownMenuItem(

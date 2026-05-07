@@ -2,17 +2,10 @@ package com.chibychibystore.ui.audit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.chibychibystore.data.local.entity.AuditStatus
-import com.chibychibystore.data.local.entity.ItemStokOpname
-import com.chibychibystore.data.local.entity.StokOpname
-import com.chibychibystore.data.local.entity.Produk
-import com.chibychibystore.data.local.entity.Gudang
+import com.chibychibystore.data.local.entity.*
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.StokGudangRepository
-import com.chibychibystore.service.AuthService
-import com.chibychibystore.service.InventoryAuditService
-import com.chibychibystore.service.ProductService
-import com.chibychibystore.service.WarehouseService
+import com.chibychibystore.service.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -70,38 +63,35 @@ class AuditViewModel @Inject constructor(
     private fun loadWarehouses() {
         viewModelScope.launch {
             warehouseService.observeGudangs()
-                .collect { list -> _uiState.update { it.copy(warehouses = list) } }
+                .collect { list ->
+                    _uiState.update { it.copy(warehouses = list) }
+                }
         }
     }
 
     private fun loadProducts() {
         viewModelScope.launch {
-            productService.observeProducts()
-                .collect { list -> _uiState.update { it.copy(products = list) } }
+            productService.observeProduks()
+                .collect { list ->
+                    _uiState.update { it.copy(products = list) }
+                }
         }
     }
 
     fun startNewAudit(warehouseId: Long) {
         viewModelScope.launch {
              _uiState.update { it.copy(isLoading = true) }
-             // Wait for products to be populated before building the audit lines. The
-             // products flow is started asynchronously in `init`, so a quick warehouse
-             // selection could otherwise race ahead and produce an empty audit (no items
-             // to count, allowing the user to "complete" an audit with zero entries).
-             val products = productService.observeProducts().first()
-             _uiState.update { it.copy(products = products) }
-             // Look up the per-warehouse stock for each product so that the expected
-             // quantity reflects the stock in this warehouse (not the global total).
+             val products = productService.observeProduks().first()
              val stocksResult = stokGudangRepository.getStocks(products.map { it.id }, warehouseId)
              val stockMap = if (stocksResult is Result.Success) {
                  stocksResult.data.associate { it.productId to it.quantity }
              } else {
                  emptyMap()
              }
-             val items = products.map { product ->
+             val items = products.map {
                  AuditItemInput(
-                     product = product,
-                     expectedQuantity = stockMap[product.id] ?: 0
+                     product = it,
+                     expectedQuantity = stockMap[it.id] ?: 0
                  )
              }
              _auditItems.value = items
