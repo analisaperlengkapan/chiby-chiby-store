@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.inventory
+import org.robolectric.annotation.Config
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
@@ -113,7 +114,7 @@ class ProductDetailViewModelIntegrationTest : BaseTest() {
         assertEquals("Produk berhasil diperbarui", vmEdit.uiState.value.successMessage)
 
         // Update stock
-        vmEdit.updateStock(10)
+        vmEdit.adjustStock(10)
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals("Stok berhasil diperbarui", vmEdit.uiState.value.successMessage)
 

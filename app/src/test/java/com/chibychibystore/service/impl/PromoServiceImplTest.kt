@@ -1,4 +1,5 @@
 package com.chibychibystore.service.impl
+import org.robolectric.annotation.Config
 
 import com.chibychibystore.data.local.entity.Promotion
 import com.chibychibystore.data.local.entity.PromotionType

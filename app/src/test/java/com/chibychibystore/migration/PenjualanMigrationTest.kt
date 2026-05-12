@@ -1,4 +1,5 @@
 package com.chibychibystore.migration
+import org.robolectric.annotation.Config
 
 import android.content.Context
 import androidx.room.Room
@@ -17,6 +18,7 @@ import androidx.room.migration.Migration
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 @Config(manifest = Config.NONE)
 class PenjualanMigrationTest {
 

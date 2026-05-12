@@ -1,6 +1,7 @@
 package com.chibychibystore.service
+import org.robolectric.annotation.Config
 
-import com.chibychibystore.data.Result
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.Pengeluaran

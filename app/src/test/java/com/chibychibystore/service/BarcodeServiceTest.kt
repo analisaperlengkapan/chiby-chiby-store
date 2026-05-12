@@ -1,4 +1,5 @@
 package com.chibychibystore.service
+import org.robolectric.annotation.Config
 
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.data.model.Result
@@ -20,6 +21,7 @@ import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class BarcodeServiceTest {
 
     @Mock

@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.components.shared
+import org.robolectric.annotation.Config
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star

@@ -1,4 +1,5 @@
 package com.chibychibystore.service
+import org.robolectric.annotation.Config
 
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
@@ -14,6 +15,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 @Config(manifest = Config.NONE)
 class PrinterServiceImplTest {
 

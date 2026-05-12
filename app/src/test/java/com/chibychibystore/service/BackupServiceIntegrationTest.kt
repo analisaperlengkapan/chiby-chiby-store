@@ -1,4 +1,5 @@
 package com.chibychibystore.service
+import org.robolectric.annotation.Config
 
 import android.content.Context
 import org.junit.runner.RunWith
@@ -21,6 +22,7 @@ import com.chibychibystore.service.BackupValidationResult
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 @Config(manifest = Config.NONE)
 class BackupServiceIntegrationTest : BaseTest() {
 

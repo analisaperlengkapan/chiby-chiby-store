@@ -1,4 +1,5 @@
 package com.chibychibystore.service
+import org.robolectric.annotation.Config
 
 import com.chibychibystore.data.local.entity.Kategori
 import com.chibychibystore.data.local.entity.Produk
@@ -164,7 +165,7 @@ class ProductServiceTest {
         `when`(produkRepository.updateProduct(updatedProduct)).thenReturn(updatedProduct)
 
         // When
-        val result = productService.updateStock(productId, additionalStock)
+        val result = productService.adjustStock(productId, additionalStock)
 
         // Then
         assertTrue(result.isSuccess)
@@ -192,7 +193,7 @@ class ProductServiceTest {
         `when`(produkRepository.getProduct(productId)).thenReturn(product)
 
         // When
-        val result = productService.updateStock(productId, reduction)
+        val result = productService.adjustStock(productId, reduction)
 
         // Then
         assertTrue(result.isFailure)

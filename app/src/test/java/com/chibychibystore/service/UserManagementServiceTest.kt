@@ -1,6 +1,7 @@
 package com.chibychibystore.service
+import org.robolectric.annotation.Config
 
-import com.chibychibystore.data.Result
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.data.model.Pengguna
 import com.chibychibystore.repository.PenggunaRepository
 import kotlinx.coroutines.flow.flowOf
@@ -55,8 +56,8 @@ class UserManagementServiceTest {
         val result = userManagementService.getAllUsers()
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertEquals("Database error", error.exception.message)
     }
 
@@ -93,8 +94,8 @@ class UserManagementServiceTest {
         val result = userManagementService.createUser("existing_user", "password123", "CASHIER")
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertTrue(error.exception.message?.contains("sudah ada") == true)
     }
 
@@ -104,8 +105,8 @@ class UserManagementServiceTest {
         val result = userManagementService.createUser("user", "password123", "INVALID_ROLE")
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertTrue(error.exception.message?.contains("role") == true)
     }
 
@@ -115,8 +116,8 @@ class UserManagementServiceTest {
         val result = userManagementService.createUser("user", "123", "CASHIER")
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertTrue(error.exception.message?.contains("password") == true)
     }
 
@@ -152,8 +153,8 @@ class UserManagementServiceTest {
         val result = userManagementService.updateUser(999, "username", "CASHIER")
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertTrue(error.exception.message?.contains("tidak ditemukan") == true)
     }
 
@@ -175,8 +176,8 @@ class UserManagementServiceTest {
         val result = userManagementService.updateUser(1, "existing_username", "CASHIER")
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertTrue(error.exception.message?.contains("sudah ada") == true)
     }
 
@@ -211,8 +212,8 @@ class UserManagementServiceTest {
         val result = userManagementService.deleteUser(999)
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertTrue(error.exception.message?.contains("tidak ditemukan") == true)
     }
 
@@ -232,8 +233,8 @@ class UserManagementServiceTest {
         val result = userManagementService.deleteUser(1)
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertTrue(error.exception.message?.contains("OWNER") == true)
     }
 
@@ -268,8 +269,8 @@ class UserManagementServiceTest {
         val result = userManagementService.changePassword(999, "new_password")
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertTrue(error.exception.message?.contains("tidak ditemukan") == true)
     }
 
@@ -289,8 +290,8 @@ class UserManagementServiceTest {
         val result = userManagementService.changePassword(1, "123")
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertTrue(error.exception.message?.contains("password") == true)
     }
 
@@ -325,8 +326,8 @@ class UserManagementServiceTest {
         val result = userManagementService.getUserById(999)
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertTrue(error.exception.message?.contains("tidak ditemukan") == true)
     }
 

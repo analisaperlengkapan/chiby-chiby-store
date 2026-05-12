@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.expense
+import org.robolectric.annotation.Config
 
 import com.chibychibystore.data.local.entity.KategoriPengeluaran
 import com.chibychibystore.data.local.entity.Pengeluaran

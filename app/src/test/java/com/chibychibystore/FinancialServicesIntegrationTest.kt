@@ -1,4 +1,5 @@
 package com.chibychibystore
+import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -19,12 +20,13 @@ import com.chibychibystore.testutils.BaseTest
 import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 @Config(manifest = Config.NONE)
 class FinancialServicesIntegrationTest : BaseTest() {
 
     private lateinit var db: ChibyChibyDatabase
     private lateinit var penggunaRepository: PenggunaRepository
-    private lateinit var sessionRepository: UserSessionRepository
+    private lateinit var sessionRepository: PenggunaSessionRepository
     private lateinit var authService: AuthServiceImpl
 
     private lateinit var pengeluaranRepository: PengeluaranRepository
@@ -46,7 +48,7 @@ class FinancialServicesIntegrationTest : BaseTest() {
 
         // Repositories
         penggunaRepository = PenggunaRepository(db.penggunaDao())
-        sessionRepository = UserSessionRepository(db.userSessionDao())
+        sessionRepository = PenggunaSessionRepository(db.penggunaSessionDao())
         pengeluaranRepository = PengeluaranRepository(db.pengeluaranDao())
         penjualanRepository = PenjualanRepository(db.penjualanDao(), db.itemPenjualanDao())
         pembelianRepository = PembelianRepository(db.pembelianDao())
@@ -107,7 +109,7 @@ class FinancialServicesIntegrationTest : BaseTest() {
         TestDataBuilder.testSaleItems.forEach { item -> db.itemPenjualanDao().insertItemPenjualan(item) }
 
         // Insert expenses
-        TestDataBuilder.testExpenses.forEach { expense -> db.pengeluaranDao().insertPengeluaran(expense) }
+        TestDataBuilder.testExpenses.forEach { expense -> db.pengeluaranDao().createPengeluaran(expense) }
     }
 
     @Test

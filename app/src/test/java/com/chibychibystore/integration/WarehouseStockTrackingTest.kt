@@ -1,4 +1,5 @@
 package com.chibychibystore.integration
+import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -25,6 +26,7 @@ import com.chibychibystore.service.impl.PromoServiceImpl
 import com.chibychibystore.service.printer.PrinterService
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class WarehouseStockTrackingTest : BaseTest() {
 
     private lateinit var database: ChibyChibyDatabase
@@ -52,10 +54,10 @@ class WarehouseStockTrackingTest : BaseTest() {
         stokGudangRepository = StokGudangRepository(database.stokGudangDao(), database.produkDao())
         penjualanRepository = PenjualanRepository(database.penjualanDao(), database.itemPenjualanDao())
         itemPenjualanRepository = ItemPenjualanRepository(database.itemPenjualanDao())
-        val userSessionRepository = UserSessionRepository(database.userSessionDao())
+        val penggunaSessionRepository = PenggunaSessionRepository(database.penggunaSessionDao())
 
         // Mock AuthService to bypass permissions
-        authService = Mockito.spy(AuthServiceImpl(database.penggunaDao(), userSessionRepository))
+        authService = Mockito.spy(AuthServiceImpl(database.penggunaDao(), penggunaSessionRepository))
         runBlocking {
             Mockito.doReturn(true).`when`(authService).hasPermission(Mockito.anyString())
         }
@@ -64,7 +66,7 @@ class WarehouseStockTrackingTest : BaseTest() {
         runBlocking {
             val user = Pengguna(id = 1L, username = "testuser", role = Role.OWNER, passwordHash = "hash")
             database.penggunaDao().insertPengguna(user)
-            database.userSessionDao().insertSession(UserSession(userId = 1L))
+            database.penggunaSessionDao().insertSession(PenggunaSession(userId = 1L))
         }
 
         warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, stokGudangRepository, authService, database)

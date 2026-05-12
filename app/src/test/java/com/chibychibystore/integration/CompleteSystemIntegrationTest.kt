@@ -1,4 +1,5 @@
 package com.chibychibystore.integration
+import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -20,21 +21,22 @@ import java.util.Date
 
 /**
  * Complete System Integration Test
- * 
+ *
  * Test ini mensimulasikan skenario penggunaan aplikasi secara lengkap:
  * 1. Login user
  * 2. Setup inventory (kategori, gudang, produk)
  * 3. Proses penjualan
  * 4. Generate laporan
  * 5. Backup data
- * 
+ *
  * Memastikan semua modul bekerja bersama dengan baik.
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class CompleteSystemIntegrationTest : BaseTest() {
 
     private lateinit var database: ChibyChibyDatabase
-    
+
     // Repositories
     private lateinit var penggunaRepository: PenggunaRepository
     private lateinit var kategoriRepository: KategoriRepository
@@ -42,9 +44,9 @@ class CompleteSystemIntegrationTest : BaseTest() {
     private lateinit var produkRepository: ProdukRepository
     private lateinit var penjualanRepository: PenjualanRepository
     private lateinit var itemPenjualanRepository: ItemPenjualanRepository
-    private lateinit var userSessionRepository: UserSessionRepository
+    private lateinit var penggunaSessionRepository: PenggunaSessionRepository
     private lateinit var stokGudangRepository: StokGudangRepository
-    
+
     // Services
     private lateinit var authService: AuthService
     private lateinit var productService: ProductService
@@ -66,11 +68,11 @@ class CompleteSystemIntegrationTest : BaseTest() {
         produkRepository = ProdukRepository(database.produkDao())
         penjualanRepository = PenjualanRepository(database.penjualanDao(), database.itemPenjualanDao())
         itemPenjualanRepository = ItemPenjualanRepository(database.itemPenjualanDao())
-        userSessionRepository = UserSessionRepository(database.userSessionDao())
+        penggunaSessionRepository = PenggunaSessionRepository(database.penggunaSessionDao())
         stokGudangRepository = StokGudangRepository(database.stokGudangDao(), database.produkDao())
 
         // Initialize services
-        authService = AuthServiceImpl(database.penggunaDao(), userSessionRepository)
+        authService = AuthServiceImpl(database.penggunaDao(), penggunaSessionRepository)
         productService = ProductServiceImpl(produkRepository, stokGudangRepository, authService)
         warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, stokGudangRepository, authService, database)
         val printerStub = com.chibychibystore.testutils.TestPrinterService()
@@ -257,7 +259,7 @@ class CompleteSystemIntegrationTest : BaseTest() {
         // Sales history via getSales
         val salesHistoryResult = saleService.getPenjualanByRentangTanggal()
         println("[TEST] STEP 9: Check Sales History - done")
-        
+
         // ===== STEP 10: Check Low Stock Products =====
         val lowStockResult = productService.getLowStockProduks()
         assertTrue(lowStockResult.isSuccess)
@@ -265,11 +267,11 @@ class CompleteSystemIntegrationTest : BaseTest() {
         // Laptop should be in low stock (4 < minStok 2 is false, but close)
         assertNotNull(lowStockProducts)
         println("[TEST] STEP 10: Low stock checked")
-        
+
         // ===== STEP 11: Transfer Stock Between Warehouses =====
         // Login as owner again to have MANAGE_WAREHOUSES permission
         authService.login("owner", "owner123")
-        
+
         // Transfer 2 keyboards from Gudang Utama to Gudang Cabang
         val transferResult = warehouseService.transferStok(
             produkId = 3L,

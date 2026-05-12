@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.viewmodel
+import org.robolectric.annotation.Config
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.chibychibystore.data.local.entity.Pengguna
@@ -27,6 +28,7 @@ import javax.inject.Inject
 
 @HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 @Config(manifest = Config.NONE)
 @ExperimentalCoroutinesApi
 class SettingsViewModelTest {

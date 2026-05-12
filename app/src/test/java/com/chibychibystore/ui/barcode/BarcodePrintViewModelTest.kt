@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.barcode
+import org.robolectric.annotation.Config
 
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.service.ProductService

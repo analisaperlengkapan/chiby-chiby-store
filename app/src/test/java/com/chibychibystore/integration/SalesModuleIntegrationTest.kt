@@ -1,4 +1,5 @@
 package com.chibychibystore.integration
+import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -32,6 +33,7 @@ import java.util.Date
  * - Riwayat penjualan
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class SalesModuleIntegrationTest : BaseTest() {
 
     private lateinit var database: ChibyChibyDatabase

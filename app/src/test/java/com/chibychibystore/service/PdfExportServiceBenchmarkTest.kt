@@ -1,4 +1,5 @@
 package com.chibychibystore.service
+import org.robolectric.annotation.Config
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
@@ -19,6 +20,7 @@ import java.time.LocalDate
  * Benchmark test for PdfExportService to measure export duration.
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class PdfExportServiceBenchmarkTest {
 
     private lateinit var context: Context

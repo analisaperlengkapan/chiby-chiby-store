@@ -1,4 +1,5 @@
 package com.chibychibystore.testutils
+import org.robolectric.annotation.Config
 
 import org.junit.Rule
 import org.junit.rules.Timeout

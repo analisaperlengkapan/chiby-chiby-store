@@ -1,6 +1,7 @@
 package com.chibychibystore.service
+import org.robolectric.annotation.Config
 
-import com.chibychibystore.data.Result
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.repository.ProdukRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi

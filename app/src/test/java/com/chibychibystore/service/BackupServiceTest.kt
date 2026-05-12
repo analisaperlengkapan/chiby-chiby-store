@@ -1,7 +1,8 @@
 package com.chibychibystore.service
+import org.robolectric.annotation.Config
 
 import android.content.Context
-import com.chibychibystore.data.Result
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.data.model.*
 import com.chibychibystore.repository.*
 import kotlinx.coroutines.Dispatchers
@@ -166,8 +167,8 @@ class BackupServiceTest {
         val result = backupService.createBackup()
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertEquals("Database error", error.exception.message)
     }
 
@@ -302,8 +303,8 @@ class BackupServiceTest {
         val result = backupService.deleteBackup(mockBackupFile)
 
         // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
+        assertTrue(result is Result.Failure)
+        val error = result as Result.Failure
         assertTrue(error.exception.message?.contains("tidak ada") == true)
     }
 }

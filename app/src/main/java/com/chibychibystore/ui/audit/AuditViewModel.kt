@@ -24,8 +24,8 @@ data class AuditUiState(
 data class AuditItemInput(
     val product: Produk,
     val expectedQuantity: Int,
-    var actualQuantity: Int = expectedQuantity,
-    var reason: String? = null
+    val actualQuantity: Int,
+    val reason: String? = null
 )
 
 @HiltViewModel
@@ -91,7 +91,8 @@ class AuditViewModel @Inject constructor(
              val items = products.map {
                  AuditItemInput(
                      product = it,
-                     expectedQuantity = stockMap[it.id] ?: 0
+                     expectedQuantity = stockMap[it.id] ?: 0,
+                     actualQuantity = stockMap[it.id] ?: 0
                  )
              }
              _auditItems.value = items
@@ -113,7 +114,7 @@ class AuditViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             val auditor = authService.getCurrentUser()
             if (auditor == null) {
-                _uiState.update { it.copy(isLoading = false, error = "User not logged in") }
+                _uiState.update { it.copy(isLoading = false, error = "Login required") }
                 return@launch
             }
 

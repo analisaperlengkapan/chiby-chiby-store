@@ -1,4 +1,5 @@
 package com.chibychibystore.ui.sales
+import org.robolectric.annotation.Config
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.chibychibystore.data.local.entity.PaymentMethod
@@ -54,7 +55,7 @@ class SalesHistoryViewModelTest {
             createTestSale(1L, 100000.0),
             createTestSale(2L, 50000.0)
         )
-        `when`(saleService.observeSales()).thenReturn(flowOf(sales))
+        `when`(saleService.getAllPenjualan()).thenReturn(flowOf(sales))
 
         // When
         viewModel.loadSales()
@@ -70,7 +71,7 @@ class SalesHistoryViewModelTest {
     fun `loadSales failure updates state with error`() = runTest {
         // Given
         val errorMessage = "Database error"
-        `when`(saleService.observeSales()).thenThrow(RuntimeException(errorMessage))
+        `when`(saleService.getAllPenjualan()).thenThrow(RuntimeException(errorMessage))
 
         // When
         viewModel.loadSales()
@@ -89,7 +90,7 @@ class SalesHistoryViewModelTest {
             createTestSale(1L, 100000.0), // Will match "CASH"
             createTestSale(2L, 50000.0)   // Will match "CARD"
         )
-        `when`(saleService.observeSales()).thenReturn(flowOf(sales))
+        `when`(saleService.getAllPenjualan()).thenReturn(flowOf(sales))
         viewModel.loadSales()
 
         // When
@@ -157,7 +158,7 @@ class SalesHistoryViewModelTest {
     fun `clearFilters resets all filters`() = runTest {
         // Given
         val sales = listOf(createTestSale(1L, 100000.0))
-        `when`(saleService.observeSales()).thenReturn(flowOf(sales))
+        `when`(saleService.getAllPenjualan()).thenReturn(flowOf(sales))
         viewModel.loadSales()
         viewModel.updateSearchQuery("test")
         viewModel.setStartDate(Date())
@@ -178,7 +179,7 @@ class SalesHistoryViewModelTest {
         // Given
         val saleId = 1L
         val saleWithItems = createTestSaleWithItems(saleId)
-        `when`(saleService.getSale(saleId)).thenReturn(Result.Success(saleWithItems))
+        `when`(saleService.getPenjualanById(saleId)).thenReturn(Result.Success(saleWithItems))
 
         // When
         viewModel.loadReceipt(saleId)
@@ -194,7 +195,7 @@ class SalesHistoryViewModelTest {
         // Given
         val saleId = 1L
         val errorMessage = "Sale not found"
-        `when`(saleService.getSale(saleId)).thenReturn(Result.Error(errorMessage))
+        `when`(saleService.getPenjualanById(saleId)).thenReturn(Result.Failure(errorMessage))
 
         // When
         viewModel.loadReceipt(saleId)
@@ -210,7 +211,7 @@ class SalesHistoryViewModelTest {
     fun `hideReceiptDialog updates state correctly`() = runTest {
         // Given
         val saleWithItems = createTestSaleWithItems(1L)
-        `when`(saleService.getSale(1L)).thenReturn(Result.Success(saleWithItems))
+        `when`(saleService.getPenjualanById(1L)).thenReturn(Result.Success(saleWithItems))
         viewModel.loadReceipt(1L)
 
         // When
@@ -226,7 +227,7 @@ class SalesHistoryViewModelTest {
     fun `clearError resets error state`() = runTest {
         // Given
         viewModel.loadSales() // This will trigger error if service throws
-        `when`(saleService.observeSales()).thenThrow(RuntimeException("Test error"))
+        `when`(saleService.getAllPenjualan()).thenThrow(RuntimeException("Test error"))
         viewModel.loadSales()
 
         // When
