@@ -1,5 +1,4 @@
 package com.chibychibystore.service.impl
-import org.robolectric.annotation.Config
 
 import android.content.Context
 import com.chibychibystore.data.local.database.ChibyChibyDatabase

@@ -1,5 +1,4 @@
 package com.chibychibystore.ui.inventory
-import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider

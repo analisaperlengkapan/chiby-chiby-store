@@ -1,5 +1,4 @@
 package com.chibychibystore.data.local.dao
-import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider

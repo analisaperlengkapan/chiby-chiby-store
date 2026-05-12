@@ -1,5 +1,4 @@
 package com.chibychibystore.service.impl
-import org.robolectric.annotation.Config
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
@@ -20,12 +19,11 @@ import org.robolectric.annotation.Config
 import java.util.Date
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 @Config(manifest = Config.NONE)
 class RestoreServiceOptimizationTest {
 
     @Mock private lateinit var database: ChibyChibyDatabase
-    @Mock private lateinit var penggunaRepository: PenggunaRepository
+    @Mock private lateinit var userRepository: PenggunaRepository
     @Mock private lateinit var categoryRepository: KategoriRepository
     @Mock private lateinit var warehouseRepository: GudangRepository
     @Mock private lateinit var productRepository: ProdukRepository
@@ -45,7 +43,7 @@ class RestoreServiceOptimizationTest {
         context = ApplicationProvider.getApplicationContext()
 
         restoreService = RestoreServiceImpl(
-            context, database, penggunaRepository, categoryRepository, warehouseRepository,
+            context, database, userRepository, categoryRepository, warehouseRepository,
             productRepository, supplierRepository, saleRepository, saleItemRepository,
             purchaseRepository, purchaseItemRepository, expenseRepository
         )

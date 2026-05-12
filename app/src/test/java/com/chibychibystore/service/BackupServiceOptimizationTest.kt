@@ -1,5 +1,4 @@
 package com.chibychibystore.service
-import org.robolectric.annotation.Config
 
 import android.content.Context
 import com.chibychibystore.data.local.entity.*
@@ -31,7 +30,7 @@ class BackupServiceOptimizationTest {
 
     @Mock private lateinit var context: Context
 
-    @Mock private lateinit var penggunaRepository: PenggunaRepository
+    @Mock private lateinit var userRepository: PenggunaRepository
     @Mock private lateinit var categoryRepository: KategoriRepository
     @Mock private lateinit var warehouseRepository: GudangRepository
     @Mock private lateinit var productRepository: ProdukRepository
@@ -55,7 +54,7 @@ class BackupServiceOptimizationTest {
         `when`(context.cacheDir).thenReturn(cacheDir)
 
         // Mock Repositories to return empty flows by default
-        `when`(penggunaRepository.getAllUsers()).thenReturn(flowOf(emptyList()))
+        `when`(userRepository.getAllUsers()).thenReturn(flowOf(emptyList()))
         `when`(categoryRepository.getAllKategori()).thenReturn(flowOf(emptyList()))
         `when`(warehouseRepository.getAllGudang()).thenReturn(flowOf(emptyList()))
         `when`(productRepository.getAllProduk()).thenReturn(flowOf(emptyList()))
@@ -68,7 +67,7 @@ class BackupServiceOptimizationTest {
 
         backupService = BackupServiceImpl(
             context,
-            penggunaRepository,
+            userRepository,
             categoryRepository,
             warehouseRepository,
             productRepository,
@@ -89,7 +88,7 @@ class BackupServiceOptimizationTest {
     fun `createBackup should create a valid backup file with streamed content`() = runTest {
         // Given
         val user = Pengguna(id = 1, username = "test", passwordHash = "hash", role = Role.OWNER)
-        `when`(penggunaRepository.getAllUsers()).thenReturn(flowOf(listOf(user)))
+        `when`(userRepository.getAllUsers()).thenReturn(flowOf(listOf(user)))
 
         // When
         val result = backupService.createBackup()
@@ -114,7 +113,7 @@ class BackupServiceOptimizationTest {
     fun `validateBackup should pass for valid compact backup`() = runTest {
          // Given
         val user = Pengguna(id = 1, username = "test", passwordHash = "hash", role = Role.OWNER)
-        `when`(penggunaRepository.getAllUsers()).thenReturn(flowOf(listOf(user)))
+        `when`(userRepository.getAllUsers()).thenReturn(flowOf(listOf(user)))
         val result = backupService.createBackup()
         val backupFile = File((result as Result.Success).data.filePath)
 

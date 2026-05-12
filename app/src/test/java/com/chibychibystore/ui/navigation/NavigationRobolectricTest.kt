@@ -1,5 +1,4 @@
 package com.chibychibystore.ui.navigation
-import org.robolectric.annotation.Config
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

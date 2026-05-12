@@ -1,5 +1,4 @@
 package com.chibychibystore
-import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -20,7 +19,6 @@ import com.chibychibystore.testutils.BaseTest
 import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 @Config(manifest = Config.NONE)
 class FinancialServicesIntegrationTest : BaseTest() {
 
@@ -109,7 +107,7 @@ class FinancialServicesIntegrationTest : BaseTest() {
         TestDataBuilder.testSaleItems.forEach { item -> db.itemPenjualanDao().insertItemPenjualan(item) }
 
         // Insert expenses
-        TestDataBuilder.testExpenses.forEach { expense -> db.pengeluaranDao().createPengeluaran(expense) }
+        TestDataBuilder.testExpenses.forEach { expense -> db.pengeluaranDao().insertPengeluaran(expense) }
     }
 
     @Test

@@ -1,5 +1,4 @@
 package com.chibychibystore.ui.components.forms
-import org.robolectric.annotation.Config
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled

@@ -1,5 +1,4 @@
 package com.chibychibystore.integration
-import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -36,7 +35,6 @@ import java.util.Date
  * - Business logic
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 class InventoryModuleIntegrationTest : BaseTest() {
 
     private lateinit var database: ChibyChibyDatabase
@@ -128,7 +126,7 @@ class InventoryModuleIntegrationTest : BaseTest() {
         // 5. Update stok - use actual product id
         val createdProducts = produkRepository.getAllProduk().first()
         val existingProduct = createdProducts.firstOrNull() ?: error("No product found")
-        val updateRes = productService.adjustStock(existingProduct.id.toString(), 15)
+        val updateRes = productService.updateStock(existingProduct.id.toString(), 15)
         assertTrue(updateRes.isSuccess)
 
         val retrievedProduct = produkRepository.getProdukById(existingProduct.id).getOrNull()

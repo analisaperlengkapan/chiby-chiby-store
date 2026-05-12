@@ -1,5 +1,4 @@
 package com.chibychibystore.service
-import org.robolectric.annotation.Config
 
 import android.content.Context
 import androidx.room.Room
@@ -26,7 +25,6 @@ import java.util.Date
 import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 @Config(manifest = Config.NONE)
 class ReportingServiceIntegrationTest : BaseTest() {
 

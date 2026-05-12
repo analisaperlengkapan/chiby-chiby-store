@@ -312,7 +312,7 @@ fun ExpenseFilterDialog(
 
                     OutlinedTextField(
                         value = if (startDate != null && endDate != null) {
-                            "${dateRangeFormatter.format(startDate)} - ${dateRangeFormatter.format(endDate)}"
+                            "${startDate?.let { dateRangeFormatter.format(it) } ?: ""} - ${endDate?.let { dateRangeFormatter.format(it) } ?: ""}"
                         } else {
                             "Pilih Tanggal"
                         },

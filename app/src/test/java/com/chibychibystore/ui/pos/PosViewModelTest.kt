@@ -1,5 +1,4 @@
 package com.chibychibystore.ui.pos
-import org.robolectric.annotation.Config
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.chibychibystore.data.local.entity.Penjualan

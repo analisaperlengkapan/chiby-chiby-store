@@ -1,5 +1,4 @@
 package com.chibychibystore.service.impl
-import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.room.withTransaction
@@ -37,7 +36,6 @@ import org.robolectric.RobolectricTestRunner
 import java.util.Date
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 class SaleServiceImplTest {
 
     private lateinit var db: ChibyChibyDatabase

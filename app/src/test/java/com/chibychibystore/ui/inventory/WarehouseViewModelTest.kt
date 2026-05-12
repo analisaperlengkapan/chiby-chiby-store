@@ -1,5 +1,4 @@
 package com.chibychibystore.ui.inventory
-import org.robolectric.annotation.Config
 
 import app.cash.turbine.test
 import com.chibychibystore.data.local.entity.Gudang

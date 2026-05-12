@@ -1,5 +1,4 @@
 package com.chibychibystore.service
-import org.robolectric.annotation.Config
 
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.PaymentMethod

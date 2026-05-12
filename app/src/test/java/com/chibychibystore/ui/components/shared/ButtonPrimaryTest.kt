@@ -1,5 +1,4 @@
 package com.chibychibystore.ui.components.shared
-import org.robolectric.annotation.Config
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule

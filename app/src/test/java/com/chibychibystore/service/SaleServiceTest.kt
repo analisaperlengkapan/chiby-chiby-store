@@ -1,7 +1,6 @@
 package com.chibychibystore.service
-import org.robolectric.annotation.Config
 
-import com.chibychibystore.data.model.Result
+import com.chibychibystore.data.Result
 import com.chibychibystore.data.model.Penjualan
 import com.chibychibystore.data.model.ItemPenjualan
 import com.chibychibystore.data.model.Produk
@@ -115,8 +114,8 @@ class SaleServiceTest {
         val result = saleService.createSale(sale)
 
         // Then
-        assertTrue(result is Result.Failure)
-        val error = result as Result.Failure
+        assertTrue(result is Result.Error)
+        val error = result as Result.Error
         assertTrue(error.exception.message?.contains("stok tidak mencukupi") == true)
     }
 
@@ -140,8 +139,8 @@ class SaleServiceTest {
         val result = saleService.createSale(sale)
 
         // Then
-        assertTrue(result is Result.Failure)
-        val error = result as Result.Failure
+        assertTrue(result is Result.Error)
+        val error = result as Result.Error
         assertTrue(error.exception.message?.contains("tidak ditemukan") == true)
     }
 
@@ -269,8 +268,8 @@ class SaleServiceTest {
         val result = saleService.refundSale(saleId)
 
         // Then
-        assertTrue(result is Result.Failure)
-        val error = result as Result.Failure
+        assertTrue(result is Result.Error)
+        val error = result as Result.Error
         assertTrue(error.exception.message?.contains("tidak ditemukan") == true)
     }
 
@@ -322,8 +321,8 @@ class SaleServiceTest {
         val result = saleService.cancelSale(saleId)
 
         // Then
-        assertTrue(result is Result.Failure)
-        val error = result as Result.Failure
+        assertTrue(result is Result.Error)
+        val error = result as Result.Error
         assertTrue(error.exception.message?.contains("tidak ditemukan") == true)
     }
 
@@ -353,8 +352,8 @@ class SaleServiceTest {
         val result = saleService.createSale(sale)
 
         // Then
-        assertTrue(result is Result.Failure)
-        val error = result as Result.Failure
+        assertTrue(result is Result.Error)
+        val error = result as Result.Error
         assertTrue(error.exception.message?.contains("metode pembayaran") == true)
     }
 
@@ -373,8 +372,8 @@ class SaleServiceTest {
         val result = saleService.createSale(sale)
 
         // Then
-        assertTrue(result is Result.Failure)
-        val error = result as Result.Failure
+        assertTrue(result is Result.Error)
+        val error = result as Result.Error
         assertTrue(error.exception.message?.contains("item penjualan") == true)
     }
 }

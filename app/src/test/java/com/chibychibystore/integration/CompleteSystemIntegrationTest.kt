@@ -1,5 +1,4 @@
 package com.chibychibystore.integration
-import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -32,7 +31,6 @@ import java.util.Date
  * Memastikan semua modul bekerja bersama dengan baik.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 class CompleteSystemIntegrationTest : BaseTest() {
 
     private lateinit var database: ChibyChibyDatabase
@@ -44,7 +42,7 @@ class CompleteSystemIntegrationTest : BaseTest() {
     private lateinit var produkRepository: ProdukRepository
     private lateinit var penjualanRepository: PenjualanRepository
     private lateinit var itemPenjualanRepository: ItemPenjualanRepository
-    private lateinit var penggunaSessionRepository: PenggunaSessionRepository
+    private lateinit var userSessionRepository: PenggunaSessionRepository
     private lateinit var stokGudangRepository: StokGudangRepository
 
     // Services
@@ -68,11 +66,11 @@ class CompleteSystemIntegrationTest : BaseTest() {
         produkRepository = ProdukRepository(database.produkDao())
         penjualanRepository = PenjualanRepository(database.penjualanDao(), database.itemPenjualanDao())
         itemPenjualanRepository = ItemPenjualanRepository(database.itemPenjualanDao())
-        penggunaSessionRepository = PenggunaSessionRepository(database.penggunaSessionDao())
+        userSessionRepository = PenggunaSessionRepository(database.penggunaSessionDao())
         stokGudangRepository = StokGudangRepository(database.stokGudangDao(), database.produkDao())
 
         // Initialize services
-        authService = AuthServiceImpl(database.penggunaDao(), penggunaSessionRepository)
+        authService = AuthServiceImpl(database.penggunaDao(), userSessionRepository)
         productService = ProductServiceImpl(produkRepository, stokGudangRepository, authService)
         warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, stokGudangRepository, authService, database)
         val printerStub = com.chibychibystore.testutils.TestPrinterService()

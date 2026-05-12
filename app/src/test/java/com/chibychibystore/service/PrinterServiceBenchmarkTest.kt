@@ -1,5 +1,4 @@
 package com.chibychibystore.service
-import org.robolectric.annotation.Config
 
 import android.bluetooth.BluetoothAdapter
 import android.content.Context

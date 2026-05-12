@@ -1,5 +1,4 @@
 package com.chibychibystore.repository
-import org.robolectric.annotation.Config
 
 import com.chibychibystore.data.local.dao.GudangDao
 import com.chibychibystore.data.local.dao.ProdukDao

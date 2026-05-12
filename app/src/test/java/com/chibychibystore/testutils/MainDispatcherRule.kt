@@ -1,6 +1,4 @@
 package com.chibychibystore.testutils
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.Config
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

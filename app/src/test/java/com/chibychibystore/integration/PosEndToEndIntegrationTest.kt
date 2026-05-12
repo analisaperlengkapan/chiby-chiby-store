@@ -1,5 +1,4 @@
 package com.chibychibystore.integration
-import org.robolectric.annotation.Config
 
 import android.content.Context
 import androidx.room.Room
@@ -41,7 +40,6 @@ import com.chibychibystore.testutils.BaseTest
 import java.util.Date
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 @Config(manifest = Config.NONE)
 class PosEndToEndIntegrationTest : BaseTest() {
 

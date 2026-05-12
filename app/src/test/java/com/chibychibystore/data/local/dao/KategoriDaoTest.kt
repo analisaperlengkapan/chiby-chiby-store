@@ -1,5 +1,4 @@
 package com.chibychibystore.data.local.dao
-import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -21,7 +20,6 @@ import java.util.Date
  * Memastikan operasi CRUD pada tabel kategori berfungsi dengan benar.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 class KategoriDaoTest {
 
     private lateinit var database: ChibyChibyDatabase

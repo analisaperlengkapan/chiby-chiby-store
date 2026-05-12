@@ -1,5 +1,4 @@
 package com.chibychibystore.service
-import org.robolectric.annotation.Config
 
 import android.content.Context
 import androidx.room.Room
@@ -23,7 +22,6 @@ import java.util.Date
 import kotlin.system.measureTimeMillis
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 @Config(manifest = Config.NONE)
 class ReportingServiceBenchmarkTest : BaseTest() {
 

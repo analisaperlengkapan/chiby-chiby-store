@@ -1,5 +1,4 @@
 package com.chibychibystore.ui.inventory
-import org.robolectric.annotation.Config
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
@@ -208,12 +207,12 @@ class ProductDetailViewModelTest {
 
         `when`(savedStateHandle.get<String>("productId")).thenReturn(productId)
         `when`(productService.getProduct(productId)).thenReturn(Result.success(product))
-        `when`(productService.adjustStock(productId, quantity)).thenReturn(Result.success(Unit))
+        `when`(productService.updateStock(productId, quantity)).thenReturn(Result.success(Unit))
 
         viewModel = ProductDetailViewModel(productService, savedStateHandle)
 
         // When
-        viewModel.adjustStock(quantity)
+        viewModel.updateStock(quantity)
 
         // Then
         viewModel.uiState.test {
@@ -225,7 +224,7 @@ class ProductDetailViewModelTest {
             assertEquals("Stok berhasil diperbarui", updatedState.successMessage)
         }
 
-        verify(productService).adjustStock(productId, quantity)
+        verify(productService).updateStock(productId, quantity)
         verify(productService, times(2)).getProduct(productId) // Initial load + reload after update
     }
 

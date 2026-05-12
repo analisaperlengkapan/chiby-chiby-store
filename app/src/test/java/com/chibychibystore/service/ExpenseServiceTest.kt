@@ -1,7 +1,6 @@
 package com.chibychibystore.service
-import org.robolectric.annotation.Config
 
-import com.chibychibystore.data.model.Result
+import com.chibychibystore.data.Result
 import com.chibychibystore.data.local.entity.ExpenseCategory
 import com.chibychibystore.data.local.entity.Pengeluaran
 import com.chibychibystore.repository.PengeluaranRepository
@@ -61,7 +60,7 @@ class ExpenseServiceTest {
         // Given
         `when`(authService.getCurrentUser()).thenReturn(testUser)
         `when`(authService.hasPermission(anyString())).thenReturn(true)
-        `when`(pengeluaranRepository.createPengeluaran(any())).thenReturn(Result.Success(1L))
+        `when`(pengeluaranRepository.insertPengeluaran(any())).thenReturn(Result.Success(1L))
 
         // When
         val result = expenseService.createExpense(
@@ -74,7 +73,7 @@ class ExpenseServiceTest {
         // Then
         assertTrue(result is Result.Success)
         assertEquals(1L, (result as Result.Success).data)
-        verify(pengeluaranRepository).createPengeluaran(any())
+        verify(pengeluaranRepository).insertPengeluaran(any())
     }
 
     @Test
@@ -90,8 +89,8 @@ class ExpenseServiceTest {
         )
 
         // Then
-        assertTrue(result is Result.Failure)
-        assertEquals("User tidak terautentikasi", (result as Result.Failure).message)
+        assertTrue(result is Result.Error)
+        assertEquals("User tidak terautentikasi", (result as Result.Error).message)
     }
 
     @Test
@@ -107,8 +106,8 @@ class ExpenseServiceTest {
         )
 
         // Then
-        assertTrue(result is Result.Failure)
-        assertEquals("Jumlah pengeluaran harus lebih dari 0", (result as Result.Failure).message)
+        assertTrue(result is Result.Error)
+        assertEquals("Jumlah pengeluaran harus lebih dari 0", (result as Result.Error).message)
     }
 
     @Test
@@ -148,8 +147,8 @@ class ExpenseServiceTest {
         )
 
         // Then
-        assertTrue(result is Result.Failure)
-        assertEquals("Tidak memiliki izin untuk mengedit pengeluaran", (result as Result.Failure).message)
+        assertTrue(result is Result.Error)
+        assertEquals("Tidak memiliki izin untuk mengedit pengeluaran", (result as Result.Error).message)
     }
 
     @Test

@@ -1,7 +1,4 @@
 package com.chibychibystore.ui.screens
-import org.robolectric.annotation.Config
-import com.chibychibystore.ui.dashboard.DashboardViewModel
-import com.chibychibystore.ui.dashboard.DashboardUiState
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule

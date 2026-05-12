@@ -1,5 +1,4 @@
 package com.chibychibystore.testutils
-import org.robolectric.annotation.Config
 
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.service.printer.PrinterService

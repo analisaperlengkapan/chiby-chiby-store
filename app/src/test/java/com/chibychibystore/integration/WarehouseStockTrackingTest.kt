@@ -1,5 +1,4 @@
 package com.chibychibystore.integration
-import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -26,7 +25,6 @@ import com.chibychibystore.service.impl.PromoServiceImpl
 import com.chibychibystore.service.printer.PrinterService
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 class WarehouseStockTrackingTest : BaseTest() {
 
     private lateinit var database: ChibyChibyDatabase
@@ -54,10 +52,10 @@ class WarehouseStockTrackingTest : BaseTest() {
         stokGudangRepository = StokGudangRepository(database.stokGudangDao(), database.produkDao())
         penjualanRepository = PenjualanRepository(database.penjualanDao(), database.itemPenjualanDao())
         itemPenjualanRepository = ItemPenjualanRepository(database.itemPenjualanDao())
-        val penggunaSessionRepository = PenggunaSessionRepository(database.penggunaSessionDao())
+        val userSessionRepository = PenggunaSessionRepository(database.penggunaSessionDao())
 
         // Mock AuthService to bypass permissions
-        authService = Mockito.spy(AuthServiceImpl(database.penggunaDao(), penggunaSessionRepository))
+        authService = Mockito.spy(AuthServiceImpl(database.penggunaDao(), userSessionRepository))
         runBlocking {
             Mockito.doReturn(true).`when`(authService).hasPermission(Mockito.anyString())
         }

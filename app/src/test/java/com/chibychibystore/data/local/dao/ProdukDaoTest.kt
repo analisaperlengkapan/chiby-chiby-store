@@ -1,5 +1,4 @@
 package com.chibychibystore.data.local.dao
-import org.robolectric.annotation.Config
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -156,7 +155,7 @@ class ProdukDaoTest {
         )
 
         val id = produkDao.insertProduk(produk)
-        produkDao.adjustStock(id, -10) // Reduce stock by 10
+        produkDao.updateStock(id, -10) // Reduce stock by 10
 
         val updated = produkDao.getProdukById(id)
         assertEquals(90, updated?.stockQuantity)

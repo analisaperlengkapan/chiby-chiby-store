@@ -1,7 +1,4 @@
 package com.chibychibystore.ui.screens.auth
-import org.robolectric.annotation.Config
-import com.chibychibystore.ui.login.LoginViewModel
-import com.chibychibystore.ui.login.LoginUiState
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
