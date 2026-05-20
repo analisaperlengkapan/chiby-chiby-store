@@ -3,6 +3,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.local.entity.*
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.runner.RunWith
@@ -10,21 +11,24 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
-class ProdukDaoTest {
+class StokGudangDaoTest {
     private lateinit var database: ChibyChibyDatabase
-    private lateinit var produkDao: ProdukDao
+    private lateinit var dao: StokGudangDao
     @Before
     fun setup() {
         database = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), ChibyChibyDatabase::class.java).allowMainThreadQueries().build()
-        produkDao = database.produkDao()
+        dao = database.stokGudangDao()
     }
     @After
     fun tearDown() = database.close()
     @Test
-    fun insertAndGetProduct() = runBlocking {
-        val catId = database.kategoriDao().insertKategori(Kategori(name = "Cat"))
-        val whId = database.gudangDao().insertGudang(Gudang(name = "WH"))
-        val id = produkDao.insertProduk(Produk(name = "P", barcode = "B", costPrice = 1.0, sellingPrice = 2.0, categoryId = catId, warehouseId = whId, stockQuantity = 10))
-        Assert.assertNotNull(produkDao.getProdukById(id))
+    fun insertAndGetStok() = runBlocking {
+        val catId = database.kategoriDao().insertKategori(Kategori(name = "C"))
+        val whId = database.gudangDao().insertGudang(Gudang(name = "W"))
+        val prodId = database.produkDao().insertProduk(Produk(id = 1L, name = "P", categoryId = catId, warehouseId = whId, costPrice = 1.0, sellingPrice = 2.0))
+        val stok = StokGudang(productId = prodId, warehouseId = whId, quantity = 50)
+        dao.insertOrUpdateStock(stok)
+        val fetched = dao.getStock(prodId, whId)
+        Assert.assertEquals(50, fetched?.quantity)
     }
 }

@@ -8,23 +8,24 @@ import org.junit.*
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Date
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
-class ProdukDaoTest {
+class PenjualanDaoTest {
     private lateinit var database: ChibyChibyDatabase
-    private lateinit var produkDao: ProdukDao
+    private lateinit var dao: PenjualanDao
     @Before
     fun setup() {
         database = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), ChibyChibyDatabase::class.java).allowMainThreadQueries().build()
-        produkDao = database.produkDao()
+        dao = database.penjualanDao()
     }
     @After
     fun tearDown() = database.close()
     @Test
-    fun insertAndGetProduct() = runBlocking {
-        val catId = database.kategoriDao().insertKategori(Kategori(name = "Cat"))
-        val whId = database.gudangDao().insertGudang(Gudang(name = "WH"))
-        val id = produkDao.insertProduk(Produk(name = "P", barcode = "B", costPrice = 1.0, sellingPrice = 2.0, categoryId = catId, warehouseId = whId, stockQuantity = 10))
-        Assert.assertNotNull(produkDao.getProdukById(id))
+    fun insertAndGetPenjualan() = runBlocking {
+        val userId = database.penggunaDao().insertPengguna(Pengguna(username = "u", passwordHash = "h", role = Role.CASHIER))
+        val sale = Penjualan(saleDate = Date(), totalAmount = 100.0, paymentMethod = PaymentMethod.CASH, cashierId = userId)
+        val id = dao.insertPenjualan(sale)
+        Assert.assertNotNull(dao.getPenjualanById(id))
     }
 }
