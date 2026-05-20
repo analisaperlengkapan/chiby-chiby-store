@@ -45,7 +45,7 @@ fun PosScreen(
     // Listen for scan results from BarcodeScannerScreen
     val currentBackStackEntry = navController.currentBackStackEntry
     val savedStateHandle = currentBackStackEntry?.savedStateHandle
-    val scannedBarcode by savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState() ?: mutableStateOf(null)
+    val scannedBarcode by savedStateHandle?.getLiveData<String>("scanned_barcode")?.observeAsState() ?: remember { mutableStateOf(null) }
 
     LaunchedEffect(scannedBarcode) {
         scannedBarcode?.let { barcode ->
