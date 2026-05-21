@@ -1,6 +1,6 @@
-package com.chibychibystore.service
+package com.chibychibystore.data.local.dao
 import org.junit.Test
-class PurchaseServiceTest {
+class PenjualanDaoTest {
     @Test
     fun testPlaceholder() {
         assert(true)
