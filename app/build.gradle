@@ -160,7 +160,7 @@ tasks.withType(JavaCompile).configureEach {
 dependencies {
     // Enable desugaring for java.time APIs on lower API levels
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
-    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.core:core-ktx:1.19.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.10.0'
     implementation 'androidx.activity:activity-compose:1.12.3'
     implementation platform('androidx.compose:compose-bom:2026.01.00')
