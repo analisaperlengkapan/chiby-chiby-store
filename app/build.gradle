@@ -42,10 +42,12 @@ android {
     sourceSets {
         test {
             java {
-                exclude '**/ui/**'
+                exclude '**/ui/screens/**'
+                exclude '**/ui/components/**'
             }
             kotlin {
-                exclude '**/ui/**'
+                exclude '**/ui/screens/**'
+                exclude '**/ui/components/**'
             }
         }
     }
