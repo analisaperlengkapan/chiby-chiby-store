@@ -4,8 +4,6 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.service.AuthService
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -16,23 +14,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
 import org.mockito.MockitoAnnotations
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
-import javax.inject.Inject
 
-@HiltAndroidTest
-@RunWith(RobolectricTestRunner::class)
-@Config(manifest = Config.NONE)
 @ExperimentalCoroutinesApi
 class SettingsViewModelTest {
-
-    @get:Rule
-    val hiltRule = HiltAndroidRule(this)
 
     @get:Rule
     val instantTaskExecutorRule = InstantTaskExecutorRule()
@@ -54,7 +42,6 @@ class SettingsViewModelTest {
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        hiltRule.inject()
 
         // Mock the auth service to return the test user
         `when`(mockAuthService.observeCurrentUser()).thenReturn(flowOf(testUser))

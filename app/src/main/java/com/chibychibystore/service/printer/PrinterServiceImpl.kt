@@ -159,7 +159,11 @@ class PrinterServiceImpl @Inject constructor(
 
             // Ensure cancellation of discovery before connecting
             try {
-                if (bluetoothAdapter?.isDiscovering == true) {
+                val hasScanPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    context.checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
+                } else true
+
+                if (hasScanPermission && bluetoothAdapter?.isDiscovering == true) {
                     bluetoothAdapter?.cancelDiscovery()
                 }
             } catch (e: SecurityException) {
