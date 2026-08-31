@@ -36,6 +36,9 @@ class PosViewModelTest {
     private lateinit var saleService: SaleService
     private lateinit var authService: AuthService
     private lateinit var promoService: PromoService
+    private lateinit var pelangganService: com.chibychibystore.service.PelangganService
+    private lateinit var warehouseService: com.chibychibystore.service.WarehouseService
+    private lateinit var stokGudangRepository: com.chibychibystore.repository.StokGudangRepository
     private lateinit var viewModel: PosViewModel
 
     @Before
@@ -44,8 +47,13 @@ class PosViewModelTest {
         productService = mock()
         saleService = mock()
         promoService = mock()
+        pelangganService = mock()
+        warehouseService = mock()
+        stokGudangRepository = mock()
 
         whenever(promoService.calculateDiscount(any())).thenReturn(0.0)
+        whenever(warehouseService.observeGudangs()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
+        whenever(pelangganService.ambilSemuaPelanggan()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
 
         // default auth service returns a logged in cashier
         authService = object : AuthService {
@@ -61,7 +69,7 @@ class PosViewModelTest {
             override suspend fun forceLogoutAll() = Result.success(Unit)
         }
 
-        viewModel = PosViewModel(productService, saleService, authService, promoService)
+        viewModel = PosViewModel(productService, saleService, authService, promoService, pelangganService, warehouseService, stokGudangRepository)
     }
 
     @After
@@ -173,7 +181,7 @@ class PosViewModelTest {
             override suspend fun forceLogoutAll() = Result.success(Unit)
         }
 
-        viewModel = PosViewModel(productService, saleService, unauth, promoService)
+        viewModel = PosViewModel(productService, saleService, unauth, promoService, pelangganService, warehouseService, stokGudangRepository)
 
         val product = Produk(
             id = 1L,

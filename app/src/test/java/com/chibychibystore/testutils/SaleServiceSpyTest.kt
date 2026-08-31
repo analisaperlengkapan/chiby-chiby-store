@@ -35,6 +35,7 @@ class SaleServiceSpyTest {
         override fun observePenjualanFiltered(startDate: String, endDate: String, query: String?) = kotlinx.coroutines.flow.flowOf<List<Penjualan>>(emptyList())
         override suspend fun cetakStruk(saleId: Long, storeName: String, storeAddress: String, cashierName: String) = Result.failure(Exception("not implemented"))
         override fun observePenjualanWithItemsByRentangTanggal(startDate: String, endDate: String) = kotlinx.coroutines.flow.flowOf<List<PenjualanWithItems>>(emptyList())
+        override suspend fun getOpenShift(kasirId: Long) = Result.success(null as com.chibychibystore.data.local.entity.Shift?)
     }
 
     @Test

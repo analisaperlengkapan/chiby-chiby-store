@@ -2,7 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
-    id 'kotlin-kapt'
+    id 'org.jetbrains.kotlin.kapt'
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'com.google.dagger.hilt.android'
     id 'jacoco'
@@ -48,6 +48,7 @@ android {
     }
     buildFeatures {
         compose true
+        buildConfig true
     }
     packagingOptions {
         resources {
@@ -61,99 +62,13 @@ android {
         test {
             java {
                 exclude '**/ui/screens/**'
-                exclude '**/ui/inventory/**'
-                exclude '**/ui/sales/**'
                 exclude '**/ui/components/**'
-                exclude '**/service/WarehouseServiceTest.*'
-                exclude '**/service/UserManagementServiceTest.*'
-                exclude '**/service/SaleServiceTest.*'
-                exclude '**/service/RestoreServiceTest.*'
-                exclude '**/service/ReportingServiceTest.*'
-                exclude '**/service/ProductServiceTest.*'
-                exclude '**/service/ExpenseServiceTest.*'
-                exclude '**/service/PdfExportServiceTest.*'
-                exclude '**/service/CashManagementServiceTest.*'
-                exclude '**/service/DataSeedingServiceTest.*'
-                exclude '**/service/BackupServiceTest.*'
-                exclude '**/service/BalanceSheetServiceTest.*'
-                exclude '**/data/local/dao/PenggunaDaoTest.*'
-                exclude '**/data/local/dao/ProdukDaoTest.*'
-                exclude '**/service/AuthServiceTest.*'
-                exclude '**/ui/viewmodel/SettingsViewModelTest.*'
             }
             kotlin {
                 exclude '**/ui/screens/**'
-                exclude '**/ui/inventory/**'
-                exclude '**/ui/sales/**'
                 exclude '**/ui/components/**'
-                exclude '**/service/WarehouseServiceTest.*'
-                exclude '**/service/UserManagementServiceTest.*'
-                exclude '**/service/SaleServiceTest.*'
-                exclude '**/service/RestoreServiceTest.*'
-                exclude '**/service/ReportingServiceTest.*'
-                exclude '**/service/ProductServiceTest.*'
-                exclude '**/service/ExpenseServiceTest.*'
-                exclude '**/service/PdfExportServiceTest.*'
-                exclude '**/service/CashManagementServiceTest.*'
-                exclude '**/service/DataSeedingServiceTest.*'
-                exclude '**/service/BackupServiceTest.*'
-                exclude '**/service/BalanceSheetServiceTest.*'
-                exclude '**/data/local/dao/PenggunaDaoTest.*'
-                exclude '**/data/local/dao/ProdukDaoTest.*'
-                exclude '**/service/AuthServiceTest.*'
-                exclude '**/ui/viewmodel/SettingsViewModelTest.*'
             }
         }
-    }
-}
-
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-    if (name.toLowerCase().contains('unittest')) {
-        exclude('**/ui/screens/**')
-        exclude('**/ui/inventory/**')
-        exclude('**/ui/sales/**')
-        exclude('**/ui/components/**')
-        exclude('**/service/WarehouseServiceTest.*')
-        exclude('**/service/UserManagementServiceTest.*')
-        exclude('**/service/SaleServiceTest.*')
-        exclude('**/service/RestoreServiceTest.*')
-        exclude('**/service/ReportingServiceTest.*')
-        exclude('**/service/ProductServiceTest.*')
-        exclude('**/service/ExpenseServiceTest.*')
-        exclude('**/service/PdfExportServiceTest.*')
-        exclude('**/service/CashManagementServiceTest.*')
-        exclude('**/service/DataSeedingServiceTest.*')
-        exclude('**/service/BackupServiceTest.*')
-        exclude('**/service/BalanceSheetServiceTest.*')
-        exclude('**/data/local/dao/PenggunaDaoTest.*')
-        exclude('**/data/local/dao/ProdukDaoTest.*')
-        exclude('**/service/AuthServiceTest.*')
-        exclude('**/ui/viewmodel/SettingsViewModelTest.*')
-    }
-}
-
-tasks.withType(JavaCompile).configureEach {
-    if (name.toLowerCase().contains('unittest')) {
-        exclude('**/ui/screens/**')
-        exclude('**/ui/inventory/**')
-        exclude('**/ui/sales/**')
-        exclude('**/ui/components/**')
-        exclude('**/service/WarehouseServiceTest.*')
-        exclude('**/service/UserManagementServiceTest.*')
-        exclude('**/service/SaleServiceTest.*')
-        exclude('**/service/RestoreServiceTest.*')
-        exclude('**/service/ReportingServiceTest.*')
-        exclude('**/service/ProductServiceTest.*')
-        exclude('**/service/ExpenseServiceTest.*')
-        exclude('**/service/PdfExportServiceTest.*')
-        exclude('**/service/CashManagementServiceTest.*')
-        exclude('**/service/DataSeedingServiceTest.*')
-        exclude('**/service/BackupServiceTest.*')
-        exclude('**/service/BalanceSheetServiceTest.*')
-        exclude('**/data/local/dao/PenggunaDaoTest.*')
-        exclude('**/data/local/dao/ProdukDaoTest.*')
-        exclude('**/service/AuthServiceTest.*')
-        exclude('**/ui/viewmodel/SettingsViewModelTest.*')
     }
 }
 
@@ -182,9 +97,9 @@ dependencies {
     kapt 'androidx.room:room-compiler:2.8.4'
     
     // Hilt dependency injection
-    implementation 'com.google.dagger:hilt-android:2.59'
-    kapt 'com.google.dagger:hilt-compiler:2.59'
-    implementation 'androidx.hilt:hilt-navigation-compose:1.3.0'
+    implementation 'com.google.dagger:hilt-android:2.55'
+    kapt 'com.google.dagger:hilt-compiler:2.55'
+    implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
     
     // ZXing barcode
     implementation 'com.google.zxing:core:3.5.4'
@@ -210,7 +125,8 @@ dependencies {
     // Update Mockito to the latest stable 5.x to pick up fixes
     testImplementation 'org.mockito:mockito-core:5.21.0'    
     // JSON serialization
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.3'
     
     // PDF generation
     implementation 'com.itextpdf:itext7-core:9.5.0'
@@ -232,8 +148,8 @@ dependencies {
     androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
     // Additional androidTest dependencies to support integration and Hilt tests
     androidTestImplementation 'app.cash.turbine:turbine:1.2.1'
-    androidTestImplementation 'com.google.dagger:hilt-android-testing:2.59'
-    kaptAndroidTest 'com.google.dagger:hilt-compiler:2.59'
+    androidTestImplementation 'com.google.dagger:hilt-android-testing:2.55'
+    kaptAndroidTest 'com.google.dagger:hilt-compiler:2.55'
     androidTestImplementation 'org.mockito:mockito-android:5.21.0'
     androidTestImplementation 'androidx.arch.core:core-testing:2.2.0'
     androidTestImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
