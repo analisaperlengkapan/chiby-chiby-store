@@ -4,16 +4,11 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.service.AuthService
-import com.chibychibystore.service.BackupService
-import com.chibychibystore.ui.settings.SettingsViewModel
-import java.util.Date
-import kotlinx.coroutines.Dispatchers
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -21,56 +16,57 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
 import org.mockito.MockitoAnnotations
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import javax.inject.Inject
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@HiltAndroidTest
+@RunWith(RobolectricTestRunner::class)
+@Config(manifest = Config.NONE)
+@ExperimentalCoroutinesApi
 class SettingsViewModelTest {
+
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
 
     @get:Rule
     val instantTaskExecutorRule = InstantTaskExecutorRule()
 
-    private val testDispatcher = StandardTestDispatcher()
-
     @Mock
     private lateinit var mockAuthService: AuthService
-
-    @Mock
-    private lateinit var mockBackupService: BackupService
 
     private lateinit var viewModel: SettingsViewModel
 
     private val testUser = Pengguna(
-        id = 1L,
+        id = "test-id",
         username = "testuser",
-        passwordHash = "hash",
+        nama = "Test User",
         role = Role.CASHIER,
-        createdAt = Date(),
-        updatedAt = Date()
+        createdAt = System.currentTimeMillis(),
+        updatedAt = System.currentTimeMillis()
     )
 
     @Before
     fun setup() {
-        Dispatchers.setMain(testDispatcher)
         MockitoAnnotations.openMocks(this)
+        hiltRule.inject()
 
-        runTest(testDispatcher) {
-            `when`(mockAuthService.getCurrentUser()).thenReturn(testUser)
-        }
+        // Mock the auth service to return the test user
+        `when`(mockAuthService.observeCurrentUser()).thenReturn(flowOf(testUser))
+        `when`(mockAuthService.getCurrentUser()).thenReturn(testUser)
 
-        viewModel = SettingsViewModel(mockAuthService, mockBackupService)
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
+        viewModel = SettingsViewModel(mockAuthService)
     }
 
     @Test
-    fun `initial state loads current user successfully`() = runTest(testDispatcher) {
-        testDispatcher.scheduler.advanceUntilIdle()
+    fun `initial state loads current user successfully`() = runTest {
+        // Wait for the ViewModel to initialize
+        kotlinx.coroutines.delay(100)
 
         val uiState = viewModel.uiState.value
         assertFalse(uiState.isLoading)
@@ -79,12 +75,15 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `changePassword success updates state correctly`() = runTest(testDispatcher) {
+    fun `changePassword success updates state correctly`() = runTest {
+        // Mock successful password change
         `when`(mockAuthService.changePassword("oldPass", "newPass"))
-            .thenReturn(com.chibychibystore.data.model.Result.success(Unit))
+            .thenReturn(Result.success(Unit))
 
         viewModel.changePassword("oldPass", "newPass")
-        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Wait for the operation to complete
+        kotlinx.coroutines.delay(100)
 
         val uiState = viewModel.uiState.value
         assertFalse(uiState.isChangingPassword)
@@ -93,13 +92,14 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `changePassword failure updates state with error`() = runTest(testDispatcher) {
+    fun `changePassword failure updates state with error`() = runTest {
         val errorMessage = "Invalid password"
         `when`(mockAuthService.changePassword("wrongOld", "newPass"))
-            .thenReturn(com.chibychibystore.data.model.Result.failure(Exception(errorMessage)))
+            .thenReturn(Result.failure(Exception(errorMessage)))
 
         viewModel.changePassword("wrongOld", "newPass")
-        testDispatcher.scheduler.advanceUntilIdle()
+
+        kotlinx.coroutines.delay(100)
 
         val uiState = viewModel.uiState.value
         assertFalse(uiState.isChangingPassword)
@@ -108,24 +108,27 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `logout calls authService and triggers callback`() = runTest(testDispatcher) {
+    fun `logout calls authService and triggers callback`() = runTest {
         var logoutCalled = false
         val onLogoutSuccess = { logoutCalled = true }
 
-        `when`(mockAuthService.logout()).thenReturn(com.chibychibystore.data.model.Result.success(Unit))
+        `when`(mockAuthService.logout()).thenReturn(Result.success(Unit))
 
         viewModel.logout(onLogoutSuccess)
-        testDispatcher.scheduler.advanceUntilIdle()
+
+        kotlinx.coroutines.delay(100)
 
         assertTrue(logoutCalled)
         verify(mockAuthService).logout()
     }
 
     @Test
-    fun `clearError removes error from state`() = runTest(testDispatcher) {
-        viewModel.changePassword("old", "new")
-        testDispatcher.scheduler.advanceUntilIdle()
+    fun `clearError removes error from state`() = runTest {
+        // First set an error
+        viewModel.changePassword("old", "new") // This will fail in test
+        kotlinx.coroutines.delay(100)
 
+        // Clear the error
         viewModel.clearError()
 
         val uiState = viewModel.uiState.value
@@ -133,16 +136,26 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `clearPasswordChangeSuccess resets success flag`() = runTest(testDispatcher) {
+    fun `clearPasswordChangeSuccess resets success flag`() = runTest {
+        // Mock successful password change first
         `when`(mockAuthService.changePassword("old", "new"))
-            .thenReturn(com.chibychibystore.data.model.Result.success(Unit))
+            .thenReturn(Result.success(Unit))
 
         viewModel.changePassword("old", "new")
-        testDispatcher.scheduler.advanceUntilIdle()
+        kotlinx.coroutines.delay(100)
 
+        // Clear success flag
         viewModel.clearPasswordChangeSuccess()
 
         val uiState = viewModel.uiState.value
         assertFalse(uiState.passwordChangeSuccess)
+    }
+
+    @Test
+    fun `createBackup shows not implemented error`() = runTest {
+        viewModel.createBackup()
+
+        val uiState = viewModel.uiState.value
+        assertEquals("Fitur backup belum diimplementasi", uiState.error)
     }
 }

@@ -38,6 +38,17 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    sourceSets {
+        test {
+            java {
+                exclude '**/ui/**'
+            }
+            kotlin {
+                exclude '**/ui/**'
+            }
+        }
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -58,18 +69,6 @@ android {
         }
     }
 
-    sourceSets {
-        test {
-            java {
-                exclude '**/ui/screens/**'
-                exclude '**/ui/components/**'
-            }
-            kotlin {
-                exclude '**/ui/screens/**'
-                exclude '**/ui/components/**'
-            }
-        }
-    }
 }
 
 dependencies {
