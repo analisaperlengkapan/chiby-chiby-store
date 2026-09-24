@@ -27,6 +27,16 @@ subprojects {
                     assemblyEnabled = false
                     nodeEnabled = false
                 }
+                // The NVD API rejects requests without a key, and an empty key is
+                // treated as invalid. Only enable the feed update when a key is set;
+                // otherwise analyse from cached data.
+                def nvdApiKey = System.getenv('NVD_API_KEY')
+                if (nvdApiKey) {
+                    autoUpdate = true
+                    nvd.apiKey = nvdApiKey
+                } else {
+                    autoUpdate = false
+                }
             }
         }
     }
