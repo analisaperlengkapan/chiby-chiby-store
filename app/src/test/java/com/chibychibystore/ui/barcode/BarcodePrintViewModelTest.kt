@@ -140,7 +140,11 @@ class BarcodePrintViewModelTest {
 
         val job = launch { viewModel.uiState.collect {} }
 
+        // uiState is built by combining the debounced product flow, so virtual
+        // time must pass before the combined state -- including any selection
+        // made in the meantime -- is re-emitted.
         viewModel.selectProduct(produk)
+        testDispatcher.scheduler.advanceTimeBy(301L)
         testDispatcher.scheduler.runCurrent()
 
         assertEquals(produk, viewModel.uiState.value.selectedProduct)

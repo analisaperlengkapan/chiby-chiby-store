@@ -5,6 +5,7 @@ import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.local.entity.Kategori
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -28,6 +29,10 @@ class RestoreCategoryBatchTest {
     @Mock private lateinit var purchaseRepository: PembelianRepository
     @Mock private lateinit var purchaseItemRepository: ItemPembelianRepository
     @Mock private lateinit var expenseRepository: PengeluaranRepository
+    @Mock private lateinit var shiftRepository: ShiftRepository
+    @Mock private lateinit var pelangganRepository: PelangganRepository
+    @Mock private lateinit var stokGudangRepository: StokGudangRepository
+    @Mock private lateinit var inventoryAuditRepository: InventoryAuditRepository
 
     private lateinit var restoreService: RestoreServiceImpl
 
@@ -37,6 +42,7 @@ class RestoreCategoryBatchTest {
         restoreService = RestoreServiceImpl(
             context,
             database,
+            Dispatchers.Unconfined,
             penggunaRepository,
             kategoriRepository,
             gudangRepository,
@@ -46,7 +52,11 @@ class RestoreCategoryBatchTest {
             itemPenjualanRepository,
             purchaseRepository,
             purchaseItemRepository,
-            expenseRepository
+            expenseRepository,
+            shiftRepository,
+            pelangganRepository,
+            stokGudangRepository,
+            inventoryAuditRepository
         )
     }
 

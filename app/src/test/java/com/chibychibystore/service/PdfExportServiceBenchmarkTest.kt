@@ -32,7 +32,7 @@ class PdfExportServiceBenchmarkTest {
     fun setup() {
         MockitoAnnotations.openMocks(this)
         context = ApplicationProvider.getApplicationContext()
-        pdfExportService = PdfExportService(context, reportingService, UnconfinedTestDispatcher())
+        pdfExportService = com.chibychibystore.service.impl.PdfExportServiceImpl(context, reportingService, UnconfinedTestDispatcher())
     }
 
     @Test

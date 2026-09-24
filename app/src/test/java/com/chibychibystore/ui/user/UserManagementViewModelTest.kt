@@ -96,7 +96,7 @@ class UserManagementViewModelTest {
 
         // Assert
         val state = viewModel.uiState.value
-        assertEquals("Pengguna berhasil dibuat", state.successMessage)
+        assertEquals("User berhasil dibuat", state.successMessage)
         verify(userManagementService).createUser(username, password, role, currentUser.id)
         verify(userManagementService, times(1)).getAllUsers() // Once in init
     }

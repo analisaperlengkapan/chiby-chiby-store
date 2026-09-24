@@ -61,7 +61,8 @@ class ReportingServiceBenchmarkTest : BaseTest() {
             purchaseRepo,
             balanceSheetService,
             cashManagementService,
-            authService
+            authService,
+            db
         )
     }
 
@@ -129,7 +130,8 @@ class ReportingServiceBenchmarkTest : BaseTest() {
                     productId = pId,
                     quantity = qty,
                     unitPrice = 150.0,
-                    totalPrice = itemTotal
+                    totalPrice = itemTotal,
+                    costPrice = product.costPrice
                 )
              }
              db.itemPenjualanDao().insertItemPenjualanList(items)
@@ -149,10 +151,10 @@ class ReportingServiceBenchmarkTest : BaseTest() {
         }
         val report = (result as com.chibychibystore.data.model.Result.Success).data
 
-        println("Actual Revenue: ${report.totalPendapatan}, Actual COGS: ${report.hpp}")
+        println("Actual Revenue: ${report.pendapatan}, Actual COGS: ${report.hargaPokokPenjualan}")
 
-        assertEquals("Revenue mismatch", expectedRevenue, report.totalPendapatan, 0.01)
-        assertEquals("COGS mismatch", expectedCogs, report.hpp, 0.01)
+        assertEquals("Revenue mismatch", expectedRevenue, report.pendapatan, 0.01)
+        assertEquals("COGS mismatch", expectedCogs, report.hargaPokokPenjualan, 0.01)
 
         // 3. Measure Performance
         val iterations = 10

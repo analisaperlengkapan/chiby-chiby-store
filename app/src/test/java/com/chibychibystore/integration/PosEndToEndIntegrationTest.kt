@@ -16,6 +16,7 @@ import com.chibychibystore.service.impl.ProductServiceImpl
 import com.chibychibystore.service.impl.SaleServiceImpl
 import com.chibychibystore.service.impl.PromoServiceImpl
 import com.chibychibystore.repository.StokGudangRepository
+import com.chibychibystore.repository.ShiftRepository
 import com.chibychibystore.repository.PromotionRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.SaleService
@@ -47,6 +48,7 @@ class PosEndToEndIntegrationTest : BaseTest() {
     private lateinit var produkRepo: ProdukRepository
     private lateinit var penjualanRepo: PenjualanRepository
     private lateinit var itemPenjualanRepo: ItemPenjualanRepository
+    private lateinit var stokGudangRepo: StokGudangRepository
     private lateinit var productService: ProductServiceImpl
     private lateinit var saleService: SaleService
     private lateinit var authService: AuthService
@@ -67,12 +69,12 @@ class PosEndToEndIntegrationTest : BaseTest() {
             Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
         }
 
-        val stokGudangRepo = StokGudangRepository(db.stokGudangDao(), db.produkDao())
+        stokGudangRepo = StokGudangRepository(db.stokGudangDao(), db.produkDao())
         productService = ProductServiceImpl(produkRepo, stokGudangRepo, authService)
         val printer = Mockito.mock(PrinterService::class.java)
         val promotionRepo = PromotionRepository(db.promotionDao())
         val promoService = PromoServiceImpl(promotionRepo)
-        saleService = SaleServiceImpl(db, penjualanRepo, itemPenjualanRepo, produkRepo, stokGudangRepo, authService, printer, promoService)
+        saleService = SaleServiceImpl(db, penjualanRepo, itemPenjualanRepo, produkRepo, stokGudangRepo, ShiftRepository(db.shiftDao()), authService, printer, promoService)
     }
 
     @After
@@ -129,26 +131,43 @@ class PosEndToEndIntegrationTest : BaseTest() {
         // Ensure ViewModel coroutines run on test dispatcher
         Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
         
-        val viewModel = PosViewModel(productService, spySaleService, auth, promoService)
+        val pelangganService = Mockito.mock(com.chibychibystore.service.PelangganService::class.java)
+        Mockito.`when`(pelangganService.ambilSemuaPelanggan()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
+        val warehouseService = Mockito.mock(com.chibychibystore.service.WarehouseService::class.java)
+        Mockito.`when`(warehouseService.observeGudangs()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
+
+        val viewModel = PosViewModel(productService, spySaleService, auth, promoService, pelangganService, warehouseService, stokGudangRepo)
         
+        // The ViewModel's suspend work reaches Room's own IO executor, so the
+        // virtual-time scheduler cannot drive it to completion on its own.
+        // Poll the observable state in real time as well.
+        fun awaitCondition(description: String, timeoutMs: Long = 10_000, condition: () -> Boolean) {
+            val deadline = System.currentTimeMillis() + timeoutMs
+            while (!condition() && System.currentTimeMillis() < deadline) {
+                testScheduler.advanceUntilIdle()
+                Thread.sleep(20)
+            }
+            testScheduler.advanceUntilIdle()
+            assertTrue("Timed out waiting for $description", condition())
+        }
+
         try {
             // Add product to cart and process payment
             viewModel.addProductToCart(savedProd)
-            testScheduler.advanceUntilIdle() // Ensure cart item is added
-            
-            val state = viewModel.uiState.value
-            assertEquals("Cart should have 1 item before payment. Error: ${state.error}", 1, state.cartItems.size)
-            
+            awaitCondition("cart to contain the added product") { viewModel.uiState.value.cartItems.size == 1 }
+
+            assertEquals("Cart should have 1 item before payment. Error: ${viewModel.uiState.value.error}", 1, viewModel.uiState.value.cartItems.size)
+
             viewModel.setPaymentMethod("CASH")
             viewModel.processPayment()
 
-            // Wait for the SaleService.createSale to complete via spy
-            val completed = spySaleService.awaitInvocation(10_000)
-            val stateAtTimeout = viewModel.uiState.value
-            assertTrue("SaleService.createSale did not complete within timeout. State error=${stateAtTimeout.error}, cartSize=${stateAtTimeout.cartItems.size}", completed)
-
-            // advance until viewmodel coroutine work completes
-            testScheduler.advanceUntilIdle()
+            awaitCondition("sale to complete") {
+                viewModel.uiState.value.completedSaleId != null || viewModel.uiState.value.error != null
+            }
+            assertTrue(
+                "SaleService.createSale did not complete. State error=${viewModel.uiState.value.error}, isProcessing=${viewModel.uiState.value.isProcessingPayment}",
+                spySaleService.invocationCount >= 1
+            )
         } finally {
             Dispatchers.resetMain()
         }

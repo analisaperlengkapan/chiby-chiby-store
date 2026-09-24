@@ -52,7 +52,8 @@ class ReportingServiceAdditionalTest {
                 runBlocking {
                     Mockito.`when`(hasPermission(Mockito.anyString())).thenReturn(true)
                 }
-            }
+            },
+            Mockito.mock(com.chibychibystore.data.local.database.ChibyChibyDatabase::class.java)
         )
     }
 

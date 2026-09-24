@@ -40,6 +40,10 @@ class BackupServiceOptimizationTest {
     @Mock private lateinit var purchaseRepository: PembelianRepository
     @Mock private lateinit var itemPembelianRepository: ItemPembelianRepository
     @Mock private lateinit var expenseRepository: PengeluaranRepository
+    @Mock private lateinit var shiftRepository: ShiftRepository
+    @Mock private lateinit var pelangganRepository: PelangganRepository
+    @Mock private lateinit var stokGudangRepository: StokGudangRepository
+    @Mock private lateinit var inventoryAuditRepository: InventoryAuditRepository
 
     private lateinit var backupService: BackupServiceImpl
     private lateinit var backupDir: File
@@ -64,9 +68,17 @@ class BackupServiceOptimizationTest {
         `when`(purchaseRepository.getAllPurchases()).thenReturn(flowOf(emptyList()))
         `when`(itemPembelianRepository.getAllPurchaseItems()).thenReturn(flowOf(emptyList()))
         `when`(expenseRepository.getAllPengeluarans()).thenReturn(flowOf(emptyList()))
+        `when`(shiftRepository.getAllShifts()).thenReturn(flowOf(emptyList()))
+        `when`(pelangganRepository.getAllPelanggan()).thenReturn(flowOf(emptyList()))
+        kotlinx.coroutines.runBlocking {
+            `when`(stokGudangRepository.getAllStocks()).thenReturn(Result.success(emptyList()))
+            `when`(inventoryAuditRepository.getAllAuditsList()).thenReturn(Result.success(emptyList()))
+            `when`(inventoryAuditRepository.getAllAuditItems()).thenReturn(Result.success(emptyList()))
+        }
 
         backupService = BackupServiceImpl(
             context,
+            Dispatchers.Unconfined,
             userRepository,
             categoryRepository,
             warehouseRepository,
@@ -77,7 +89,10 @@ class BackupServiceOptimizationTest {
             purchaseRepository,
             itemPembelianRepository,
             expenseRepository,
-            Dispatchers.Unconfined
+            shiftRepository,
+            pelangganRepository,
+            stokGudangRepository,
+            inventoryAuditRepository
         )
 
         // Override backup directory
@@ -105,8 +120,8 @@ class BackupServiceOptimizationTest {
         assertTrue("Validation failed: " + (validation as? Result.Success)?.data?.errors, validation is Result.Success)
         val validationData = (validation as Result.Success).data
         assertTrue("Validation isValid is false", validationData.isValid)
-        assertEquals(1, validationData.recordCounts?.get("pengguna"))
-        assertEquals("1.0", validationData.version)
+        assertEquals(1, validationData.recordCounts?.get("users"))
+        assertEquals("2.0", validationData.version)
     }
 
     @Test

@@ -60,7 +60,8 @@ class ReportingServiceIntegrationTest : BaseTest() {
             purchaseRepo,
             balanceSheetService,
             cashManagementService,
-            authService
+            authService,
+            db
         )
     }
 
@@ -129,7 +130,8 @@ class ReportingServiceIntegrationTest : BaseTest() {
         assertTrue(profitRes.isSuccess)
         val profit = profitRes.getOrNull()!!
         // profit is a Map<String, Any>
-        assertEquals(30000.0, profit.totalPendapatan, 0.001)
+        // sale1 was refunded above, so only sale2 (20000) counts as revenue
+        assertEquals(20000.0, profit.totalPendapatan, 0.001)
         // totalCost comes from purchases sum (in implementation: costOfGoodsSold)
         assertEquals(5000.0, profit.totalBiaya, 0.001)
 
@@ -157,10 +159,16 @@ class ReportingServiceIntegrationTest : BaseTest() {
         assertTrue(trendRes.isSuccess)
         val trends = trendRes.getOrNull()!!
         // trends is a List<Map<String, Any>> in the current implementation
-        // Expect grouping: 2025-01-01 -> 15000 (2 transactions), 2025-01-02 -> 7000 (1 transaction)
-        assertEquals(2, trends.size)
+        // The implementation emits one entry per day in the range, including empty days.
+        assertEquals(3, trends.size)
         val day1 = trends.first { it.tanggal == java.time.LocalDate.of(2025, 1, 1) }
         assertEquals(15000.0, day1.penjualan, 0.001)
         assertEquals(2, day1.transaksi)
+        val day2 = trends.first { it.tanggal == java.time.LocalDate.of(2025, 1, 2) }
+        assertEquals(7000.0, day2.penjualan, 0.001)
+        assertEquals(1, day2.transaksi)
+        val day3 = trends.first { it.tanggal == java.time.LocalDate.of(2025, 1, 3) }
+        assertEquals(0.0, day3.penjualan, 0.001)
+        assertEquals(0, day3.transaksi)
     }
 }

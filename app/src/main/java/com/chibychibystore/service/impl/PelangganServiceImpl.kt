@@ -22,9 +22,9 @@ class PelangganServiceImpl @Inject constructor(
 
     override suspend fun buatPelanggan(
         nama: String,
-        telepon: String? = null,
-        email: String? = null,
-        alamat: String? = null
+        telepon: String?,
+        email: String?,
+        alamat: String?
     ): Result<Long> {
         val pelanggan = Pelanggan(
             name = nama,
@@ -38,10 +38,10 @@ class PelangganServiceImpl @Inject constructor(
     override suspend fun perbaruiPelanggan(
         id: Long,
         nama: String,
-        telepon: String? = null,
-        email: String? = null,
-        alamat: String? = null,
-        point: Int? = null
+        telepon: String?,
+        email: String?,
+        alamat: String?,
+        point: Int?
     ): Result<Unit> {
         val existingResult = pelangganRepository.getPelangganById(id)
         if (existingResult is Result.Failure) return Result.failure((existingResult as Result.Failure).exception)

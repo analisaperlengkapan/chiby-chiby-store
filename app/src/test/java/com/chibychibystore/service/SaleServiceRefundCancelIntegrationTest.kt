@@ -12,6 +12,7 @@ import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.ShiftRepository
 import com.chibychibystore.repository.StokGudangRepository
 import com.chibychibystore.service.PromoService
 import com.chibychibystore.service.impl.SaleServiceImpl
@@ -56,6 +57,7 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
         val authService = Mockito.mock(AuthService::class.java)
         runBlocking {
             Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
+            Mockito.`when`(promoService.calculateDiscount(Mockito.anyDouble())).thenReturn(0.0)
         }
         val stokGudangRepo = StokGudangRepository(db.stokGudangDao(), db.produkDao())
         saleService = SaleServiceImpl(
@@ -64,6 +66,7 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
             itemPenjualanRepo,
             produkRepo,
             stokGudangRepo,
+            ShiftRepository(db.shiftDao()),
             authService,
             printerService,
             promoService
@@ -73,6 +76,18 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
     @After
     fun teardown() {
         db.close()
+    }
+
+    private suspend fun insertProductWithStock(prod: com.chibychibystore.data.local.entity.Produk): Long {
+        val id = db.produkDao().insertProduk(prod)
+        db.stokGudangDao().insertOrUpdateStock(
+            com.chibychibystore.data.local.entity.StokGudang(
+                productId = id,
+                warehouseId = prod.warehouseId,
+                quantity = prod.stockQuantity
+            )
+        )
+        return id
     }
 
     @Test
@@ -91,7 +106,7 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
             stockQuantity = 5,
             warehouseId = gudangId
         )
-        val prodId = db.produkDao().insertProduk(prod)
+        val prodId = insertProductWithStock(prod)
 
         // Create sale
         val sale = Penjualan(saleDate = Date(), totalAmount = 15000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
@@ -125,7 +140,7 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
         val cashierId = db.penggunaDao().insertPengguna(com.chibychibystore.data.local.entity.Pengguna(username = "cc", passwordHash = "x", role = com.chibychibystore.data.local.entity.Role.CASHIER))
 
         val prod = Produk(name = "Concurrent", barcode = "C-1", categoryId = kategoriId, costPrice = 1000.0, sellingPrice = 2000.0, stockQuantity = 5, warehouseId = gudangId)
-        val prodId = db.produkDao().insertProduk(prod)
+        val prodId = insertProductWithStock(prod)
 
         val sale = Penjualan(saleDate = Date(), totalAmount = 4000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
         val item = ItemPenjualan(saleId = 0, productId = prodId, quantity = 2, unitPrice = 2000.0, totalPrice = 4000.0)
@@ -173,7 +188,7 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
         val cashierId = db.penggunaDao().insertPengguna(com.chibychibystore.data.local.entity.Pengguna(username = "cy", passwordHash = "x", role = com.chibychibystore.data.local.entity.Role.CASHIER))
 
         val prod = Produk(name = "CancelRef", barcode = "CR1", categoryId = kategoriId, costPrice = 1000.0, sellingPrice = 2000.0, stockQuantity = 3, warehouseId = gudangId)
-        val prodId = db.produkDao().insertProduk(prod)
+        val prodId = insertProductWithStock(prod)
 
         val sale = Penjualan(saleDate = Date(), totalAmount = 4000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
         val item = ItemPenjualan(saleId = 0, productId = prodId, quantity = 2, unitPrice = 2000.0, totalPrice = 4000.0)
@@ -198,7 +213,7 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
         val cashierId = db.penggunaDao().insertPengguna(com.chibychibystore.data.local.entity.Pengguna(username = "cz", passwordHash = "x", role = com.chibychibystore.data.local.entity.Role.CASHIER))
 
         val prod = Produk(name = "IdempProd", barcode = "ID1", categoryId = kategoriId, costPrice = 2000.0, sellingPrice = 3000.0, stockQuantity = 6, warehouseId = gudangId)
-        val prodId = db.produkDao().insertProduk(prod)
+        val prodId = insertProductWithStock(prod)
 
         // Create sale
         val sale = Penjualan(saleDate = Date(), totalAmount = 6000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
@@ -238,7 +253,7 @@ class SaleServiceRefundCancelIntegrationTest : BaseTest() {
             stockQuantity = 4,
             warehouseId = gudangId
         )
-        val prodId = db.produkDao().insertProduk(prod)
+        val prodId = insertProductWithStock(prod)
 
         val sale = Penjualan(saleDate = Date(), totalAmount = 16000.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
         val item = ItemPenjualan(saleId = 0, productId = prodId, quantity = 2, unitPrice = 8000.0, totalPrice = 16000.0)

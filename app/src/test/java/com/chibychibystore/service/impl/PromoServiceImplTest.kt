@@ -11,7 +11,7 @@ import org.junit.Test
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
-import org.mockito.ArgumentMatchers
+import org.mockito.kotlin.any
 
 class PromoServiceImplTest {
 
@@ -28,7 +28,7 @@ class PromoServiceImplTest {
 
     @Test
     fun `calculateDiscount returns 0 when no promotions active`() = runTest {
-        `when`(promotionRepository.getActivePromotionsForDate(ArgumentMatchers.any(java.util.Date::class.java)))
+        `when`(promotionRepository.getActivePromotionsForDate(any()))
             .thenReturn(flowOf(emptyList()))
 
         val subtotal = 100_000.0
@@ -45,7 +45,7 @@ class PromoServiceImplTest {
             value = 0.1, // 10%
             minPurchaseAmount = 50_000.0
         )
-        `when`(promotionRepository.getActivePromotionsForDate(ArgumentMatchers.any(java.util.Date::class.java)))
+        `when`(promotionRepository.getActivePromotionsForDate(any()))
             .thenReturn(flowOf(listOf(promo)))
 
         val subtotal = 100_000.0
@@ -62,7 +62,7 @@ class PromoServiceImplTest {
             value = 5_000.0,
             minPurchaseAmount = 50_000.0
         )
-        `when`(promotionRepository.getActivePromotionsForDate(ArgumentMatchers.any(java.util.Date::class.java)))
+        `when`(promotionRepository.getActivePromotionsForDate(any()))
             .thenReturn(flowOf(listOf(promo)))
 
         val subtotal = 60_000.0
@@ -80,7 +80,7 @@ class PromoServiceImplTest {
             minPurchaseAmount = 0.0,
             maxDiscountAmount = 20_000.0
         )
-        `when`(promotionRepository.getActivePromotionsForDate(ArgumentMatchers.any(java.util.Date::class.java)))
+        `when`(promotionRepository.getActivePromotionsForDate(any()))
             .thenReturn(flowOf(listOf(promo)))
 
         val subtotal = 100_000.0
@@ -105,7 +105,7 @@ class PromoServiceImplTest {
             type = PromotionType.FIXED_AMOUNT,
             value = 10_000.0
         )
-        `when`(promotionRepository.getActivePromotionsForDate(ArgumentMatchers.any(java.util.Date::class.java)))
+        `when`(promotionRepository.getActivePromotionsForDate(any()))
             .thenReturn(flowOf(listOf(promo1, promo2)))
 
         val subtotal = 100_000.0

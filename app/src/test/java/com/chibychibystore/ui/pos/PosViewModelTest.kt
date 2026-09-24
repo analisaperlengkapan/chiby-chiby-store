@@ -44,8 +44,17 @@ class PosViewModelTest {
         productService = mock()
         saleService = mock()
         promoService = mock()
+        val pelangganService = mock<com.chibychibystore.service.PelangganService>()
+        val warehouseService = mock<com.chibychibystore.service.WarehouseService>()
+        val stokGudangRepository = mock<com.chibychibystore.repository.StokGudangRepository>()
+        whenever(pelangganService.ambilSemuaPelanggan()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
+        whenever(warehouseService.observeGudangs()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
+        whenever(stokGudangRepository.getStock(any(), any())).thenReturn(
+            Result.success(com.chibychibystore.data.local.entity.StokGudang(productId = 1L, warehouseId = 1L, quantity = 1000))
+        )
 
         whenever(promoService.calculateDiscount(any())).thenReturn(0.0)
+        whenever(saleService.getOpenShift(any())).thenReturn(Result.success(null))
 
         // default auth service returns a logged in cashier
         authService = object : AuthService {
@@ -61,7 +70,7 @@ class PosViewModelTest {
             override suspend fun forceLogoutAll() = Result.success(Unit)
         }
 
-        viewModel = PosViewModel(productService, saleService, authService, promoService)
+        viewModel = PosViewModel(productService, saleService, authService, promoService, pelangganService, warehouseService, stokGudangRepository)
     }
 
     @After
@@ -115,6 +124,7 @@ class PosViewModelTest {
         viewModel.addProductToCart(product)
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.updateCartItemQuantity(product.id, 3)
+        testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals(3, state.cartItems[0].quantity)
@@ -173,7 +183,15 @@ class PosViewModelTest {
             override suspend fun forceLogoutAll() = Result.success(Unit)
         }
 
-        viewModel = PosViewModel(productService, saleService, unauth, promoService)
+        val pelangganService2 = mock<com.chibychibystore.service.PelangganService>()
+        val warehouseService2 = mock<com.chibychibystore.service.WarehouseService>()
+        val stokGudangRepository2 = mock<com.chibychibystore.repository.StokGudangRepository>()
+        whenever(pelangganService2.ambilSemuaPelanggan()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
+        whenever(warehouseService2.observeGudangs()).thenReturn(kotlinx.coroutines.flow.flowOf(emptyList()))
+        whenever(stokGudangRepository2.getStock(any(), any())).thenReturn(
+            Result.success(com.chibychibystore.data.local.entity.StokGudang(productId = 1L, warehouseId = 1L, quantity = 1000))
+        )
+        viewModel = PosViewModel(productService, saleService, unauth, promoService, pelangganService2, warehouseService2, stokGudangRepository2)
 
         val product = Produk(
             id = 1L,
