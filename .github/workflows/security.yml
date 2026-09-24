@@ -65,9 +65,18 @@ jobs:
             echo "NVD API key not set — NVD auto-update disabled; report may be incomplete."
           fi
 
-          report_dir="$PWD/app/build/reports/dependency-check"
-          report_xml="$report_dir/dependency-check-report.xml"
-          rm -f "$report_xml"
+          # The aggregate report location is not fixed across plugin versions, so look
+          # for any generated XML report when deciding whether findings were produced.
+          rm -f app/build/reports/dependency-check/dependency-check-report.xml \
+                build/reports/dependency-check/dependency-check-report.xml
+
+          report_has_findings() {
+            local f
+            while IFS= read -r f; do
+              grep -q '<vulnerability' "$f" && return 0
+            done < <(find . -path '*/reports/dependency-check/*' -name 'dependency-check-report.xml' 2>/dev/null)
+            return 1
+          }
 
           max_attempts=3
           per_attempt_timeout=1200  # seconds; 20 minutes per attempt
@@ -93,7 +102,7 @@ jobs:
             # Non-timeout failure. Distinguish a completed scan that reported
             # vulnerabilities (red) from a scan that could not run at all, e.g.
             # missing cached NVD data (not a finding — treat as green).
-            if [ -f "$report_xml" ] && grep -q "<vulnerability" "$report_xml"; then
+            if report_has_findings; then
               echo "Dependency check completed and reported vulnerabilities — red."
               exit "$rc"
             fi
