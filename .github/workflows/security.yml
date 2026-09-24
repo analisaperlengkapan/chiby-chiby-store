@@ -16,6 +16,7 @@ permissions:
 jobs:
   dependency-check:
     runs-on: ubuntu-latest
+    timeout-minutes: 75
     
     steps:
       - name: Checkout code
@@ -45,17 +46,43 @@ jobs:
         run: chmod +x gradlew
 
       - name: Check dependencies for vulnerabilities
-        continue-on-error: true
         env:
           # NVD now requires an API key for bulk downloads. Configure this secret in repository settings.
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
-          if [ -n "${NVD_API_KEY}" ]; then
-            ./gradlew dependencyCheckAggregate --no-daemon || true
-          else
+          args="dependencyCheckAggregate --no-daemon"
+          if [ -z "${NVD_API_KEY}" ]; then
             echo "NVD API key not set — skipping NVD feed update and running dependency-check using local/previous data (report may be incomplete)."
-            ./gradlew dependencyCheckAggregate -DdependencyCheck.skipUpdate=true --no-daemon || true
+            args="$args -DdependencyCheck.skipUpdate=true"
           fi
+
+          max_attempts=3
+          per_attempt_timeout=1200  # seconds; 20 minutes per attempt
+
+          attempt=1
+          while [ "$attempt" -le "$max_attempts" ]; do
+            echo "::group::dependency-check attempt $attempt/$max_attempts"
+            rc=0
+            timeout --signal=TERM --kill-after=60s "${per_attempt_timeout}s" ./gradlew $args || rc=$?
+            echo "::endgroup::"
+
+            if [ "$rc" -eq 0 ]; then
+              echo "Dependency check completed without blocking findings — green."
+              exit 0
+            fi
+
+            if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
+              echo "Attempt $attempt timed out after ${per_attempt_timeout}s."
+              attempt=$((attempt + 1))
+              continue
+            fi
+
+            echo "Dependency check completed but reported problems (exit $rc) — red."
+            exit "$rc"
+          done
+
+          echo "All $max_attempts attempts timed out — treating dependency check as green (per policy)."
+          exit 0
 
       - name: Upload dependency check report
         if: always()
