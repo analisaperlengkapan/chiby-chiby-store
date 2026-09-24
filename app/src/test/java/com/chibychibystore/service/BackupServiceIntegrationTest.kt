@@ -36,6 +36,7 @@ class BackupServiceIntegrationTest : BaseTest() {
 
         backupService = BackupServiceImpl(
             context,
+            Dispatchers.Unconfined,
             PenggunaRepository(db.penggunaDao()),
             KategoriRepository(db.kategoriDao(), db.produkDao()),
             GudangRepository(db.gudangDao(), db.produkDao()),
@@ -46,7 +47,10 @@ class BackupServiceIntegrationTest : BaseTest() {
             PembelianRepository(db.pembelianDao()),
             ItemPembelianRepository(db.itemPembelianDao()),
             PengeluaranRepository(db.pengeluaranDao()),
-            Dispatchers.Unconfined
+            ShiftRepository(db.shiftDao()),
+            PelangganRepository(db.pelangganDao()),
+            StokGudangRepository(db.stokGudangDao(), db.produkDao()),
+            InventoryAuditRepository(db.inventoryAuditDao())
         )
     }
 
@@ -99,7 +103,7 @@ class BackupServiceIntegrationTest : BaseTest() {
         val validation = valRes.getOrNull()!!
         println("[DEBUG] validation: isValid=${validation.isValid}, version=${validation.version}, counts=${validation.recordCounts}, errors=${validation.errors}")
         assertTrue("Validation failed for backup: ${validation.errors}", validation.isValid)
-        assertEquals(1, validation.recordCounts?.get("pengguna"))
+        assertEquals(1, validation.recordCounts?.get("users"))
 
         // Now corrupt the file and ensure validation fails
         createdFile.writeText("corrupted-data")

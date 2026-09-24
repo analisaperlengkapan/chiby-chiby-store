@@ -143,7 +143,12 @@ class PrinterServiceImpl @Inject constructor(
         }
     }
 
-    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    @RequiresPermission(
+        allOf = [
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_SCAN
+        ]
+    )
     override suspend fun connectPrinter(device: BluetoothDevice): Result<Unit> = withContext(dispatcher) {
         try {
             currentStatus = PrinterStatus.CONNECTING

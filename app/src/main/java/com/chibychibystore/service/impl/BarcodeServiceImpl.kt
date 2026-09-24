@@ -150,14 +150,12 @@ class BarcodeServiceImpl @Inject constructor(
         // Step 1: Add digits in odd positions (1, 3, 5, 7, 9, 11)
         val oddSum = (0..10 step 2).sumOf { code[it].digitToInt() }
 
-        // Step 2: Multiply odd sum by 3
-        val oddSumTimes3 = oddSum * 3
-
-        // Step 3: Add digits in even positions (2, 4, 6, 8, 10, 12)
+        // Step 2: Add digits in even positions (2, 4, 6, 8, 10, 12) and multiply by 3
         val evenSum = (1..11 step 2).sumOf { code[it].digitToInt() }
+        val evenSumTimes3 = evenSum * 3
 
-        // Step 4: Add odd sum * 3 + even sum
-        val total = oddSumTimes3 + evenSum
+        // Step 3: Add odd sum + even sum * 3
+        val total = oddSum + evenSumTimes3
 
         // Step 5: Find the smallest number >= total that is divisible by 10
         val nextMultipleOf10 = ((total + 9) / 10) * 10

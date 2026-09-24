@@ -41,6 +41,7 @@ class ReportingServiceImplTest {
     // db is required by the ReportingServiceImpl constructor (used in getStockMovementReport);
     // it is not exercised by the tests below but must be provided for instantiation.
     @Mock private lateinit var db: ChibyChibyDatabase
+    @Mock private lateinit var kategoriDao: com.chibychibystore.data.local.dao.KategoriDao
 
     private lateinit var reportingService: ReportingServiceImpl
 
@@ -81,6 +82,10 @@ class ReportingServiceImplTest {
         whenever(produkRepository.getProdukCount()).thenReturn(Result.success(10))
         whenever(produkRepository.countLowStock()).thenReturn(Result.success(1))
         whenever(produkRepository.countOutOfStock()).thenReturn(Result.success(0))
+        whenever(produkRepository.getTotalInventoryValue()).thenReturn(Result.success(0.0))
+        whenever(produkRepository.getAllProduk()).thenReturn(flowOf(emptyList()))
+        whenever(db.kategoriDao()).thenReturn(kategoriDao)
+        whenever(kategoriDao.getAllKategori()).thenReturn(flowOf(emptyList()))
 
         val result = reportingService.getInventoryReport()
 

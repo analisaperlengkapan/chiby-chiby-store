@@ -6,6 +6,7 @@ import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.repository.*
 import com.chibychibystore.data.model.Result
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -33,6 +34,10 @@ class RestoreServiceOptimizationTest {
     @Mock private lateinit var purchaseRepository: PembelianRepository
     @Mock private lateinit var purchaseItemRepository: ItemPembelianRepository
     @Mock private lateinit var expenseRepository: PengeluaranRepository
+    @Mock private lateinit var shiftRepository: ShiftRepository
+    @Mock private lateinit var pelangganRepository: PelangganRepository
+    @Mock private lateinit var stokGudangRepository: StokGudangRepository
+    @Mock private lateinit var inventoryAuditRepository: InventoryAuditRepository
 
     private lateinit var restoreService: RestoreServiceImpl
     private lateinit var context: Context
@@ -43,9 +48,10 @@ class RestoreServiceOptimizationTest {
         context = ApplicationProvider.getApplicationContext()
 
         restoreService = RestoreServiceImpl(
-            context, database, userRepository, categoryRepository, warehouseRepository,
+            context, database, Dispatchers.Unconfined, userRepository, categoryRepository, warehouseRepository,
             productRepository, supplierRepository, saleRepository, saleItemRepository,
-            purchaseRepository, purchaseItemRepository, expenseRepository
+            purchaseRepository, purchaseItemRepository, expenseRepository,
+            shiftRepository, pelangganRepository, stokGudangRepository, inventoryAuditRepository
         )
     }
 

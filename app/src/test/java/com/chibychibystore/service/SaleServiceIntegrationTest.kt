@@ -11,6 +11,7 @@ import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
+import com.chibychibystore.repository.ShiftRepository
 import com.chibychibystore.repository.StokGudangRepository
 import com.chibychibystore.service.PromoService
 import com.chibychibystore.service.impl.SaleServiceImpl
@@ -54,6 +55,7 @@ class SaleServiceIntegrationTest : BaseTest() {
         
         runBlocking {
             Mockito.`when`(authService.hasPermission(Mockito.anyString())).thenReturn(true)
+            Mockito.`when`(promoService.calculateDiscount(Mockito.anyDouble())).thenReturn(0.0)
         }
         
         val stokGudangRepo = StokGudangRepository(db.stokGudangDao(), db.produkDao())
@@ -64,6 +66,7 @@ class SaleServiceIntegrationTest : BaseTest() {
             itemPenjualanRepo,
             produkRepo,
             stokGudangRepo,
+            ShiftRepository(db.shiftDao()),
             authService,
             printerService,
             promoService
@@ -73,6 +76,18 @@ class SaleServiceIntegrationTest : BaseTest() {
     @After
     fun teardown() {
         db.close()
+    }
+
+    private suspend fun insertProductWithStock(prod: com.chibychibystore.data.local.entity.Produk): Long {
+        val id = db.produkDao().insertProduk(prod)
+        db.stokGudangDao().insertOrUpdateStock(
+            com.chibychibystore.data.local.entity.StokGudang(
+                productId = id,
+                warehouseId = prod.warehouseId,
+                quantity = prod.stockQuantity
+            )
+        )
+        return id
     }
 
     @Test
@@ -91,7 +106,7 @@ class SaleServiceIntegrationTest : BaseTest() {
             stockQuantity = 10,
             warehouseId = gudangId
         )
-        val prodId = db.produkDao().insertProduk(prod)
+        val prodId = insertProductWithStock(prod)
 
         // Insert a cashier user required by foreign key
         val cashierId = db.penggunaDao().insertPengguna(com.chibychibystore.data.local.entity.Pengguna(username = "cashier", passwordHash = "x", role = com.chibychibystore.data.local.entity.Role.CASHIER))
@@ -143,7 +158,7 @@ class SaleServiceIntegrationTest : BaseTest() {
             stockQuantity = 5,
             warehouseId = gudangId
         )
-        val prodId = db.produkDao().insertProduk(prod)
+        val prodId = insertProductWithStock(prod)
 
         val sale = Penjualan(saleDate = Date(), totalAmount = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
         val item = ItemPenjualan(saleId = 0, productId = prodId, quantity = 2, unitPrice = 10000.0, totalPrice = 20000.0)
@@ -187,7 +202,7 @@ class SaleServiceIntegrationTest : BaseTest() {
             stockQuantity = 4,
             warehouseId = gudangId
         )
-        val prodId = db.produkDao().insertProduk(prod)
+        val prodId = insertProductWithStock(prod)
 
         val sale = Penjualan(saleDate = Date(), totalAmount = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
         val item = ItemPenjualan(saleId = 0, productId = prodId, quantity = 2, unitPrice = 2000.0, totalPrice = 4000.0)
@@ -227,7 +242,7 @@ class SaleServiceIntegrationTest : BaseTest() {
             stockQuantity = 4,
             warehouseId = gudangId
         )
-        val prodId = db.produkDao().insertProduk(prod)
+        val prodId = insertProductWithStock(prod)
 
         val sale = Penjualan(saleDate = Date(), totalAmount = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId)
         val item = ItemPenjualan(saleId = 0, productId = prodId, quantity = 2, unitPrice = 12000.0, totalPrice = 24000.0)

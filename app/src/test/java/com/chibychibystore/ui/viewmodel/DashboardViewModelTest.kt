@@ -66,6 +66,7 @@ class DashboardViewModelTest {
         whenever(saleService.getPenjualanCountByRentangTanggal(any(), any())).thenReturn(com.chibychibystore.data.model.Result.success(2))
         whenever(saleService.getRecentPenjualan(any())).thenReturn(com.chibychibystore.data.model.Result.success(listOf(sale1, sale2)))
         whenever(reportingService.getSalesTrend(any(), any())).thenReturn(com.chibychibystore.data.model.Result.success(emptyList()))
+        whenever(reportingService.observeSalesMetrics()).thenReturn(flowOf(com.chibychibystore.service.MetrikPenjualan(150000.0, 2, 0.0, 0.0)))
         whenever(produkRepository.getLowStockProduk()).thenReturn(flowOf(listOf(Produk(name = "Low Stock", categoryId = 1, warehouseId = 1, costPrice = 1000.0, sellingPrice = 2000.0))))
 
         viewModel = DashboardViewModel(saleService, reportingService, produkRepository)
@@ -88,6 +89,7 @@ class DashboardViewModelTest {
     @Test
     fun `loadDashboardData handles service exception`() = runTest {
         whenever(saleService.getTotalPenjualanByRentangTanggal(any(), any())).thenThrow(RuntimeException("service failure"))
+        whenever(reportingService.observeSalesMetrics()).thenReturn(flowOf(com.chibychibystore.service.MetrikPenjualan(0.0, 0, 0.0, 0.0)))
         whenever(produkRepository.getLowStockProduk()).thenReturn(flowOf(emptyList()))
 
         viewModel = DashboardViewModel(saleService, reportingService, produkRepository)

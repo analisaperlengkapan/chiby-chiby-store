@@ -21,7 +21,7 @@ class AuthServiceTest {
 
     private lateinit var authService: AuthServiceImpl
     private lateinit var mockPenggunaDao: PenggunaDao
-    private lateinit var mockUserSessionRepository: com.chibychibystore.repository.UserSessionRepository
+    private lateinit var mockPenggunaSessionRepository: com.chibychibystore.repository.PenggunaSessionRepository
 
     private val testUser = Pengguna(
         id = 1,
@@ -33,8 +33,8 @@ class AuthServiceTest {
     @Before
     fun setup() {
         mockPenggunaDao = mock()
-        mockUserSessionRepository = mock()
-        authService = AuthServiceImpl(mockPenggunaDao, mockUserSessionRepository)
+        mockPenggunaSessionRepository = mock()
+        authService = AuthServiceImpl(mockPenggunaDao, mockPenggunaSessionRepository)
     }
 
     @Test
@@ -254,7 +254,7 @@ class AuthServiceTest {
     @Test
     fun `initializeSession should restore active session when valid`() = runTest {
         // Given
-        val session = com.chibychibystore.data.local.entity.UserSession(
+        val session = com.chibychibystore.data.local.entity.PenggunaSession(
             id = 1,
             userId = testUser.id,
             loginTime = java.util.Date(System.currentTimeMillis() - 1000),
@@ -262,7 +262,7 @@ class AuthServiceTest {
             isActive = true
         )
 
-        whenever(mockUserSessionRepository.getActiveSession()).thenReturn(Result.success(session))
+        whenever(mockPenggunaSessionRepository.getActiveSession()).thenReturn(Result.success(session))
         whenever(mockPenggunaDao.getPenggunaById(testUser.id)).thenReturn(testUser)
 
         // When
@@ -271,17 +271,17 @@ class AuthServiceTest {
         // Then
         assertTrue(result.isSuccess)
         assertEquals(testUser, authService.getCurrentUser())
-        verify(mockUserSessionRepository).updateLastActivityTime(session.id)
+        verify(mockPenggunaSessionRepository).updateLastActivityTime(session.id)
     }
 
     @Test
     fun `extendSession should update last activity time when session exists`() = runTest {
         // Given - logged in user
         whenever(mockPenggunaDao.getPenggunaByUsername("testuser")).thenReturn(testUser)
-        whenever(mockUserSessionRepository.createSession(any())).thenReturn(Result.success(1L))
+        whenever(mockPenggunaSessionRepository.createSession(any())).thenReturn(Result.success(1L))
         authService.login("testuser", "password123")
 
-        val session = com.chibychibystore.data.local.entity.UserSession(
+        val session = com.chibychibystore.data.local.entity.PenggunaSession(
             id = 2,
             userId = testUser.id,
             loginTime = java.util.Date(System.currentTimeMillis() - 1000),
@@ -289,24 +289,24 @@ class AuthServiceTest {
             isActive = true
         )
 
-        whenever(mockUserSessionRepository.getActiveSessionForUser(testUser.id)).thenReturn(Result.success(session))
+        whenever(mockPenggunaSessionRepository.getActiveSessionForUser(testUser.id)).thenReturn(Result.success(session))
 
         // When
         val result = authService.extendSession()
 
         // Then
         assertTrue(result.isSuccess)
-        verify(mockUserSessionRepository).updateLastActivityTime(session.id)
+        verify(mockPenggunaSessionRepository).updateLastActivityTime(session.id)
     }
 
     @Test
     fun `forceLogoutAll should deactivate sessions and clear current user`() = runTest {
         // Given - user is logged in
         whenever(mockPenggunaDao.getPenggunaByUsername("testuser")).thenReturn(testUser)
-        whenever(mockUserSessionRepository.createSession(any())).thenReturn(Result.success(1L))
+        whenever(mockPenggunaSessionRepository.createSession(any())).thenReturn(Result.success(1L))
         authService.login("testuser", "password123")
 
-        whenever(mockUserSessionRepository.deactivateAllSessions()).thenReturn(Result.success(Unit))
+        whenever(mockPenggunaSessionRepository.deactivateAllSessions()).thenReturn(Result.success(Unit))
 
         // When
         val result = authService.forceLogoutAll()
@@ -314,7 +314,7 @@ class AuthServiceTest {
         // Then
         assertTrue(result.isSuccess)
         assertNull(authService.getCurrentUser())
-        verify(mockUserSessionRepository).deactivateAllSessions()
+        verify(mockPenggunaSessionRepository).deactivateAllSessions()
     }
 
     private fun hashPassword(password: String): String {

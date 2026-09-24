@@ -444,6 +444,11 @@ class BackupServiceImpl @Inject constructor(
 
     private var backupDirectoryOverride: File? = null
 
+    /** Test-only hook to redirect backup output to a JVM-managed directory. */
+    internal fun setBackupDirectoryForTest(dir: File) {
+        backupDirectoryOverride = dir
+    }
+
     private fun calculateChecksum(data: String): String {
         val digest = MessageDigest.getInstance("SHA-256")
         val hash = digest.digest(data.toByteArray())

@@ -56,7 +56,7 @@ class BarcodeServiceTest {
         val product = Produk(
             id = productId,
             name = "Test Product",
-            barcode = "1234567890123",
+            barcode = "1234567890128",
             categoryId = 1,
             costPrice = 10000.0,
             sellingPrice = 15000.0,

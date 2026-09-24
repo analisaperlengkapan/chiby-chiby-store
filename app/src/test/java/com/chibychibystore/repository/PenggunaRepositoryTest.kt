@@ -166,7 +166,7 @@ class PenggunaRepositoryTest {
         // Given - only one owner exists
         val ownerUser = testUser.copy(role = Role.OWNER)
         whenever(mockPenggunaDao.getPenggunaById(1L)).thenReturn(ownerUser)
-        whenever(mockPenggunaDao.getAllPengguna()).thenReturn(flowOf(listOf(ownerUser)))
+        whenever(mockPenggunaDao.countByRole(Role.OWNER)).thenReturn(1)
 
         // When
         val result = repository.deleteUser(1)

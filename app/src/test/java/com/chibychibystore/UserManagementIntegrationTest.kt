@@ -6,7 +6,7 @@ import com.chibychibystore.data.local.database.ChibyChibyDatabase
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.repository.PenggunaRepository
-import com.chibychibystore.repository.UserSessionRepository
+import com.chibychibystore.repository.PenggunaSessionRepository
 import com.chibychibystore.service.impl.AuthServiceImpl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,7 +30,7 @@ class UserManagementIntegrationTest : BaseTest() {
 
     private lateinit var db: ChibyChibyDatabase
     private lateinit var penggunaRepo: PenggunaRepository
-    private lateinit var sessionRepo: UserSessionRepository
+    private lateinit var sessionRepo: PenggunaSessionRepository
     private lateinit var authService: AuthServiceImpl
 
     private val dispatcher = StandardTestDispatcher()
@@ -44,7 +44,7 @@ class UserManagementIntegrationTest : BaseTest() {
             .build()
 
         penggunaRepo = PenggunaRepository(db.penggunaDao())
-        sessionRepo = UserSessionRepository(db.userSessionDao())
+        sessionRepo = PenggunaSessionRepository(db.penggunaSessionDao())
         authService = AuthServiceImpl(db.penggunaDao(), sessionRepo)
     }
 
