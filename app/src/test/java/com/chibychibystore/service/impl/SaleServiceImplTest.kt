@@ -15,6 +15,7 @@ import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.repository.StokGudangRepository
+import com.chibychibystore.repository.ShiftRepository
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.service.PromoService
 import com.chibychibystore.service.printer.PrinterService
@@ -43,6 +44,7 @@ class SaleServiceImplTest {
     @Mock private lateinit var itemPenjualanRepository: ItemPenjualanRepository
     @Mock private lateinit var productRepository: ProdukRepository
     @Mock private lateinit var stokGudangRepository: StokGudangRepository
+    @Mock private lateinit var shiftRepository: ShiftRepository
     @Mock private lateinit var authService: AuthService
     @Mock private lateinit var printerService: PrinterService
     @Mock private lateinit var promoService: PromoService
@@ -67,6 +69,7 @@ class SaleServiceImplTest {
             itemPenjualanRepository,
             productRepository,
             stokGudangRepository,
+            shiftRepository,
             authService,
             printerService,
             promoService
@@ -113,6 +116,7 @@ class SaleServiceImplTest {
             quantity = 5 // Less than requested 10
         )
 
+        whenever(authService.hasPermission(any())).thenReturn(true)
         whenever(productRepository.getProductsByIds(any())).thenReturn(Result.success(listOf(product)))
         whenever(stokGudangRepository.getStocks(any(), any())).thenReturn(Result.success(listOf(stokGudang)))
         whenever(promoService.calculateDiscount(any())).thenReturn(0.0)
@@ -162,9 +166,10 @@ class SaleServiceImplTest {
             quantity = 10 // More than requested 5
         )
 
+        whenever(authService.hasPermission(any())).thenReturn(true)
         whenever(productRepository.getProductsByIds(any())).thenReturn(Result.success(listOf(product)))
         whenever(stokGudangRepository.getStocks(any(), any())).thenReturn(Result.success(listOf(stokGudang)))
-        whenever(stokGudangRepository.adjustStock(any(), any(), any())).thenReturn(Result.success(Unit))
+        whenever(stokGudangRepository.adjustStockBatch(any())).thenReturn(Result.success(Unit))
         whenever(penjualanRepository.createPenjualan(any(), any())).thenReturn(Result.success(PenjualanWithItems(sale, items)))
         whenever(promoService.calculateDiscount(any())).thenReturn(0.0)
 
@@ -173,7 +178,9 @@ class SaleServiceImplTest {
 
         // Assert
         assertTrue(result.isSuccess)
-        verify(stokGudangRepository).adjustStock(1L, 1L, -5)
+        verify(stokGudangRepository).adjustStockBatch(
+            listOf(com.chibychibystore.data.model.StockAdjustment(1L, 1L, -5))
+        )
     }
 
 }

@@ -42,7 +42,7 @@ class CompleteSystemIntegrationTest : BaseTest() {
     private lateinit var produkRepository: ProdukRepository
     private lateinit var penjualanRepository: PenjualanRepository
     private lateinit var itemPenjualanRepository: ItemPenjualanRepository
-    private lateinit var userSessionRepository: UserSessionRepository
+    private lateinit var userSessionRepository: PenggunaSessionRepository
     private lateinit var stokGudangRepository: StokGudangRepository
     
     // Services
@@ -66,7 +66,7 @@ class CompleteSystemIntegrationTest : BaseTest() {
         produkRepository = ProdukRepository(database.produkDao())
         penjualanRepository = PenjualanRepository(database.penjualanDao(), database.itemPenjualanDao())
         itemPenjualanRepository = ItemPenjualanRepository(database.itemPenjualanDao())
-        userSessionRepository = UserSessionRepository(database.userSessionDao())
+        userSessionRepository = PenggunaSessionRepository(database.penggunaSessionDao())
         stokGudangRepository = StokGudangRepository(database.stokGudangDao(), database.produkDao())
 
         // Initialize services
@@ -75,7 +75,7 @@ class CompleteSystemIntegrationTest : BaseTest() {
         warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, stokGudangRepository, authService, database)
         val printerStub = com.chibychibystore.testutils.TestPrinterService()
         val promoService = PromoServiceImpl(PromotionRepository(database.promotionDao()))
-        saleService = SaleServiceImpl(database, penjualanRepository, itemPenjualanRepository, produkRepository, stokGudangRepository, authService, printerStub, promoService)
+        saleService = SaleServiceImpl(database, penjualanRepository, itemPenjualanRepository, produkRepository, stokGudangRepository, ShiftRepository(database.shiftDao()), authService, printerStub, promoService)
     }
 
     @After
@@ -228,7 +228,7 @@ class CompleteSystemIntegrationTest : BaseTest() {
             )
         )
 
-        val totalAmount = 16250000.0 // 15M + 500K + 750K
+        val totalAmount = 17875000.0 // (15M + 500K + 750K) + 10% tax
 
         val saleHeader = Penjualan(saleDate = Date(), totalAmount = totalAmount, paymentMethod = PaymentMethod.CASH, cashierId = cashierUser!!.id)
 

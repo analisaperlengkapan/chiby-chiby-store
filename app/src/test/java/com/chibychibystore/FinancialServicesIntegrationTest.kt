@@ -24,7 +24,7 @@ class FinancialServicesIntegrationTest : BaseTest() {
 
     private lateinit var db: ChibyChibyDatabase
     private lateinit var penggunaRepository: PenggunaRepository
-    private lateinit var sessionRepository: UserSessionRepository
+    private lateinit var sessionRepository: PenggunaSessionRepository
     private lateinit var authService: AuthServiceImpl
 
     private lateinit var pengeluaranRepository: PengeluaranRepository
@@ -46,7 +46,7 @@ class FinancialServicesIntegrationTest : BaseTest() {
 
         // Repositories
         penggunaRepository = PenggunaRepository(db.penggunaDao())
-        sessionRepository = UserSessionRepository(db.userSessionDao())
+        sessionRepository = PenggunaSessionRepository(db.penggunaSessionDao())
         pengeluaranRepository = PengeluaranRepository(db.pengeluaranDao())
         penjualanRepository = PenjualanRepository(db.penjualanDao(), db.itemPenjualanDao())
         pembelianRepository = PembelianRepository(db.pembelianDao())
@@ -55,8 +55,18 @@ class FinancialServicesIntegrationTest : BaseTest() {
         // Services
         authService = AuthServiceImpl(db.penggunaDao(), sessionRepository)
         expenseService = ExpenseServiceImpl(pengeluaranRepository)
-        cashManagementService = CashManagementService(penjualanRepository, pengeluaranRepository)
-        balanceSheetService = BalanceSheetService(produkRepository, pengeluaranRepository, cashManagementService)
+        cashManagementService = CashManagementServiceImpl(
+            db,
+            penjualanRepository,
+            pengeluaranRepository,
+            ShiftRepository(db.shiftDao()),
+            authService
+        )
+        balanceSheetService = BalanceSheetServiceImpl(
+            produkRepository,
+            pengeluaranRepository,
+            javax.inject.Provider { cashManagementService }
+        )
         val itemPenjualanRepository = ItemPenjualanRepository(db.itemPenjualanDao())
         reportingService = ReportingServiceImpl(
             penjualanRepository,
@@ -66,7 +76,8 @@ class FinancialServicesIntegrationTest : BaseTest() {
             pembelianRepository,
             balanceSheetService,
             cashManagementService,
-            authService
+            authService,
+            db
         )
 
         // Create and login an owner user to allow operations that need authentication

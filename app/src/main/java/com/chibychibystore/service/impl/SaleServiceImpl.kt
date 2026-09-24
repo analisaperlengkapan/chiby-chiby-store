@@ -9,6 +9,8 @@ import com.chibychibystore.data.model.StockAdjustment
 import com.chibychibystore.repository.ItemPenjualanRepository
 import com.chibychibystore.repository.PenjualanRepository
 import com.chibychibystore.constant.AppConstants
+import com.chibychibystore.error.ChibyChibyException
+import com.chibychibystore.util.Permissions
 import com.chibychibystore.repository.ProdukRepository
 import com.chibychibystore.repository.ShiftRepository
 import com.chibychibystore.repository.StokGudangRepository
@@ -43,6 +45,9 @@ class SaleServiceImpl @Inject constructor(
         items: List<ItemPenjualan>
     ): Result<PenjualanWithItems> {
         val pelangganId = sale.pelangganId
+        if (!authService.hasPermission(Permissions.CREATE_SALES)) {
+            return Result.failure(ChibyChibyException.PermissionError(Permissions.CREATE_SALES))
+        }
         if (items.isEmpty()) {
             return Result.failure(Exception("Item penjualan tidak boleh kosong"))
         }
@@ -299,7 +304,31 @@ class SaleServiceImpl @Inject constructor(
     }
 
     override suspend fun cancelPenjualan(id: Long): Result<Unit> {
-        return refundPenjualan(id)
+        return try {
+            db.withTransaction {
+                val saleResult = getPenjualanById(id)
+                if (saleResult is Result.Failure) throw saleResult.exception
+                val saleWithItems = (saleResult as Result.Success).data
+                    ?: throw Exception("Penjualan tidak ditemukan")
+
+                // Restore per-warehouse stock, then delete the sale and its items.
+                val warehouseId = saleWithItems.sale.warehouseId
+                val adjustments = saleWithItems.items.map {
+                    StockAdjustment(it.productId, warehouseId, it.quantity)
+                }
+                if (adjustments.isNotEmpty()) {
+                    val stockResult = stokGudangRepository.adjustStockBatch(adjustments)
+                    if (stockResult is Result.Failure) throw stockResult.exception
+                }
+
+                penjualanRepository.deletePenjualan(id)
+                itemPenjualanRepository.deleteItemPenjualanByPenjualanId(id)
+
+                Result.success(Unit)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     override suspend fun getTotalPenjualanByRentangTanggal(startDate: String, endDate: String): Result<Double> {

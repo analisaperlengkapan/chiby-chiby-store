@@ -76,7 +76,7 @@ class AuditViewModel @Inject constructor(
 
     private fun loadProducts() {
         viewModelScope.launch {
-            productService.observeProducts()
+            productService.observeProduks()
                 .collect { list -> _uiState.update { it.copy(products = list) } }
         }
     }
@@ -88,7 +88,7 @@ class AuditViewModel @Inject constructor(
              // products flow is started asynchronously in `init`, so a quick warehouse
              // selection could otherwise race ahead and produce an empty audit (no items
              // to count, allowing the user to "complete" an audit with zero entries).
-             val products = productService.observeProducts().first()
+             val products = productService.observeProduks().first()
              _uiState.update { it.copy(products = products) }
              // Look up the per-warehouse stock for each product so that the expected
              // quantity reflects the stock in this warehouse (not the global total).

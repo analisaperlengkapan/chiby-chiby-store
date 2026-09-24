@@ -517,7 +517,11 @@ class PosViewModel @Inject constructor(
             updateState { it.copy(isProcessingPayment = true, error = null) }
             
             val currentUser = authService.getCurrentUser()
-            val userId = currentUser?.id ?: 0L
+            if (currentUser == null) {
+                updateState { it.copy(isProcessingPayment = false, error = "User tidak terautentikasi") }
+                return@launchWithState
+            }
+            val userId = currentUser.id
 
             // Look up the cashier's open shift so the sale can be linked for shift
             // reconciliation. If none is open, the sale still proceeds (so a cashier

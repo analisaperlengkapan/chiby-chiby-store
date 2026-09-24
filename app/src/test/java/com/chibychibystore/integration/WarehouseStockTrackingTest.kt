@@ -52,7 +52,7 @@ class WarehouseStockTrackingTest : BaseTest() {
         stokGudangRepository = StokGudangRepository(database.stokGudangDao(), database.produkDao())
         penjualanRepository = PenjualanRepository(database.penjualanDao(), database.itemPenjualanDao())
         itemPenjualanRepository = ItemPenjualanRepository(database.itemPenjualanDao())
-        val userSessionRepository = UserSessionRepository(database.userSessionDao())
+        val userSessionRepository = PenggunaSessionRepository(database.penggunaSessionDao())
 
         // Mock AuthService to bypass permissions
         authService = Mockito.spy(AuthServiceImpl(database.penggunaDao(), userSessionRepository))
@@ -64,7 +64,7 @@ class WarehouseStockTrackingTest : BaseTest() {
         runBlocking {
             val user = Pengguna(id = 1L, username = "testuser", role = Role.OWNER, passwordHash = "hash")
             database.penggunaDao().insertPengguna(user)
-            database.userSessionDao().insertSession(UserSession(userId = 1L))
+            database.penggunaSessionDao().insertSession(PenggunaSession(userId = 1L))
         }
 
         warehouseService = WarehouseServiceImpl(gudangRepository, produkRepository, stokGudangRepository, authService, database)
@@ -79,6 +79,7 @@ class WarehouseStockTrackingTest : BaseTest() {
             itemPenjualanRepository,
             produkRepository,
             stokGudangRepository,
+            ShiftRepository(database.shiftDao()),
             authService,
             printerStub,
             promoService

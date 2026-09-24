@@ -29,6 +29,7 @@ class SecurityPermissionTest {
     @Mock lateinit var balanceSheetService: BalanceSheetService
     @Mock lateinit var cashManagementService: CashManagementService
     @Mock lateinit var stokGudangRepository: StokGudangRepository
+    @Mock lateinit var shiftRepository: com.chibychibystore.repository.ShiftRepository
     @Mock lateinit var promoService: PromoService
     @Mock lateinit var db: com.chibychibystore.data.local.database.ChibyChibyDatabase
 
@@ -48,6 +49,7 @@ class SecurityPermissionTest {
             itemPenjualanRepository,
             productRepository,
             stokGudangRepository,
+            shiftRepository,
             authService,
             printerService,
             promoService
@@ -61,7 +63,8 @@ class SecurityPermissionTest {
             pembelianRepository,
             balanceSheetService,
             cashManagementService,
-            authService
+            authService,
+            db
         )
     }
 

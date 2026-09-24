@@ -77,7 +77,7 @@ class PurchaseViewModel @Inject constructor(
 
     private fun loadProducts() {
         viewModelScope.launch {
-            productService.observeProducts()
+            productService.observeProduks()
                 .collect { list ->
                     _uiState.update { it.copy(products = list) }
                 }

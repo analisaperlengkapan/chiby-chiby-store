@@ -21,6 +21,7 @@ class SaleServiceSpyTest {
 
         // Minimal implementations for other interface members
         override suspend fun getPenjualanById(id: Long) = Result.success(null as PenjualanWithItems?)
+        override suspend fun getOpenShift(kasirId: Long) = Result.success(null as com.chibychibystore.data.local.entity.Shift?)
         override suspend fun getPenjualanByRentangTanggal(startDate: String?, endDate: String?, cashierId: Long?, query: String?) = Result.success(emptyList<Penjualan>())
         override suspend fun getRecentPenjualan(limit: Int) = Result.success(emptyList<Penjualan>())
         override suspend fun searchPenjualan(query: String) = Result.success(emptyList<Penjualan>())

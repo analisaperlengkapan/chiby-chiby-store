@@ -65,6 +65,6 @@ class PemasokRepositoryTest {
 
         assertTrue(result.isFailure)
         val exception = result.exceptionOrNull() as ChibyChibyException.DatabaseError
-        assertEquals("Pemasok tidak ditemukan", exception.message)
+        assertEquals("Error database saat Pemasok tidak ditemukan", exception.message)
     }
 }

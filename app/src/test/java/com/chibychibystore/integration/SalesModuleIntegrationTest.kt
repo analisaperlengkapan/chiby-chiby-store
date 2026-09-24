@@ -71,6 +71,7 @@ class SalesModuleIntegrationTest : BaseTest() {
             itemPenjualanRepository,
             produkRepository,
             stokGudangRepository,
+            ShiftRepository(database.shiftDao()),
             authService,
             printerStub,
             promoService
@@ -145,7 +146,7 @@ class SalesModuleIntegrationTest : BaseTest() {
         assertNotNull(saleWithItems)
 
         // 5. Verify sale data
-        assertEquals(14300000.0, saleWithItems?.sale?.totalAmount)
+        assertEquals(15730000.0, saleWithItems?.sale?.totalAmount) // subtotal + 10% tax
         assertEquals(userId, saleWithItems?.sale?.cashierId)
 
         // 6. Verify stock was updated

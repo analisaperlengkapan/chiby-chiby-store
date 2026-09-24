@@ -60,7 +60,8 @@ class ReportingServiceBenchmarkTest {
             pembelianRepository,
             balanceSheetService,
             cashManagementService,
-            authService
+            authService,
+            db
         )
     }
 
@@ -75,6 +76,10 @@ class ReportingServiceBenchmarkTest {
             Kategori(id = it.toLong(), name = "Category $it")
         }
         categories.forEach { db.kategoriDao().insertKategori(it) }
+
+        // Foreign-key parents required by produk (warehouse) and penjualan (cashier)
+        db.gudangDao().insertGudang(Gudang(id = 1L, name = "Main Warehouse"))
+        db.penggunaDao().insertPengguna(Pengguna(id = 1L, username = "cashier", passwordHash = "x", role = Role.CASHIER))
 
         // Create Products (100 products, distributed across categories)
         val products = (1..100).map { i ->
