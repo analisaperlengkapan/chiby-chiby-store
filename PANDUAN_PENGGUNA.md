@@ -1,9 +1,10 @@
 # Panduan Pengguna Aplikasi Chiby Chiby Store
 
 **Versi:** 1.0
-**Tanggal:** December 12, 2025
-**Platform:** Android (min. API 21)
+**Platform:** Android (min. API 23 / Android 6.0, target API 35)
 **Bahasa:** Indonesia
+
+> Semua tangkapan layar di dokumen ini dihasilkan otomatis dari kode UI terkini. Lihat [README.md](README.md) untuk galeri lengkap semua halaman.
 
 ---
 
@@ -44,7 +45,7 @@ Chiby Chiby Store adalah aplikasi Point of Sale (POS) lengkap untuk toko retail 
 - ✅ **Thermal Printer**: Dukungan printer struk dan label Bluetooth
 
 ### 1.3 Persyaratan Sistem
-- **Android**: Versi 5.0 (API 21) atau lebih tinggi
+- **Android**: Versi 6.0 (API 23) atau lebih tinggi
 - **Storage**: Minimal 100MB ruang kosong
 - **Kamera**: Untuk pemindaian barcode (opsional)
 - **Bluetooth**: Untuk printer thermal (opsional)
@@ -124,32 +125,52 @@ Aplikasi memerlukan izin berikut:
 
 ## 5. Navigasi Aplikasi
 
-### 5.1 Bottom Navigation
-- **Dashboard**: Ringkasan dan metrik utama
+### 5.1 Struktur Navigasi
+Aplikasi menggunakan satu `NavHost` dengan halaman **Login** sebagai titik awal. Setelah login, halaman **Dashboard** menjadi pusat navigasi:
+
+- **Dashboard**: Ringkasan penjualan hari ini, tren 7 hari, dan transaksi terakhir
 - **Inventory**: Manajemen produk dan stok
-- **Sales**: Riwayat penjualan
+- **Point of Sale**: Antarmuka kasir
+- **Sales History**: Riwayat penjualan
 - **Reports**: Laporan dan analitik
 - **Settings**: Pengaturan aplikasi
 
+Halaman lain (warehouse, pembelian, promosi, pelanggan, kas, stok opname, expense, backup, user, pemasok) dibuka dari Dashboard atau dari halaman terkait.
+
 ### 5.2 Drawer Menu (Menu Samping)
-Akses melalui ikon menu (☰) di kiri atas:
+Komponen drawer (`AppDrawer`) berisi daftar lengkap menu:
 - **Point of Sale**: Antarmuka kasir
-- **Manajemen Gudang**: Multi-gudang management
-- **Scan Barcode**: Pemindaian barcode
-- **Print Barcode**: Generate label
-- **Backup Data**: Cadangkan data
-- **Manajemen Pengguna**: Kelola user (Owner only)
-- **Logout**: Keluar aplikasi
+- **Manajemen Pembelian**: Purchase order
+- **Manajemen Warehouse**: Multi-gudang management
+- **Manajemen Expense**: Pengeluaran operasional
+- **Manajemen User**: Kelola user (Owner only)
+- **Manajemen Promosi**: Diskon dan promo
+- **Manajemen Pelanggan**: Data pelanggan
+- **Manajemen Kas**: Shift kasir
+- **Stok Opname**: Audit stok fisik
+- **Barcode Scanner**: Pemindaian barcode
+- **Cetak Label Barcode**: Generate label
+- **Backup & Restore**: Cadangkan data
+
+> Catatan: komponen drawer dan bottom navigation tersedia di codebase namun belum dipasang di `AppNavigation`. Untuk saat ini navigasi antar halaman dilakukan dari tombol/menu di dalam masing-masing halaman.
+
+| Login | Dashboard |
+| --- | --- |
+| ![Login](docs/screenshots/01-login.png) | ![Dashboard](docs/screenshots/02-dashboard.png) |
 
 ---
 
 ## 6. Manajemen Inventori
 
 ### 6.1 Melihat Inventori
-1. Klik tab "Inventory" di bottom navigation
+1. Buka halaman **Inventory**
 2. **Search**: Gunakan search bar untuk cari produk
 3. **Filter**: Klik ikon filter untuk filter berdasarkan kategori
 4. **Low Stock Alert**: Produk dengan stok rendah ditandai merah
+
+| Daftar Inventory | Tambah Produk | Detail Produk |
+| --- | --- | --- |
+| ![Inventory](docs/screenshots/03-inventory.png) | ![Tambah Produk](docs/screenshots/04-inventory-add-product.png) | ![Detail Produk](docs/screenshots/05-inventory-product-detail.png) |
 
 ### 6.2 Menambah Produk Baru
 1. Di halaman Inventory, klik tombol **"+"** (Add Product)
@@ -176,21 +197,29 @@ Akses melalui ikon menu (☰) di kiri atas:
 4. Klik "Simpan"
 
 ### 6.5 Transfer Antar Gudang
-1. Buka drawer menu → "Manajemen Gudang"
+1. Buka halaman **Manajemen Warehouse**
 2. Pilih gudang tujuan
 3. Klik produk yang ingin dipindah
 4. Klik "Transfer" dan pilih gudang tujuan
 5. Masukkan jumlah yang akan dipindah
+
+| Daftar Warehouse | Detail Warehouse | Tambah Warehouse | Edit Warehouse |
+| --- | --- | --- | --- |
+| ![Warehouse](docs/screenshots/06-warehouse-list.png) | ![Detail Warehouse](docs/screenshots/07-warehouse-detail.png) | ![Tambah Warehouse](docs/screenshots/09-warehouse-add.png) | ![Edit Warehouse](docs/screenshots/08-warehouse-edit.png) |
 
 ---
 
 ## 7. Point of Sale (POS)
 
 ### 7.1 Memulai Transaksi
-1. Buka drawer menu → "Point of Sale"
+1. Buka halaman **Point of Sale**
 2. Aplikasi akan menampilkan antarmuka POS dengan:
    - Panel kiri: Pencarian produk
    - Panel kanan: Keranjang dan pembayaran
+
+| Point of Sale | Dialog Struk |
+| --- | --- |
+| ![POS](docs/screenshots/10-pos.png) | ![Dialog Struk](docs/screenshots/39-dialog-pos-receipt.png) |
 
 ### 7.2 Menambah Produk ke Keranjang
 **Opsi 1 - Pencarian Manual:**
@@ -213,20 +242,25 @@ Akses melalui ikon menu (☰) di kiri atas:
 
 ### 7.4 Proses Pembayaran
 1. Pilih metode pembayaran:
-   - **Tunai (Cash)**
-   - **Kartu (Card)** - placeholder untuk future
+   - **Tunai (CASH)**
+   - **Kartu (CARD)**
+   - **QRIS**
 2. Klik "Bayar"
 3. Konfirmasi pembayaran
-4. Struk otomatis dicetak (jika printer tersedia)
+4. Struk ditampilkan di dialog dan bisa dicetak/dibagikan (jika printer tersedia)
 
 ---
 
 ## 8. Riwayat Penjualan
 
 ### 8.1 Melihat Riwayat Penjualan
-1. Klik tab "Sales" di bottom navigation
+1. Buka halaman **Sales History**
 2. **Filter Tanggal**: Klik ikon kalender untuk filter periode
 3. **Search**: Cari berdasarkan nomor struk atau metode pembayaran
+
+| Riwayat Penjualan | Dialog Struk |
+| --- | --- |
+| ![Riwayat Penjualan](docs/screenshots/11-sales-history.png) | ![Dialog Struk](docs/screenshots/12-sales-receipt-dialog.png) |
 
 ### 8.2 Detail Transaksi
 1. Klik transaksi dari list
@@ -237,26 +271,25 @@ Akses melalui ikon menu (☰) di kiri atas:
    - Waktu transaksi
 
 ### 8.3 Print Struk Ulang
-1. Di halaman detail transaksi
-2. Klik tombol "Print Struk"
-3. Pilih printer Bluetooth
-4. Struk akan dicetak
+1. Di halaman riwayat, klik "Lihat Struk" pada transaksi
+2. Dialog struk akan tampil
+3. Klik tombol "Cetak Struk"
+4. Struk dikirim ke printer atau dibagikan sebagai file
 
-### 8.4 Refund/Pembatalan
-1. Klik transaksi yang ingin direfund
-2. Klik "Refund" (hanya untuk transaksi hari ini)
-3. Konfirmasi refund
-4. Stok produk otomatis dikembalikan
+### 8.4 Refund
+Refund dijalankan di lapisan service (`SaleServiceImpl.refundPenjualan`): transaksi ditandai `isRefunded` dan stok produk dikembalikan. Belum ada tombol refund di UI, jadi saat ini hanya bisa dipicu dari kode/service.
 
 ---
 
 ## 9. Laporan dan Analitik
 
 ### 9.1 Mengakses Laporan
-1. Klik tab "Reports" di bottom navigation
-2. Pilih tipe laporan dari dropdown
+1. Buka halaman **Reports**
+2. Pilih tipe laporan dari dropdown "Pilih Tipe Laporan"
+3. Atur Tanggal Mulai dan Tanggal Akhir
 
 ### 9.2 Tipe Laporan Tersedia
+Aplikasi menyediakan 12 tipe laporan:
 
 #### 9.2.1 Penjualan Kotor (Gross Sales)
 - Total penjualan dalam periode
@@ -281,41 +314,65 @@ Akses melalui ikon menu (☰) di kiri atas:
 - Grafik garis penjualan harian
 - Analisis pola penjualan
 
-#### 9.2.6 Laporan Keuangan
-- **Neraca**: Aset, liabilitas, ekuitas
-- **Arus Kas**: Operating, investing, financing
-- **Laporan Laba Rugi**: Pendapatan dan pengeluaran
+#### 9.2.6 Pergerakan Stok (Stock Movement)
+- Riwayat masuk/keluar stok per produk
+- Referensi transaksi (INV/TRX)
+
+#### 9.2.7 Ringkasan Periodik (Periodic Summary)
+- Penjualan dan net profit per hari dalam periode
+
+#### 9.2.8 Laporan Keuangan
+- **Neraca (Balance Sheet)**: Aset, liabilitas, ekuitas
+- **Arus Kas (Cash Flow)**: Operating, investing, financing
+- **Laporan Laba Rugi (Income Statement)**: Pendapatan dan pengeluaran
+- **Laporan Expense**: Rekap pengeluaran per kategori
+
+| Gross Sales | Net Profit | Profit Margin | Sales Trend |
+| --- | --- | --- | --- |
+| ![Gross Sales](docs/screenshots/34-report-gross-sales.png) | ![Net Profit](docs/screenshots/34-report-net-profit.png) | ![Profit Margin](docs/screenshots/34-report-profit-margin.png) | ![Sales Trend](docs/screenshots/34-report-sales-trend.png) |
+
+| Sales per Produk | Sales per Kategori | Pergerakan Stok | Ringkasan Periodik |
+| --- | --- | --- | --- |
+| ![Sales per Produk](docs/screenshots/34-report-sales-by-product.png) | ![Sales per Kategori](docs/screenshots/34-report-sales-by-category.png) | ![Pergerakan Stok](docs/screenshots/34-report-stock-movement.png) | ![Ringkasan Periodik](docs/screenshots/34-report-periodic-summary.png) |
+
+| Laba Rugi | Neraca | Arus Kas | Expense |
+| --- | --- | --- | --- |
+| ![Laba Rugi](docs/screenshots/34-report-income-statement.png) | ![Neraca](docs/screenshots/34-report-balance-sheet.png) | ![Arus Kas](docs/screenshots/34-report-cash-flow.png) | ![Expense](docs/screenshots/34-report-expense.png) |
 
 ### 9.3 Export Laporan
-1. Di halaman laporan, klik tombol "Export PDF"
-2. Konfirmasi export
-3. File PDF akan disimpan di folder Downloads
-4. Bisa dibagikan via email atau WhatsApp
+1. Di halaman laporan, klik tombol export
+2. Laporan dirender menjadi PDF
+3. Muncul pilihan untuk membuka atau membagikan file PDF
+4. Bagikan via email, WhatsApp, atau aplikasi lain
 
 ---
 
 ## 10. Manajemen Barcode
 
 ### 10.1 Scan Barcode
-1. Buka drawer menu → "Scan Barcode"
+1. Buka halaman **Scan Barcode**
 2. Izinkan akses kamera
 3. Arahkan kamera ke barcode
 4. Produk otomatis ditemukan dan ditampilkan
 
+| Scan Barcode | Cetak Label Barcode |
+| --- | --- |
+| ![Scan Barcode](docs/screenshots/23-barcode-scanner.png) | ![Cetak Label Barcode](docs/screenshots/24-barcode-print.png) |
+
 ### 10.2 Generate Barcode
-1. Buka drawer menu → "Print Barcode"
+1. Buka halaman **Cetak Label Barcode**
 2. Pilih produk dari list
 3. Pilih ukuran label:
    - Kecil (2x1 cm)
    - Sedang (3x2 cm)
-   - Besar (5x3 cm)
+   - Besar (3x2 cm)
    - Extra Large (7x4 cm)
 4. Masukkan jumlah label
 5. Klik "Print" untuk cetak via Bluetooth
 
 ### 10.3 Format Barcode
 Aplikasi mendukung:
-- **EAN-13**: Standar retail Indonesia (prefix 899)
+- **EAN-13**: Standar retail Indonesia
 - **Code 128**: General purpose
 - **QR Code**: 2D barcode
 - **GS1 DataMatrix**: Healthcare dan logistik
@@ -325,10 +382,10 @@ Aplikasi mendukung:
 ## 11. Backup dan Restore
 
 ### 11.1 Membuat Backup
-1. Buka drawer menu → "Backup Data"
-2. Klik "Buat Backup Baru"
+1. Buka halaman **Backup & Restore**
+2. Klik "Buat Backup"
 3. Tunggu proses backup selesai
-4. File backup (.enc) tersimpan di folder Downloads/ChibyChibyBackup
+4. File backup (.enc) tersimpan di folder `Downloads/ChibyChibyBackup`, terenkripsi AES-256-GCM
 
 ### 11.2 Melihat Riwayat Backup
 - List semua file backup dengan:
@@ -347,16 +404,20 @@ Aplikasi mendukung:
 1. Swipe kiri pada file backup
 2. Klik "Hapus" atau konfirmasi
 
+| Backup & Restore |
+| --- |
+| ![Backup & Restore](docs/screenshots/28-backup-restore.png) |
+
 ---
 
 ## 12. Manajemen Pengguna
 
 ### 12.1 Menambah User Baru (Owner Only)
-1. Buka drawer menu → "Manajemen Pengguna"
+1. Buka halaman **Manajemen User**
 2. Klik tombol "+" (Add User)
 3. Isi detail:
    - Username
-   - Password (minimal 8 karakter)
+   - Password
    - Peran: Owner/Manager/Cashier/Warehouse
 4. Klik "Simpan"
 
@@ -371,6 +432,10 @@ Aplikasi mendukung:
 2. Masukkan password baru
 3. Konfirmasi password
 4. Klik "Simpan"
+
+| Manajemen User | Tambah User | Detail User | Konfirmasi Hapus |
+| --- | --- | --- | --- |
+| ![Manajemen User](docs/screenshots/29-user-list.png) | ![Tambah User](docs/screenshots/30-user-add.png) | ![Detail User](docs/screenshots/31-user-detail.png) | ![Hapus User](docs/screenshots/37-dialog-user-delete.png) |
 
 ---
 
@@ -392,6 +457,42 @@ Aplikasi mendukung:
 ### 13.4 Logout
 - Keluar dari aplikasi
 - Konfirmasi sebelum logout
+
+| Pengaturan |
+| --- |
+| ![Pengaturan](docs/screenshots/33-settings.png) |
+
+### 13.5 Halaman Lainnya
+
+**Pemasok** — daftar supplier dengan pencarian. Tombol "+" membuka dialog tambah pemasok (nama wajib, telepon, email, alamat). Ikon pensil untuk edit, ikon hapus untuk hapus.
+
+**Promosi** — daftar promo beserta status aktif/nonaktif. Form tambah/edit memuat nama, deskripsi, tipe (Persentase atau Nominal Tetap), nilai, minimal belanja, maksimal diskon opsional, dan periode promo.
+
+**Pelanggan** — daftar pelanggan dengan pencarian dan total poin. Form tambah/edit memuat nama, nomor HP, email, dan alamat.
+
+**Kas / Shift** — buka shift dengan modal awal, lalu tutup shift dengan mengisi kas aktual di laci dan catatan; selisih dihitung otomatis. Halaman riwayat menampilkan shift sebelumnya.
+
+**Pembelian** — daftar purchase order. Form pembelian baru memilih pemasok, gudang, dan daftar produk beserta jumlah dan harga beli.
+
+**Stok Opname** — daftar sesi opname. Memulai opname berarti memilih gudang, lalu memasukkan jumlah fisik tiap produk; selisih terhadap stok sistem dicatat dan stok disesuaikan.
+
+**Expense** — daftar pengeluaran dengan filter periode dan kategori. Form tambah memuat jumlah, kategori, tanggal, dan deskripsi. Halaman detail menampilkan rincian dan bisa masuk mode edit.
+
+| Pemasok | Promosi | Pelanggan | Kas / Shift |
+| --- | --- | --- | --- |
+| ![Pemasok](docs/screenshots/32-supplier-list.png) | ![Promosi](docs/screenshots/15-promotion-list.png) | ![Pelanggan](docs/screenshots/21-customer-list.png) | ![Kas](docs/screenshots/17-cash-shift.png) |
+
+| Pembelian | Stok Opname | Expense | Riwayat Shift |
+| --- | --- | --- | --- |
+| ![Pembelian](docs/screenshots/13-purchase-list.png) | ![Stok Opname](docs/screenshots/19-audit-list.png) | ![Expense](docs/screenshots/25-expense-list.png) | ![Riwayat Shift](docs/screenshots/18-cash-shift-history.png) |
+
+| Tambah Promosi | Tambah Pelanggan | Pembelian Baru | Mulai Opname |
+| --- | --- | --- | --- |
+| ![Tambah Promosi](docs/screenshots/16-promotion-add.png) | ![Tambah Pelanggan](docs/screenshots/22-customer-add.png) | ![Pembelian Baru](docs/screenshots/14-purchase-add.png) | ![Mulai Opname](docs/screenshots/20-audit-add.png) |
+
+| Tambah Expense | Detail Expense |
+| --- | --- |
+| ![Tambah Expense](docs/screenshots/26-expense-add.png) | ![Detail Expense](docs/screenshots/27-expense-detail.png) |
 
 ---
 
@@ -456,22 +557,22 @@ Aplikasi mendukung:
 **A:** Ya, aplikasi dirancang offline-first. Semua fitur berfungsi tanpa internet.
 
 ### Q: Berapa maksimal produk yang bisa dikelola?
-**A:** Aplikasi dapat menangani hingga 10,000 produk dengan performa optimal.
+**A:** Tidak ada batas keras dari aplikasi. Database SQLite lokal sanggup menangani ribuan produk; performa bergantung pada perangkat.
 
 ### Q: Apakah data aman?
-**A:** Ya, data dienkripsi dengan AES256 dan disimpan lokal di perangkat.
+**A:** Data tersimpan lokal di perangkat (database SQLite belum terenkripsi). File backup terenkripsi AES-256-GCM dan hanya bisa dibuka oleh aplikasi ini.
 
 ### Q: Bagaimana cara backup data?
-**A:** Buka menu Backup Data dan klik "Buat Backup Baru". File tersimpan di Downloads.
+**A:** Buka halaman Backup & Restore dan klik "Buat Backup". File `.enc` tersimpan di folder `Downloads/ChibyChibyBackup`.
 
 ### Q: Format barcode apa yang didukung?
 **A:** EAN-13, Code 128, QR Code, dan GS1 DataMatrix.
 
 ### Q: Bisakah digunakan di multiple device?
-**A:** Saat ini single device. Multi-device sync akan hadir di versi future.
+**A:** Saat ini single device dengan data lokal. Sinkronisasi multi-device belum tersedia.
 
 ### Q: Bagaimana cara reset password?
-**A:** Owner dapat reset password user lain melalui Manajemen Pengguna.
+**A:** Owner dapat mereset password user lain melalui dialog "Reset Password" di halaman Manajemen User.
 
 ### Q: Apakah ada biaya langganan?
 **A:** Tidak, aplikasi gratis untuk digunakan tanpa batas waktu.

@@ -46,6 +46,12 @@ android {
         compose true
         buildConfig true
     }
+    testOptions {
+        unitTests {
+            // Robolectric renders Compose screens against the real merged resources/manifest.
+            includeAndroidResources = true
+        }
+    }
     packagingOptions {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
@@ -224,6 +230,12 @@ dependencies {
     testImplementation 'org.robolectric:robolectric:4.16.1'
     testImplementation 'androidx.room:room-testing:2.8.4'
     testImplementation 'androidx.test:core:1.7.0'
+    // Compose UI testing under Robolectric enables headless screenshot generation
+    testImplementation platform('androidx.compose:compose-bom:2026.01.00')
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
+    testImplementation 'androidx.compose.ui:ui-test-manifest'
+    // Provide a NavHostController for screens that accept one
+    testImplementation 'androidx.navigation:navigation-testing:2.9.6'
     androidTestImplementation 'androidx.test.ext:junit:1.3.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
     androidTestImplementation platform('androidx.compose:compose-bom:2026.01.00')
@@ -239,6 +251,15 @@ dependencies {
     androidTestImplementation 'androidx.test:core:1.7.0'
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
+}
+
+// Forward the optional screenshot output directory to the unit-test JVM so the
+// Robolectric screenshot harness can write PNGs when explicitly requested.
+tasks.withType(Test).configureEach {
+    def screenshotDir = System.getProperty("screenshot.dir")
+    if (screenshotDir != null) {
+        systemProperty "screenshot.dir", screenshotDir
+    }
 }
 
 // JaCoCo test report task

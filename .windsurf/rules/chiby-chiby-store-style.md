@@ -5,15 +5,21 @@ trigger: always_on
 # AI Coding Agent Instructions for Chiby Chiby Store
 
 ## Architecture Overview
-This is an offline-first Android POS (Point of Sale) app for retail stores using MVVM architecture with Repository pattern. The app consists of 5 main modules: Inventory, Sales, Reporting, Barcode, and Financial management.
+This is an offline-first Android POS (Point of Sale) app for retail stores using MVVM architecture with Repository pattern. Modules: Inventory, Warehouses, Sales/POS, Purchasing, Reporting, Barcode, Cash management, Expenses, Users, and Backup.
 
 **Key Components:**
 - **Database**: SQLite with Room ORM, normalized 3NF schema
-- **UI**: Jetpack Compose with Material Design 3, bottom navigation
+- **UI**: Jetpack Compose with Material Design 3
 - **Business Logic**: Kotlin services with dependency injection (Hilt)
 - **State Management**: ViewModel + StateFlow for reactive UI updates
 
-**Data Flow**: UI → ViewModel → Repository → DAO → SQLite
+**Data Flow**: UI → ViewModel → Service → Repository → DAO → SQLite
+
+ViewModels call services, never DAOs or repositories directly. Services own the business
+rules and transaction boundaries.
+
+> Note: `BottomNavBar` and `AppDrawer` components exist but are not wired into
+> `AppNavigation` yet — navigation is currently driven by in-screen buttons.
 
 ## Key Patterns & Conventions
 
@@ -96,7 +102,11 @@ Standard Android development:
 
 ## Code Examples
 
-### Repository Pattern
+### Service Layer
+
+ViewModels depend on service interfaces (`ProductService`, `SaleService`, `ReportingService`, ...) which are implemented in `service/impl` and injected with Hilt. Services delegate persistence to repositories in `data/`.
+
+## Repository Pattern
 ```kotlin
 class ProductRepository @Inject constructor(
     private val productDao: ProductDao
