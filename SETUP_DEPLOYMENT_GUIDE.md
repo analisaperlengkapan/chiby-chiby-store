@@ -171,18 +171,23 @@ chiby-chiby-store/
 │   ├── proguard-rules.pro       # ProGuard rules untuk release build
 │   └── src/
 │       ├── androidTest/         # Instrumentation tests
+│       ├── androidTest_disabled/# Instrumentation tests (dinonaktifkan)
 │       ├── main/                # Main source code
 │       │   ├── AndroidManifest.xml
 │       │   ├── java/com/chibychibystore/
-│       │   │   ├── data/        # Data layer (Room entities, DAOs)
+│       │   │   ├── constant/    # Konstanta aplikasi (TAX_RATE, dll.)
+│       │   │   ├── data/        # Data layer (Room entities, DAOs, repositories)
 │       │   │   ├── di/          # Dependency injection (Hilt modules)
 │       │   │   ├── error/       # Error handling classes
 │       │   │   ├── repository/  # Repository layer
 │       │   │   ├── service/     # Business logic services
 │       │   │   ├── ui/          # UI layer (Compose screens, ViewModels)
-│       │   │   └── usecase/     # Use cases
+│       │   │   └── util/        # Utility helpers
 │       │   └── res/             # Android resources
-│       └── test/                # Unit tests
+│       └── test/                # Unit tests (termasuk screenshot harness)
+│           ├── java/com/chibychibystore/screenshots/  # Screenshot generator
+│           └── resources/robolectric.properties       # sdk=34, graphics.mode=NATIVE
+├── docs/screenshots/            # Gambar untuk README
 ├── build.gradle                 # Project-level build configuration
 ├── gradle.properties           # Gradle properties
 ├── local.properties            # Local configuration (SDK path)
