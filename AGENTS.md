@@ -71,8 +71,20 @@ put agent guidance here instead.
 
 The official logo is `docs/assets/logo.png` — a pink (`#EF5EB0`) "cc" monogram on
 white. The same artwork backs the Android launcher icons (`res/mipmap-*/ic_launcher*.png`)
-and the adaptive icon (`res/drawable/ic_launcher_foreground.xml`, background `#FFFFFF`).
+and the adaptive icon (`res/mipmap-anydpi-v26/ic_launcher.xml`, foreground
+`mipmap-*/ic_launcher_foreground.png` on a `#FFFFFF` background).
 Reuse it in docs rather than inventing new branding.
+
+In-app, the logo is `res/drawable-nodpi/chiby_logo.png` (256px, white knocked out
+to transparent so it sits on any surface). It is rendered on the login card and in
+the `AppDrawer` header. Those are the only two screens that embed it, so they are
+the only two screenshots that change when the logo is touched — if a logo edit
+alters any other screenshot, something unintended happened.
+
+Regenerating the logo assets from `docs/assets/logo.png` produces launcher icons at
+all five densities, round variants (circular mask, transparent), and adaptive
+foregrounds sized to the 72dp safe zone of a 108dp canvas. Never hand-edit the
+generated PNGs; regenerate them all together so the densities stay consistent.
 
 ## Skills
 
