@@ -1,5 +1,6 @@
 package com.chibychibystore.ui.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -7,18 +8,19 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.R
 import com.chibychibystore.ui.components.ChibyButton
 import com.chibychibystore.ui.components.ChibyCard
 import com.chibychibystore.ui.components.ChibyInput
@@ -69,15 +71,14 @@ fun LoginScreen(
                 Surface(
                     shape = CircleShape,
                     color = ChibyPinkPrimary.copy(alpha = 0.1f),
-                    modifier = Modifier.size(80.dp)
+                    modifier = Modifier.size(96.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Store,
-                        contentDescription = null,
+                    Image(
+                        painter = painterResource(R.drawable.chiby_logo),
+                        contentDescription = "Logo Chiby Chiby Store",
                         modifier = Modifier
-                            .padding(20.dp)
-                            .fillMaxSize(),
-                        tint = ChibyPinkPrimary
+                            .padding(12.dp)
+                            .fillMaxSize()
                     )
                 }
 
