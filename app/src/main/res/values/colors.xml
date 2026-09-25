@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Official Chiby Chiby Store brand pink, sampled from docs/assets/logo.png -->
+    <color name="brand_pink">#EF5EB0</color>
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>
