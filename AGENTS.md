@@ -97,4 +97,5 @@ Specialised, step-by-step procedures live in `.agents/skills/`:
 
 - CI installs `platforms;android-33` explicitly, but the app compiles against 36 — don't lower `compileSdk` expecting CI to match.
 - The security workflow runs OWASP dependency-check; it is sensitive to NVD API availability and has bounded retries/timeouts. Failures there are usually infrastructure, not code.
+- Vulnerable transitives are pinned in `gradle.ext.securityPins` (root `build.gradle`), forced on both the plugin classpath (`buildscript` block) and every `:app` configuration. The vulnerable ones arrive indirectly — Jackson through `itextpdf:sign`, BouncyCastle through Robolectric, and jdom2/jose4j/httpclient/commons-lang3 through AGP lint and the dependency-check plugin — so bumping a direct dependency will not clear them. When adding a pin, confirm the target version has no open advisory and that the depending library still works; do not drop a pin to resolve a conflict.
 - `app/build.gradle` forwards `-Dscreenshot.dir` into the test JVM via `tasks.withType(Test)`. If you add a new test task, forward it there too or screenshots silently won't be written.
