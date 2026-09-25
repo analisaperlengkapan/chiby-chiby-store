@@ -160,6 +160,16 @@ tasks.withType(JavaCompile).configureEach {
     }
 }
 
+configurations.configureEach {
+    resolutionStrategy {
+        // Jackson arrives via itextpdf:sign, BouncyCastle via Robolectric; both
+        // stay on advisory-prone versions unless forced. See root build.gradle.
+        gradle.ext.securityPins.each { module, version ->
+            force "$module:$version"
+        }
+    }
+}
+
 dependencies {
     // Enable desugaring for java.time APIs on lower API levels
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
