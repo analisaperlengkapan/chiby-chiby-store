@@ -60,7 +60,26 @@ Harness details worth knowing:
 
 ## Documentation to keep in sync
 
-`README.md`, `PANDUAN_PENGGUNA.md`, `API_DOCUMENTATION.md`, `SETUP_DEPLOYMENT_GUIDE.md`, `TROUBLESHOOTING_GUIDE.md`. `.github/copilot-instructions.md` and `.agent/rules/chiby-chiby-store-project-guide.md` carry overlapping architecture guidance.
+`README.md`, `PANDUAN_PENGGUNA.md`, `API_DOCUMENTATION.md`, `SETUP_DEPLOYMENT_GUIDE.md`, `TROUBLESHOOTING_GUIDE.md`.
+
+This file is the single source of agent instructions. It deliberately replaces the
+former `.github/copilot-instructions.md`, `.agent/rules/`, and `.windsurf/rules/`,
+which duplicated each other and had drifted from the code. Do not recreate them —
+put agent guidance here instead.
+
+## Brand
+
+The official logo is `docs/assets/logo.png` — a pink (`#EF5EB0`) "cc" monogram on
+white. The same artwork backs the Android launcher icons (`res/mipmap-*/ic_launcher*.png`)
+and the adaptive icon (`res/drawable/ic_launcher_foreground.xml`, background `#FFFFFF`).
+Reuse it in docs rather than inventing new branding.
+
+## Skills
+
+Specialised, step-by-step procedures live in `.agents/skills/`:
+
+- `chiby-screenshots` — render one screenshot per screen and refresh `docs/screenshots/`
+- `chiby-mobile-preview` — capture real phone-viewport previews via the browser
 
 ## Gotchas
 

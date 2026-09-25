@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/logo.png" width="140" alt="Chiby Chiby Store logo" />
+</p>
+
 # Chiby Chiby Store POS
 
 A native Android Point of Sale (POS) and inventory management app for retail shops. Built with Jetpack Compose and an offline-first Room database, it runs a full counter operation — sales, stock, purchasing, cash, expenses, and reporting — without an internet connection.

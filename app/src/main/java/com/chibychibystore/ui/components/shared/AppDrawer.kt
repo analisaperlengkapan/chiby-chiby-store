@@ -1,5 +1,6 @@
 package com.chibychibystore.ui.components.shared
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -10,9 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.chibychibystore.R
 import com.chibychibystore.ui.navigation.Screen
 
 data class DrawerNavItem(
@@ -67,20 +70,17 @@ fun AppDrawer(
                         .padding(vertical = 32.dp, horizontal = 24.dp)
                 ) {
                     Column {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
-                            modifier = Modifier.size(56.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    "C", 
-                                    style = MaterialTheme.typography.headlineMedium,
+                        Image(
+                            painter = painterResource(R.drawable.chiby_logo),
+                            contentDescription = "Logo Chiby Chiby Store",
+                            modifier = Modifier
+                                .size(56.dp)
+                                .background(
                                     color = MaterialTheme.colorScheme.onPrimary,
-                                    fontWeight = FontWeight.ExtraBold
+                                    shape = CircleShape
                                 )
-                            }
-                        }
+                                .padding(6.dp)
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Chiby Chiby Store",
