@@ -203,7 +203,7 @@ class SaleServiceImpl @Inject constructor(
          return try {
              val end = if (endDate != null) LocalDate.parse(endDate) else LocalDate.now()
              val start = if (startDate != null) LocalDate.parse(startDate) else end.minusDays(30)
-             val sales = penjualanRepository.getSalesInDateRange(start, end)
+             val sales = penjualanRepository.getFilteredPenjualan(start, end, cashierId, query)
              Result.success(sales)
         } catch (e: Exception) {
             Result.failure(e)
@@ -352,7 +352,9 @@ class SaleServiceImpl @Inject constructor(
     }
 
     override fun observePenjualanFiltered(startDate: String, endDate: String, query: String?): Flow<List<Penjualan>> {
-        return penjualanRepository.getPenjualanByRentangTanggal(startDate, endDate)
+        // Filtering is applied in SQL so a concurrent insert matching the query
+        // shows up too; re-filtering an unfiltered flow in memory would not.
+        return penjualanRepository.observeFilteredPenjualan(startDate, endDate, query)
     }
 
     override suspend fun cetakStruk(

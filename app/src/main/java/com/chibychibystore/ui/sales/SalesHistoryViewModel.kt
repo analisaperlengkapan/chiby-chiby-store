@@ -6,6 +6,7 @@ import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.PenjualanWithItems
 import com.chibychibystore.service.SaleService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -48,6 +49,11 @@ class SalesHistoryViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(SalesHistoryUiState())
     val uiState: StateFlow<SalesHistoryUiState> = _uiState
+
+    // Held so a new load can cancel the previous collector. loadSales() runs on
+    // every keystroke and date change; without this each one would leave another
+    // live collector on the Room flow for the lifetime of the ViewModel.
+    private var observeJob: Job? = null
 
     // Use Locale.US to ensure consistent ISO-8601 formatting for backend/service communication,
     // regardless of the user's device locale settings (e.g., avoids Buddhist calendar years).
@@ -103,7 +109,8 @@ class SalesHistoryViewModel @Inject constructor(
      * Observe perubahan penjualan secara real-time dalam date range
      */
     private fun observeSales() {
-        viewModelScope.launch {
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch {
             val currentState = _uiState.value
             val startDateStr = currentState.startDate?.let { dateFormat.format(it) } ?: "1900-01-01"
             val endDateStr = currentState.endDate?.let { dateFormat.format(it) } ?: "2100-12-31"

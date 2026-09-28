@@ -270,4 +270,66 @@ class SaleServiceIntegrationTest : BaseTest() {
         val itemCount = db.itemPenjualanDao().getItemCountByPenjualanId(saleId)
         assertEquals(0, itemCount)
     }
+
+    @Test
+    fun getPenjualanByRentangTanggal_appliesQueryFilter() = runBlocking {
+        val kategoriId = db.kategoriDao().insertKategori(com.chibychibystore.data.local.entity.Kategori(name = "SearchCat"))
+        val gudangId = db.gudangDao().insertGudang(com.chibychibystore.data.local.entity.Gudang(name = "SearchWh"))
+        val cashierId = db.penggunaDao().insertPengguna(
+            com.chibychibystore.data.local.entity.Pengguna(
+                username = "searchcashier", passwordHash = "x",
+                role = com.chibychibystore.data.local.entity.Role.CASHIER
+            )
+        )
+
+        val prod = Produk(
+            name = "Search Product", barcode = "S-1", categoryId = kategoriId,
+            costPrice = 1000.0, sellingPrice = 1000.0, stockQuantity = 50, warehouseId = gudangId
+        )
+        val prodId = insertProductWithStock(prod)
+
+        // Two sales in the same window; one CASH, one QRIS.
+        (saleService as SaleServiceImpl).createPenjualan(
+            Penjualan(saleDate = Date(), totalAmount = 0.0, paymentMethod = PaymentMethod.CASH, cashierId = cashierId),
+            listOf(ItemPenjualan(saleId = 0, productId = prodId, quantity = 1, unitPrice = 1000.0, totalPrice = 1000.0))
+        )
+
+        (saleService as SaleServiceImpl).createPenjualan(
+            Penjualan(saleDate = Date(), totalAmount = 0.0, paymentMethod = PaymentMethod.QRIS, cashierId = cashierId),
+            listOf(ItemPenjualan(saleId = 0, productId = prodId, quantity = 1, unitPrice = 1000.0, totalPrice = 1000.0))
+        )
+
+        val today = java.time.LocalDate.now().toString()
+
+        // No query: both sales returned.
+        val unfiltered = saleService.getPenjualanByRentangTanggal(today, today, null, null)
+        assertEquals(2, unfiltered.getOrNull()?.size)
+
+        // Query by payment method: only the CASH sale.
+        val filtered = saleService.getPenjualanByRentangTanggal(today, today, null, "CASH")
+        val filteredSales = filtered.getOrNull()!!
+        assertEquals("Query should filter to the matching sale", 1, filteredSales.size)
+        assertEquals(PaymentMethod.CASH, filteredSales.first().paymentMethod)
+
+        val qris = saleService.getPenjualanByRentangTanggal(today, today, null, "QRIS")
+        assertEquals(1, qris.getOrNull()?.size)
+        assertEquals(PaymentMethod.QRIS, qris.getOrNull()!!.first().paymentMethod)
+
+        // A query matching nothing returns nothing.
+        val noMatch = saleService.getPenjualanByRentangTanggal(today, today, null, "NO-SUCH-SALE")
+        assertEquals(0, noMatch.getOrNull()?.size)
+
+        // cashierId filter excludes a different cashier.
+        val otherCashier = db.penggunaDao().insertPengguna(
+            com.chibychibystore.data.local.entity.Pengguna(
+                username = "othercashier", passwordHash = "x",
+                role = com.chibychibystore.data.local.entity.Role.CASHIER
+            )
+        )
+        val byOtherCashier = saleService.getPenjualanByRentangTanggal(today, today, otherCashier, null)
+        assertEquals("Cashier filter should exclude this cashier's sales", 0, byOtherCashier.getOrNull()?.size)
+
+        val byCashier = saleService.getPenjualanByRentangTanggal(today, today, cashierId, null)
+        assertEquals(2, byCashier.getOrNull()?.size)
+    }
 }
