@@ -80,6 +80,21 @@ class PenjualanRepository @Inject constructor(
     }
 
     /**
+     * Get penjualan in date range with optional cashier and free-text filters.
+     *
+     * [query] matches the sale id, payment method or total amount; null skips it.
+     */
+    suspend fun getFilteredPenjualan(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        cashierId: Long?,
+        query: String?
+    ): List<Penjualan> {
+        val (start, end) = getDateRange(startDate, endDate)
+        return penjualanDao.getPenjualanFiltered(start, end, cashierId, query)
+    }
+
+    /**
      * Get penjualan with items in date range
      */
     suspend fun getSalesWithItemsInDateRange(startDate: LocalDate, endDate: LocalDate): List<PenjualanWithItems> {
@@ -263,6 +278,20 @@ class PenjualanRepository @Inject constructor(
             val start = Date.from(LocalDate.parse(startDate).atStartOfDay(ZoneId.systemDefault()).toInstant())
             val end = Date.from(LocalDate.parse(endDate).atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
             penjualanDao.getPenjualanByRentangTanggal(start, end)
+        } catch (e: Exception) {
+            kotlinx.coroutines.flow.flowOf(emptyList())
+        }
+    }
+
+    /**
+     * Observe penjualan in date range with an optional free-text [query]
+     * (matches sale id, payment method or total amount).
+     */
+    fun observeFilteredPenjualan(startDate: String, endDate: String, query: String?): Flow<List<Penjualan>> {
+        return try {
+            val start = Date.from(LocalDate.parse(startDate).atStartOfDay(ZoneId.systemDefault()).toInstant())
+            val end = Date.from(LocalDate.parse(endDate).atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant())
+            penjualanDao.observePenjualanFiltered(start, end, query?.takeIf { it.isNotBlank() })
         } catch (e: Exception) {
             kotlinx.coroutines.flow.flowOf(emptyList())
         }
