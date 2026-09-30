@@ -80,3 +80,6 @@ obj/
 # Local Gradle overrides (untracked)
 gradle.properties.local
 
+
+# Agent memory is local state, not repo content
+.openhands/memory/

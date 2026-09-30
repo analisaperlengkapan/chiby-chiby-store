@@ -18,6 +18,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
+import com.chibychibystore.ui.components.shared.ScreenTitleTestTag
 import com.chibychibystore.ui.theme.ChibyPinkPrimary
 import com.chibychibystore.ui.theme.Neutral99
 import com.chibychibystore.ui.theme.White
@@ -27,6 +30,7 @@ import com.chibychibystore.ui.theme.White
 fun ChibyScaffold(
     title: String,
     onNavigateUp: (() -> Unit)? = null,
+    navigationIcon: ImageVector = Icons.AutoMirrored.Filled.ArrowBack,
     actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
@@ -39,6 +43,7 @@ fun ChibyScaffold(
                 title = {
                     Text(
                         text = title,
+                        modifier = Modifier.testTag(ScreenTitleTestTag),
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White
                     )
@@ -47,8 +52,8 @@ fun ChibyScaffold(
                     if (onNavigateUp != null) {
                         IconButton(onClick = onNavigateUp) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
+                                imageVector = navigationIcon,
+                                contentDescription = "Navigation",
                                 tint = Color.White
                             )
                         }
