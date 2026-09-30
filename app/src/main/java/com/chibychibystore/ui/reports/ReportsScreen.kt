@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,7 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import com.chibychibystore.R
 import com.chibychibystore.service.*
 import com.chibychibystore.ui.components.ChibyScaffold
@@ -40,8 +41,9 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportsScreen(
+    onOpenDrawer: () -> Unit = {},
     onNavigateBack: () -> Unit,
-    viewModel: ReportsViewModel = hiltViewModel()
+    viewModel: ReportsViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -78,7 +80,8 @@ fun ReportsScreen(
 
     ChibyScaffold(
         title = stringResource(R.string.reports_title),
-        onNavigateUp = onNavigateBack,
+        onNavigateUp = onOpenDrawer,
+        navigationIcon = Icons.Default.Menu,
         actions = {
             IconButton(
                 onClick = { viewModel.exportCurrentReportToPdf() },

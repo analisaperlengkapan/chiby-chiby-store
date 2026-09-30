@@ -13,7 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.PaymentMethod
 import com.chibychibystore.data.local.entity.Penjualan
@@ -28,7 +28,8 @@ import java.util.*
 @Composable
 fun SalesHistoryScreen(
     navController: NavController,
-    viewModel: SalesHistoryViewModel = hiltViewModel()
+    onOpenDrawer: () -> Unit = {},
+    viewModel: SalesHistoryViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
@@ -37,7 +38,8 @@ fun SalesHistoryScreen(
 
     ChibyScaffold(
         title = "Riwayat Penjualan",
-        onNavigateUp = { navController.popBackStack() },
+        onNavigateUp = onOpenDrawer,
+        navigationIcon = Icons.Default.Menu,
         actions = {
             IconButton(onClick = { viewModel.clearFilters() }) {
                 Icon(Icons.Default.Clear, "Clear Filters", tint = androidx.compose.ui.graphics.Color.White)

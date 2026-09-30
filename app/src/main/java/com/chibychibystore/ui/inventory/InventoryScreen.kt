@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -23,7 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.R
 import com.chibychibystore.data.local.entity.Produk
@@ -43,7 +44,8 @@ import java.util.Locale
 @Composable
 fun InventoryScreen(
     navController: NavController,
-    viewModel: InventoryViewModel = hiltViewModel()
+    onOpenDrawer: () -> Unit = {},
+    viewModel: InventoryViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -75,7 +77,7 @@ fun InventoryScreen(
     }
     
     ChibyScaffold(
-        title = "Inventory",
+        title = "Inventaris",
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { navController.navigate(Screen.ProductAdd.route) },
@@ -86,7 +88,8 @@ fun InventoryScreen(
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        onNavigateUp = { navController.navigateUp() }
+        onNavigateUp = onOpenDrawer,
+        navigationIcon = Icons.Default.Menu
     ) { paddingValues ->
         Column(
             modifier = Modifier
