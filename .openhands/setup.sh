@@ -288,12 +288,22 @@ sdk_has_required_packages() {
 ensure_android_sdk() {
     find_android_sdk
     log "using Android SDK root $sdk_root"
-    ensure_cmdline_tools || return 1
-    install_android_packages || return 1
 
-    if ! sdk_has_required_packages; then
-        warn "Android SDK at $sdk_root is missing platform ${ANDROID_PLATFORM} or build-tools ${BUILD_TOOLS}"
-        return 1
+    # An SDK can already carry the platform and build-tools Gradle needs while
+    # having no command-line tools (sdkmanager). Gradle only reads sdk.dir, so
+    # accept and export such an SDK without trying to provision anything —
+    # otherwise an offline machine with a perfectly usable SDK gets left
+    # unconfigured when the sdkmanager download fails.
+    if sdk_has_required_packages; then
+        ok "Android SDK at $sdk_root already has platform ${ANDROID_PLATFORM} and build-tools ${BUILD_TOOLS}"
+    else
+        ensure_cmdline_tools || return 1
+        install_android_packages || return 1
+
+        if ! sdk_has_required_packages; then
+            warn "Android SDK at $sdk_root is missing platform ${ANDROID_PLATFORM} or build-tools ${BUILD_TOOLS}"
+            return 1
+        fi
     fi
 
     export ANDROID_HOME="$sdk_root"

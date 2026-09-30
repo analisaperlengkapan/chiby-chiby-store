@@ -27,6 +27,7 @@ import com.chibychibystore.ui.navigation.AppShell
 import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.ui.navigation.appDestinations
 import com.chibychibystore.ui.navigation.rememberDrawerNavigation
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -136,6 +137,22 @@ class AppNavigationDrawerTest {
     }
 
     @Test
+    fun `drawer labels use the localized module names`() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val byRoute = drawerNavItems.associateBy { it.route }
+        // AGENTS.md requires Indonesian UI strings; these two entries were English
+        // ("Dashboard"/"Inventory") while strings.xml already had the wording.
+        assertEquals(
+            context.getString(com.chibychibystore.R.string.dashboard),
+            byRoute[Screen.Dashboard.route]?.label
+        )
+        assertEquals(
+            context.getString(com.chibychibystore.R.string.inventory),
+            byRoute[Screen.Inventory.route]?.label
+        )
+    }
+
+    @Test
     fun `drawer entry taps navigate to their route`() {
         var navigatedTo: String? = null
         composeTestRule.setContent {
@@ -185,8 +202,8 @@ class AppNavigationDrawerTest {
         composeTestRule.setContent {
             AppShell(
                 isLoggedIn = false,
-                drawerState = rememberDrawerState(DrawerValue.Closed),
                 currentRoute = Screen.Login.route,
+                drawerState = rememberDrawerState(DrawerValue.Closed),
                 onNavigateToRoute = {},
                 onCloseDrawer = {}
             ) {
@@ -200,13 +217,36 @@ class AppNavigationDrawerTest {
         composeTestRule.onNodeWithText("FITUR LANJUTAN").assertDoesNotExist()
     }
 
+    /**
+     * Regression: a session that is still sitting on the login destination (after
+     * logout, or a restored back stack) must not expose the menu either. Gating on
+     * user state alone left the modules reachable from the login form.
+     */
+    @Test
+    fun `drawer is not mounted when a signed-in session sits on login`() {
+        composeTestRule.setContent {
+            AppShell(
+                isLoggedIn = true,
+                currentRoute = Screen.Login.route,
+                drawerState = rememberDrawerState(DrawerValue.Closed),
+                onNavigateToRoute = {},
+                onCloseDrawer = {}
+            ) {
+                Text("login-content")
+            }
+        }
+
+        composeTestRule.onNodeWithText("login-content").assertIsDisplayed()
+        composeTestRule.onNodeWithText("FITUR LANJUTAN").assertDoesNotExist()
+    }
+
     @Test
     fun `drawer is mounted after login`() {
         composeTestRule.setContent {
             AppShell(
                 isLoggedIn = true,
-                drawerState = rememberDrawerState(DrawerValue.Closed),
                 currentRoute = Screen.Dashboard.route,
+                drawerState = rememberDrawerState(DrawerValue.Closed),
                 onNavigateToRoute = {},
                 onCloseDrawer = {}
             ) {

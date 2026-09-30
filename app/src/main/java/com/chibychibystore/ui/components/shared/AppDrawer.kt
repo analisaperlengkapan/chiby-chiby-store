@@ -36,11 +36,15 @@ data class DrawerNavItem(
  * instance, lives only on [Screen.Settings]).
  */
 val drawerNavItems: List<DrawerNavItem> = listOf(
-    DrawerNavItem("Dashboard", Icons.Default.Dashboard, Screen.Dashboard.route),
+    // Labels are Indonesian per the AGENTS.md UI-string convention; the first two
+    // reuse the app's own resource wording (R.string.dashboard "Dasbor",
+    // R.string.inventory "Inventaris"). The remaining module names match the
+    // titles of the screens they open, which keep their established wording.
+    DrawerNavItem("Dasbor", Icons.Default.Dashboard, Screen.Dashboard.route),
     DrawerNavItem("Point of Sale", Icons.Default.PointOfSale, Screen.Pos.route),
-    DrawerNavItem("Inventory", Icons.Default.Inventory, Screen.Inventory.route),
+    DrawerNavItem("Inventaris", Icons.Default.Inventory, Screen.Inventory.route),
     DrawerNavItem("Riwayat Penjualan", Icons.Default.Receipt, Screen.SalesHistory.route),
-    DrawerNavItem("Manajemen Pembelian", Icons.Default.ShoppingBag, Screen.PurchaseList.route),
+    DrawerNavItem("Riwayat Pembelian", Icons.Default.ShoppingBag, Screen.PurchaseList.route),
     DrawerNavItem("Manajemen Warehouse", Icons.Default.Warehouse, Screen.WarehouseList.route),
     DrawerNavItem("Manajemen Expense", Icons.Default.AccountBalanceWallet, Screen.ExpenseList.route),
     DrawerNavItem("Manajemen User", Icons.Default.Group, Screen.UserList.route),

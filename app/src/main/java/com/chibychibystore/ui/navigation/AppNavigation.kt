@@ -39,8 +39,8 @@ fun AppNavigation(
 
     AppShell(
         isLoggedIn = currentUser != null,
-        drawerState = drawerState,
         currentRoute = currentRoute,
+        drawerState = drawerState,
         onNavigateToRoute = navigateToRoute,
         onCloseDrawer = { scope.launch { drawerState.close() } }
     ) {
@@ -59,20 +59,28 @@ fun AppNavigation(
 }
 
 /**
- * Mounts the app-wide [AppDrawer] around [content] only once a user is signed in.
- * Before sign-in the drawer is absent, so it cannot be swiped open over the login
- * screen to reach a protected module; the login route keeps the whole screen.
+ * Mounts the app-wide [AppDrawer] around [content] only for an authenticated user
+ * who is on a real module. Two separate cases must not expose the menu:
+ *
+ *  - no session yet: the drawer used to wrap the whole NavHost, so it could be
+ *    swiped open over the login screen to reach a protected module;
+ *  - a session that is *sitting on* the login destination (logout, or a restored
+ *    back stack): gating on user state alone would still show the modules over
+ *    the login form.
+ *
+ * So the drawer requires both a user and a non-login route.
  */
 @Composable
 fun AppShell(
     isLoggedIn: Boolean,
-    drawerState: DrawerState,
     currentRoute: String,
+    drawerState: DrawerState,
     onNavigateToRoute: (String) -> Unit,
     onCloseDrawer: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    if (isLoggedIn) {
+    val showDrawer = isLoggedIn && currentRoute != Screen.Login.route
+    if (showDrawer) {
         AppDrawer(
             drawerState = drawerState,
             currentRoute = currentRoute,
