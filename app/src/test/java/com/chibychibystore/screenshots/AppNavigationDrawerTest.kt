@@ -1,6 +1,11 @@
 package com.chibychibystore.screenshots
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -9,20 +14,19 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.test.performScrollTo
 import androidx.navigation.NavGraph
 import androidx.navigation.createGraph
 import androidx.navigation.compose.ComposeNavigator
-import androidx.navigation.compose.composable
 import androidx.navigation.testing.TestNavHostController
 import androidx.test.core.app.ApplicationProvider
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.ui.components.shared.AppDrawer
 import com.chibychibystore.ui.components.shared.drawerNavItems
+import com.chibychibystore.ui.navigation.AppShell
 import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.ui.navigation.appDestinations
+import com.chibychibystore.ui.navigation.rememberDrawerNavigation
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -72,14 +76,14 @@ class AppNavigationDrawerTest {
         }
         composeTestRule.waitForIdle()
 
-        assertNotNull("nav graph was not built", graph)
-        // Sanity check: the graph must actually carry the destinations, otherwise
-        // findNode would return null for every entry and mask a broken builder.
+        val builtGraph = graph
+        assertNotNull("nav graph was not built", builtGraph)
+        val navGraph = builtGraph!!
         // Sanity check: a known route must resolve, otherwise findNode returning
         // null for every entry would mask a builder that registered nothing.
         assertNotNull(
             "the dashboard destination is missing from the built graph",
-            graph!!.findNode(Screen.Dashboard.route)
+            navGraph.findNode(Screen.Dashboard.route)
         )
         drawerNavItems.forEach { item ->
             // findNode returns null when the destination was never registered -
@@ -87,7 +91,46 @@ class AppNavigationDrawerTest {
             // silently does nothing.
             assertNotNull(
                 "Drawer entry '${item.label}' points at unregistered route '${item.route}'",
-                graph!!.findNode(item.route)
+                navGraph.findNode(item.route)
+            )
+        }
+    }
+
+    /**
+     * The drawer is the only production entry point to the modules after login,
+     * so a top-level screen without an entry is unreachable. Regression: the
+     * menu omitted Inventory, Reports, Settings, Sales history, Suppliers and
+     * Dashboard, which also hid the only logout action (it lives on Settings).
+     */
+    @Test
+    fun `every intended top-level screen has a drawer entry`() {
+        val intendedTopLevelRoutes = listOf(
+            Screen.Dashboard,
+            Screen.Pos,
+            Screen.Inventory,
+            Screen.SalesHistory,
+            Screen.PurchaseList,
+            Screen.WarehouseList,
+            Screen.ExpenseList,
+            Screen.UserList,
+            Screen.PromotionList,
+            Screen.PelangganList,
+            Screen.CashShift,
+            Screen.CashHistory,
+            Screen.AuditList,
+            Screen.SupplierList,
+            Screen.Reports,
+            Screen.BarcodeScanner,
+            Screen.BarcodePrint,
+            Screen.Backup,
+            Screen.Settings
+        ).map { it.route }
+
+        val drawerRoutes = drawerNavItems.map { it.route }.toSet()
+        intendedTopLevelRoutes.forEach { route ->
+            assertTrue(
+                "no drawer entry reaches top-level screen '$route'",
+                route in drawerRoutes
             )
         }
     }
@@ -104,30 +147,77 @@ class AppNavigationDrawerTest {
             ) {}
         }
 
-        composeTestRule.onNodeWithText("Manajemen Kas").performClick()
+        // "Pengaturan" is the last entry and the only route that exposes logout,
+        // so it also proves the list scrolls far enough to reach the tail.
+        composeTestRule.onNodeWithText("Pengaturan").performScrollTo().performClick()
         assertTrue(
-            "tapping 'Manajemen Kas' should navigate to ${Screen.CashShift.route}, got $navigatedTo",
-            navigatedTo == Screen.CashShift.route
+            "tapping 'Pengaturan' should navigate to ${Screen.Settings.route}, got $navigatedTo",
+            navigatedTo == Screen.Settings.route
         )
     }
 
     @Test
     fun `top bar menu action opens the shared drawer`() {
-        var opened = 0
+        lateinit var drawerState: DrawerState
         composeTestRule.setContent {
+            drawerState = rememberDrawerState(DrawerValue.Closed)
             AppDrawer(
+                drawerState = drawerState,
+                currentRoute = Screen.Dashboard.route,
+                onNavigateToRoute = {},
+                onCloseDrawer = {}
+            ) {
+                // Production screens get exactly this callback from AppNavigation.
+                MenuProbe(onOpenDrawer = rememberDrawerNavigation(drawerState))
+            }
+        }
+
+        composeTestRule.onNodeWithContentDescription("Navigation").performClick()
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            drawerState.currentValue == DrawerValue.Open
+        }
+        // The drawer sheet only occupies the screen once the state is Open.
+        composeTestRule.onNodeWithText("FITUR LANJUTAN").assertIsDisplayed()
+    }
+
+    @Test
+    fun `drawer is not mounted before login`() {
+        composeTestRule.setContent {
+            AppShell(
+                isLoggedIn = false,
+                drawerState = rememberDrawerState(DrawerValue.Closed),
+                currentRoute = Screen.Login.route,
+                onNavigateToRoute = {},
+                onCloseDrawer = {}
+            ) {
+                Text("login-content")
+            }
+        }
+
+        composeTestRule.onNodeWithText("login-content").assertIsDisplayed()
+        // Regression: the drawer used to wrap the whole NavHost, so it could be
+        // swiped open over the login screen to reach a protected module.
+        composeTestRule.onNodeWithText("FITUR LANJUTAN").assertDoesNotExist()
+    }
+
+    @Test
+    fun `drawer is mounted after login`() {
+        composeTestRule.setContent {
+            AppShell(
+                isLoggedIn = true,
                 drawerState = rememberDrawerState(DrawerValue.Closed),
                 currentRoute = Screen.Dashboard.route,
                 onNavigateToRoute = {},
                 onCloseDrawer = {}
             ) {
-                MenuProbe(onOpenDrawer = { opened++ })
+                Text("dashboard-content")
             }
         }
 
-        composeTestRule.onNodeWithContentDescription("Navigation").performClick()
-        composeTestRule.waitForIdle()
-        assertTrue("the menu action must open the drawer", opened == 1)
+        composeTestRule.onNodeWithText("dashboard-content").assertIsDisplayed()
+        // The drawer sheet is composed once a session exists (it is closed by
+        // default, but its content is part of the tree).
+        composeTestRule.onNodeWithText("FITUR LANJUTAN").assertExists()
     }
 
     /**

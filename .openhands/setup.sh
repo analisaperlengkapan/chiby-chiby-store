@@ -176,15 +176,28 @@ export_java() {
     printf 'org.gradle.java.home=%s\n' "$jdk_home" >> "$gprops"
 
     # gradlew itself needs a java on PATH (or JAVA_HOME) just to bootstrap.
+    # Replace the managed block on every run: if a later run selects a different
+    # JDK, a stale export would point new shells at a removed installation.
     local bashrc="$HOME/.bashrc"
     touch "$bashrc" 2>/dev/null
-    if ! grep -q 'chiby-setup: JAVA_HOME' "$bashrc" 2>/dev/null; then
-        {
-            printf '\n# chiby-setup: JAVA_HOME (added by .openhands/setup.sh)\n'
-            printf 'export JAVA_HOME="%s"\n' "$jdk_home"
-            printf 'case ":$PATH:" in *":$JAVA_HOME/bin:"*) ;; *) export PATH="$JAVA_HOME/bin:$PATH" ;; esac\n'
-        } >> "$bashrc"
+    local marker="# chiby-setup: JAVA_HOME (added by .openhands/setup.sh)"
+    local desired
+    desired="$(printf '%s\nexport JAVA_HOME="%s"\ncase ":$PATH:" in *":$JAVA_HOME/bin:"*) ;; *) export PATH="$JAVA_HOME/bin:$PATH" ;; esac\n' "$marker" "$jdk_home")"
+
+    if grep -qF "$marker" "$bashrc" 2>/dev/null; then
+        # Strip the old managed block (the marker line plus the two lines it
+        # owns, and any blank line left directly above it) before re-adding it.
+        local tmp="$bashrc.chiby.tmp"
+        awk -v marker="$marker" '
+            BEGIN { skip = 0; blank = 0 }
+            skip > 0 { skip--; next }
+            $0 == marker { blank = 0; skip = 2; next }
+            /^[[:space:]]*$/ { blank++; buf[blank] = $0; next }
+            { for (i = 1; i <= blank; i++) print buf[i]; blank = 0; print }
+            END { for (i = 1; i <= blank; i++) print buf[i] }
+        ' "$bashrc" > "$tmp" 2>/dev/null && mv "$tmp" "$bashrc"
     fi
+    printf '\n%s\n' "$desired" >> "$bashrc"
     ok "JAVA_HOME=$jdk_home (recorded in ~/.gradle/gradle.properties and ~/.bashrc)"
 }
 
@@ -267,11 +280,21 @@ install_android_packages() {
     return 1
 }
 
+sdk_has_required_packages() {
+    [ -d "$sdk_root/platforms/android-${ANDROID_PLATFORM}" ] &&
+        [ -d "$sdk_root/build-tools/${BUILD_TOOLS}" ]
+}
+
 ensure_android_sdk() {
     find_android_sdk
     log "using Android SDK root $sdk_root"
     ensure_cmdline_tools || return 1
     install_android_packages || return 1
+
+    if ! sdk_has_required_packages; then
+        warn "Android SDK at $sdk_root is missing platform ${ANDROID_PLATFORM} or build-tools ${BUILD_TOOLS}"
+        return 1
+    fi
 
     export ANDROID_HOME="$sdk_root"
     export ANDROID_SDK_ROOT="$sdk_root"
@@ -279,6 +302,13 @@ ensure_android_sdk() {
 }
 
 write_local_properties() {
+    # Never point Gradle at an SDK that lacks the required platform and
+    # build-tools: that turns an optional provisioning failure into a persistent
+    # build failure. On failure leave any existing local.properties untouched.
+    if ! sdk_has_required_packages; then
+        warn "not writing local.properties: $sdk_root lacks platform ${ANDROID_PLATFORM} / build-tools ${BUILD_TOOLS}"
+        return 1
+    fi
     # Gradle reads local.properties natively for sdk.dir; the file is gitignored.
     printf 'sdk.dir=%s\n' "$sdk_root" > "$REPO_ROOT/local.properties"
     ok "wrote local.properties (sdk.dir=$sdk_root)"
@@ -355,8 +385,11 @@ fi
 
 ensure_java
 export_java
-ensure_android_sdk
-write_local_properties
+if ensure_android_sdk; then
+    write_local_properties
+else
+    warn "Android SDK setup did not complete; leaving local.properties unchanged so builds keep using any previously configured sdk.dir"
+fi
 prepare_gradle
 warm_gradle
 optional_build

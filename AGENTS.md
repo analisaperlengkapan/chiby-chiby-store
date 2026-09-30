@@ -53,7 +53,8 @@ docs/screenshots/  images referenced by README.md
 - Screens take `navController: NavController` and a `viewModel: XViewModel = hiltViewModel()` default. The default parameter is what makes them injectable in tests.
 - Each screen has one immutable `XUiState` data class exposed via `StateFlow`, and dialog visibility is a boolean flag on that state (e.g. `showDeleteUserDialog`).
 - Roles: OWNER, MANAGER, CASHIER, WAREHOUSE. Permission checks go through `AuthService`.
-- `Screen.kt` is the single source of truth for routes; the destination graph is built by `appDestinations()` in `AppDestinations.kt`, which `AppNavigation.kt` hosts. `AppDrawer` is composed once in `AppNavigation`; each top-level screen opens it via an `onOpenDrawer` parameter wired to its top-bar navigation icon (`Icons.Default.Menu`). `Screen.UserAdd` exists but is not registered in the graph — check before assuming a route is reachable.
+- `Screen.kt` is the single source of truth for routes; the destination graph is built by `appDestinations()` in `AppDestinations.kt`, which `AppNavigation.kt` hosts. `AppNavigation` mounts the shared `AppDrawer` via `AppShell`, but only once `AuthService.observeCurrentUser()` reports a session — before login the drawer is absent so it cannot be swiped open over the login screen to reach a protected module. Each top-level screen opens the drawer via an `onOpenDrawer` parameter wired to its top-bar navigation icon (`Icons.Default.Menu`).
+- `drawerNavItems` in `AppDrawer.kt` is the single source of truth for what the post-login menu reaches, and it is the only production entry point to most modules (logout lives only on `Screen.Settings`). When you add or register a top-level destination, add it there too — `AppNavigationDrawerTest` asserts every intended top-level screen has an entry. `Screen.UserAdd` exists but is not registered in the graph — check before assuming a route is reachable.
 
 ## Screenshots
 
