@@ -11,7 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Pembelian
 import com.chibychibystore.ui.components.shared.AppTopBar
@@ -26,7 +26,7 @@ import java.util.*
 fun PurchaseListScreen(
     navController: NavController,
     onOpenDrawer: () -> Unit = {},
-    viewModel: PurchaseViewModel = hiltViewModel()
+    viewModel: PurchaseViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

@@ -24,7 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.R
 import com.chibychibystore.data.local.entity.Produk
@@ -45,7 +45,7 @@ import java.util.Locale
 fun InventoryScreen(
     navController: NavController,
     onOpenDrawer: () -> Unit = {},
-    viewModel: InventoryViewModel = hiltViewModel()
+    viewModel: InventoryViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }

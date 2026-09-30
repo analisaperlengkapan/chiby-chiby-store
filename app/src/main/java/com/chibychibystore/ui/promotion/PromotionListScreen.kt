@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Promotion
 import com.chibychibystore.data.local.entity.PromotionType
@@ -31,7 +31,7 @@ import java.util.*
 fun PromotionListScreen(
     navController: NavController,
     onOpenDrawer: () -> Unit = {},
-    viewModel: PromotionViewModel = hiltViewModel()
+    viewModel: PromotionViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

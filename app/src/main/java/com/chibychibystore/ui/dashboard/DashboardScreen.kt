@@ -32,7 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Penjualan
 import com.chibychibystore.data.local.entity.Produk
@@ -53,7 +53,7 @@ fun DashboardScreen(
     navController: NavController,
     onOpenDrawer: () -> Unit = {},
     onNavigateToRoute: (String) -> Unit = {},
-    viewModel: DashboardViewModel = hiltViewModel()
+    viewModel: DashboardViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

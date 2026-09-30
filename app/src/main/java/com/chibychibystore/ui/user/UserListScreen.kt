@@ -10,7 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 fun UserListScreen(
     navController: NavController,
     onOpenDrawer: () -> Unit = {},
-    viewModel: UserManagementViewModel = hiltViewModel()
+    viewModel: UserManagementViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val createUserFormState by viewModel.createUserFormState.collectAsState()

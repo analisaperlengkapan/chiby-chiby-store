@@ -39,7 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.CardItem
 import com.chibychibystore.ui.components.shared.LoadingIndicator
@@ -53,7 +53,7 @@ import java.util.Locale
 fun BackupScreen(
     onOpenDrawer: () -> Unit = {},
     onNavigateBack: () -> Unit,
-    viewModel: BackupViewModel = hiltViewModel()
+    viewModel: BackupViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val backupProgress by viewModel.backupProgress.collectAsState()

@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.ui.components.shared.AppTopBar
@@ -30,7 +30,7 @@ import com.chibychibystore.ui.navigation.Screen
 fun WarehouseListScreen(
     navController: NavController,
     onOpenDrawer: () -> Unit = {},
-    viewModel: WarehouseViewModel = hiltViewModel()
+    viewModel: WarehouseViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

@@ -13,7 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.PaymentMethod
 import com.chibychibystore.data.local.entity.Penjualan
@@ -29,7 +29,7 @@ import java.util.*
 fun SalesHistoryScreen(
     navController: NavController,
     onOpenDrawer: () -> Unit = {},
-    viewModel: SalesHistoryViewModel = hiltViewModel()
+    viewModel: SalesHistoryViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }

@@ -15,7 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Pelanggan
 import com.chibychibystore.ui.components.shared.AppTopBar
@@ -27,7 +27,7 @@ import com.chibychibystore.ui.navigation.Screen
 fun PelangganListScreen(
     navController: NavController,
     onOpenDrawer: () -> Unit = {},
-    viewModel: PelangganViewModel = hiltViewModel()
+    viewModel: PelangganViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()

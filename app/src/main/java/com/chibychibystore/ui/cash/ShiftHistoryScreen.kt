@@ -10,7 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Shift
 import com.chibychibystore.data.local.entity.ShiftStatus
@@ -25,7 +25,7 @@ import java.util.*
 fun ShiftHistoryScreen(
     navController: NavController,
     onOpenDrawer: () -> Unit = {},
-    viewModel: ShiftViewModel = hiltViewModel()
+    viewModel: ShiftViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

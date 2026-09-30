@@ -22,7 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.ui.components.shared.*
 import com.chibychibystore.data.local.entity.KategoriPengeluaran
@@ -38,7 +38,7 @@ import java.util.*
 fun ExpenseListScreen(
     navController: NavController,
     onOpenDrawer: () -> Unit = {},
-    viewModel: ExpenseViewModel = hiltViewModel()
+    viewModel: ExpenseViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showFilterDialog by remember { mutableStateOf(false) }

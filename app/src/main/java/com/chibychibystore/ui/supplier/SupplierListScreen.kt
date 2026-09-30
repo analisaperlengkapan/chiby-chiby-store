@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import com.chibychibystore.data.local.entity.Pemasok
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.LoadingIndicator
@@ -26,7 +26,7 @@ import com.chibychibystore.ui.components.shared.LoadingIndicator
 fun SupplierListScreen(
     navController: androidx.navigation.NavController,
     onOpenDrawer: () -> Unit = {},
-    viewModel: SupplierViewModel = hiltViewModel()
+    viewModel: SupplierViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()

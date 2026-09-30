@@ -16,7 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import com.chibychibystore.R
 import com.chibychibystore.service.*
 import com.chibychibystore.ui.components.ChibyScaffold
@@ -43,7 +43,7 @@ import java.time.format.DateTimeFormatter
 fun ReportsScreen(
     onOpenDrawer: () -> Unit = {},
     onNavigateBack: () -> Unit,
-    viewModel: ReportsViewModel = hiltViewModel()
+    viewModel: ReportsViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current

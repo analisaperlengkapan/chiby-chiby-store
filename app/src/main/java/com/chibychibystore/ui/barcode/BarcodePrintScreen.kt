@@ -14,7 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import com.chibychibystore.R
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.shared.AppTopBar
@@ -38,7 +38,7 @@ enum class LabelSize(val displayName: String, val width: Int, val height: Int) {
 fun BarcodePrintScreen(
     onOpenDrawer: () -> Unit = {},
     onNavigateBack: () -> Unit,
-    viewModel: BarcodePrintViewModel = hiltViewModel()
+    viewModel: BarcodePrintViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
