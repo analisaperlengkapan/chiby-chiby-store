@@ -59,7 +59,7 @@ fun PosScreen(
         }
     }
     ChibyScaffold(
-        title = "Point of Sale",
+        title = "POS",
         onNavigateUp = onOpenDrawer,
         navigationIcon = Icons.Default.Menu
     ) { paddingValues ->

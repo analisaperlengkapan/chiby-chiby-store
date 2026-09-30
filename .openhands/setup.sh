@@ -8,7 +8,9 @@
 # It installs what the Android build needs (a JDK and the Android SDK) and
 # warms the Gradle caches, so the first `./gradlew` call in a session does not
 # pay for downloads. The build itself needs JDK 17+, Android platform 36 and
-# build-tools 36.0.0 (see app/build.gradle and AGENTS.md).
+# build-tools 36.0.0 (see app/build.gradle and AGENTS.md). platform-tools (adb)
+# is installed too when a sdkmanager is available, because the repo ships an
+# instrumented androidTest suite; it is best-effort since builds do not need it.
 #
 # Design rules:
 #   * Idempotent  — safe to run every session; anything already present is reused.
@@ -296,6 +298,22 @@ ensure_android_sdk() {
     # unconfigured when the sdkmanager download fails.
     if sdk_has_required_packages; then
         ok "Android SDK at $sdk_root already has platform ${ANDROID_PLATFORM} and build-tools ${BUILD_TOOLS}"
+        # Gradle only needs the platform and build-tools, but adb lives in
+        # platform-tools. The app ships an instrumented androidTest suite
+        # (app/src/androidTest), so try to add platform-tools when a sdkmanager
+        # is available and they are missing. This is best-effort: a download
+        # failure must not fail the SDK setup, since Gradle builds do not need
+        # adb, and the script is non-fatal by design.
+        if [ ! -d "$sdk_root/platform-tools" ] && sdkmanager="$(sdkmanager_path "$sdk_root")"; then
+            log "installing platform-tools so adb is available for instrumented tests"
+            yes 2>/dev/null | "$sdkmanager" --sdk_root="$sdk_root" --licenses >/dev/null 2>&1
+            "$sdkmanager" --sdk_root="$sdk_root" platform-tools >/dev/null 2>&1
+            if [ -d "$sdk_root/platform-tools" ]; then
+                ok "platform-tools installed under $sdk_root"
+            else
+                warn "platform-tools missing; adb unavailable for instrumented tests (builds are unaffected)"
+            fi
+        fi
     else
         ensure_cmdline_tools || return 1
         install_android_packages || return 1
@@ -381,6 +399,8 @@ doctor() {
         "$([ -d "$sdk_root/platforms/android-${ANDROID_PLATFORM}" ] && printf present || printf 'missing')"
     printf '  build-tools %s: %s\n' "$BUILD_TOOLS" \
         "$([ -d "$sdk_root/build-tools/${BUILD_TOOLS}" ] && printf present || printf 'missing')"
+    printf '  platform-tools: %s\n' \
+        "$([ -d "$sdk_root/platform-tools" ] && printf present || printf 'missing (no adb)')"
     printf '  gradlew       : %s\n' "$([ -x "$REPO_ROOT/gradlew" ] && printf executable || printf 'not executable')"
 }
 

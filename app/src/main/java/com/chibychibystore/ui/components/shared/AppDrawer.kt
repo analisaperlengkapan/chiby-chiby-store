@@ -36,18 +36,18 @@ data class DrawerNavItem(
  * instance, lives only on [Screen.Settings]).
  */
 val drawerNavItems: List<DrawerNavItem> = listOf(
-    // Labels are Indonesian per the AGENTS.md UI-string convention; the first two
-    // reuse the app's own resource wording (R.string.dashboard "Dasbor",
-    // R.string.inventory "Inventaris"). The remaining module names match the
-    // titles of the screens they open, which keep their established wording.
+    // Labels are Indonesian per the AGENTS.md UI-string convention, and each one
+    // matches the title of the screen it opens so the menu and the screen agree.
+    // "POS" is kept because the app's own docs use it as the standard Indonesian
+    // abbreviation for the cashier module ("Point of Sale (POS)").
     DrawerNavItem("Dasbor", Icons.Default.Dashboard, Screen.Dashboard.route),
-    DrawerNavItem("Point of Sale", Icons.Default.PointOfSale, Screen.Pos.route),
+    DrawerNavItem("POS", Icons.Default.PointOfSale, Screen.Pos.route),
     DrawerNavItem("Inventaris", Icons.Default.Inventory, Screen.Inventory.route),
     DrawerNavItem("Riwayat Penjualan", Icons.Default.Receipt, Screen.SalesHistory.route),
     DrawerNavItem("Riwayat Pembelian", Icons.Default.ShoppingBag, Screen.PurchaseList.route),
-    DrawerNavItem("Manajemen Warehouse", Icons.Default.Warehouse, Screen.WarehouseList.route),
-    DrawerNavItem("Manajemen Expense", Icons.Default.AccountBalanceWallet, Screen.ExpenseList.route),
-    DrawerNavItem("Manajemen User", Icons.Default.Group, Screen.UserList.route),
+    DrawerNavItem("Manajemen Gudang", Icons.Default.Warehouse, Screen.WarehouseList.route),
+    DrawerNavItem("Manajemen Pengeluaran", Icons.Default.AccountBalanceWallet, Screen.ExpenseList.route),
+    DrawerNavItem("Manajemen Pengguna", Icons.Default.Group, Screen.UserList.route),
     DrawerNavItem("Manajemen Promosi", Icons.Default.LocalOffer, Screen.PromotionList.route),
     DrawerNavItem("Manajemen Pelanggan", Icons.Default.Person, Screen.PelangganList.route),
     DrawerNavItem("Manajemen Kas", Icons.Default.PointOfSale, Screen.CashShift.route),
@@ -55,9 +55,9 @@ val drawerNavItems: List<DrawerNavItem> = listOf(
     DrawerNavItem("Stok Opname", Icons.Default.FactCheck, Screen.AuditList.route),
     DrawerNavItem("Daftar Pemasok", Icons.Default.LocalShipping, Screen.SupplierList.route),
     DrawerNavItem("Laporan", Icons.Default.Assessment, Screen.Reports.route),
-    DrawerNavItem("Barcode Scanner", Icons.Default.QrCodeScanner, Screen.BarcodeScanner.route),
+    DrawerNavItem("Pindai Barcode", Icons.Default.QrCodeScanner, Screen.BarcodeScanner.route),
     DrawerNavItem("Cetak Label Barcode", Icons.Default.Print, Screen.BarcodePrint.route),
-    DrawerNavItem("Backup & Restore", Icons.Default.Backup, Screen.Backup.route),
+    DrawerNavItem("Cadangkan & Pulihkan", Icons.Default.Backup, Screen.Backup.route),
     DrawerNavItem("Pengaturan", Icons.Default.Settings, Screen.Settings.route)
 )
 

@@ -38,7 +38,7 @@ fun UserListScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Manajemen User",
+                title = "Manajemen Pengguna",
                 navigationIcon = Icons.Default.Menu,
                 onNavigationClick = onOpenDrawer,
                 actions = {

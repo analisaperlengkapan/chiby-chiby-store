@@ -37,7 +37,7 @@ fun WarehouseListScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Manajemen Warehouse",
+                title = "Manajemen Gudang",
                 navigationIcon = Icons.Default.Menu,
                 onNavigationClick = onOpenDrawer,
                 actions = {

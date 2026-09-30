@@ -46,7 +46,7 @@ fun ExpenseListScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Manajemen Expense",
+                title = "Manajemen Pengeluaran",
                 navigationIcon = Icons.Default.Menu,
                 onNavigationClick = onOpenDrawer,
                 actions = {

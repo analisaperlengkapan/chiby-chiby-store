@@ -28,6 +28,7 @@ import com.chibychibystore.ui.navigation.Screen
 import com.chibychibystore.ui.navigation.appDestinations
 import com.chibychibystore.ui.navigation.rememberDrawerNavigation
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -150,6 +151,24 @@ class AppNavigationDrawerTest {
             context.getString(com.chibychibystore.R.string.inventory),
             byRoute[Screen.Inventory.route]?.label
         )
+    }
+
+    @Test
+    fun `drawer labels do not leak English module names`() {
+        // AGENTS.md requires Indonesian UI strings. Guards the second review
+        // round, where "Point of Sale", "Manajemen Warehouse" and
+        // "Backup & Restore" (plus "Manajemen Expense"/"Manajemen User"/
+        // "Barcode Scanner") were still English. "POS" is the app's documented
+        // abbreviation for the cashier module, so it is allowed.
+        val banned = listOf("Warehouse", "Expense", "User", "Backup", "Restore", "Scanner", "Point of Sale")
+        drawerNavItems.forEach { item ->
+            banned.forEach { word ->
+                assertFalse(
+                    "Drawer label '${item.label}' should not contain the English word '$word'",
+                    item.label.contains(word, ignoreCase = true)
+                )
+            }
+        }
     }
 
     @Test

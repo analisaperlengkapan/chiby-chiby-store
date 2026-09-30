@@ -10,7 +10,7 @@
     <string name="settings">Pengaturan</string>
 
     <!-- POS Screen -->
-    <string name="pos_title">Point of Sale</string>
+    <string name="pos_title">POS</string>
     <string name="pos_search_products">Cari produk...</string>
     <string name="pos_add_product">Tambah Produk</string>
     <string name="pos_quantity">Qty</string>

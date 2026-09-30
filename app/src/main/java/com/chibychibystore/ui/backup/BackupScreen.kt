@@ -69,7 +69,7 @@ fun BackupScreen(
     Scaffold(
         topBar = {
                 AppTopBar(
-                title = "Backup & Restore",
+                title = "Cadangkan & Pulihkan",
                 navigationIcon = Icons.Filled.Menu,
                 onNavigationClick = onOpenDrawer
             )

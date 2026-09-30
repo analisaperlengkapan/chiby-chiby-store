@@ -38,10 +38,10 @@ Chiby Chiby Store adalah aplikasi Point of Sale (POS) lengkap untuk toko retail 
 - ✅ **Offline-First**: Beroperasi tanpa koneksi internet
 - ✅ **Multi-User**: Sistem peran dengan izin berbeda (Owner, Manager, Cashier, Warehouse)
 - ✅ **Inventory Management**: Pelacakan stok real-time dengan multi-gudang
-- ✅ **Point of Sale**: Antarmuka POS dengan pemindaian barcode
+- ✅ **POS**: Antarmuka POS dengan pemindaian barcode
 - ✅ **Financial Reporting**: Laporan keuangan lengkap dengan ekspor PDF
 - ✅ **Barcode Management**: Generate dan scan barcode GS1 Indonesia
-- ✅ **Backup & Restore**: Cadangkan data dengan enkripsi AES256
+- ✅ **Cadangkan & Pulihkan**: Cadangkan data dengan enkripsi AES256
 - ✅ **Thermal Printer**: Dukungan printer struk dan label Bluetooth
 
 ### 1.3 Persyaratan Sistem
@@ -109,7 +109,7 @@ Aplikasi memerlukan izin berikut:
 
 ### 4.3 Cashier (Kasir)
 **Izin:**
-- Point of Sale (POS)
+- POS
 - View riwayat penjualan harian
 - Input manual penjualan
 - Tidak bisa edit inventori atau laporan
@@ -130,7 +130,7 @@ Aplikasi menggunakan satu `NavHost` dengan halaman **Login** sebagai titik awal.
 
 - **Dashboard**: Ringkasan penjualan hari ini, tren 7 hari, dan transaksi terakhir
 - **Inventory**: Manajemen produk dan stok
-- **Point of Sale**: Antarmuka kasir
+- **POS**: Antarmuka kasir
 - **Sales History**: Riwayat penjualan
 - **Reports**: Laporan dan analitik
 - **Settings**: Pengaturan aplikasi
@@ -139,18 +139,18 @@ Halaman lain (warehouse, pembelian, promosi, pelanggan, kas, stok opname, expens
 
 ### 5.2 Drawer Menu (Menu Samping)
 Komponen drawer (`AppDrawer`) berisi daftar lengkap menu:
-- **Point of Sale**: Antarmuka kasir
+- **POS**: Antarmuka kasir
 - **Manajemen Pembelian**: Purchase order
-- **Manajemen Warehouse**: Multi-gudang management
-- **Manajemen Expense**: Pengeluaran operasional
-- **Manajemen User**: Kelola user (Owner only)
+- **Manajemen Gudang**: Multi-gudang management
+- **Manajemen Pengeluaran**: Pengeluaran operasional
+- **Manajemen Pengguna**: Kelola user (Owner only)
 - **Manajemen Promosi**: Diskon dan promo
 - **Manajemen Pelanggan**: Data pelanggan
 - **Manajemen Kas**: Shift kasir
 - **Stok Opname**: Audit stok fisik
-- **Barcode Scanner**: Pemindaian barcode
+- **Pindai Barcode**: Pemindaian barcode
 - **Cetak Label Barcode**: Generate label
-- **Backup & Restore**: Cadangkan data
+- **Cadangkan & Pulihkan**: Cadangkan data
 
 > Catatan: komponen drawer dan bottom navigation tersedia di codebase namun belum dipasang di `AppNavigation`. Untuk saat ini navigasi antar halaman dilakukan dari tombol/menu di dalam masing-masing halaman.
 
@@ -197,7 +197,7 @@ Komponen drawer (`AppDrawer`) berisi daftar lengkap menu:
 4. Klik "Simpan"
 
 ### 6.5 Transfer Antar Gudang
-1. Buka halaman **Manajemen Warehouse**
+1. Buka halaman **Manajemen Gudang**
 2. Pilih gudang tujuan
 3. Klik produk yang ingin dipindah
 4. Klik "Transfer" dan pilih gudang tujuan
@@ -212,12 +212,12 @@ Komponen drawer (`AppDrawer`) berisi daftar lengkap menu:
 ## 7. Point of Sale (POS)
 
 ### 7.1 Memulai Transaksi
-1. Buka halaman **Point of Sale**
+1. Buka halaman **POS**
 2. Aplikasi akan menampilkan antarmuka POS dengan:
    - Panel kiri: Pencarian produk
    - Panel kanan: Keranjang dan pembayaran
 
-| Point of Sale | Dialog Struk |
+| POS | Dialog Struk |
 | --- | --- |
 | ![POS](docs/screenshots/10-pos.png) | ![Dialog Struk](docs/screenshots/39-dialog-pos-receipt.png) |
 
@@ -382,7 +382,7 @@ Aplikasi mendukung:
 ## 11. Backup dan Restore
 
 ### 11.1 Membuat Backup
-1. Buka halaman **Backup & Restore**
+1. Buka halaman **Cadangkan & Pulihkan**
 2. Klik "Buat Backup"
 3. Tunggu proses backup selesai
 4. File backup (.enc) tersimpan di folder `Downloads/ChibyChibyBackup`, terenkripsi AES-256-GCM
@@ -404,16 +404,16 @@ Aplikasi mendukung:
 1. Swipe kiri pada file backup
 2. Klik "Hapus" atau konfirmasi
 
-| Backup & Restore |
+| Cadangkan & Pulihkan |
 | --- |
-| ![Backup & Restore](docs/screenshots/28-backup-restore.png) |
+| ![Cadangkan & Pulihkan](docs/screenshots/28-backup-restore.png) |
 
 ---
 
 ## 12. Manajemen Pengguna
 
 ### 12.1 Menambah User Baru (Owner Only)
-1. Buka halaman **Manajemen User**
+1. Buka halaman **Manajemen Pengguna**
 2. Klik tombol "+" (Add User)
 3. Isi detail:
    - Username
@@ -433,9 +433,9 @@ Aplikasi mendukung:
 3. Konfirmasi password
 4. Klik "Simpan"
 
-| Manajemen User | Tambah User | Detail User | Konfirmasi Hapus |
+| Manajemen Pengguna | Tambah User | Detail User | Konfirmasi Hapus |
 | --- | --- | --- | --- |
-| ![Manajemen User](docs/screenshots/29-user-list.png) | ![Tambah User](docs/screenshots/30-user-add.png) | ![Detail User](docs/screenshots/31-user-detail.png) | ![Hapus User](docs/screenshots/37-dialog-user-delete.png) |
+| ![Manajemen Pengguna](docs/screenshots/29-user-list.png) | ![Tambah User](docs/screenshots/30-user-add.png) | ![Detail User](docs/screenshots/31-user-detail.png) | ![Hapus User](docs/screenshots/37-dialog-user-delete.png) |
 
 ---
 
@@ -563,7 +563,7 @@ Aplikasi mendukung:
 **A:** Data tersimpan lokal di perangkat (database SQLite belum terenkripsi). File backup terenkripsi AES-256-GCM dan hanya bisa dibuka oleh aplikasi ini.
 
 ### Q: Bagaimana cara backup data?
-**A:** Buka halaman Backup & Restore dan klik "Buat Backup". File `.enc` tersimpan di folder `Downloads/ChibyChibyBackup`.
+**A:** Buka halaman Cadangkan & Pulihkan dan klik "Buat Backup". File `.enc` tersimpan di folder `Downloads/ChibyChibyBackup`.
 
 ### Q: Format barcode apa yang didukung?
 **A:** EAN-13, Code 128, QR Code, dan GS1 DataMatrix.
@@ -572,7 +572,7 @@ Aplikasi mendukung:
 **A:** Saat ini single device dengan data lokal. Sinkronisasi multi-device belum tersedia.
 
 ### Q: Bagaimana cara reset password?
-**A:** Owner dapat mereset password user lain melalui dialog "Reset Password" di halaman Manajemen User.
+**A:** Owner dapat mereset password user lain melalui dialog "Reset Password" di halaman Manajemen Pengguna.
 
 ### Q: Apakah ada biaya langganan?
 **A:** Tidak, aplikasi gratis untuk digunakan tanpa batas waktu.
