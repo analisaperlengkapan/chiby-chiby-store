@@ -126,16 +126,16 @@ Aplikasi memerlukan izin berikut:
 ## 5. Navigasi Aplikasi
 
 ### 5.1 Struktur Navigasi
-Aplikasi menggunakan satu `NavHost` dengan halaman **Login** sebagai titik awal. Setelah login, halaman **Dashboard** menjadi pusat navigasi:
+Aplikasi menggunakan satu `NavHost` dengan halaman **Login** sebagai titik awal. Setelah login, halaman **Dasbor** menjadi pusat navigasi:
 
-- **Dashboard**: Ringkasan penjualan hari ini, tren 7 hari, dan transaksi terakhir
-- **Inventory**: Manajemen produk dan stok
+- **Dasbor**: Ringkasan penjualan hari ini, tren 7 hari, dan transaksi terakhir
+- **Inventaris**: Manajemen produk dan stok
 - **POS**: Antarmuka kasir
 - **Sales History**: Riwayat penjualan
 - **Reports**: Laporan dan analitik
 - **Settings**: Pengaturan aplikasi
 
-Halaman lain (warehouse, pembelian, promosi, pelanggan, kas, stok opname, expense, backup, user, pemasok) dibuka dari Dashboard atau dari halaman terkait.
+Halaman lain (warehouse, pembelian, promosi, pelanggan, kas, stok opname, expense, backup, user, pemasok) dibuka dari Dasbor atau dari halaman terkait.
 
 ### 5.2 Drawer Menu (Menu Samping)
 Komponen drawer (`AppDrawer`) berisi daftar lengkap menu:
@@ -154,26 +154,26 @@ Komponen drawer (`AppDrawer`) berisi daftar lengkap menu:
 
 > Catatan: komponen drawer dan bottom navigation tersedia di codebase namun belum dipasang di `AppNavigation`. Untuk saat ini navigasi antar halaman dilakukan dari tombol/menu di dalam masing-masing halaman.
 
-| Login | Dashboard |
+| Login | Dasbor |
 | --- | --- |
-| ![Login](docs/screenshots/01-login.png) | ![Dashboard](docs/screenshots/02-dashboard.png) |
+| ![Login](docs/screenshots/01-login.png) | ![Dasbor](docs/screenshots/02-dashboard.png) |
 
 ---
 
 ## 6. Manajemen Inventori
 
 ### 6.1 Melihat Inventori
-1. Buka halaman **Inventory**
+1. Buka halaman **Inventaris**
 2. **Search**: Gunakan search bar untuk cari produk
 3. **Filter**: Klik ikon filter untuk filter berdasarkan kategori
 4. **Low Stock Alert**: Produk dengan stok rendah ditandai merah
 
-| Daftar Inventory | Tambah Produk | Detail Produk |
+| Daftar Inventaris | Tambah Produk | Detail Produk |
 | --- | --- | --- |
-| ![Inventory](docs/screenshots/03-inventory.png) | ![Tambah Produk](docs/screenshots/04-inventory-add-product.png) | ![Detail Produk](docs/screenshots/05-inventory-product-detail.png) |
+| ![Inventaris](docs/screenshots/03-inventory.png) | ![Tambah Produk](docs/screenshots/04-inventory-add-product.png) | ![Detail Produk](docs/screenshots/05-inventory-product-detail.png) |
 
 ### 6.2 Menambah Produk Baru
-1. Di halaman Inventory, klik tombol **"+"** (Add Product)
+1. Di halaman Inventaris, klik tombol **"+"** (Add Product)
 2. Isi detail produk:
    - **Nama**: Nama produk
    - **Barcode**: Scan atau input manual
@@ -185,7 +185,7 @@ Komponen drawer (`AppDrawer`) berisi daftar lengkap menu:
 3. Klik "Simpan"
 
 ### 6.3 Edit Produk
-1. Di halaman Inventory, klik produk yang ingin diedit
+1. Di halaman Inventaris, klik produk yang ingin diedit
 2. Klik tombol "Edit" di kanan atas
 3. Ubah detail yang diperlukan
 4. Klik "Simpan" untuk menyimpan perubahan
@@ -349,15 +349,15 @@ Aplikasi menyediakan 12 tipe laporan:
 
 ## 10. Manajemen Barcode
 
-### 10.1 Scan Barcode
-1. Buka halaman **Scan Barcode**
+### 10.1 Pindai Barcode
+1. Buka halaman **Pindai Barcode**
 2. Izinkan akses kamera
 3. Arahkan kamera ke barcode
 4. Produk otomatis ditemukan dan ditampilkan
 
-| Scan Barcode | Cetak Label Barcode |
+| Pindai Barcode | Cetak Label Barcode |
 | --- | --- |
-| ![Scan Barcode](docs/screenshots/23-barcode-scanner.png) | ![Cetak Label Barcode](docs/screenshots/24-barcode-print.png) |
+| ![Pindai Barcode](docs/screenshots/23-barcode-scanner.png) | ![Cetak Label Barcode](docs/screenshots/24-barcode-print.png) |
 
 ### 10.2 Generate Barcode
 1. Buka halaman **Cetak Label Barcode**

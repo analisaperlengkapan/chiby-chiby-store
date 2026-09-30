@@ -77,7 +77,7 @@ fun InventoryScreen(
     }
     
     ChibyScaffold(
-        title = "Inventory",
+        title = "Inventaris",
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { navController.navigate(Screen.ProductAdd.route) },

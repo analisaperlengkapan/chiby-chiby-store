@@ -60,7 +60,7 @@ fun DashboardScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Dashboard",
+                title = "Dasbor",
                 navigationIcon = Icons.Default.Menu,
                 onNavigationClick = onOpenDrawer,
                 actions = {}

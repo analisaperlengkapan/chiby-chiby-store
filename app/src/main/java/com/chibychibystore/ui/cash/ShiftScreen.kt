@@ -36,7 +36,7 @@ fun ShiftScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Manajemen Shift",
+                title = "Manajemen Kas",
                 navigationIcon = Icons.Default.Menu,
                 onNavigationClick = onOpenDrawer
             )

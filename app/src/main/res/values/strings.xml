@@ -48,7 +48,7 @@
     <string name="common_no">Tidak</string>
 
     <!-- Barcode Scanner -->
-    <string name="barcode_scanner_title">Scan Barcode</string>
+    <string name="barcode_scanner_title">Pindai Barcode</string>
     <string name="barcode_scan_instructions">Arahkan kamera ke barcode produk</string>
     <string name="barcode_last_scanned">Terakhir scan: %s</string>
     <string name="barcode_processing">Memproses...</string>

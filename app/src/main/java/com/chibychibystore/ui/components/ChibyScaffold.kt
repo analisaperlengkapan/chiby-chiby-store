@@ -19,6 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
+import com.chibychibystore.ui.components.shared.ScreenTitleTestTag
 import com.chibychibystore.ui.theme.ChibyPinkPrimary
 import com.chibychibystore.ui.theme.Neutral99
 import com.chibychibystore.ui.theme.White
@@ -41,6 +43,7 @@ fun ChibyScaffold(
                 title = {
                     Text(
                         text = title,
+                        modifier = Modifier.testTag(ScreenTitleTestTag),
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White
                     )
