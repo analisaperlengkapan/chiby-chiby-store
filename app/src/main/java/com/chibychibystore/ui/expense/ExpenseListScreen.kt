@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,7 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.ui.components.shared.*
 import com.chibychibystore.data.local.entity.KategoriPengeluaran
@@ -36,7 +37,8 @@ import java.util.*
 @Composable
 fun ExpenseListScreen(
     navController: NavController,
-    viewModel: ExpenseViewModel = hiltViewModel()
+    onOpenDrawer: () -> Unit = {},
+    viewModel: ExpenseViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showFilterDialog by remember { mutableStateOf(false) }
@@ -44,7 +46,9 @@ fun ExpenseListScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Manajemen Expense",
+                title = "Manajemen Pengeluaran",
+                navigationIcon = Icons.Default.Menu,
+                onNavigationClick = onOpenDrawer,
                 actions = {
                     IconButton(onClick = { navController.navigate(Screen.ExpenseAdd.route) }) {
                         Icon(Icons.Default.Add, contentDescription = "Tambah Expense")

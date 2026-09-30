@@ -8,13 +8,14 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Pelanggan
 import com.chibychibystore.ui.components.shared.AppTopBar
@@ -25,7 +26,8 @@ import com.chibychibystore.ui.navigation.Screen
 @Composable
 fun PelangganListScreen(
     navController: NavController,
-    viewModel: PelangganViewModel = hiltViewModel()
+    onOpenDrawer: () -> Unit = {},
+    viewModel: PelangganViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -34,7 +36,8 @@ fun PelangganListScreen(
         topBar = {
             AppTopBar(
                 title = "Manajemen Pelanggan",
-                onNavigationClick = { navController.popBackStack() }
+                navigationIcon = Icons.Default.Menu,
+                onNavigationClick = onOpenDrawer
             )
         },
         floatingActionButton = {

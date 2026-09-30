@@ -3,6 +3,11 @@ package com.chibychibystore.ui.screens
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.navigation.compose.ComposeNavigator
+import androidx.navigation.testing.TestNavHostController
+import androidx.test.core.app.ApplicationProvider
 import com.chibychibystore.ui.viewmodel.DashboardUiState
 import com.chibychibystore.ui.viewmodel.DashboardViewModel
 import org.junit.Rule
@@ -15,6 +20,13 @@ class DashboardScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    @Composable
+    private fun navController(): TestNavHostController = remember {
+        TestNavHostController(ApplicationProvider.getApplicationContext()).apply {
+            navigatorProvider.addNavigator(ComposeNavigator())
+        }
+    }
+
     @Test
     fun `dashboard screen displays title and refresh button`() {
         val viewModel = mock<DashboardViewModel> {
@@ -26,7 +38,7 @@ class DashboardScreenTest {
 
         composeTestRule.setContent {
             DashboardScreen(
-                currentRoute = "dashboard",
+                navController = navController(),
                 onNavigateToRoute = onNavigateToRoute,
                 viewModel = viewModel
             )
@@ -48,7 +60,7 @@ class DashboardScreenTest {
 
         composeTestRule.setContent {
             DashboardScreen(
-                currentRoute = "dashboard",
+                navController = navController(),
                 onNavigateToRoute = onNavigateToRoute,
                 viewModel = viewModel
             )
@@ -73,7 +85,7 @@ class DashboardScreenTest {
 
         composeTestRule.setContent {
             DashboardScreen(
-                currentRoute = "dashboard",
+                navController = navController(),
                 onNavigateToRoute = onNavigateToRoute,
                 viewModel = viewModel
             )
@@ -110,7 +122,7 @@ class DashboardScreenTest {
 
         composeTestRule.setContent {
             DashboardScreen(
-                currentRoute = "dashboard",
+                navController = navController(),
                 onNavigateToRoute = onNavigateToRoute,
                 viewModel = viewModel
             )
@@ -145,7 +157,7 @@ class DashboardScreenTest {
 
         composeTestRule.setContent {
             DashboardScreen(
-                currentRoute = "dashboard",
+                navController = navController(),
                 onNavigateToRoute = onNavigateToRoute,
                 viewModel = viewModel
             )
@@ -165,7 +177,7 @@ class DashboardScreenTest {
 
         composeTestRule.setContent {
             DashboardScreen(
-                currentRoute = "dashboard",
+                navController = navController(),
                 onNavigateToRoute = onNavigateToRoute,
                 viewModel = viewModel
             )

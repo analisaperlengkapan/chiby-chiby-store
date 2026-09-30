@@ -38,10 +38,10 @@ Chiby Chiby Store adalah aplikasi Point of Sale (POS) lengkap untuk toko retail 
 - ✅ **Offline-First**: Beroperasi tanpa koneksi internet
 - ✅ **Multi-User**: Sistem peran dengan izin berbeda (Owner, Manager, Cashier, Warehouse)
 - ✅ **Inventory Management**: Pelacakan stok real-time dengan multi-gudang
-- ✅ **Point of Sale**: Antarmuka POS dengan pemindaian barcode
+- ✅ **POS**: Antarmuka POS dengan pemindaian barcode
 - ✅ **Financial Reporting**: Laporan keuangan lengkap dengan ekspor PDF
 - ✅ **Barcode Management**: Generate dan scan barcode GS1 Indonesia
-- ✅ **Backup & Restore**: Cadangkan data dengan enkripsi AES256
+- ✅ **Cadangkan & Pulihkan**: Cadangkan data dengan enkripsi AES256
 - ✅ **Thermal Printer**: Dukungan printer struk dan label Bluetooth
 
 ### 1.3 Persyaratan Sistem
@@ -109,7 +109,7 @@ Aplikasi memerlukan izin berikut:
 
 ### 4.3 Cashier (Kasir)
 **Izin:**
-- Point of Sale (POS)
+- POS
 - View riwayat penjualan harian
 - Input manual penjualan
 - Tidak bisa edit inventori atau laporan
@@ -126,54 +126,54 @@ Aplikasi memerlukan izin berikut:
 ## 5. Navigasi Aplikasi
 
 ### 5.1 Struktur Navigasi
-Aplikasi menggunakan satu `NavHost` dengan halaman **Login** sebagai titik awal. Setelah login, halaman **Dashboard** menjadi pusat navigasi:
+Aplikasi menggunakan satu `NavHost` dengan halaman **Login** sebagai titik awal. Setelah login, halaman **Dasbor** menjadi pusat navigasi:
 
-- **Dashboard**: Ringkasan penjualan hari ini, tren 7 hari, dan transaksi terakhir
-- **Inventory**: Manajemen produk dan stok
-- **Point of Sale**: Antarmuka kasir
+- **Dasbor**: Ringkasan penjualan hari ini, tren 7 hari, dan transaksi terakhir
+- **Inventaris**: Manajemen produk dan stok
+- **POS**: Antarmuka kasir
 - **Sales History**: Riwayat penjualan
 - **Reports**: Laporan dan analitik
 - **Settings**: Pengaturan aplikasi
 
-Halaman lain (warehouse, pembelian, promosi, pelanggan, kas, stok opname, expense, backup, user, pemasok) dibuka dari Dashboard atau dari halaman terkait.
+Halaman lain (warehouse, pembelian, promosi, pelanggan, kas, stok opname, expense, backup, user, pemasok) dibuka dari Dasbor atau dari halaman terkait.
 
 ### 5.2 Drawer Menu (Menu Samping)
 Komponen drawer (`AppDrawer`) berisi daftar lengkap menu:
-- **Point of Sale**: Antarmuka kasir
+- **POS**: Antarmuka kasir
 - **Manajemen Pembelian**: Purchase order
-- **Manajemen Warehouse**: Multi-gudang management
-- **Manajemen Expense**: Pengeluaran operasional
-- **Manajemen User**: Kelola user (Owner only)
+- **Manajemen Gudang**: Multi-gudang management
+- **Manajemen Pengeluaran**: Pengeluaran operasional
+- **Manajemen Pengguna**: Kelola user (Owner only)
 - **Manajemen Promosi**: Diskon dan promo
 - **Manajemen Pelanggan**: Data pelanggan
 - **Manajemen Kas**: Shift kasir
 - **Stok Opname**: Audit stok fisik
-- **Barcode Scanner**: Pemindaian barcode
+- **Pindai Barcode**: Pemindaian barcode
 - **Cetak Label Barcode**: Generate label
-- **Backup & Restore**: Cadangkan data
+- **Cadangkan & Pulihkan**: Cadangkan data
 
 > Catatan: komponen drawer dan bottom navigation tersedia di codebase namun belum dipasang di `AppNavigation`. Untuk saat ini navigasi antar halaman dilakukan dari tombol/menu di dalam masing-masing halaman.
 
-| Login | Dashboard |
+| Login | Dasbor |
 | --- | --- |
-| ![Login](docs/screenshots/01-login.png) | ![Dashboard](docs/screenshots/02-dashboard.png) |
+| ![Login](docs/screenshots/01-login.png) | ![Dasbor](docs/screenshots/02-dashboard.png) |
 
 ---
 
 ## 6. Manajemen Inventori
 
 ### 6.1 Melihat Inventori
-1. Buka halaman **Inventory**
+1. Buka halaman **Inventaris**
 2. **Search**: Gunakan search bar untuk cari produk
 3. **Filter**: Klik ikon filter untuk filter berdasarkan kategori
 4. **Low Stock Alert**: Produk dengan stok rendah ditandai merah
 
-| Daftar Inventory | Tambah Produk | Detail Produk |
+| Daftar Inventaris | Tambah Produk | Detail Produk |
 | --- | --- | --- |
-| ![Inventory](docs/screenshots/03-inventory.png) | ![Tambah Produk](docs/screenshots/04-inventory-add-product.png) | ![Detail Produk](docs/screenshots/05-inventory-product-detail.png) |
+| ![Inventaris](docs/screenshots/03-inventory.png) | ![Tambah Produk](docs/screenshots/04-inventory-add-product.png) | ![Detail Produk](docs/screenshots/05-inventory-product-detail.png) |
 
 ### 6.2 Menambah Produk Baru
-1. Di halaman Inventory, klik tombol **"+"** (Add Product)
+1. Di halaman Inventaris, klik tombol **"+"** (Add Product)
 2. Isi detail produk:
    - **Nama**: Nama produk
    - **Barcode**: Scan atau input manual
@@ -185,7 +185,7 @@ Komponen drawer (`AppDrawer`) berisi daftar lengkap menu:
 3. Klik "Simpan"
 
 ### 6.3 Edit Produk
-1. Di halaman Inventory, klik produk yang ingin diedit
+1. Di halaman Inventaris, klik produk yang ingin diedit
 2. Klik tombol "Edit" di kanan atas
 3. Ubah detail yang diperlukan
 4. Klik "Simpan" untuk menyimpan perubahan
@@ -197,7 +197,7 @@ Komponen drawer (`AppDrawer`) berisi daftar lengkap menu:
 4. Klik "Simpan"
 
 ### 6.5 Transfer Antar Gudang
-1. Buka halaman **Manajemen Warehouse**
+1. Buka halaman **Manajemen Gudang**
 2. Pilih gudang tujuan
 3. Klik produk yang ingin dipindah
 4. Klik "Transfer" dan pilih gudang tujuan
@@ -212,12 +212,12 @@ Komponen drawer (`AppDrawer`) berisi daftar lengkap menu:
 ## 7. Point of Sale (POS)
 
 ### 7.1 Memulai Transaksi
-1. Buka halaman **Point of Sale**
+1. Buka halaman **POS**
 2. Aplikasi akan menampilkan antarmuka POS dengan:
    - Panel kiri: Pencarian produk
    - Panel kanan: Keranjang dan pembayaran
 
-| Point of Sale | Dialog Struk |
+| POS | Dialog Struk |
 | --- | --- |
 | ![POS](docs/screenshots/10-pos.png) | ![Dialog Struk](docs/screenshots/39-dialog-pos-receipt.png) |
 
@@ -349,15 +349,15 @@ Aplikasi menyediakan 12 tipe laporan:
 
 ## 10. Manajemen Barcode
 
-### 10.1 Scan Barcode
-1. Buka halaman **Scan Barcode**
+### 10.1 Pindai Barcode
+1. Buka halaman **Pindai Barcode**
 2. Izinkan akses kamera
 3. Arahkan kamera ke barcode
 4. Produk otomatis ditemukan dan ditampilkan
 
-| Scan Barcode | Cetak Label Barcode |
+| Pindai Barcode | Cetak Label Barcode |
 | --- | --- |
-| ![Scan Barcode](docs/screenshots/23-barcode-scanner.png) | ![Cetak Label Barcode](docs/screenshots/24-barcode-print.png) |
+| ![Pindai Barcode](docs/screenshots/23-barcode-scanner.png) | ![Cetak Label Barcode](docs/screenshots/24-barcode-print.png) |
 
 ### 10.2 Generate Barcode
 1. Buka halaman **Cetak Label Barcode**
@@ -382,7 +382,7 @@ Aplikasi mendukung:
 ## 11. Backup dan Restore
 
 ### 11.1 Membuat Backup
-1. Buka halaman **Backup & Restore**
+1. Buka halaman **Cadangkan & Pulihkan**
 2. Klik "Buat Backup"
 3. Tunggu proses backup selesai
 4. File backup (.enc) tersimpan di folder `Downloads/ChibyChibyBackup`, terenkripsi AES-256-GCM
@@ -404,16 +404,16 @@ Aplikasi mendukung:
 1. Swipe kiri pada file backup
 2. Klik "Hapus" atau konfirmasi
 
-| Backup & Restore |
+| Cadangkan & Pulihkan |
 | --- |
-| ![Backup & Restore](docs/screenshots/28-backup-restore.png) |
+| ![Cadangkan & Pulihkan](docs/screenshots/28-backup-restore.png) |
 
 ---
 
 ## 12. Manajemen Pengguna
 
 ### 12.1 Menambah User Baru (Owner Only)
-1. Buka halaman **Manajemen User**
+1. Buka halaman **Manajemen Pengguna**
 2. Klik tombol "+" (Add User)
 3. Isi detail:
    - Username
@@ -433,9 +433,9 @@ Aplikasi mendukung:
 3. Konfirmasi password
 4. Klik "Simpan"
 
-| Manajemen User | Tambah User | Detail User | Konfirmasi Hapus |
+| Manajemen Pengguna | Tambah User | Detail User | Konfirmasi Hapus |
 | --- | --- | --- | --- |
-| ![Manajemen User](docs/screenshots/29-user-list.png) | ![Tambah User](docs/screenshots/30-user-add.png) | ![Detail User](docs/screenshots/31-user-detail.png) | ![Hapus User](docs/screenshots/37-dialog-user-delete.png) |
+| ![Manajemen Pengguna](docs/screenshots/29-user-list.png) | ![Tambah User](docs/screenshots/30-user-add.png) | ![Detail User](docs/screenshots/31-user-detail.png) | ![Hapus User](docs/screenshots/37-dialog-user-delete.png) |
 
 ---
 
@@ -563,7 +563,7 @@ Aplikasi mendukung:
 **A:** Data tersimpan lokal di perangkat (database SQLite belum terenkripsi). File backup terenkripsi AES-256-GCM dan hanya bisa dibuka oleh aplikasi ini.
 
 ### Q: Bagaimana cara backup data?
-**A:** Buka halaman Backup & Restore dan klik "Buat Backup". File `.enc` tersimpan di folder `Downloads/ChibyChibyBackup`.
+**A:** Buka halaman Cadangkan & Pulihkan dan klik "Buat Backup". File `.enc` tersimpan di folder `Downloads/ChibyChibyBackup`.
 
 ### Q: Format barcode apa yang didukung?
 **A:** EAN-13, Code 128, QR Code, dan GS1 DataMatrix.
@@ -572,7 +572,7 @@ Aplikasi mendukung:
 **A:** Saat ini single device dengan data lokal. Sinkronisasi multi-device belum tersedia.
 
 ### Q: Bagaimana cara reset password?
-**A:** Owner dapat mereset password user lain melalui dialog "Reset Password" di halaman Manajemen User.
+**A:** Owner dapat mereset password user lain melalui dialog "Reset Password" di halaman Manajemen Pengguna.
 
 ### Q: Apakah ada biaya langganan?
 **A:** Tidak, aplikasi gratis untuk digunakan tanpa batas waktu.

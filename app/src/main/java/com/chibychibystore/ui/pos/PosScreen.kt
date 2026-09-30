@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.navigation.Screen
@@ -36,7 +36,8 @@ import java.util.Locale
 @Composable
 fun PosScreen(
     navController: NavController,
-    viewModel: PosViewModel = hiltViewModel()
+    onOpenDrawer: () -> Unit = {},
+    viewModel: PosViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -58,8 +59,9 @@ fun PosScreen(
         }
     }
     ChibyScaffold(
-        title = "Point of Sale",
-        onNavigateUp = { navController.navigateUp() }
+        title = "POS",
+        onNavigateUp = onOpenDrawer,
+        navigationIcon = Icons.Default.Menu
     ) { paddingValues ->
         Box(
             modifier = Modifier
