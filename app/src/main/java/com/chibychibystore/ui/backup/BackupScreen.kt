@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Delete
@@ -51,6 +51,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackupScreen(
+    onOpenDrawer: () -> Unit = {},
     onNavigateBack: () -> Unit,
     viewModel: BackupViewModel = hiltViewModel()
 ) {
@@ -69,8 +70,8 @@ fun BackupScreen(
         topBar = {
                 AppTopBar(
                 title = "Backup & Restore",
-                navigationIcon = Icons.Filled.ArrowBack,
-                onNavigationClick = onNavigateBack
+                navigationIcon = Icons.Filled.Menu,
+                onNavigationClick = onOpenDrawer
             )
         }
     ) { paddingValues ->

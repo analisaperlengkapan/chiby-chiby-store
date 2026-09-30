@@ -28,6 +28,7 @@ import java.util.*
 @Composable
 fun SalesHistoryScreen(
     navController: NavController,
+    onOpenDrawer: () -> Unit = {},
     viewModel: SalesHistoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -37,7 +38,8 @@ fun SalesHistoryScreen(
 
     ChibyScaffold(
         title = "Riwayat Penjualan",
-        onNavigateUp = { navController.popBackStack() },
+        onNavigateUp = onOpenDrawer,
+        navigationIcon = Icons.Default.Menu,
         actions = {
             IconButton(onClick = { viewModel.clearFilters() }) {
                 Icon(Icons.Default.Clear, "Clear Filters", tint = androidx.compose.ui.graphics.Color.White)

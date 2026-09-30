@@ -27,8 +27,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,20 +51,18 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     navController: NavController,
-    drawerState: androidx.compose.material3.DrawerState,
-    currentRoute: String,
-    onNavigateToRoute: (String) -> Unit,
+    onOpenDrawer: () -> Unit = {},
+    onNavigateToRoute: (String) -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
             AppTopBar(
                 title = "Dashboard",
                 navigationIcon = Icons.Default.Menu,
-                onNavigationClick = { scope.launch { drawerState.open() } },
+                onNavigationClick = onOpenDrawer,
                 actions = {}
             )
         }

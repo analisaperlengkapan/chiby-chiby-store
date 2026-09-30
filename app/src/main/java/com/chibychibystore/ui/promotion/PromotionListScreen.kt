@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +30,7 @@ import java.util.*
 @Composable
 fun PromotionListScreen(
     navController: NavController,
+    onOpenDrawer: () -> Unit = {},
     viewModel: PromotionViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -37,7 +39,8 @@ fun PromotionListScreen(
         topBar = {
             AppTopBar(
                 title = "Manajemen Promosi",
-                onNavigationClick = { navController.popBackStack() }
+                navigationIcon = Icons.Default.Menu,
+                onNavigationClick = onOpenDrawer
             )
         },
         floatingActionButton = {

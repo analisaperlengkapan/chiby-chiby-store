@@ -29,6 +29,7 @@ import com.chibychibystore.ui.navigation.Screen
 @Composable
 fun WarehouseListScreen(
     navController: NavController,
+    onOpenDrawer: () -> Unit = {},
     viewModel: WarehouseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -37,6 +38,8 @@ fun WarehouseListScreen(
         topBar = {
             AppTopBar(
                 title = "Manajemen Warehouse",
+                navigationIcon = Icons.Default.Menu,
+                onNavigationClick = onOpenDrawer,
                 actions = {
                     IconButton(onClick = { navController.navigate(Screen.WarehouseAdd.route) }) {
                         Icon(Icons.Default.Add, contentDescription = "Tambah Warehouse")
@@ -77,7 +80,7 @@ fun WarehouseListScreen(
                 }
                 uiState.warehouses.isEmpty() -> {
                     WarehouseEmptyState(onAddWarehouse = {
-                        navController.navigate(Screen.Warehouse.route)
+                        navController.navigate(Screen.WarehouseAdd.route)
                     })
                 }
                 else -> {

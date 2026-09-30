@@ -25,7 +25,7 @@ import java.util.Locale
 
 @Composable
 fun SettingsScreen(
-    currentRoute: String,
+    onOpenDrawer: () -> Unit = {},
     onNavigateToRoute: (String) -> Unit,
     onLogout: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
@@ -37,7 +37,8 @@ fun SettingsScreen(
 
     ChibyScaffold(
         title = "Pengaturan",
-        onNavigateUp = { /* Top level screen, no up navigation */ }
+        onNavigateUp = onOpenDrawer,
+        navigationIcon = Icons.Default.Menu
     ) { paddingValues ->
         if (uiState.isLoading) {
             LoadingIndicator("Memuat pengaturan...")

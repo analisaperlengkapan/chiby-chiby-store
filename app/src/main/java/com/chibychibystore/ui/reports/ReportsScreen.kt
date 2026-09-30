@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,6 +41,7 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportsScreen(
+    onOpenDrawer: () -> Unit = {},
     onNavigateBack: () -> Unit,
     viewModel: ReportsViewModel = hiltViewModel()
 ) {
@@ -78,7 +80,8 @@ fun ReportsScreen(
 
     ChibyScaffold(
         title = stringResource(R.string.reports_title),
-        onNavigateUp = onNavigateBack,
+        onNavigateUp = onOpenDrawer,
+        navigationIcon = Icons.Default.Menu,
         actions = {
             IconButton(
                 onClick = { viewModel.exportCurrentReportToPdf() },

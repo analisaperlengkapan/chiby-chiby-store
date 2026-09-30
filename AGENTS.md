@@ -16,6 +16,22 @@ JDK 17 is required; the Gradle wrapper is 9.6.0. Do not hard-code a JDK path in 
 ./gradlew lint                   # lint
 ```
 
+`.openhands/setup.sh` provisions the toolchain (JDK + Android SDK) and warms
+the Gradle caches. OpenHands runs it automatically when a session starts; run
+it yourself on a bare machine:
+
+```bash
+bash .openhands/setup.sh                 # install JDK + SDK, warm caches
+SETUP_DOCTOR=1 bash .openhands/setup.sh  # just report what is installed
+SETUP_BUILD=1  bash .openhands/setup.sh  # also run :app:assembleDebug
+```
+
+It is idempotent and non-fatal (a failed download warns instead of aborting),
+so it is safe to run every session. It writes the gitignored `local.properties`
+(`sdk.dir`) and records `org.gradle.java.home` in `~/.gradle/gradle.properties`
+— never in the tracked `gradle.properties`. The script prefers JDK 17 and falls
+back to any installed JDK 21 if 17 is absent (the build was verified on 21).
+
 Unit tests run on the JVM. `app/src/test/resources/robolectric.properties` pins `sdk=34` and `graphics.mode=NATIVE`; native graphics mode is what lets Compose render into a real bitmap for screenshots.
 
 ## Layout
@@ -37,7 +53,7 @@ docs/screenshots/  images referenced by README.md
 - Screens take `navController: NavController` and a `viewModel: XViewModel = hiltViewModel()` default. The default parameter is what makes them injectable in tests.
 - Each screen has one immutable `XUiState` data class exposed via `StateFlow`, and dialog visibility is a boolean flag on that state (e.g. `showDeleteUserDialog`).
 - Roles: OWNER, MANAGER, CASHIER, WAREHOUSE. Permission checks go through `AuthService`.
-- `Screen.kt` is the single source of truth for routes; every route is also registered in `AppNavigation.kt`. Some screens (`UserAddScreen`, `AppDrawer`) are currently not reachable from the nav graph — check before assuming a route exists.
+- `Screen.kt` is the single source of truth for routes; the destination graph is built by `appDestinations()` in `AppDestinations.kt`, which `AppNavigation.kt` hosts. `AppDrawer` is composed once in `AppNavigation`; each top-level screen opens it via an `onOpenDrawer` parameter wired to its top-bar navigation icon (`Icons.Default.Menu`). `Screen.UserAdd` exists but is not registered in the graph — check before assuming a route is reachable.
 
 ## Screenshots
 

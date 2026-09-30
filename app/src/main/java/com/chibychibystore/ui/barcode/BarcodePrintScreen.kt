@@ -36,6 +36,7 @@ enum class LabelSize(val displayName: String, val width: Int, val height: Int) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BarcodePrintScreen(
+    onOpenDrawer: () -> Unit = {},
     onNavigateBack: () -> Unit,
     viewModel: BarcodePrintViewModel = hiltViewModel()
 ) {
@@ -45,8 +46,8 @@ fun BarcodePrintScreen(
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.barcode_print_title),
-                navigationIcon = Icons.Filled.ArrowBack,
-                onNavigationClick = onNavigateBack
+                navigationIcon = Icons.Filled.Menu,
+                onNavigationClick = onOpenDrawer
             )
         }
     ) { padding ->

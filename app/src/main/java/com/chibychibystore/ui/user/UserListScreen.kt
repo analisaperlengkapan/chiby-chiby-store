@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun UserListScreen(
     navController: NavController,
+    onOpenDrawer: () -> Unit = {},
     viewModel: UserManagementViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -38,6 +39,8 @@ fun UserListScreen(
         topBar = {
             AppTopBar(
                 title = "Manajemen User",
+                navigationIcon = Icons.Default.Menu,
+                onNavigationClick = onOpenDrawer,
                 actions = {
                     IconButton(
                         onClick = { viewModel.showCreateUserDialog() }

@@ -36,6 +36,7 @@ import java.util.Locale
 @Composable
 fun PosScreen(
     navController: NavController,
+    onOpenDrawer: () -> Unit = {},
     viewModel: PosViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -59,7 +60,8 @@ fun PosScreen(
     }
     ChibyScaffold(
         title = "Point of Sale",
-        onNavigateUp = { navController.navigateUp() }
+        onNavigateUp = onOpenDrawer,
+        navigationIcon = Icons.Default.Menu
     ) { paddingValues ->
         Box(
             modifier = Modifier

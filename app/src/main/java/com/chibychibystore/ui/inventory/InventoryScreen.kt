@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -43,6 +44,7 @@ import java.util.Locale
 @Composable
 fun InventoryScreen(
     navController: NavController,
+    onOpenDrawer: () -> Unit = {},
     viewModel: InventoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -86,7 +88,8 @@ fun InventoryScreen(
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        onNavigateUp = { navController.navigateUp() }
+        onNavigateUp = onOpenDrawer,
+        navigationIcon = Icons.Default.Menu
     ) { paddingValues ->
         Column(
             modifier = Modifier

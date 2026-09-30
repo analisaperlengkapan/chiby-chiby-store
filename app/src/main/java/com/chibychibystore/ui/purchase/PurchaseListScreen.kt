@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -24,6 +25,7 @@ import java.util.*
 @Composable
 fun PurchaseListScreen(
     navController: NavController,
+    onOpenDrawer: () -> Unit = {},
     viewModel: PurchaseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -32,7 +34,8 @@ fun PurchaseListScreen(
         topBar = {
             AppTopBar(
                 title = "Riwayat Pembelian",
-                onNavigationClick = { navController.popBackStack() }
+                navigationIcon = Icons.Default.Menu,
+                onNavigationClick = onOpenDrawer
             )
         },
         floatingActionButton = {

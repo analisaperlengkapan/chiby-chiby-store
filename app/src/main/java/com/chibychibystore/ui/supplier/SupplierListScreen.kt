@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ import com.chibychibystore.ui.components.shared.LoadingIndicator
 @Composable
 fun SupplierListScreen(
     navController: androidx.navigation.NavController,
+    onOpenDrawer: () -> Unit = {},
     viewModel: SupplierViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -33,7 +35,8 @@ fun SupplierListScreen(
         topBar = {
             AppTopBar(
                 title = "Daftar Pemasok",
-                onNavigationClick = { navController.popBackStack() }
+                navigationIcon = Icons.Default.Menu,
+                onNavigationClick = onOpenDrawer
             )
         },
         floatingActionButton = {

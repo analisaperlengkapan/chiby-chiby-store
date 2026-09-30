@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,6 +37,7 @@ import java.util.*
 @Composable
 fun ExpenseListScreen(
     navController: NavController,
+    onOpenDrawer: () -> Unit = {},
     viewModel: ExpenseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -45,6 +47,8 @@ fun ExpenseListScreen(
         topBar = {
             AppTopBar(
                 title = "Manajemen Expense",
+                navigationIcon = Icons.Default.Menu,
+                onNavigationClick = onOpenDrawer,
                 actions = {
                     IconButton(onClick = { navController.navigate(Screen.ExpenseAdd.route) }) {
                         Icon(Icons.Default.Add, contentDescription = "Tambah Expense")
