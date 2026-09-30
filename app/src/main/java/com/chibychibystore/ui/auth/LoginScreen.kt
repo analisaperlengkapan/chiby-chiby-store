@@ -19,7 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import com.chibychibystore.R
 import com.chibychibystore.ui.components.ChibyButton
 import com.chibychibystore.ui.components.ChibyCard
@@ -32,7 +32,7 @@ import com.chibychibystore.ui.theme.White
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
-    viewModel: LoginViewModel = hiltViewModel()
+    viewModel: LoginViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
