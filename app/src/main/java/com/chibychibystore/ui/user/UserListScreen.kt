@@ -10,7 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.Role
@@ -24,7 +24,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun UserListScreen(
     navController: NavController,
-    viewModel: UserManagementViewModel = hiltViewModel()
+    onOpenDrawer: () -> Unit = {},
+    viewModel: UserManagementViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val createUserFormState by viewModel.createUserFormState.collectAsState()
@@ -37,7 +38,9 @@ fun UserListScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Manajemen User",
+                title = "Manajemen Pengguna",
+                navigationIcon = Icons.Default.Menu,
+                onNavigationClick = onOpenDrawer,
                 actions = {
                     IconButton(
                         onClick = { viewModel.showCreateUserDialog() }

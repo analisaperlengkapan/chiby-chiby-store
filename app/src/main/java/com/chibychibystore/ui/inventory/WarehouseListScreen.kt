@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.ui.components.shared.AppTopBar
@@ -29,14 +29,17 @@ import com.chibychibystore.ui.navigation.Screen
 @Composable
 fun WarehouseListScreen(
     navController: NavController,
-    viewModel: WarehouseViewModel = hiltViewModel()
+    onOpenDrawer: () -> Unit = {},
+    viewModel: WarehouseViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "Manajemen Warehouse",
+                title = "Manajemen Gudang",
+                navigationIcon = Icons.Default.Menu,
+                onNavigationClick = onOpenDrawer,
                 actions = {
                     IconButton(onClick = { navController.navigate(Screen.WarehouseAdd.route) }) {
                         Icon(Icons.Default.Add, contentDescription = "Tambah Warehouse")
@@ -77,7 +80,7 @@ fun WarehouseListScreen(
                 }
                 uiState.warehouses.isEmpty() -> {
                     WarehouseEmptyState(onAddWarehouse = {
-                        navController.navigate(Screen.Warehouse.route)
+                        navController.navigate(Screen.WarehouseAdd.route)
                     })
                 }
                 else -> {
