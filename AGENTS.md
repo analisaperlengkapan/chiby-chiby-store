@@ -16,6 +16,22 @@ JDK 17 is required; the Gradle wrapper is 9.6.0. Do not hard-code a JDK path in 
 ./gradlew lint                   # lint
 ```
 
+`.openhands/setup.sh` provisions the toolchain (JDK + Android SDK) and warms
+the Gradle caches. OpenHands runs it automatically when a session starts; run
+it yourself on a bare machine:
+
+```bash
+bash .openhands/setup.sh                 # install JDK + SDK, warm caches
+SETUP_DOCTOR=1 bash .openhands/setup.sh  # just report what is installed
+SETUP_BUILD=1  bash .openhands/setup.sh  # also run :app:assembleDebug
+```
+
+It is idempotent and non-fatal (a failed download warns instead of aborting),
+so it is safe to run every session. It writes the gitignored `local.properties`
+(`sdk.dir`) and records `org.gradle.java.home` in `~/.gradle/gradle.properties`
+— never in the tracked `gradle.properties`. The script prefers JDK 17 and falls
+back to any installed JDK 21 if 17 is absent (the build was verified on 21).
+
 Unit tests run on the JVM. `app/src/test/resources/robolectric.properties` pins `sdk=34` and `graphics.mode=NATIVE`; native graphics mode is what lets Compose render into a real bitmap for screenshots.
 
 ## Layout
@@ -37,7 +53,10 @@ docs/screenshots/  images referenced by README.md
 - Screens take `navController: NavController` and a `viewModel: XViewModel = hiltViewModel()` default. The default parameter is what makes them injectable in tests.
 - Each screen has one immutable `XUiState` data class exposed via `StateFlow`, and dialog visibility is a boolean flag on that state (e.g. `showDeleteUserDialog`).
 - Roles: OWNER, MANAGER, CASHIER, WAREHOUSE. Permission checks go through `AuthService`.
-- `Screen.kt` is the single source of truth for routes; every route is also registered in `AppNavigation.kt`. Some screens (`UserAddScreen`, `AppDrawer`) are currently not reachable from the nav graph — check before assuming a route exists.
+- `Screen.kt` is the single source of truth for routes; the destination graph is built by `appDestinations()` in `AppDestinations.kt`, which `AppNavigation.kt` hosts. `AppNavigation` mounts the shared `AppDrawer` via `AppShell`, but only when `AuthService.observeCurrentUser()` reports a session **and** the current route is not `Screen.Login` — so the drawer can never be swiped open over the login form, not before sign-in and not for a session that is sitting on the login destination. Each top-level screen opens the drawer via an `onOpenDrawer` parameter wired to its top-bar navigation icon (`Icons.Default.Menu`).
+- `drawerNavItems` in `AppDrawer.kt` is the single source of truth for what the post-login menu reaches, and it is the only production entry point to most modules (logout lives only on `Screen.Settings`). When you add or register a top-level destination, add it there too — `AppNavigationDrawerTest` asserts every intended top-level screen has an entry. `Screen.UserAdd` exists but is not registered in the graph — check before assuming a route is reachable.
+- Drawer labels are Indonesian and must match the title of the screen they open, so the menu and the screen agree (e.g. `Manajemen Gudang` ↔ `WarehouseListScreen`, `Cadangkan & Pulihkan` ↔ `BackupScreen`). `AppNavigationDrawerTest` guards the wording (no English module word — `Warehouse`, `Expense`, `User`, `Backup`, `Restore`, `Scanner`, `Point of Sale` — may leak into a label), and `DrawerTitleConsistencyTest` guards what each label opens. The latter builds the **real** graph with `appDestinations()`, navigates every drawer route, and asserts the rendered top-bar title equals the drawer label — so it also fails when a route is wired to the wrong screen, which a test that renders screens directly cannot see. It reads the title via the shared `ScreenTitleTestTag` ("screenTitle") applied in both top-bar implementations (`AppTopBar` and `ChibyScaffold`); tagging only one would silently skip the other's screens. The one allowed exception is `POS`, the app's documented abbreviation for the cashier module (`PANDUAN_PENGGUNA.md` writes "Point of Sale (POS)"). Renaming a label means renaming the screen title, the drawer entry, and the matching screenshot together.
+- Top-level screens resolve their ViewModel through `screenViewModel()` (in `ui/components/shared/ScreenViewModel.kt`), not `hiltViewModel()` directly. Production leaves `LocalScreenViewModelFactory` unset, so it is exactly `hiltViewModel()`; a test can provide a factory of mocked ViewModels. This is what lets `DrawerTitleConsistencyTest` render the real `appDestinations` graph under Robolectric, which has no Hilt component. Detail/add/edit screens the drawer does not open still call `hiltViewModel()` directly — switch one only when a test needs to render it.
 
 ## Screenshots
 

@@ -3,7 +3,9 @@ package com.chibychibystore.ui.components.shared
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -24,6 +26,41 @@ data class DrawerNavItem(
     val route: String
 )
 
+/**
+ * Single source of truth for the drawer menu. Kept public so the navigation
+ * tests can assert that every listed destination is registered in the nav graph
+ * and that every intended top-level screen has an entry here.
+ *
+ * The drawer is the only production entry point to the modules after login, so
+ * a screen missing from this list is unreachable (the logout action, for
+ * instance, lives only on [Screen.Settings]).
+ */
+val drawerNavItems: List<DrawerNavItem> = listOf(
+    // Labels are Indonesian per the AGENTS.md UI-string convention, and each one
+    // matches the title of the screen it opens so the menu and the screen agree.
+    // "POS" is kept because the app's own docs use it as the standard Indonesian
+    // abbreviation for the cashier module ("Point of Sale (POS)").
+    DrawerNavItem("Dasbor", Icons.Default.Dashboard, Screen.Dashboard.route),
+    DrawerNavItem("POS", Icons.Default.PointOfSale, Screen.Pos.route),
+    DrawerNavItem("Inventaris", Icons.Default.Inventory, Screen.Inventory.route),
+    DrawerNavItem("Riwayat Penjualan", Icons.Default.Receipt, Screen.SalesHistory.route),
+    DrawerNavItem("Riwayat Pembelian", Icons.Default.ShoppingBag, Screen.PurchaseList.route),
+    DrawerNavItem("Manajemen Gudang", Icons.Default.Warehouse, Screen.WarehouseList.route),
+    DrawerNavItem("Manajemen Pengeluaran", Icons.Default.AccountBalanceWallet, Screen.ExpenseList.route),
+    DrawerNavItem("Manajemen Pengguna", Icons.Default.Group, Screen.UserList.route),
+    DrawerNavItem("Manajemen Promosi", Icons.Default.LocalOffer, Screen.PromotionList.route),
+    DrawerNavItem("Manajemen Pelanggan", Icons.Default.Person, Screen.PelangganList.route),
+    DrawerNavItem("Manajemen Kas", Icons.Default.PointOfSale, Screen.CashShift.route),
+    DrawerNavItem("Riwayat Shift", Icons.Default.History, Screen.CashHistory.route),
+    DrawerNavItem("Stok Opname", Icons.Default.FactCheck, Screen.AuditList.route),
+    DrawerNavItem("Daftar Pemasok", Icons.Default.LocalShipping, Screen.SupplierList.route),
+    DrawerNavItem("Laporan", Icons.Default.Assessment, Screen.Reports.route),
+    DrawerNavItem("Pindai Barcode", Icons.Default.QrCodeScanner, Screen.BarcodeScanner.route),
+    DrawerNavItem("Cetak Label Barcode", Icons.Default.Print, Screen.BarcodePrint.route),
+    DrawerNavItem("Cadangkan & Pulihkan", Icons.Default.Backup, Screen.Backup.route),
+    DrawerNavItem("Pengaturan", Icons.Default.Settings, Screen.Settings.route)
+)
+
 @Composable
 fun AppDrawer(
     drawerState: DrawerState,
@@ -32,20 +69,7 @@ fun AppDrawer(
     onCloseDrawer: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    val drawerItems = listOf(
-        DrawerNavItem("Point of Sale", Icons.Default.PointOfSale, Screen.Pos.route),
-        DrawerNavItem("Manajemen Pembelian", Icons.Default.ShoppingBag, Screen.PurchaseList.route),
-        DrawerNavItem("Manajemen Warehouse", Icons.Default.Warehouse, Screen.WarehouseList.route),
-        DrawerNavItem("Manajemen Expense", Icons.Default.AccountBalanceWallet, Screen.ExpenseList.route),
-        DrawerNavItem("Manajemen User", Icons.Default.Group, Screen.UserList.route),
-        DrawerNavItem("Manajemen Promosi", Icons.Default.LocalOffer, Screen.PromotionList.route),
-        DrawerNavItem("Manajemen Pelanggan", Icons.Default.Person, Screen.PelangganList.route),
-        DrawerNavItem("Manajemen Kas", Icons.Default.PointOfSale, Screen.CashShift.route),
-        DrawerNavItem("Stok Opname", Icons.Default.FactCheck, Screen.AuditList.route),
-        DrawerNavItem("Barcode Scanner", Icons.Default.QrCodeScanner, Screen.BarcodeScanner.route),
-        DrawerNavItem("Cetak Label Barcode", Icons.Default.Print, Screen.BarcodePrint.route),
-        DrawerNavItem("Backup & Restore", Icons.Default.Backup, "backup")
-    )
+    val drawerItems = drawerNavItems
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -98,45 +122,55 @@ fun AppDrawer(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "FITUR LANJUTAN",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                    letterSpacing = 1.2.sp
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                drawerItems.forEach { item ->
-                    val isSelected = currentRoute == item.route
-
-                    NavigationDrawerItem(
-                        label = {
-                            Text(
-                                text = item.label,
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        },
-                        selected = isSelected,
-                        onClick = {
-                            onNavigateToRoute(item.route)
-                            onCloseDrawer()
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = item.label
-                            )
-                        },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                // The item list scrolls: with this many modules it is taller than
+                // a phone screen, and a fixed column would clip the last entries.
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = "FITUR LANJUTAN",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                        letterSpacing = 1.2.sp
                     )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    drawerItems.forEach { item ->
+                        val isSelected = currentRoute == item.route
+
+                        NavigationDrawerItem(
+                            label = {
+                                Text(
+                                    text = item.label,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            },
+                            selected = isSelected,
+                            onClick = {
+                                onNavigateToRoute(item.route)
+                                onCloseDrawer()
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = item.icon,
+                                    contentDescription = item.label
+                                )
+                            },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         },
