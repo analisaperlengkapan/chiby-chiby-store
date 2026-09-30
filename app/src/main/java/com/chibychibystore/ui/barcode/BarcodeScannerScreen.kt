@@ -18,7 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import com.chibychibystore.R
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.special.BarcodeScanner
@@ -32,7 +32,7 @@ import com.chibychibystore.ui.components.special.BarcodeScanner
 fun BarcodeScannerScreen(
     onBarcodeScanned: (String) -> Unit,
     onDismiss: () -> Unit,
-    viewModel: BarcodeScannerViewModel = hiltViewModel()
+    viewModel: BarcodeScannerViewModel = screenViewModel()
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
