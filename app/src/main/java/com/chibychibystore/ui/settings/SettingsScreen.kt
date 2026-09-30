@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import com.chibychibystore.ui.components.ChibyCard
 import com.chibychibystore.ui.components.ChibyScaffold
 import com.chibychibystore.ui.components.settings.ChangePasswordDialog
@@ -25,10 +25,10 @@ import java.util.Locale
 
 @Composable
 fun SettingsScreen(
-    currentRoute: String,
+    onOpenDrawer: () -> Unit = {},
     onNavigateToRoute: (String) -> Unit,
     onLogout: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showChangePasswordDialog by remember { mutableStateOf(false) }
@@ -37,7 +37,8 @@ fun SettingsScreen(
 
     ChibyScaffold(
         title = "Pengaturan",
-        onNavigateUp = { /* Top level screen, no up navigation */ }
+        onNavigateUp = onOpenDrawer,
+        navigationIcon = Icons.Default.Menu
     ) { paddingValues ->
         if (uiState.isLoading) {
             LoadingIndicator("Memuat pengaturan...")

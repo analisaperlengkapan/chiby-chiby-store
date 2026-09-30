@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Delete
@@ -39,7 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.CardItem
 import com.chibychibystore.ui.components.shared.LoadingIndicator
@@ -51,8 +51,9 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackupScreen(
+    onOpenDrawer: () -> Unit = {},
     onNavigateBack: () -> Unit,
-    viewModel: BackupViewModel = hiltViewModel()
+    viewModel: BackupViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val backupProgress by viewModel.backupProgress.collectAsState()
@@ -68,9 +69,9 @@ fun BackupScreen(
     Scaffold(
         topBar = {
                 AppTopBar(
-                title = "Backup & Restore",
-                navigationIcon = Icons.Filled.ArrowBack,
-                onNavigationClick = onNavigateBack
+                title = "Cadangkan & Pulihkan",
+                navigationIcon = Icons.Filled.Menu,
+                onNavigationClick = onOpenDrawer
             )
         }
     ) { paddingValues ->

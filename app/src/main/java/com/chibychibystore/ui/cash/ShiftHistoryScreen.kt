@@ -3,12 +3,14 @@ package com.chibychibystore.ui.cash
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import androidx.navigation.NavController
 import com.chibychibystore.data.local.entity.Shift
 import com.chibychibystore.data.local.entity.ShiftStatus
@@ -22,7 +24,8 @@ import java.util.*
 @Composable
 fun ShiftHistoryScreen(
     navController: NavController,
-    viewModel: ShiftViewModel = hiltViewModel()
+    onOpenDrawer: () -> Unit = {},
+    viewModel: ShiftViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -30,7 +33,8 @@ fun ShiftHistoryScreen(
         topBar = {
             AppTopBar(
                 title = "Riwayat Shift",
-                onNavigationClick = { navController.popBackStack() }
+                navigationIcon = Icons.Default.Menu,
+                onNavigationClick = onOpenDrawer
             )
         }
     ) { paddingValues ->

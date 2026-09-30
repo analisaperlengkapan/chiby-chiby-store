@@ -14,7 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.chibychibystore.ui.components.shared.screenViewModel
 import com.chibychibystore.R
 import com.chibychibystore.data.local.entity.Produk
 import com.chibychibystore.ui.components.shared.AppTopBar
@@ -36,8 +36,9 @@ enum class LabelSize(val displayName: String, val width: Int, val height: Int) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BarcodePrintScreen(
+    onOpenDrawer: () -> Unit = {},
     onNavigateBack: () -> Unit,
-    viewModel: BarcodePrintViewModel = hiltViewModel()
+    viewModel: BarcodePrintViewModel = screenViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -45,8 +46,8 @@ fun BarcodePrintScreen(
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.barcode_print_title),
-                navigationIcon = Icons.Filled.ArrowBack,
-                onNavigationClick = onNavigateBack
+                navigationIcon = Icons.Filled.Menu,
+                onNavigationClick = onOpenDrawer
             )
         }
     ) { padding ->
