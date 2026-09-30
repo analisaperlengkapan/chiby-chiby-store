@@ -167,11 +167,9 @@ class ScreenshotCatalog(
                 )
             )
         }
-        val drawerState = rememberDrawerState(DrawerValue.Closed)
         DashboardScreen(
             navController = nav(),
-            drawerState = drawerState,
-            currentRoute = "dashboard",
+            onOpenDrawer = {},
             onNavigateToRoute = {},
             viewModel = vm
         )
@@ -191,8 +189,7 @@ class ScreenshotCatalog(
         ) {
             DashboardScreen(
                 navController = nav(),
-                drawerState = rememberDrawerState(DrawerValue.Closed),
-                currentRoute = "dashboard",
+                onOpenDrawer = {},
                 onNavigateToRoute = {},
                 viewModel = vm
             )
@@ -534,7 +531,7 @@ class ScreenshotCatalog(
         val vm = mockVm<SettingsViewModel>() {
             whenever(uiState).thenReturn(state(SettingsUiState(currentUser = SampleData.owner, isLoading = false)))
         }
-        SettingsScreen(currentRoute = "settings", onNavigateToRoute = {}, onLogout = {}, viewModel = vm)
+        SettingsScreen(onNavigateToRoute = {}, onLogout = {}, viewModel = vm)
     }
 
     fun captureReport(name: String, type: ReportType, data: Any) = capture("34-report-$name") {
