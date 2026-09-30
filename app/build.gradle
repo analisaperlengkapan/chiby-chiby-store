@@ -190,9 +190,9 @@ dependencies {
     implementation 'androidx.compose.runtime:runtime-livedata'
     
     // Room database
-    implementation 'androidx.room:room-runtime:2.8.4'
-    implementation 'androidx.room:room-ktx:2.8.4'
-    kapt 'androidx.room:room-compiler:2.8.4'
+    implementation 'androidx.room:room-runtime:2.8.5'
+    implementation 'androidx.room:room-ktx:2.8.5'
+    kapt 'androidx.room:room-compiler:2.8.5'
     kapt 'org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.20'
     
     // Hilt dependency injection
@@ -227,18 +227,18 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0'
     
     // PDF generation
-    implementation 'com.itextpdf:itext7-core:9.5.0'
+    implementation 'com.itextpdf:itext7-core:9.7.1'
     // Force a newer Gson version (override transitive gson 2.8.9 from tink) to address known issues
     implementation 'com.google.code.gson:gson:2.14.0'
     
     // Testing
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.21.0'
-    testImplementation 'org.mockito.kotlin:mockito-kotlin:6.3.0'
+    testImplementation 'org.mockito.kotlin:mockito-kotlin:6.4.0'
     testImplementation 'androidx.arch.core:core-testing:2.2.0'
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0'
     testImplementation 'org.robolectric:robolectric:4.16.1'
-    testImplementation 'androidx.room:room-testing:2.8.4'
+    testImplementation 'androidx.room:room-testing:2.8.5'
     testImplementation 'androidx.test:core:1.7.0'
     // Compose UI testing under Robolectric enables headless screenshot generation
     testImplementation platform('androidx.compose:compose-bom:2026.01.00')
