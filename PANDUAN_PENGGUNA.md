@@ -83,6 +83,8 @@ Aplikasi memerlukan izin berikut:
 2. Klik tombol "Masuk"
 3. Aplikasi akan mengarahkan ke dashboard sesuai peran Anda
 
+Saat aplikasi dibuka kembali, sesi login Anda dipulihkan secara otomatis sehingga Anda langsung masuk ke dashboard tanpa perlu memasukkan kredensial lagi. Sesi hanya berlaku selama **24 jam sejak aktivitas terakhir**; bila perangkat dibiarkan menganggur lebih lama dari itu, Anda akan diminta login ulang. Logout manual tetap tersedia dan langsung mengakhiri sesi.
+
 ### 3.2 Logout
 1. Buka menu drawer (klik ikon menu di kiri atas)
 2. Scroll ke bawah dan klik "Logout"

@@ -547,12 +547,6 @@ class RestoreServiceImpl @Inject constructor(
         return if (r is com.chibychibystore.data.model.Result.Success) items.size else 0
     }
 
-    private fun calculateChecksum(data: String): String {
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
-        val hash = digest.digest(data.toByteArray())
-        return hash.joinToString("") { "%02x".format(it) }
-    }
-
     private suspend fun decryptFileAsync(filePath: String): String {
         return withContext(ioDispatcher) {
             decryptFile(filePath)

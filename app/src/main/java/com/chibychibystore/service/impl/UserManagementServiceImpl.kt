@@ -153,6 +153,13 @@ class UserManagementServiceImpl @Inject constructor(
 
     override suspend fun deleteUser(userId: Long, deletedBy: Long): Result<Unit> {
         return try {
+            // Authorization first, as every other operation here does: checking
+            // the user's existence before the permission gate told an unauthorised
+            // caller whether an account existed.
+            if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
+                return Result.failure(Exception("Tidak memiliki izin untuk menghapus pengguna"))
+            }
+
             val userResult = userRepository.getUserById(userId)
             if (userResult.isFailure) {
                 return Result.failure(Exception("Pengguna tidak ditemukan"))
@@ -161,10 +168,6 @@ class UserManagementServiceImpl @Inject constructor(
             val currentUser = authService.getCurrentUser()
             if (currentUser?.id == userId) {
                 return Result.failure(Exception("Tidak dapat menghapus pengguna sendiri"))
-            }
-
-            if (!authService.hasPermission(Permissions.MANAGE_USERS)) {
-                return Result.failure(Exception("Tidak memiliki izin untuk menghapus pengguna"))
             }
 
             userRepository.deleteUser(userId)

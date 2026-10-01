@@ -135,15 +135,19 @@ class AuthServiceImpl @Inject constructor(
             val activeSessionRes = penggunaSessionRepository.getActiveSession()
             val activeSession = activeSessionRes.getOrNull()
             if (activeSession != null) {
-                val sessionAge = System.currentTimeMillis() - activeSession.loginTime.time
-                val maxSessionAge = 24 * 60 * 60 * 1000L // 24 hours
+                // Expiry is measured from last activity, not login time: a cashier
+                // who keeps working must not be logged out at the 24h mark, and
+                // isSessionExpired() already uses lastActivityTime. Using loginTime
+                // here made the two disagree about whether the same session was valid.
+                val idleAge = System.currentTimeMillis() - activeSession.lastActivityTime.time
 
-                if (sessionAge < maxSessionAge) {
+                if (idleAge in 0 until SESSION_TIMEOUT_MS) {
                     val user = penggunaDao.getPenggunaById(activeSession.userId)
-                    if (user != null) {
+                    if (user != null && user.isActive) {
                         currentUser.value = user
                         penggunaSessionRepository.updateLastActivityTime(activeSession.id)
                     } else {
+                        // User deleted or deactivated while the session lingered.
                         penggunaSessionRepository.deactivateUserSessions(activeSession.userId)
                     }
                 } else {
@@ -163,10 +167,8 @@ class AuthServiceImpl @Inject constructor(
         val activeSession = penggunaSessionRepository.getActiveSessionForUser(user.id).getOrNull()
         if (activeSession == null) return true
 
-        val sessionAge = System.currentTimeMillis() - activeSession.lastActivityTime.time
-        val maxSessionAge = 24 * 60 * 60 * 1000L // 24 hours
-
-        return sessionAge > maxSessionAge
+        val idleAge = System.currentTimeMillis() - activeSession.lastActivityTime.time
+        return idleAge > SESSION_TIMEOUT_MS
     }
 
     override suspend fun extendSession(): Result<Unit> {
@@ -232,5 +234,10 @@ class AuthServiceImpl @Inject constructor(
         val md = MessageDigest.getInstance("SHA-256")
         val digest = md.digest(bytes)
         return digest.fold("") { str, it -> str + "%02x".format(it) }
+    }
+
+    companion object {
+        /** A session that has been idle longer than this is no longer valid. */
+        internal const val SESSION_TIMEOUT_MS = 24 * 60 * 60 * 1000L // 24 hours
     }
 }

@@ -57,6 +57,9 @@ interface AuthService {
     suspend fun changePassword(oldPassword: String, newPassword: String): Result<Unit>
     fun observeCurrentUser(): Flow<Pengguna?>
     suspend fun initializeSession(): Result<Unit>
+    suspend fun isSessionExpired(): Boolean
+    suspend fun extendSession(): Result<Unit>
+    suspend fun forceLogoutAll(): Result<Unit>
 }
 ```
 
@@ -98,9 +101,21 @@ interface AuthService {
 **Returns:** `Flow<Pengguna?>` - Reactive stream untuk user state
 
 #### initializeSession(): Result<Unit>
-**Description:** Initialize session dari stored data saat app start
+**Description:** Memulihkan sesi tersimpan saat app start. Dipanggil oleh `AppNavigation` sebelum graf navigasi ditampilkan; selama proses ini splash screen ditampilkan agar form login tidak berkedip. Sesi dipulihkan hanya bila **belum menganggur lebih dari 24 jam** (`lastActivityTime`) dan pengguna masih aktif; selain itu sesi dinonaktifkan dan pengguna harus login ulang. Setelah pemulihan, `observeCurrentUser()` langsung memancarkan pengguna sehingga drawer dan rute terlindungi langsung aktif.
 **Returns:** `Result<Unit>` - Success jika berhasil
 **Throws:** `DatabaseError`
+
+#### isSessionExpired(): Boolean
+**Description:** Cek apakah sesi aktif sudah melewati batas menganggur 24 jam (diukur dari `lastActivityTime`). Mengembalikan `true` bila tidak ada pengguna/sesi aktif.
+**Returns:** `Boolean`
+
+#### extendSession(): Result<Unit>
+**Description:** Memperbarui `lastActivityTime` sesi pengguna saat ini (memperpanjang masa berlaku).
+**Returns:** `Result<Unit>`
+
+#### forceLogoutAll(): Result<Unit>
+**Description:** Menonaktifkan seluruh sesi aktif dan membersihkan pengguna saat ini.
+**Returns:** `Result<Unit>`
 
 ---
 
@@ -400,6 +415,29 @@ interface BalanceSheetService {
     suspend fun generateBalanceSheet(date: LocalDate?): Result<BalanceSheet>
 }
 ```
+
+### PromoService Interface
+
+```kotlin
+interface PromoService {
+    suspend fun calculateDiscount(subtotal: Double): Double
+    suspend fun savePromotion(promotion: Promotion): Result<Long>
+}
+```
+
+#### calculateDiscount(subtotal: Double): Double
+**Description:** Menghitung diskon terbaik dari seluruh promosi aktif pada tanggal berjalan. Hanya promosi dengan `minPurchaseAmount <= subtotal` yang dipertimbangkan; nilai diskon terbesar dipilih. Hasil selalu dijepit ke rentang `0..subtotal`, sehingga diskon tidak pernah melebihi nilai belanja (baris lama dengan persentase > 100% pun tetap aman).
+**Parameters:** `subtotal` — nilai belanja sebelum diskon
+**Returns:** `Double` — nominal diskon (0.0 bila tidak ada promosi yang berlaku)
+
+#### savePromotion(promotion: Promotion): Result<Long>
+**Description:** Memvalidasi lalu menyimpan promosi. `id == 0` berarti insert, selain itu update. Promosi tidak valid ditolak tanpa menyentuh database.
+**Aturan validasi:**
+- `name` tidak boleh kosong
+- `value` tidak boleh negatif; untuk `PERCENTAGE`, `value` disimpan sebagai pecahan (`0.1` = 10%) sehingga maksimal `1.0` (100%)
+- `minPurchaseAmount` dan `maxDiscountAmount` (bila ada) tidak boleh negatif
+- `endDate` harus setelah `startDate` bila keduanya diisi
+**Returns:** `Result<Long>` — id promosi yang tersimpan, atau `ValidationError`/`DatabaseError`
 
 ---
 
