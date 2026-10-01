@@ -57,9 +57,6 @@ interface AuthService {
     suspend fun changePassword(oldPassword: String, newPassword: String): Result<Unit>
     fun observeCurrentUser(): Flow<Pengguna?>
     suspend fun initializeSession(): Result<Unit>
-    suspend fun isSessionExpired(): Boolean
-    suspend fun extendSession(): Result<Unit>
-    suspend fun forceLogoutAll(): Result<Unit>
 }
 ```
 
@@ -101,21 +98,9 @@ interface AuthService {
 **Returns:** `Flow<Pengguna?>` - Reactive stream untuk user state
 
 #### initializeSession(): Result<Unit>
-**Description:** Memulihkan sesi tersimpan saat app start. Dipanggil oleh `AppNavigation` sebelum graf navigasi ditampilkan; selama proses ini splash screen ditampilkan agar form login tidak berkedip. Sesi dipulihkan hanya bila **belum menganggur lebih dari 24 jam** (`lastActivityTime`) dan pengguna masih aktif; selain itu sesi dinonaktifkan dan pengguna harus login ulang. Setelah pemulihan, `observeCurrentUser()` langsung memancarkan pengguna sehingga drawer dan rute terlindungi langsung aktif.
-**Returns:** `Result<Unit>` - Success jika berhasil
+**Description:** Memulihkan sesi tersimpan saat app start. Dipanggil oleh `AppNavigation` sebelum graf navigasi ditampilkan; selama proses ini splash screen ditampilkan agar form login tidak berkedip. Sesi dipulihkan hanya bila **belum menganggur lebih dari 24 jam** (`lastActivityTime`) dan pengguna masih aktif. Bila ada beberapa sesi aktif, yang dipilih adalah sesi dengan aktivitas **terbaru** (`lastActivityTime`) yang masih memenuhi syarat — bukan login terbaru — sehingga sesi yang masih segar tidak terbuang. Baris yang ditolak (menganggur atau penggunanya nonaktif/dihapus) dinonaktifkan, dan bila tidak ada sesi yang bisa dipulihkan pengguna harus login ulang. Saat pemulihan gagal (mis. error database), `AppNavigation` menampilkan layar "Coba Lagi" alih-alih form login.
+**Returns:** `Result<Unit>` - Success jika berhasil; Failure bila sesi tidak dapat dibaca
 **Throws:** `DatabaseError`
-
-#### isSessionExpired(): Boolean
-**Description:** Cek apakah sesi aktif sudah melewati batas menganggur 24 jam (diukur dari `lastActivityTime`). Mengembalikan `true` bila tidak ada pengguna/sesi aktif.
-**Returns:** `Boolean`
-
-#### extendSession(): Result<Unit>
-**Description:** Memperbarui `lastActivityTime` sesi pengguna saat ini (memperpanjang masa berlaku).
-**Returns:** `Result<Unit>`
-
-#### forceLogoutAll(): Result<Unit>
-**Description:** Menonaktifkan seluruh sesi aktif dan membersihkan pengguna saat ini.
-**Returns:** `Result<Unit>`
 
 ---
 

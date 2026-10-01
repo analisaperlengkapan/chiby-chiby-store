@@ -15,7 +15,4 @@ interface AuthService {
     suspend fun changePassword(oldPassword: String, newPassword: String): Result<Unit>
     fun observeCurrentUser(): Flow<Pengguna?>
     suspend fun initializeSession(): Result<Unit>
-    suspend fun isSessionExpired(): Boolean
-    suspend fun extendSession(): Result<Unit>
-    suspend fun forceLogoutAll(): Result<Unit>
 }

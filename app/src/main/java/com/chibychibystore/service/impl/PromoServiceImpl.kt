@@ -7,6 +7,7 @@ import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.PromotionRepository
 import com.chibychibystore.service.PromoService
 import kotlinx.coroutines.flow.first
+import java.util.Calendar
 import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -37,11 +38,17 @@ class PromoServiceImpl @Inject constructor(
     override suspend fun savePromotion(promotion: Promotion): Result<Long> {
         return try {
             validate(promotion)
-            val id = if (promotion.id == 0L) {
-                promotionRepository.insertPromotion(promotion)
+            // The date picker returns midnight for the chosen day. Persist the end
+            // date at the end of that day so a promotion ending "today" still
+            // applies for the rest of today instead of expiring at 00:00.
+            val normalized = promotion.copy(
+                endDate = promotion.endDate?.let { endOfDay(it) }
+            )
+            val id = if (normalized.id == 0L) {
+                promotionRepository.insertPromotion(normalized)
             } else {
-                promotionRepository.updatePromotion(promotion)
-                promotion.id
+                promotionRepository.updatePromotion(normalized)
+                normalized.id
             }
             Result.success(id)
         } catch (e: ChibyChibyException.ValidationError) {
@@ -55,6 +62,12 @@ class PromoServiceImpl @Inject constructor(
      * A percentage value is stored as a fraction (0.1 == 10%), so anything above
      * 1.0 would discount more than the whole subtotal. Non-percentage amounts and
      * the optional cap must simply be non-negative.
+     *
+     * `endDate` is normalised to the end of its calendar day: the date picker
+     * returns midnight, and the discount query compares full timestamps, so an
+     * end date left at 00:00 would make a same-day promotion expire the instant
+     * it was saved. Comparing calendar days keeps "endDate after startDate"
+     * meaningful for a same-day window.
      */
     private fun validate(promotion: Promotion) {
         if (promotion.name.isBlank()) {
@@ -73,7 +86,7 @@ class PromoServiceImpl @Inject constructor(
             throw ChibyChibyException.ValidationError("maxDiscountAmount", "Maksimal diskon tidak boleh negatif")
         }
         if (promotion.startDate != null && promotion.endDate != null &&
-            promotion.endDate.before(promotion.startDate)
+            endOfDay(promotion.endDate).before(startOfDay(promotion.startDate))
         ) {
             throw ChibyChibyException.ValidationError("endDate", "Tanggal berakhir harus setelah tanggal mulai")
         }
@@ -91,4 +104,22 @@ class PromoServiceImpl @Inject constructor(
 
         return discount
     }
+
+    /** Midnight at the start of [date]'s calendar day. */
+    private fun startOfDay(date: Date): Date = Calendar.getInstance().apply {
+        time = date
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.time
+
+    /** The last millisecond of [date]'s calendar day. */
+    private fun endOfDay(date: Date): Date = Calendar.getInstance().apply {
+        time = date
+        set(Calendar.HOUR_OF_DAY, 23)
+        set(Calendar.MINUTE, 59)
+        set(Calendar.SECOND, 59)
+        set(Calendar.MILLISECOND, 999)
+    }.time
 }

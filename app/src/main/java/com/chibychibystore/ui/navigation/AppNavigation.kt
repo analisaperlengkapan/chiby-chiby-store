@@ -1,20 +1,30 @@
 package com.chibychibystore.ui.navigation
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -40,9 +50,36 @@ fun AppNavigation(
     // would briefly be wrong. Restoring is a couple of Room reads, so the splash
     // is short; it also avoids a login-form flash on every cold start.
     var sessionRestored by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        authService.initializeSession()
-        sessionRestored = true
+    var restoreFailed by remember { mutableStateOf(false) }
+    var restoreAttempt by remember { mutableIntStateOf(0) }
+    // Captured once, at restore time, so the start destination is decided from
+    // the session that existed before the graph is built. A later login is
+    // handled by LoginScreen navigating to the dashboard itself.
+    var startDestination by remember { mutableStateOf(Screen.Login.route) }
+
+    LaunchedEffect(restoreAttempt) {
+        val result = authService.initializeSession()
+        if (result.isSuccess) {
+            startDestination = if (authService.getCurrentUser() != null) {
+                Screen.Dashboard.route
+            } else {
+                Screen.Login.route
+            }
+            sessionRestored = true
+        } else {
+            // A failed restore (database error) must not silently look like "no
+            // session": show a retry instead of dropping the user on the login
+            // form as though they had signed out.
+            restoreFailed = true
+        }
+    }
+
+    if (restoreFailed) {
+        RestoreFailedScreen(onRetry = {
+            restoreFailed = false
+            restoreAttempt++
+        })
+        return
     }
 
     if (!sessionRestored) {
@@ -74,7 +111,7 @@ fun AppNavigation(
     ) {
         NavHost(
             navController = navController,
-            startDestination = Screen.Login.route
+            startDestination = startDestination
         ) {
             appDestinations(
                 navController = navController,
@@ -98,6 +135,40 @@ private fun SplashScreen() {
         color = MaterialTheme.colorScheme.background
     ) {
         LoadingIndicator()
+    }
+}
+
+/**
+ * Shown when the session restore failed (e.g. a database error) so the user can
+ * retry instead of being dropped on the login form as though they had signed out.
+ */
+@Composable
+private fun RestoreFailedScreen(onRetry: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Gagal memuat sesi",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = "Terjadi masalah saat memulihkan sesi Anda.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = onRetry) {
+                Text("Coba Lagi")
+            }
+        }
     }
 }
 

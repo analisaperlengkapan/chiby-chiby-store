@@ -132,67 +132,42 @@ class AuthServiceImpl @Inject constructor(
 
     override suspend fun initializeSession(): Result<Unit> {
         return try {
-            val activeSessionRes = penggunaSessionRepository.getActiveSession()
-            val activeSession = activeSessionRes.getOrNull()
-            if (activeSession != null) {
-                // Expiry is measured from last activity, not login time: a cashier
-                // who keeps working must not be logged out at the 24h mark, and
-                // isSessionExpired() already uses lastActivityTime. Using loginTime
-                // here made the two disagree about whether the same session was valid.
-                val idleAge = System.currentTimeMillis() - activeSession.lastActivityTime.time
+            // Consider every active session, most recently used first. Several
+            // rows can be active at once (login never closes an earlier user's
+            // session), and the newest loginTime can belong to a session that has
+            // gone idle while an older row is still fresh. Restoring only by
+            // loginTime discarded the fresh row and forced a needless re-login.
+            val sessionsResult = penggunaSessionRepository.getActiveSessions()
+            val sessions = sessionsResult.getOrNull()
+                ?: throw sessionsResult.exceptionOrNull() ?: IllegalStateException("Gagal membaca sesi")
+            val now = System.currentTimeMillis()
 
-                if (idleAge in 0 until SESSION_TIMEOUT_MS) {
-                    val user = penggunaDao.getPenggunaById(activeSession.userId)
-                    if (user != null && user.isActive) {
-                        currentUser.value = user
-                        penggunaSessionRepository.updateLastActivityTime(activeSession.id)
-                    } else {
-                        // User deleted or deactivated while the session lingered.
-                        penggunaSessionRepository.deactivateUserSessions(activeSession.userId)
-                    }
-                } else {
-                    penggunaSessionRepository.deactivateUserSessions(activeSession.userId)
+            var restored = false
+            for (session in sessions) {
+                val idleAge = now - session.lastActivityTime.time
+                val user = penggunaDao.getPenggunaById(session.userId)
+                if (user != null && user.isActive && idleAge in 0 until SESSION_TIMEOUT_MS) {
+                    currentUser.value = user
+                    penggunaSessionRepository.activateSession(session.id)
+                    restored = true
+                    break
                 }
+                // Rejected: idle past the timeout, or the user was deleted or
+                // deactivated while the session lingered. Close that row so it is
+                // not reconsidered on the next launch. Deactivating per row (not
+                // per user) matters when the same user also has a still-fresh
+                // session further down the list.
+                penggunaSessionRepository.deactivateSession(session.id)
+            }
+
+            if (!restored) {
+                currentUser.value = null
             }
 
             penggunaSessionRepository.cleanupOldSessions()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("initializeSession", e))
-        }
-    }
-
-    override suspend fun isSessionExpired(): Boolean {
-        val user = currentUser.value ?: return true
-        val activeSession = penggunaSessionRepository.getActiveSessionForUser(user.id).getOrNull()
-        if (activeSession == null) return true
-
-        val idleAge = System.currentTimeMillis() - activeSession.lastActivityTime.time
-        return idleAge > SESSION_TIMEOUT_MS
-    }
-
-    override suspend fun extendSession(): Result<Unit> {
-        return try {
-            val user = currentUser.value
-                ?: return Result.failure(ChibyChibyException.AuthenticationError("Tidak ada user yang login"))
-
-            val activeSession = penggunaSessionRepository.getActiveSessionForUser(user.id).getOrNull()
-                ?: return Result.failure(ChibyChibyException.AuthenticationError("Session tidak ditemukan"))
-
-            penggunaSessionRepository.updateLastActivityTime(activeSession.id)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("extendSession", e))
-        }
-    }
-
-    override suspend fun forceLogoutAll(): Result<Unit> {
-        return try {
-            penggunaSessionRepository.deactivateAllSessions()
-            currentUser.value = null
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("forceLogoutAll", e))
         }
     }
 

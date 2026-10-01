@@ -15,6 +15,7 @@ import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
+import java.util.Calendar
 import java.util.Date
 
 class PromoServiceImplTest {
@@ -144,14 +145,65 @@ class PromoServiceImplTest {
     }
 
     @Test
+    fun `savePromotion normalises the end date to the end of its day`() = runTest {
+        // The picker returns midnight; without normalisation a same-day promotion
+        // would be eligible only at that instant.
+        val calendar = Calendar.getInstance().apply {
+            set(2026, Calendar.OCTOBER, 1, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val startOfDay = calendar.time
+        val promo = Promotion(
+            name = "Same Day",
+            description = "Desc",
+            type = PromotionType.PERCENTAGE,
+            value = 0.1,
+            startDate = startOfDay,
+            endDate = startOfDay
+        )
+        `when`(promotionRepository.insertPromotion(any())).thenReturn(1L)
+
+        val result = promoService.savePromotion(promo)
+
+        assertTrue(result.isSuccess)
+        val saved = org.mockito.kotlin.argumentCaptor<Promotion>()
+        verify(promotionRepository).insertPromotion(saved.capture())
+        val endOfDay = Calendar.getInstance().apply {
+            set(2026, Calendar.OCTOBER, 1, 23, 59, 59)
+            set(Calendar.MILLISECOND, 999)
+        }.time
+        assertEquals(endOfDay, saved.firstValue.endDate)
+    }
+
+    @Test
+    fun `savePromotion accepts a same-day window`() = runTest {
+        val day = Calendar.getInstance().apply {
+            set(2026, Calendar.OCTOBER, 1, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.time
+        val promo = Promotion(
+            name = "Same Day",
+            description = "Desc",
+            type = PromotionType.FIXED_AMOUNT,
+            value = 5_000.0,
+            startDate = day,
+            endDate = day
+        )
+        `when`(promotionRepository.insertPromotion(any())).thenReturn(1L)
+
+        assertTrue(promoService.savePromotion(promo).isSuccess)
+    }
+
+    @Test
     fun `savePromotion rejects an end date before the start date`() = runTest {
+        // A full day apart, since a same-day window is valid.
         val promo = Promotion(
             name = "Backwards",
             description = "Desc",
             type = PromotionType.FIXED_AMOUNT,
             value = 1_000.0,
-            startDate = Date(2_000_000L),
-            endDate = Date(1_000_000L)
+            startDate = Date(2 * 24 * 60 * 60 * 1000L),
+            endDate = Date(1 * 24 * 60 * 60 * 1000L)
         )
 
         val result = promoService.savePromotion(promo)
