@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chibychibystore.data.local.entity.Promotion
 import com.chibychibystore.repository.PromotionRepository
+import com.chibychibystore.service.PromoService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -18,7 +19,8 @@ data class PromotionUiState(
 
 @HiltViewModel
 class PromotionViewModel @Inject constructor(
-    private val promotionRepository: PromotionRepository
+    private val promotionRepository: PromotionRepository,
+    private val promoService: PromoService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PromotionUiState())
@@ -52,16 +54,11 @@ class PromotionViewModel @Inject constructor(
     fun savePromotion(promotion: Promotion) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            try {
-                if (promotion.id == 0L) {
-                    promotionRepository.insertPromotion(promotion)
-                } else {
-                    promotionRepository.updatePromotion(promotion)
-                }
-                _uiState.update { it.copy(isLoading = false, isSuccess = true) }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message) }
-            }
+            // Persist through the service so the same validation that protects the
+            // discount calculation also guards what reaches the database.
+            promoService.savePromotion(promotion)
+                .onSuccess { _uiState.update { it.copy(isLoading = false, isSuccess = true) } }
+                .onFailure { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
         }
     }
 

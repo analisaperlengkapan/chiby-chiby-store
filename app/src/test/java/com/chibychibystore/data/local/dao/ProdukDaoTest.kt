@@ -8,37 +8,43 @@ import com.chibychibystore.data.local.entity.Kategori
 import com.chibychibystore.data.local.entity.Produk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import java.util.Date
 
+/**
+ * Restores the DAO coverage that the deleted `ProdukDaoTest` used to provide.
+ * The original was written against a DAO that no longer exists (`updateStock`,
+ * `insertProdukList` returning a single id); these cases exercise the real
+ * queries the repository and services depend on.
+ */
+@RunWith(RobolectricTestRunner::class)
 class ProdukDaoTest {
 
     private lateinit var database: ChibyChibyDatabase
     private lateinit var produkDao: ProdukDao
-    private lateinit var kategoriDao: KategoriDao
-    private lateinit var gudangDao: GudangDao
-
     private var kategoriId: Long = 0
     private var gudangId: Long = 0
 
     @Before
-    fun setup() = runBlocking {
-        database = Room.inMemoryDatabaseBuilder(
-            ApplicationProvider.getApplicationContext(),
-            ChibyChibyDatabase::class.java
-        ).build()
+    fun setup() {
+        runBlocking {
+            database = Room.inMemoryDatabaseBuilder(
+                ApplicationProvider.getApplicationContext(),
+                ChibyChibyDatabase::class.java
+            ).allowMainThreadQueries().build()
 
-        produkDao = database.produkDao()
-        kategoriDao = database.kategoriDao()
-        gudangDao = database.gudangDao()
-
-        // Insert test data
-        kategoriId = kategoriDao.insertKategori(Kategori(name = "Test Category"))
-        gudangId = gudangDao.insertGudang(Gudang(name = "Test Warehouse"))
+            produkDao = database.produkDao()
+            kategoriId = database.kategoriDao().insertKategori(Kategori(name = "Test Category"))
+            gudangId = database.gudangDao().insertGudang(Gudang(name = "Test Warehouse"))
+        }
     }
 
     @After
@@ -46,19 +52,27 @@ class ProdukDaoTest {
         database.close()
     }
 
-    @Test
-    fun insertAndGetProduk() = runBlocking {
-        val produk = Produk(
-            name = "Test Product",
-            barcode = "123456789",
-            categoryId = kategoriId,
-            costPrice = 10.0,
-            sellingPrice = 15.0,
-            stockQuantity = 100,
-            warehouseId = gudangId
-        )
+    private fun produk(
+        name: String,
+        barcode: String? = null,
+        stock: Int = 0,
+        minStock: Int = 0
+    ) = Produk(
+        name = name,
+        barcode = barcode,
+        categoryId = kategoriId,
+        costPrice = 10.0,
+        sellingPrice = 15.0,
+        stockQuantity = stock,
+        warehouseId = gudangId,
+        minStock = minStock,
+        createdAt = Date()
+    )
 
-        val id = produkDao.insertProduk(produk)
+    @Test
+    fun `insert and get produk round trips the row`() = runTest {
+        val id = produkDao.insertProduk(produk("Test Product", barcode = "123456789", stock = 100))
+
         val retrieved = produkDao.getProdukById(id)
 
         assertNotNull(retrieved)
@@ -68,139 +82,77 @@ class ProdukDaoTest {
     }
 
     @Test
-    fun getProdukByBarcode() = runBlocking {
-        val produk = Produk(
-            name = "Test Product",
-            barcode = "123456789",
-            categoryId = kategoriId,
-            costPrice = 10.0,
-            sellingPrice = 15.0,
-            warehouseId = gudangId
-        )
+    fun `getProdukByBarcode finds the matching product`() = runTest {
+        produkDao.insertProduk(produk("Test Product", barcode = "123456789"))
 
-        produkDao.insertProduk(produk)
-        val retrieved = produkDao.getProdukByBarcode("123456789")
-
-        assertNotNull(retrieved)
-        assertEquals("Test Product", retrieved?.name)
+        assertNotNull(produkDao.getProdukByBarcode("123456789"))
+        assertNull(produkDao.getProdukByBarcode("does-not-exist"))
     }
 
     @Test
-    fun searchProduk() = runBlocking {
-        val produk1 = Produk(
-            name = "Apple",
-            barcode = "111",
-            categoryId = kategoriId,
-            costPrice = 5.0,
-            sellingPrice = 7.0,
-            warehouseId = gudangId
-        )
-        val produk2 = Produk(
-            name = "Banana",
-            barcode = "222",
-            categoryId = kategoriId,
-            costPrice = 3.0,
-            sellingPrice = 5.0,
-            warehouseId = gudangId
-        )
+    fun `searchProduk matches name and barcode substrings`() = runTest {
+        produkDao.insertProduk(produk("Apple", barcode = "111"))
+        produkDao.insertProduk(produk("Banana", barcode = "222"))
 
-        produkDao.insertProduk(produk1)
-        produkDao.insertProduk(produk2)
+        val byName = produkDao.searchProduk("app").first()
+        assertEquals(1, byName.size)
+        assertEquals("Apple", byName[0].name)
 
-        val results = produkDao.searchProduk("app").first()
-
-        assertEquals(1, results.size)
-        assertEquals("Apple", results[0].name)
+        val byBarcode = produkDao.searchProduk("222").first()
+        assertEquals(1, byBarcode.size)
+        assertEquals("Banana", byBarcode[0].name)
     }
 
     @Test
-    fun getLowStockProduk() = runBlocking {
-        val lowStockProduk = Produk(
-            name = "Low Stock Item",
-            categoryId = kategoriId,
-            costPrice = 10.0,
-            sellingPrice = 15.0,
-            stockQuantity = 5,
-            minStock = 10,
-            warehouseId = gudangId
-        )
-        val normalStockProduk = Produk(
-            name = "Normal Stock Item",
-            categoryId = kategoriId,
-            costPrice = 10.0,
-            sellingPrice = 15.0,
-            stockQuantity = 50,
-            minStock = 10,
-            warehouseId = gudangId
-        )
+    fun `getLowStockProduk returns only items at or below the minimum`() = runTest {
+        produkDao.insertProduk(produk("Low Stock Item", stock = 5, minStock = 10))
+        produkDao.insertProduk(produk("Normal Stock Item", stock = 50, minStock = 10))
+        // Zero stock is intentionally excluded by the query (it is "out of stock").
+        produkDao.insertProduk(produk("Out Of Stock Item", stock = 0, minStock = 10))
 
-        produkDao.insertProduk(lowStockProduk)
-        produkDao.insertProduk(normalStockProduk)
+        val lowStock = produkDao.getLowStockProduk().first()
 
-        val lowStockItems = produkDao.getLowStockProduk().first()
-
-        assertEquals(1, lowStockItems.size)
-        assertEquals("Low Stock Item", lowStockItems[0].name)
+        assertEquals(1, lowStock.size)
+        assertEquals("Low Stock Item", lowStock[0].name)
     }
 
     @Test
-    fun updateStock() = runBlocking {
-        val produk = Produk(
-            name = "Test Product",
-            categoryId = kategoriId,
-            costPrice = 10.0,
-            sellingPrice = 15.0,
-            stockQuantity = 100,
-            warehouseId = gudangId
-        )
+    fun `setStock replaces the stored quantity`() = runTest {
+        val id = produkDao.insertProduk(produk("Test Product", stock = 100))
 
-        val id = produkDao.insertProduk(produk)
-        produkDao.updateStock(id, -10) // Reduce stock by 10
+        produkDao.setStock(id, 90)
 
-        val updated = produkDao.getProdukById(id)
-        assertEquals(90, updated?.stockQuantity)
+        assertEquals(90, produkDao.getProdukById(id)?.stockQuantity)
     }
 
     @Test
-    fun getProdukCount() = runBlocking {
-        val countBefore = produkDao.getProdukCount()
-        assertEquals(0, countBefore)
+    fun `adjustStock adds a delta to the stored quantity`() = runTest {
+        val id = produkDao.insertProduk(produk("Test Product", stock = 100))
 
-        produkDao.insertProduk(Produk(
-            name = "Test",
-            categoryId = kategoriId,
-            costPrice = 1.0,
-            sellingPrice = 2.0,
-            warehouseId = gudangId
-        ))
+        produkDao.adjustStock(id, -10)
 
-        val countAfter = produkDao.getProdukCount()
-        assertEquals(1, countAfter)
+        assertEquals(90, produkDao.getProdukById(id)?.stockQuantity)
     }
 
     @Test
-    fun getTotalStock() = runBlocking {
-        val produk1 = Produk(
-            name = "Product 1",
-            categoryId = kategoriId,
-            costPrice = 1.0,
-            sellingPrice = 2.0,
-            stockQuantity = 10,
-            warehouseId = gudangId
-        )
-        val produk2 = Produk(
-            name = "Product 2",
-            categoryId = kategoriId,
-            costPrice = 1.0,
-            sellingPrice = 2.0,
-            stockQuantity = 20,
-            warehouseId = gudangId
-        )
+    fun `counts and totals aggregate the table`() = runTest {
+        assertEquals(0, produkDao.getProdukCount())
 
-        produkDao.insertProduk(produk1)
-        produkDao.insertProduk(produk2)
+        produkDao.insertProduk(produk("Product 1", stock = 10))
+        produkDao.insertProduk(produk("Product 2", stock = 20))
 
-        val totalStock = produkDao.getTotalStock()
-        assertEquals(30, totalStock)
+        assertEquals(2, produkDao.getProdukCount())
+        assertEquals(30, produkDao.getTotalStock())
+        assertEquals(300.0, produkDao.getTotalInventoryValue()!!, 0.001)
+    }
+
+    @Test
+    fun `countProdukByKategori and countProdukByGudang filter correctly`() = runTest {
+        produkDao.insertProduk(produk("Product 1"))
+        produkDao.insertProduk(produk("Product 2"))
+
+        assertEquals(2, produkDao.countProdukByKategori(kategoriId))
+        assertEquals(2, produkDao.countProdukByGudang(gudangId))
+        assertEquals(0, produkDao.countProdukByKategori(kategoriId + 99))
     }
 }

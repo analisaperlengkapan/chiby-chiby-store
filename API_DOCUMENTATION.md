@@ -98,8 +98,8 @@ interface AuthService {
 **Returns:** `Flow<Pengguna?>` - Reactive stream untuk user state
 
 #### initializeSession(): Result<Unit>
-**Description:** Initialize session dari stored data saat app start
-**Returns:** `Result<Unit>` - Success jika berhasil
+**Description:** Memulihkan sesi tersimpan saat app start. Dipanggil oleh `AppNavigation` sebelum graf navigasi ditampilkan; selama proses ini splash screen ditampilkan agar form login tidak berkedip. Sesi dipulihkan hanya bila **belum menganggur lebih dari 24 jam** (`lastActivityTime`) dan pengguna masih aktif. Bila ada beberapa sesi aktif, yang dipilih adalah sesi dengan aktivitas **terbaru** (`lastActivityTime`) yang masih memenuhi syarat — bukan login terbaru — sehingga sesi yang masih segar tidak terbuang. Baris yang ditolak (menganggur atau penggunanya nonaktif/dihapus) dinonaktifkan, dan bila tidak ada sesi yang bisa dipulihkan pengguna harus login ulang. Saat pemulihan gagal (mis. error database), `AppNavigation` menampilkan layar "Coba Lagi" alih-alih form login.
+**Returns:** `Result<Unit>` - Success jika berhasil; Failure bila sesi tidak dapat dibaca
 **Throws:** `DatabaseError`
 
 ---
@@ -400,6 +400,29 @@ interface BalanceSheetService {
     suspend fun generateBalanceSheet(date: LocalDate?): Result<BalanceSheet>
 }
 ```
+
+### PromoService Interface
+
+```kotlin
+interface PromoService {
+    suspend fun calculateDiscount(subtotal: Double): Double
+    suspend fun savePromotion(promotion: Promotion): Result<Long>
+}
+```
+
+#### calculateDiscount(subtotal: Double): Double
+**Description:** Menghitung diskon terbaik dari seluruh promosi aktif pada tanggal berjalan. Hanya promosi dengan `minPurchaseAmount <= subtotal` yang dipertimbangkan; nilai diskon terbesar dipilih. Hasil selalu dijepit ke rentang `0..subtotal`, sehingga diskon tidak pernah melebihi nilai belanja (baris lama dengan persentase > 100% pun tetap aman).
+**Parameters:** `subtotal` — nilai belanja sebelum diskon
+**Returns:** `Double` — nominal diskon (0.0 bila tidak ada promosi yang berlaku)
+
+#### savePromotion(promotion: Promotion): Result<Long>
+**Description:** Memvalidasi lalu menyimpan promosi. `id == 0` berarti insert, selain itu update. Promosi tidak valid ditolak tanpa menyentuh database.
+**Aturan validasi:**
+- `name` tidak boleh kosong
+- `value` tidak boleh negatif; untuk `PERCENTAGE`, `value` disimpan sebagai pecahan (`0.1` = 10%) sehingga maksimal `1.0` (100%)
+- `minPurchaseAmount` dan `maxDiscountAmount` (bila ada) tidak boleh negatif
+- `endDate` harus setelah `startDate` bila keduanya diisi
+**Returns:** `Result<Long>` — id promosi yang tersimpan, atau `ValidationError`/`DatabaseError`
 
 ---
 

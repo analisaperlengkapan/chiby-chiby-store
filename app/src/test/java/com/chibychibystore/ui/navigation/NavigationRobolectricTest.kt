@@ -62,6 +62,14 @@ class NavigationRobolectricTest {
             role = Role.CASHIER
         )
         whenever(penggunaDao.getPenggunaByUsername("testuser")).thenReturn(user)
+        // login now writes the session first, and observeCurrentUser re-checks it.
+        whenever(sessionRepository.createSession(org.mockito.kotlin.any()))
+            .thenReturn(com.chibychibystore.data.model.Result.success(1L))
+        whenever(sessionRepository.getActiveSessionForUser(1L)).thenReturn(
+            com.chibychibystore.data.model.Result.success(
+                com.chibychibystore.data.local.entity.PenggunaSession(id = 1, userId = 1, lastActivityTime = java.util.Date())
+            )
+        )
 
         val observed = mutableListOf<Pengguna?>()
         val job = launch { service.observeCurrentUser().collect { observed.add(it) } }

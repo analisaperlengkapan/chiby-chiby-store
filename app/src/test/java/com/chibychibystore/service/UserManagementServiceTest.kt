@@ -1,427 +1,199 @@
 package com.chibychibystore.service
 
-import com.chibychibystore.data.Result
-import com.chibychibystore.data.model.Pengguna
+import com.chibychibystore.constant.Permissions
+import com.chibychibystore.data.local.entity.Pengguna
+import com.chibychibystore.data.local.entity.Role
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.PenggunaRepository
-import kotlinx.coroutines.flow.flowOf
+import com.chibychibystore.service.impl.UserManagementServiceImpl
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
-import org.mockito.Mockito.*
 import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.any
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
+/**
+ * User administration: create/update/delete, password reset, activation, and
+ * the authorization ordering. The legacy `UserManagementServiceTest` was removed
+ * with the excluded suite; this restores its cases against the current service.
+ */
 class UserManagementServiceTest {
 
-    @Mock
-    private lateinit var penggunaRepository: PenggunaRepository
+    @Mock lateinit var userRepository: PenggunaRepository
+    @Mock lateinit var authService: AuthService
 
-    private lateinit var userManagementService: UserManagementService
+    private lateinit var service: UserManagementServiceImpl
 
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        userManagementService = UserManagementServiceImpl(penggunaRepository)
+        service = UserManagementServiceImpl(userRepository, authService)
+    }
+
+    private fun user(
+        id: Long = 2,
+        username: String = "kasir",
+        role: Role = Role.CASHIER,
+        isActive: Boolean = true
+    ) = Pengguna(id = id, username = username, passwordHash = "hash", role = role, isActive = isActive)
+
+    @Test
+    fun `createUser inserts a user when the caller may manage users`() = runTest {
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(true)
+        whenever(userRepository.getUserByUsername("baru")).thenReturn(Result.failure(Exception("not found")))
+        whenever(userRepository.createPengguna(any())).thenReturn(Result.success(7L))
+
+        val result = service.createUser("baru", "secret123", Role.CASHIER, createdBy = 1L)
+
+        assertEquals(7L, result.getOrNull())
+        verify(userRepository).createPengguna(any())
     }
 
     @Test
-    fun `getAllUsers should return list of users successfully`() = runTest {
-        // Given
-        val mockUsers = listOf(
-            Pengguna(id = 1, username = "owner", passwordHash = "hash1", role = "OWNER", permissions = "[]"),
-            Pengguna(id = 2, username = "manager", passwordHash = "hash2", role = "MANAGER", permissions = "[]")
-        )
-        `when`(penggunaRepository.getAllPengguna()).thenReturn(flowOf(mockUsers))
+    fun `createUser rejects a duplicate username`() = runTest {
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(true)
+        whenever(userRepository.getUserByUsername("kasir")).thenReturn(Result.success(user()))
 
-        // When
-        val result = userManagementService.getAllUsers()
-
-        // Then
-        assertTrue(result is Result.Success)
-        val users = (result as Result.Success).data
-        assertEquals(2, users.size)
-        assertEquals("owner", users[0].username)
-        assertEquals("manager", users[1].username)
+        assertTrue(service.createUser("kasir", "secret123", Role.CASHIER, 1L).isFailure)
+        verify(userRepository, never()).createPengguna(any())
     }
 
     @Test
-    fun `getAllUsers should return error when repository fails`() = runTest {
-        // Given
-        `when`(penggunaRepository.getAllPengguna())
-            .thenThrow(RuntimeException("Database error"))
+    fun `createUser rejects a weak password`() = runTest {
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(true)
 
-        // When
-        val result = userManagementService.getAllUsers()
-
-        // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
-        assertEquals("Database error", error.exception.message)
+        assertTrue(service.createUser("baru", "123", Role.CASHIER, 1L).isFailure)
+        verify(userRepository, never()).createPengguna(any())
     }
 
     @Test
-    fun `createUser should create user successfully with valid data`() = runTest {
-        // Given
-        val newUser = Pengguna(
-            username = "cashier",
-            passwordHash = "hashed_password",
-            role = "CASHIER",
-            permissions = "[]"
-        )
-        `when`(penggunaRepository.insertPengguna(any())).thenReturn(1L)
+    fun `createUser is refused without permission`() = runTest {
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(false)
 
-        // When
-        val result = userManagementService.createUser("cashier", "password123", "CASHIER")
-
-        // Then
-        assertTrue(result is Result.Success)
-        val createdUser = (result as Result.Success).data
-        assertEquals("cashier", createdUser.username)
-        assertEquals("CASHIER", createdUser.role)
-        assertNotNull(createdUser.passwordHash)
-        assertNotEquals("password123", createdUser.passwordHash) // Should be hashed
+        assertTrue(service.createUser("baru", "secret123", Role.CASHIER, 1L).isFailure)
+        verify(userRepository, never()).createPengguna(any())
     }
 
     @Test
-    fun `createUser should return error for duplicate username`() = runTest {
-        // Given
-        `when`(penggunaRepository.insertPengguna(any()))
-            .thenThrow(RuntimeException("UNIQUE constraint failed: pengguna.username"))
+    fun `updateUser persists the changed fields`() = runTest {
+        val existing = user()
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(true)
+        whenever(userRepository.getUserById(existing.id)).thenReturn(Result.success(existing))
+        // A changed username is looked up to rule out a collision; the only match
+        // is the user being edited, so it is not a duplicate.
+        whenever(userRepository.getUserByUsername("kasir2")).thenReturn(Result.failure(Exception("not found")))
+        whenever(userRepository.updateUser(any())).thenReturn(Result.success(Unit))
 
-        // When
-        val result = userManagementService.createUser("existing_user", "password123", "CASHIER")
+        val result = service.updateUser(existing.id, username = "kasir2", role = Role.MANAGER, isActive = false, updatedBy = 1L)
 
-        // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
-        assertTrue(error.exception.message?.contains("sudah ada") == true)
+        assertTrue(result.isSuccess)
+        verify(userRepository).updateUser(any())
     }
 
     @Test
-    fun `createUser should return error for invalid role`() = runTest {
-        // When
-        val result = userManagementService.createUser("user", "password123", "INVALID_ROLE")
+    fun `updateUser rejects a username already taken by someone else`() = runTest {
+        val existing = user(id = 2, username = "kasir")
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(true)
+        whenever(userRepository.getUserById(2L)).thenReturn(Result.success(existing))
+        whenever(userRepository.getUserByUsername("owner")).thenReturn(Result.success(user(id = 1, username = "owner", role = Role.OWNER)))
 
-        // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
-        assertTrue(error.exception.message?.contains("role") == true)
+        assertTrue(service.updateUser(2L, "owner", null, null, 1L).isFailure)
+        verify(userRepository, never()).updateUser(any())
     }
 
     @Test
-    fun `createUser should return error for weak password`() = runTest {
-        // When
-        val result = userManagementService.createUser("user", "123", "CASHIER")
+    fun `deleteUser checks authorization before revealing whether the user exists`() = runTest {
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(false)
 
-        // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
-        assertTrue(error.exception.message?.contains("password") == true)
+        val result = service.deleteUser(42L, deletedBy = 1L)
+
+        assertTrue(result.isFailure)
+        // The existence lookup must not run for an unauthorised caller, otherwise
+        // the error message leaks whether an account id exists.
+        verify(userRepository, never()).getUserById(any())
+        verify(userRepository, never()).deleteUser(any())
     }
 
     @Test
-    fun `updateUser should update user successfully with valid data`() = runTest {
-        // Given
-        val existingUser = Pengguna(
-            id = 1,
-            username = "old_username",
-            passwordHash = "old_hash",
-            role = "CASHIER",
-            permissions = "[]"
-        )
-        `when`(penggunaRepository.getPenggunaById(1)).thenReturn(existingUser)
-        `when`(penggunaRepository.updatePengguna(any())).thenReturn(1)
+    fun `deleteUser refuses to delete the signed-in user`() = runTest {
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(true)
+        whenever(userRepository.getUserById(2L)).thenReturn(Result.success(user()))
+        whenever(authService.getCurrentUser()).thenReturn(user())
 
-        // When
-        val result = userManagementService.updateUser(1, "new_username", "MANAGER")
-
-        // Then
-        assertTrue(result is Result.Success)
-        val updatedUser = (result as Result.Success).data
-        assertEquals("new_username", updatedUser.username)
-        assertEquals("MANAGER", updatedUser.role)
+        assertTrue(service.deleteUser(2L, deletedBy = 2L).isFailure)
+        verify(userRepository, never()).deleteUser(any())
     }
 
     @Test
-    fun `updateUser should return error for non-existent user`() = runTest {
-        // Given
-        `when`(penggunaRepository.getPenggunaById(999)).thenReturn(null)
+    fun `deleteUser removes another user`() = runTest {
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(true)
+        whenever(userRepository.getUserById(2L)).thenReturn(Result.success(user()))
+        whenever(authService.getCurrentUser()).thenReturn(user(id = 1, username = "owner", role = Role.OWNER))
+        whenever(userRepository.deleteUser(2L)).thenReturn(Result.success(Unit))
 
-        // When
-        val result = userManagementService.updateUser(999, "username", "CASHIER")
-
-        // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
-        assertTrue(error.exception.message?.contains("tidak ditemukan") == true)
+        assertTrue(service.deleteUser(2L, deletedBy = 1L).isSuccess)
+        verify(userRepository).deleteUser(2L)
     }
 
     @Test
-    fun `updateUser should return error for duplicate username`() = runTest {
-        // Given
-        val existingUser = Pengguna(
-            id = 1,
-            username = "user1",
-            passwordHash = "hash",
-            role = "CASHIER",
-            permissions = "[]"
-        )
-        `when`(penggunaRepository.getPenggunaById(1)).thenReturn(existingUser)
-        `when`(penggunaRepository.updatePengguna(any()))
-            .thenThrow(RuntimeException("UNIQUE constraint failed: pengguna.username"))
+    fun `resetUserPassword writes a new hash`() = runTest {
+        val target = user()
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(true)
+        whenever(userRepository.getUserById(2L)).thenReturn(Result.success(target))
+        whenever(userRepository.updateUser(any())).thenReturn(Result.success(Unit))
 
-        // When
-        val result = userManagementService.updateUser(1, "existing_username", "CASHIER")
-
-        // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
-        assertTrue(error.exception.message?.contains("sudah ada") == true)
+        assertTrue(service.resetUserPassword(2L, "brandnew1", resetBy = 1L).isSuccess)
+        verify(userRepository).updateUser(any())
     }
 
     @Test
-    fun `deleteUser should delete user successfully`() = runTest {
-        // Given
-        val existingUser = Pengguna(
-            id = 1,
-            username = "user",
-            passwordHash = "hash",
-            role = "CASHIER",
-            permissions = "[]"
-        )
-        `when`(penggunaRepository.getPenggunaById(1)).thenReturn(existingUser)
-        `when`(penggunaRepository.deletePengguna(1)).thenReturn(1)
+    fun `resetUserPassword rejects a short password`() = runTest {
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(true)
 
-        // When
-        val result = userManagementService.deleteUser(1)
-
-        // Then
-        assertTrue(result is Result.Success)
-        val success = (result as Result.Success).data
-        assertTrue(success)
+        assertTrue(service.resetUserPassword(2L, "abc", resetBy = 1L).isFailure)
+        verify(userRepository, never()).updateUser(any())
     }
 
     @Test
-    fun `deleteUser should return error for non-existent user`() = runTest {
-        // Given
-        `when`(penggunaRepository.getPenggunaById(999)).thenReturn(null)
+    fun `deactivateUser refuses to deactivate the signed-in user`() = runTest {
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(true)
+        whenever(authService.getCurrentUser()).thenReturn(user(id = 2))
 
-        // When
-        val result = userManagementService.deleteUser(999)
-
-        // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
-        assertTrue(error.exception.message?.contains("tidak ditemukan") == true)
+        assertTrue(service.deactivateUser(2L, deactivatedBy = 2L).isFailure)
+        verify(userRepository, never()).updateUser(any())
     }
 
     @Test
-    fun `deleteUser should return error for owner user deletion attempt`() = runTest {
-        // Given
-        val ownerUser = Pengguna(
-            id = 1,
-            username = "owner",
-            passwordHash = "hash",
-            role = "OWNER",
-            permissions = "[]"
-        )
-        `when`(penggunaRepository.getPenggunaById(1)).thenReturn(ownerUser)
+    fun `getUserStats aggregates the repository counts`() = runTest {
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(true)
+        whenever(userRepository.getUserCount()).thenReturn(Result.success(10))
+        whenever(userRepository.countActiveUsers()).thenReturn(Result.success(8))
+        whenever(userRepository.countByRole(Role.OWNER)).thenReturn(Result.success(1))
+        whenever(userRepository.countByRole(Role.MANAGER)).thenReturn(Result.success(2))
+        whenever(userRepository.countByRole(Role.CASHIER)).thenReturn(Result.success(4))
+        whenever(userRepository.countByRole(Role.WAREHOUSE)).thenReturn(Result.success(3))
 
-        // When
-        val result = userManagementService.deleteUser(1)
+        val stats = service.getUserStats().getOrNull()!!
 
-        // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
-        assertTrue(error.exception.message?.contains("OWNER") == true)
+        assertEquals(10, stats.totalUsers)
+        assertEquals(8, stats.activeUsers)
+        assertEquals(1, stats.owners)
+        assertEquals(2, stats.managers)
+        assertEquals(4, stats.cashiers)
+        assertEquals(3, stats.warehouseStaff)
     }
 
     @Test
-    fun `changePassword should change password successfully with valid data`() = runTest {
-        // Given
-        val existingUser = Pengguna(
-            id = 1,
-            username = "user",
-            passwordHash = "old_hash",
-            role = "CASHIER",
-            permissions = "[]"
-        )
-        `when`(penggunaRepository.getPenggunaById(1)).thenReturn(existingUser)
-        `when`(penggunaRepository.updatePengguna(any())).thenReturn(1)
+    fun `getUserById is refused without permission`() = runTest {
+        whenever(authService.hasPermission(Permissions.MANAGE_USERS)).thenReturn(false)
 
-        // When
-        val result = userManagementService.changePassword(1, "new_password123")
-
-        // Then
-        assertTrue(result is Result.Success)
-        val success = (result as Result.Success).data
-        assertTrue(success)
-    }
-
-    @Test
-    fun `changePassword should return error for non-existent user`() = runTest {
-        // Given
-        `when`(penggunaRepository.getPenggunaById(999)).thenReturn(null)
-
-        // When
-        val result = userManagementService.changePassword(999, "new_password")
-
-        // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
-        assertTrue(error.exception.message?.contains("tidak ditemukan") == true)
-    }
-
-    @Test
-    fun `changePassword should return error for weak password`() = runTest {
-        // Given
-        val existingUser = Pengguna(
-            id = 1,
-            username = "user",
-            passwordHash = "hash",
-            role = "CASHIER",
-            permissions = "[]"
-        )
-        `when`(penggunaRepository.getPenggunaById(1)).thenReturn(existingUser)
-
-        // When
-        val result = userManagementService.changePassword(1, "123")
-
-        // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
-        assertTrue(error.exception.message?.contains("password") == true)
-    }
-
-    @Test
-    fun `getUserById should return user successfully`() = runTest {
-        // Given
-        val mockUser = Pengguna(
-            id = 1,
-            username = "user",
-            passwordHash = "hash",
-            role = "CASHIER",
-            permissions = "[]"
-        )
-        `when`(penggunaRepository.getPenggunaById(1)).thenReturn(mockUser)
-
-        // When
-        val result = userManagementService.getUserById(1)
-
-        // Then
-        assertTrue(result is Result.Success)
-        val user = (result as Result.Success).data
-        assertEquals("user", user.username)
-        assertEquals("CASHIER", user.role)
-    }
-
-    @Test
-    fun `getUserById should return error for non-existent user`() = runTest {
-        // Given
-        `when`(penggunaRepository.getPenggunaById(999)).thenReturn(null)
-
-        // When
-        val result = userManagementService.getUserById(999)
-
-        // Then
-        assertTrue(result is Result.Error)
-        val error = result as Result.Error
-        assertTrue(error.exception.message?.contains("tidak ditemukan") == true)
-    }
-
-    @Test
-    fun `getUsersByRole should return users filtered by role successfully`() = runTest {
-        // Given
-        val mockUsers = listOf(
-            Pengguna(id = 1, username = "cashier1", passwordHash = "hash1", role = "CASHIER", permissions = "[]"),
-            Pengguna(id = 2, username = "cashier2", passwordHash = "hash2", role = "CASHIER", permissions = "[]"),
-            Pengguna(id = 3, username = "manager", passwordHash = "hash3", role = "MANAGER", permissions = "[]")
-        )
-        `when`(penggunaRepository.getAllPengguna()).thenReturn(flowOf(mockUsers))
-
-        // When
-        val result = userManagementService.getUsersByRole("CASHIER")
-
-        // Then
-        assertTrue(result is Result.Success)
-        val users = (result as Result.Success).data
-        assertEquals(2, users.size)
-        users.forEach { assertEquals("CASHIER", it.role) }
-    }
-
-    @Test
-    fun `getUsersByRole should return empty list for role with no users`() = runTest {
-        // Given
-        val mockUsers = listOf(
-            Pengguna(id = 1, username = "cashier", passwordHash = "hash", role = "CASHIER", permissions = "[]")
-        )
-        `when`(penggunaRepository.getAllPengguna()).thenReturn(flowOf(mockUsers))
-
-        // When
-        val result = userManagementService.getUsersByRole("WAREHOUSE")
-
-        // Then
-        assertTrue(result is Result.Success)
-        val users = (result as Result.Success).data
-        assertTrue(users.isEmpty())
-    }
-
-    @Test
-    fun `validatePasswordStrength should accept strong passwords`() {
-        // Given
-        val strongPasswords = listOf(
-            "password123",
-            "MySecurePass123",
-            "Complex!Password#456",
-            "VeryLongPasswordWithNumbers123"
-        )
-
-        // When & Then
-        strongPasswords.forEach { password ->
-            assertTrue(userManagementService.validatePasswordStrength(password))
-        }
-    }
-
-    @Test
-    fun `validatePasswordStrength should reject weak passwords`() {
-        // Given
-        val weakPasswords = listOf(
-            "",
-            "1",
-            "12",
-            "123",
-            "1234",
-            "12345",
-            "123456",
-            "1234567"
-        )
-
-        // When & Then
-        weakPasswords.forEach { password ->
-            assertFalse(userManagementService.validatePasswordStrength(password))
-        }
-    }
-
-    @Test
-    fun `validateRole should accept valid roles`() {
-        // Given
-        val validRoles = listOf("OWNER", "MANAGER", "CASHIER", "WAREHOUSE")
-
-        // When & Then
-        validRoles.forEach { role ->
-            assertTrue(userManagementService.validateRole(role))
-        }
-    }
-
-    @Test
-    fun `validateRole should reject invalid roles`() {
-        // Given
-        val invalidRoles = listOf("", "ADMIN", "USER", "invalid", "null")
-
-        // When & Then
-        invalidRoles.forEach { role ->
-            assertFalse(userManagementService.validateRole(role))
-        }
+        assertTrue(service.getUserById(2L).isFailure)
+        verify(userRepository, never()).getUserById(any())
     }
 }

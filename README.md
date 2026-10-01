@@ -48,9 +48,9 @@ Every screen below is rendered by an automated Robolectric test, so the gallery 
 
 ### Authentication and dashboard
 
-| Login | Dashboard | Navigation drawer |
-| --- | --- | --- |
-| ![Login](docs/screenshots/01-login.png) | ![Dashboard](docs/screenshots/02-dashboard.png) | ![Navigation drawer](docs/screenshots/02b-navigation-drawer.png) |
+| Login | Session restore failed | Dashboard | Navigation drawer |
+| --- | --- | --- | --- |
+| ![Login](docs/screenshots/01-login.png) | ![Session restore failed](docs/screenshots/01b-restore-failed.png) | ![Dashboard](docs/screenshots/02-dashboard.png) | ![Navigation drawer](docs/screenshots/02b-navigation-drawer.png) |
 
 ### Point of Sale
 

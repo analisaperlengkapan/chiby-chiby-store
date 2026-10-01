@@ -86,6 +86,9 @@ fun PromotionItem(
 ) {
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale("id", "ID"))
     val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
+    // Periods are stored as UTC day boundaries, so format them in UTC too —
+    // otherwise the list and the edit form disagree on the day west of UTC.
+    dateFormat.timeZone = TimeZone.getTimeZone("UTC")
 
     Card(
         modifier = Modifier.fillMaxWidth(),

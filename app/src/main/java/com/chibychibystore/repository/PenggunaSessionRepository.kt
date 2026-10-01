@@ -4,7 +4,6 @@ import com.chibychibystore.data.local.dao.PenggunaSessionDao
 import com.chibychibystore.data.local.entity.PenggunaSession
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
-import kotlinx.coroutines.flow.Flow
 import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,33 +17,27 @@ class PenggunaSessionRepository @Inject constructor(
 ) {
 
     /**
-     * Get active session
+     * Snapshot of every active session, newest activity first.
      */
-    suspend fun getActiveSession(): Result<PenggunaSession?> {
+    suspend fun getActiveSessions(): Result<List<PenggunaSession>> {
         return try {
-            val session = penggunaSessionDao.getActiveSession()
-            Result.success(session)
+            Result.success(penggunaSessionDao.getActiveSessions())
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("getActiveSession", e))
+            Result.failure(ChibyChibyException.DatabaseError("getActiveSessions", e))
         }
     }
 
     /**
-     * Get active session for specific user
+     * The most recently used active session for a user, or null when they have
+     * none. Used to re-check the idle timeout against the stored session.
      */
     suspend fun getActiveSessionForUser(userId: Long): Result<PenggunaSession?> {
         return try {
-            val session = penggunaSessionDao.getActiveSessionForUser(userId)
-            Result.success(session)
+            Result.success(penggunaSessionDao.getActiveSessionForUser(userId))
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("getActiveSessionForUser", e))
         }
     }
-
-    /**
-     * Get all active sessions
-     */
-    fun getAllActiveSessions(): Flow<List<PenggunaSession>> = penggunaSessionDao.getAllActiveSessions()
 
     /**
      * Create new session
@@ -55,18 +48,6 @@ class PenggunaSessionRepository @Inject constructor(
             Result.success(id)
         } catch (e: Exception) {
             Result.failure(ChibyChibyException.DatabaseError("createSession", e))
-        }
-    }
-
-    /**
-     * Update session
-     */
-    suspend fun updateSession(session: PenggunaSession): Result<Unit> {
-        return try {
-            penggunaSessionDao.updateSession(session)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("updateSession", e))
         }
     }
 
@@ -83,26 +64,28 @@ class PenggunaSessionRepository @Inject constructor(
     }
 
     /**
-     * Deactivate all sessions
+     * Deactivate a single session row.
      */
-    suspend fun deactivateAllSessions(): Result<Unit> {
+    suspend fun deactivateSession(sessionId: Long): Result<Unit> {
         return try {
-            penggunaSessionDao.deactivateAllSessions()
+            penggunaSessionDao.deactivateSession(sessionId)
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("deactivateAllSessions", e))
+            Result.failure(ChibyChibyException.DatabaseError("deactivateSession", e))
         }
     }
 
     /**
-     * Update last activity time
+     * Reactivate a session and stamp it with the current time. Used when a
+     * restore picks an existing session so the chosen row is the most recently
+     * used one from then on.
      */
-    suspend fun updateLastActivityTime(sessionId: Long): Result<Unit> {
+    suspend fun activateSession(sessionId: Long): Result<Unit> {
         return try {
-            penggunaSessionDao.updateLastActivityTime(sessionId, Date())
+            penggunaSessionDao.activateSession(sessionId, Date())
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(ChibyChibyException.DatabaseError("updateLastActivityTime", e))
+            Result.failure(ChibyChibyException.DatabaseError("activateSession", e))
         }
     }
 

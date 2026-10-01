@@ -449,12 +449,6 @@ class BackupServiceImpl @Inject constructor(
         backupDirectoryOverride = dir
     }
 
-    private fun calculateChecksum(data: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val hash = digest.digest(data.toByteArray())
-        return hash.joinToString("") { "%02x".format(it) }
-    }
-
     private fun calculateFileChecksum(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")
         file.inputStream().use { input ->
