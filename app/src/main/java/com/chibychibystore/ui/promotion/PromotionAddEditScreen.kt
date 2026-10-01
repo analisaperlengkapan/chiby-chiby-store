@@ -77,11 +77,10 @@ fun PromotionAddEditScreen(
                 minPurchaseAmount = promo.minPurchaseAmount.toString()
                 maxDiscountAmount = promo.maxDiscountAmount?.toString() ?: ""
                 isActive = promo.isActive
-                // Stored dates are local-day boundaries; convert each to the UTC
-                // day marker the picker expects so editing and re-saving does not
-                // shift the day.
-                startDate = promo.startDate?.let { CalendarDates.utcDayMarker(CalendarDates.localDay(it)) }
-                endDate = promo.endDate?.let { CalendarDates.utcDayMarker(CalendarDates.localDay(it)) }
+                // Stored dates are the UTC boundaries of the picked day; read the
+                // day back in UTC so editing and re-saving does not shift it.
+                startDate = promo.startDate?.let { CalendarDates.utcDayMarker(CalendarDates.utcDay(it)) }
+                endDate = promo.endDate?.let { CalendarDates.utcDayMarker(CalendarDates.utcDay(it)) }
                 originalCreatedAt = promo.createdAt
             }
             isLoadingInitial = false

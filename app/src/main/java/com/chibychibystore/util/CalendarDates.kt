@@ -2,7 +2,6 @@ package com.chibychibystore.util
 
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.Date
 
@@ -11,18 +10,23 @@ import java.util.Date
  * instants persisted for a promotion period.
  *
  * The picker reports a selection as **UTC midnight of the chosen calendar
- * date**, so `Date(millis)` is a UTC day marker, not a local instant. Reading it
- * back with a local `Calendar` shifts the day by the device offset: on a UTC-7
- * device, October 1 arrives as September 30 17:00 local, and "end of October 1"
- * computed locally would land on September 30 — the promotion would never apply
- * on its final day.
+ * date**, so `Date(millis)` is a UTC day marker, not a local instant. A
+ * promotion period is stored as the *UTC* boundaries of that day
+ * ([startOfUtcDay] / [endOfUtcDay]): the values depend only on the picked
+ * calendar date, not on the device zone at save time, so a period means the
+ * same day everywhere and never shifts if the device zone later changes.
  *
- * Every helper here therefore interprets a picker value in UTC first and only
- * then places the day boundary in the target (local) zone. The invariant is:
+ * The active-promotion query compares full timestamps, so it must open the day
+ * at its *UTC* start (see [startOfUtcDay]) — not a local start-of-day, which on
+ * a device west of UTC would fall before the stored boundary and drop the
+ * promotion on its final day.
  *
- *  - the day the user picked is the day that is stored and matched;
- *  - a period stored with [startOfUtcDay] / [endOfUtcDay] compares correctly
- *    against a query boundary from [startOfLocalDay].
+ * The invariant is:
+ *
+ *  - the day the user picked is the day that is stored and matched, in every
+ *    zone and after any later zone change;
+ *  - a period stored with [startOfUtcDay] / [endOfUtcDay] brackets a UTC
+ *    query boundary from [startOfUtcDay] of the same day.
  */
 object CalendarDates {
 
@@ -34,21 +38,13 @@ object CalendarDates {
     fun utcDayMarker(day: LocalDate): Date =
         Date(day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
 
-    /** The local calendar date of a stored instant. */
-    fun localDay(date: Date, zone: ZoneId = ZoneId.systemDefault()): LocalDate =
-        Instant.ofEpochMilli(date.time).atZone(zone).toLocalDate()
+    /** First instant of the picker day [date], expressed in UTC. */
+    fun startOfUtcDay(date: Date): Date =
+        Date(utcDay(date).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
 
-    /** First instant of the picker day [date], expressed in [zone]. */
-    fun startOfUtcDay(date: Date, zone: ZoneId = ZoneId.systemDefault()): Date =
-        Date(utcDay(date).atStartOfDay(zone).toInstant().toEpochMilli())
-
-    /** Last instant of the picker day [date], expressed in [zone]. */
-    fun endOfUtcDay(date: Date, zone: ZoneId = ZoneId.systemDefault()): Date {
-        val nextDayStart = utcDay(date).plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+    /** Last instant of the picker day [date], expressed in UTC. */
+    fun endOfUtcDay(date: Date): Date {
+        val nextDayStart = utcDay(date).plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
         return Date(nextDayStart - 1)
     }
-
-    /** First instant of [date]'s local calendar day — a query lower bound. */
-    fun startOfLocalDay(date: Date, zone: ZoneId = ZoneId.systemDefault()): Date =
-        Date(localDay(date, zone).atStartOfDay(zone).toInstant().toEpochMilli())
 }

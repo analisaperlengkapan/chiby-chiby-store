@@ -1,15 +1,21 @@
 package com.chibychibystore.service
 
 import com.chibychibystore.data.local.dao.PenggunaDao
+import com.chibychibystore.data.local.dao.PenggunaSessionDao
 import com.chibychibystore.data.local.entity.Pengguna
 import com.chibychibystore.data.local.entity.PenggunaSession
 import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.PenggunaSessionRepository
 import com.chibychibystore.service.impl.AuthServiceImpl
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -27,6 +33,7 @@ import java.util.Date
  * within the idle timeout and whose user is still active; anything else has to
  * stay logged out so the login screen is shown.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class AuthSessionRestoreTest {
 
     private val penggunaDao = mock<PenggunaDao>()
@@ -173,7 +180,7 @@ class AuthSessionRestoreTest {
     // --- idle timeout while the app stays open (CWE-613) --------------------
 
     @Test
-    fun `isSessionExpired is false for a freshly used session`() = runTest {
+    fun `sessionStatus is VALID for a freshly used session`() = runTest {
         val session = PenggunaSession(id = 1, userId = activeUser.id, lastActivityTime = Date())
         whenever(sessionRepository.getActiveSessions()).thenReturn(Result.success(listOf(session)))
         whenever(penggunaDao.getPenggunaById(activeUser.id)).thenReturn(activeUser)
@@ -181,11 +188,11 @@ class AuthSessionRestoreTest {
             .thenReturn(Result.success(session))
         service.initializeSession()
 
-        assertFalse(service.isSessionExpired())
+        assertEquals(AuthService.SessionStatus.VALID, service.sessionStatus())
     }
 
     @Test
-    fun `isSessionExpired is true once the stored session passes the timeout`() = runTest {
+    fun `sessionStatus is EXPIRED once the stored session passes the timeout`() = runTest {
         val fresh = PenggunaSession(id = 1, userId = activeUser.id, lastActivityTime = Date())
         whenever(sessionRepository.getActiveSessions()).thenReturn(Result.success(listOf(fresh)))
         whenever(penggunaDao.getPenggunaById(activeUser.id)).thenReturn(activeUser)
@@ -195,15 +202,89 @@ class AuthSessionRestoreTest {
         val stale = fresh.copy(lastActivityTime = Date(System.currentTimeMillis() - AuthServiceImpl.SESSION_TIMEOUT_MS - 1))
         whenever(sessionRepository.getActiveSessionForUser(activeUser.id)).thenReturn(Result.success(stale))
 
-        assertTrue(service.isSessionExpired())
+        assertEquals(AuthService.SessionStatus.EXPIRED, service.sessionStatus())
+        assertNull(service.getCurrentUser())
+        verify(sessionRepository).deactivateUserSessions(activeUser.id)
     }
 
     @Test
-    fun `isSessionExpired is true when there is no session row`() = runTest {
+    fun `sessionStatus is EXPIRED when there is no session row`() = runTest {
         whenever(sessionRepository.getActiveSessions()).thenReturn(Result.success(emptyList()))
         service.initializeSession()
 
-        assertTrue(service.isSessionExpired())
+        assertEquals(AuthService.SessionStatus.EXPIRED, service.sessionStatus())
+    }
+
+    @Test
+    fun `a transient session read failure is UNKNOWN and keeps the user signed in`() = runTest {
+        // A failed read is not an expiry: signing the user out on a temporary
+        // database error would drop a still-valid session.
+        val session = PenggunaSession(id = 1, userId = activeUser.id, lastActivityTime = Date())
+        whenever(sessionRepository.getActiveSessions()).thenReturn(Result.success(listOf(session)))
+        whenever(penggunaDao.getPenggunaById(activeUser.id)).thenReturn(activeUser)
+        service.initializeSession()
+
+        whenever(sessionRepository.getActiveSessionForUser(activeUser.id))
+            .thenReturn(Result.failure(Exception("db down")))
+
+        assertEquals(AuthService.SessionStatus.UNKNOWN, service.sessionStatus())
+        assertSame(activeUser, service.getCurrentUser())
+        verify(sessionRepository, never()).deactivateUserSessions(any())
+    }
+
+    @Test
+    fun `a stale check does not revoke a user who logged in meanwhile`() = runTest {
+        // A's session lookup is still in flight when B signs in. The revocation
+        // must be identity-aware (and the stale check cancelled), or it would
+        // deactivate B and force B to sign in again.
+        val dao = FakeSessionDao()
+        val repo = PenggunaSessionRepository(dao)
+        val svc = AuthServiceImpl(penggunaDao, repo)
+
+        dao.insertSession(PenggunaSession(userId = activeUser.id, lastActivityTime = Date()))
+        whenever(penggunaDao.getPenggunaById(activeUser.id)).thenReturn(activeUser)
+        svc.initializeSession()
+        assertSame(activeUser, svc.getCurrentUser())
+
+        // Hold A's session read so it is still in flight when B signs in.
+        val gate = CompletableDeferred<Unit>()
+        dao.gate = gate
+        dao.gatedUserId = activeUser.id
+
+        val job = launch { svc.observeCurrentUser().collect {} }
+        runCurrent() // A's check is now suspended at the gate
+
+        // A newer login lands while A's check is pending.
+        val other = Pengguna(id = 8, username = "manager", passwordHash = "hash", role = Role.MANAGER, isActive = true)
+        whenever(penggunaDao.getPenggunaById(other.id)).thenReturn(other)
+        dao.insertSession(PenggunaSession(userId = other.id, lastActivityTime = Date()))
+        svc.initializeSession()
+        assertSame(other, svc.getCurrentUser())
+
+        // A's read completes; it must not revoke B.
+        dao.gate = null
+        gate.complete(Unit)
+        runCurrent()
+
+        assertSame("B must stay signed in", other, svc.getCurrentUser())
+        assertNotNull("B's session must stay active", dao.getActiveSessionForUser(other.id))
+        job.cancel()
+    }
+
+    @Test
+    fun `observing keeps the user when the session read fails`() = runTest {
+        // The flow must not treat a transient read failure as an expiry; otherwise
+        // AuthGuard/the drawer would flip to the login screen on a DB hiccup.
+        val session = PenggunaSession(id = 1, userId = activeUser.id, lastActivityTime = Date())
+        whenever(sessionRepository.getActiveSessions()).thenReturn(Result.success(listOf(session)))
+        whenever(penggunaDao.getPenggunaById(activeUser.id)).thenReturn(activeUser)
+        service.initializeSession()
+
+        whenever(sessionRepository.getActiveSessionForUser(activeUser.id))
+            .thenReturn(Result.failure(Exception("db down")))
+
+        assertSame(activeUser, service.observeCurrentUser().first())
+        assertSame(activeUser, service.getCurrentUser())
     }
 
     @Test
@@ -227,5 +308,50 @@ class AuthSessionRestoreTest {
 
     private companion object {
         const val DAY = 24 * 60 * 60 * 1000L
+    }
+}
+
+/**
+ * Minimal in-memory [PenggunaSessionDao] with a one-shot gate: while [gate] is
+ * set, a read for [gatedUserId] suspends until the gate completes. This lets a
+ * test hold a session check "in flight" to exercise the login race.
+ */
+private class FakeSessionDao : PenggunaSessionDao {
+    private val sessions = mutableListOf<PenggunaSession>()
+    private var nextId = 1L
+    var gate: CompletableDeferred<Unit>? = null
+    var gatedUserId: Long = -1
+
+    override suspend fun getActiveSessions(): List<PenggunaSession> =
+        sessions.filter { it.isActive }.sortedByDescending { it.lastActivityTime }
+
+    override suspend fun getActiveSessionForUser(userId: Long): PenggunaSession? {
+        if (gate != null && userId == gatedUserId) gate!!.await()
+        return sessions
+            .filter { it.userId == userId && it.isActive }
+            .maxByOrNull { it.lastActivityTime }
+    }
+
+    override suspend fun insertSession(session: PenggunaSession): Long {
+        val id = if (session.id == 0L) nextId++ else session.id
+        sessions.removeAll { it.id == id }
+        sessions.add(session.copy(id = id))
+        return id
+    }
+
+    override suspend fun deactivateUserSessions(userId: Long) {
+        sessions.replaceAll { if (it.userId == userId) it.copy(isActive = false) else it }
+    }
+
+    override suspend fun deactivateSession(sessionId: Long) {
+        sessions.replaceAll { if (it.id == sessionId) it.copy(isActive = false) else it }
+    }
+
+    override suspend fun activateSession(sessionId: Long, time: Date) {
+        sessions.replaceAll { if (it.id == sessionId) it.copy(isActive = true, lastActivityTime = time) else it }
+    }
+
+    override suspend fun deleteOldSessions(cutoffDate: Date) {
+        sessions.removeAll { it.loginTime.before(cutoffDate) }
     }
 }

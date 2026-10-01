@@ -99,12 +99,14 @@ fun AppNavigation(
     // AuthGuard and the drawer gate on observeCurrentUser(), which cannot change
     // by itself while the app sits untouched, so an unattended device would keep
     // protected screens mounted forever. Re-check on a timer and revoke the
-    // session (logout) once it lapses; the user flow then emits null and the
-    // graph falls back to the login screen.
+    // session once it is *confirmed* expired; the user flow then emits null and
+    // the graph falls back to the login screen. An UNKNOWN result (a transient
+    // session-read failure) is deliberately left alone — the next tick retries
+    // instead of signing out a user whose session may still be valid.
     LaunchedEffect(sessionRestored) {
         while (sessionRestored) {
             delay(SESSION_EXPIRY_CHECK_INTERVAL_MS)
-            if (authService.isSessionExpired()) {
+            if (authService.sessionStatus() == AuthService.SessionStatus.EXPIRED) {
                 authService.logout()
             }
         }

@@ -1,6 +1,7 @@
 package com.chibychibystore.service.impl
 
 import com.chibychibystore.service.AuthService
+import com.chibychibystore.service.AuthService.SessionStatus
 import com.chibychibystore.repository.PenggunaSessionRepository
 import com.chibychibystore.data.local.entity.PenggunaSession
 import com.chibychibystore.data.local.entity.Pengguna
@@ -10,7 +11,7 @@ import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import java.security.MessageDigest
 import com.chibychibystore.data.model.Result
 import javax.inject.Inject
@@ -138,33 +139,54 @@ class AuthServiceImpl @Inject constructor(
     }
 
     override fun observeCurrentUser(): Flow<Pengguna?> {
-        // Re-check the session on every emission. The stored session is the
-        // authority: when the idle timeout has passed (or the row was closed),
-        // the user is revoked here as well as by the caller's periodic poll, so
-        // no consumer of this flow can keep trusting an expired session.
-        return currentUser.asStateFlow().map { user ->
-            if (user == null) {
-                null
-            } else if (isSessionExpired()) {
-                revokeExpiredSession()
-                null
-            } else {
+        // Re-check the session whenever the user changes. The stored session is
+        // the authority: an idle user is revoked here as well as by the caller's
+        // periodic poll, so no consumer of this flow can keep trusting an expired
+        // session. Only a *confirmed* expiry clears the user — a transient
+        // session-read failure leaves the user signed in (sessionStatus returns
+        // UNKNOWN and does not revoke).
+        return currentUser.asStateFlow().mapLatest { user ->
+            // Keep the user for VALID *and* UNKNOWN; only a confirmed EXPIRED
+            // revokes. (UNKNOWN is a transient read failure — see sessionStatus.)
+            if (user == null || sessionStatus() != SessionStatus.EXPIRED) {
                 user
+            } else {
+                null
             }
         }
     }
 
-    override suspend fun isSessionExpired(): Boolean {
-        val user = currentUser.value ?: return true
-        val session = penggunaSessionRepository.getActiveSessionForUser(user.id).getOrNull()
-            ?: return true
-        return System.currentTimeMillis() - session.lastActivityTime.time > SESSION_TIMEOUT_MS
+    override suspend fun sessionStatus(): SessionStatus {
+        val user = currentUser.value ?: return SessionStatus.EXPIRED
+
+        // A failed read is not an expiry. Distinguishing the two keeps a
+        // temporary database error from signing out a user whose session is
+        // still valid; the caller retries on its next poll.
+        val sessionResult = penggunaSessionRepository.getActiveSessionForUser(user.id)
+        val session = sessionResult.getOrNull()
+            ?: return if (sessionResult.isFailure) {
+                SessionStatus.UNKNOWN
+            } else {
+                revokeSession(user.id)
+                SessionStatus.EXPIRED
+            }
+
+        val expired = System.currentTimeMillis() - session.lastActivityTime.time > SESSION_TIMEOUT_MS
+        if (expired) revokeSession(user.id)
+        return if (expired) SessionStatus.EXPIRED else SessionStatus.VALID
     }
 
-    /** Clears the in-memory user and closes the persisted session for it. */
-    private suspend fun revokeExpiredSession() {
-        currentUser.value?.let { penggunaSessionRepository.deactivateUserSessions(it.id) }
-        currentUser.value = null
+    /**
+     * Clears the in-memory user and closes the persisted session for [userId],
+     * but only if that user is still the current one. Without the identity check
+     * a slow check for an older session could complete after a newer login and
+     * revoke the user who just signed in.
+     */
+    private suspend fun revokeSession(userId: Long) {
+        penggunaSessionRepository.deactivateUserSessions(userId)
+        if (currentUser.value?.id == userId) {
+            currentUser.value = null
+        }
     }
 
     override suspend fun initializeSession(): Result<Unit> {

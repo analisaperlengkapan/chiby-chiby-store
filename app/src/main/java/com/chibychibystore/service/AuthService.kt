@@ -16,10 +16,18 @@ interface AuthService {
     fun observeCurrentUser(): Flow<Pengguna?>
     suspend fun initializeSession(): Result<Unit>
     /**
-     * True when there is no authenticated user, or the current user's session has
-     * been idle past the timeout. Callers that hold protected state (the
-     * navigation graph, [AuthGuard]) poll this while the app is open so an
-     * unattended session is revoked instead of being trusted forever.
+     * Whether the current user's session is still valid, so callers that hold
+     * protected state (the navigation graph, [AuthGuard]) can revoke an
+     * unattended session instead of trusting it forever.
+     *
+     * [VALID] means the stored session is present and not idle past the timeout.
+     * [EXPIRED] is a confirmed absence or timeout and the session has been
+     * revoked — the caller may clear its state. [UNKNOWN] means the session could
+     * not be read (a transient database error); the caller must keep the user
+     * signed in and retry rather than sign them out.
      */
-    suspend fun isSessionExpired(): Boolean
+    suspend fun sessionStatus(): SessionStatus
+
+    /** Outcome of [sessionStatus]. */
+    enum class SessionStatus { VALID, EXPIRED, UNKNOWN }
 }

@@ -118,7 +118,7 @@ class PosEndToEndIntegrationTest : BaseTest() {
             override suspend fun changePassword(oldPassword: String, newPassword: String) = com.chibychibystore.data.model.Result.success(Unit)
             override fun observeCurrentUser() = kotlinx.coroutines.flow.flowOf(cashier)
             override suspend fun initializeSession() = com.chibychibystore.data.model.Result.success(Unit)
-            override suspend fun isSessionExpired() = false
+            override suspend fun sessionStatus() = AuthService.SessionStatus.VALID
         }
 
         val spySaleService = com.chibychibystore.testutils.SaleServiceSpy(saleService)

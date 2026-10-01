@@ -18,11 +18,12 @@ class PromoServiceImpl @Inject constructor(
 ) : PromoService {
 
     override suspend fun calculateDiscount(subtotal: Double): Double {
-        // Query with the start of the local day, not Date(): the active-promotion
-        // query compares full timestamps, so a "now" boundary would drop a
-        // promotion whose start date is today but whose stored instant is later
-        // today. A local start-of-day keeps the whole local day in range.
-        val dayStart = CalendarDates.startOfLocalDay(Date())
+        // A promotion period is stored as the UTC boundaries of the picked day,
+        // and the query compares full timestamps. Opening the day at its UTC
+        // start matches those boundaries in every device zone; a local
+        // start-of-day would fall before the stored start on a device west of
+        // UTC and drop the promotion on its first and last days.
+        val dayStart = CalendarDates.startOfUtcDay(Date())
         val promotions = promotionRepository.getActivePromotionsForDate(dayStart).first()
 
         val applicablePromotions = promotions.filter { promo ->
