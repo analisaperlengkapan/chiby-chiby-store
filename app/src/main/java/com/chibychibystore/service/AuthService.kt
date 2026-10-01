@@ -15,4 +15,11 @@ interface AuthService {
     suspend fun changePassword(oldPassword: String, newPassword: String): Result<Unit>
     fun observeCurrentUser(): Flow<Pengguna?>
     suspend fun initializeSession(): Result<Unit>
+    /**
+     * True when there is no authenticated user, or the current user's session has
+     * been idle past the timeout. Callers that hold protected state (the
+     * navigation graph, [AuthGuard]) poll this while the app is open so an
+     * unattended session is revoked instead of being trusted forever.
+     */
+    suspend fun isSessionExpired(): Boolean
 }

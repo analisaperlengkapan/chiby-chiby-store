@@ -7,7 +7,9 @@ import com.chibychibystore.data.local.entity.Role
 import com.chibychibystore.data.model.Result
 import com.chibychibystore.repository.PenggunaSessionRepository
 import com.chibychibystore.service.impl.AuthServiceImpl
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -166,6 +168,61 @@ class AuthSessionRestoreTest {
 
         assertTrue(result.isFailure)
         assertNull(service.getCurrentUser())
+    }
+
+    // --- idle timeout while the app stays open (CWE-613) --------------------
+
+    @Test
+    fun `isSessionExpired is false for a freshly used session`() = runTest {
+        val session = PenggunaSession(id = 1, userId = activeUser.id, lastActivityTime = Date())
+        whenever(sessionRepository.getActiveSessions()).thenReturn(Result.success(listOf(session)))
+        whenever(penggunaDao.getPenggunaById(activeUser.id)).thenReturn(activeUser)
+        whenever(sessionRepository.getActiveSessionForUser(activeUser.id))
+            .thenReturn(Result.success(session))
+        service.initializeSession()
+
+        assertFalse(service.isSessionExpired())
+    }
+
+    @Test
+    fun `isSessionExpired is true once the stored session passes the timeout`() = runTest {
+        val fresh = PenggunaSession(id = 1, userId = activeUser.id, lastActivityTime = Date())
+        whenever(sessionRepository.getActiveSessions()).thenReturn(Result.success(listOf(fresh)))
+        whenever(penggunaDao.getPenggunaById(activeUser.id)).thenReturn(activeUser)
+        service.initializeSession()
+
+        // The stored row is now stale even though nothing re-read it.
+        val stale = fresh.copy(lastActivityTime = Date(System.currentTimeMillis() - AuthServiceImpl.SESSION_TIMEOUT_MS - 1))
+        whenever(sessionRepository.getActiveSessionForUser(activeUser.id)).thenReturn(Result.success(stale))
+
+        assertTrue(service.isSessionExpired())
+    }
+
+    @Test
+    fun `isSessionExpired is true when there is no session row`() = runTest {
+        whenever(sessionRepository.getActiveSessions()).thenReturn(Result.success(emptyList()))
+        service.initializeSession()
+
+        assertTrue(service.isSessionExpired())
+    }
+
+    @Test
+    fun `observing an expired session revokes it instead of emitting the user`() = runTest {
+        val session = PenggunaSession(id = 1, userId = activeUser.id, lastActivityTime = Date())
+        whenever(sessionRepository.getActiveSessions()).thenReturn(Result.success(listOf(session)))
+        whenever(penggunaDao.getPenggunaById(activeUser.id)).thenReturn(activeUser)
+        service.initializeSession()
+        assertSame(activeUser, service.getCurrentUser())
+
+        whenever(sessionRepository.getActiveSessionForUser(activeUser.id)).thenReturn(
+            Result.success(session.copy(lastActivityTime = Date(System.currentTimeMillis() - AuthServiceImpl.SESSION_TIMEOUT_MS - 1)))
+        )
+
+        val observed = service.observeCurrentUser().first()
+
+        assertNull(observed)
+        assertNull(service.getCurrentUser())
+        verify(sessionRepository).deactivateUserSessions(activeUser.id)
     }
 
     private companion object {

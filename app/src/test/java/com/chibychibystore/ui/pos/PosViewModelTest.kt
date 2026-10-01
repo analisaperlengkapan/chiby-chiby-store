@@ -65,6 +65,7 @@ class PosViewModelTest {
             override suspend fun changePassword(oldPassword: String, newPassword: String) = Result.success(Unit)
             override fun observeCurrentUser() = kotlinx.coroutines.flow.flowOf(null)
             override suspend fun initializeSession() = Result.success(Unit)
+            override suspend fun isSessionExpired() = false
         }
 
         viewModel = PosViewModel(productService, saleService, authService, promoService, pelangganService, warehouseService, stokGudangRepository)
@@ -175,6 +176,7 @@ class PosViewModelTest {
             override suspend fun changePassword(oldPassword: String, newPassword: String) = Result.success(Unit)
             override fun observeCurrentUser() = kotlinx.coroutines.flow.flowOf(null)
             override suspend fun initializeSession() = Result.success(Unit)
+            override suspend fun isSessionExpired() = false
         }
 
         val pelangganService2 = mock<com.chibychibystore.service.PelangganService>()

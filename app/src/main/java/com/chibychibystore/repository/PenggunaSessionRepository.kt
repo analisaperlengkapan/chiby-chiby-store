@@ -28,6 +28,18 @@ class PenggunaSessionRepository @Inject constructor(
     }
 
     /**
+     * The most recently used active session for a user, or null when they have
+     * none. Used to re-check the idle timeout against the stored session.
+     */
+    suspend fun getActiveSessionForUser(userId: Long): Result<PenggunaSession?> {
+        return try {
+            Result.success(penggunaSessionDao.getActiveSessionForUser(userId))
+        } catch (e: Exception) {
+            Result.failure(ChibyChibyException.DatabaseError("getActiveSessionForUser", e))
+        }
+    }
+
+    /**
      * Create new session
      */
     suspend fun createSession(session: PenggunaSession): Result<Long> {

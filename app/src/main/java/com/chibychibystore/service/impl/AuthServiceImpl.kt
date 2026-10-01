@@ -10,6 +10,7 @@ import com.chibychibystore.error.ChibyChibyException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import java.security.MessageDigest
 import com.chibychibystore.data.model.Result
 import javax.inject.Inject
@@ -44,16 +45,26 @@ class AuthServiceImpl @Inject constructor(
                 return Result.failure(ChibyChibyException.AuthenticationError("Akun Anda telah dinonaktifkan. Silakan hubungi admin."))
             }
 
-            currentUser.value = user
-
+            // Persist the session before publishing the user. observeCurrentUser
+            // re-checks the session against the database, so emitting first would
+            // briefly expose a user whose session row does not exist yet — and a
+            // failed insert would leave the caller authenticated with nothing to
+            // expire. The insert is authoritative: no session row, no login.
             val session = PenggunaSession(
                 userId = user.id,
                 loginTime = java.util.Date(),
                 lastActivityTime = java.util.Date(),
                 isActive = true
             )
-            penggunaSessionRepository.createSession(session)
+            val sessionResult = penggunaSessionRepository.createSession(session)
+            if (sessionResult.isFailure) {
+                return Result.failure(
+                    sessionResult.exceptionOrNull()
+                        ?: ChibyChibyException.DatabaseError("login", IllegalStateException("Sesi gagal dibuat"))
+                )
+            }
 
+            currentUser.value = user
             Result.success(user)
 
         } catch (e: Exception) {
@@ -127,7 +138,33 @@ class AuthServiceImpl @Inject constructor(
     }
 
     override fun observeCurrentUser(): Flow<Pengguna?> {
-        return currentUser.asStateFlow()
+        // Re-check the session on every emission. The stored session is the
+        // authority: when the idle timeout has passed (or the row was closed),
+        // the user is revoked here as well as by the caller's periodic poll, so
+        // no consumer of this flow can keep trusting an expired session.
+        return currentUser.asStateFlow().map { user ->
+            if (user == null) {
+                null
+            } else if (isSessionExpired()) {
+                revokeExpiredSession()
+                null
+            } else {
+                user
+            }
+        }
+    }
+
+    override suspend fun isSessionExpired(): Boolean {
+        val user = currentUser.value ?: return true
+        val session = penggunaSessionRepository.getActiveSessionForUser(user.id).getOrNull()
+            ?: return true
+        return System.currentTimeMillis() - session.lastActivityTime.time > SESSION_TIMEOUT_MS
+    }
+
+    /** Clears the in-memory user and closes the persisted session for it. */
+    private suspend fun revokeExpiredSession() {
+        currentUser.value?.let { penggunaSessionRepository.deactivateUserSessions(it.id) }
+        currentUser.value = null
     }
 
     override suspend fun initializeSession(): Result<Unit> {

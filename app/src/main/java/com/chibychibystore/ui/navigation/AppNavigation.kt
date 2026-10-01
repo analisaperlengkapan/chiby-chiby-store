@@ -24,15 +24,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.chibychibystore.service.AuthService
 import com.chibychibystore.ui.components.shared.AppDrawer
 import com.chibychibystore.ui.components.shared.LoadingIndicator
+import com.chibychibystore.ui.components.shared.ScreenTitleTestTag
 
 @Composable
 fun AppNavigation(
@@ -92,6 +95,21 @@ fun AppNavigation(
     val onOpenDrawer = rememberDrawerNavigation(drawerState)
     val currentUser by authService.observeCurrentUser().collectAsState(initial = null)
 
+    // Enforce the idle timeout while the app is open, not only at cold start.
+    // AuthGuard and the drawer gate on observeCurrentUser(), which cannot change
+    // by itself while the app sits untouched, so an unattended device would keep
+    // protected screens mounted forever. Re-check on a timer and revoke the
+    // session (logout) once it lapses; the user flow then emits null and the
+    // graph falls back to the login screen.
+    LaunchedEffect(sessionRestored) {
+        while (sessionRestored) {
+            delay(SESSION_EXPIRY_CHECK_INTERVAL_MS)
+            if (authService.isSessionExpired()) {
+                authService.logout()
+            }
+        }
+    }
+
     // Top-level destinations share one drawer, so a drawer tap pops back to the
     // dashboard hub (saving each screen's state) instead of stacking screens.
     val navigateToRoute: (String) -> Unit = { route ->
@@ -141,9 +159,10 @@ private fun SplashScreen() {
 /**
  * Shown when the session restore failed (e.g. a database error) so the user can
  * retry instead of being dropped on the login form as though they had signed out.
+ * Internal (not private) so the screenshot catalog can render it.
  */
 @Composable
-private fun RestoreFailedScreen(onRetry: () -> Unit) {
+internal fun RestoreFailedScreen(onRetry: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -157,7 +176,8 @@ private fun RestoreFailedScreen(onRetry: () -> Unit) {
         ) {
             Text(
                 text = "Gagal memuat sesi",
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.testTag(ScreenTitleTestTag)
             )
             Text(
                 text = "Terjadi masalah saat memulihkan sesi Anda.",
@@ -206,3 +226,6 @@ fun AppShell(
         content()
     }
 }
+
+/** How often an open app re-checks whether its session has gone idle. */
+private const val SESSION_EXPIRY_CHECK_INTERVAL_MS = 30_000L

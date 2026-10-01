@@ -6,8 +6,8 @@ import com.chibychibystore.data.model.Result
 import com.chibychibystore.error.ChibyChibyException
 import com.chibychibystore.repository.PromotionRepository
 import com.chibychibystore.service.PromoService
+import com.chibychibystore.util.CalendarDates
 import kotlinx.coroutines.flow.first
-import java.util.Calendar
 import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,8 +18,12 @@ class PromoServiceImpl @Inject constructor(
 ) : PromoService {
 
     override suspend fun calculateDiscount(subtotal: Double): Double {
-        // Fetch active promotions for today
-        val promotions = promotionRepository.getActivePromotionsForDate(Date()).first()
+        // Query with the start of the local day, not Date(): the active-promotion
+        // query compares full timestamps, so a "now" boundary would drop a
+        // promotion whose start date is today but whose stored instant is later
+        // today. A local start-of-day keeps the whole local day in range.
+        val dayStart = CalendarDates.startOfLocalDay(Date())
+        val promotions = promotionRepository.getActivePromotionsForDate(dayStart).first()
 
         val applicablePromotions = promotions.filter { promo ->
              subtotal >= promo.minPurchaseAmount
@@ -38,11 +42,12 @@ class PromoServiceImpl @Inject constructor(
     override suspend fun savePromotion(promotion: Promotion): Result<Long> {
         return try {
             validate(promotion)
-            // The date picker returns midnight for the chosen day. Persist the end
-            // date at the end of that day so a promotion ending "today" still
-            // applies for the rest of today instead of expiring at 00:00.
+            // The picker emits UTC midnight of the chosen day. Persist the start
+            // and end at that day's boundaries so the period covers the whole of
+            // the first and last selected days, regardless of the device zone.
             val normalized = promotion.copy(
-                endDate = promotion.endDate?.let { endOfDay(it) }
+                startDate = promotion.startDate?.let { CalendarDates.startOfUtcDay(it) },
+                endDate = promotion.endDate?.let { CalendarDates.endOfUtcDay(it) }
             )
             val id = if (normalized.id == 0L) {
                 promotionRepository.insertPromotion(normalized)
@@ -86,7 +91,7 @@ class PromoServiceImpl @Inject constructor(
             throw ChibyChibyException.ValidationError("maxDiscountAmount", "Maksimal diskon tidak boleh negatif")
         }
         if (promotion.startDate != null && promotion.endDate != null &&
-            endOfDay(promotion.endDate).before(startOfDay(promotion.startDate))
+            CalendarDates.utcDay(promotion.endDate).isBefore(CalendarDates.utcDay(promotion.startDate))
         ) {
             throw ChibyChibyException.ValidationError("endDate", "Tanggal berakhir harus setelah tanggal mulai")
         }
@@ -104,22 +109,4 @@ class PromoServiceImpl @Inject constructor(
 
         return discount
     }
-
-    /** Midnight at the start of [date]'s calendar day. */
-    private fun startOfDay(date: Date): Date = Calendar.getInstance().apply {
-        time = date
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.time
-
-    /** The last millisecond of [date]'s calendar day. */
-    private fun endOfDay(date: Date): Date = Calendar.getInstance().apply {
-        time = date
-        set(Calendar.HOUR_OF_DAY, 23)
-        set(Calendar.MINUTE, 59)
-        set(Calendar.SECOND, 59)
-        set(Calendar.MILLISECOND, 999)
-    }.time
 }

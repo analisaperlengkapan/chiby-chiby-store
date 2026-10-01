@@ -11,6 +11,9 @@ interface PenggunaSessionDao {
     @Query("SELECT * FROM user_sessions WHERE isActive = 1 ORDER BY lastActivityTime DESC")
     suspend fun getActiveSessions(): List<PenggunaSession>
 
+    @Query("SELECT * FROM user_sessions WHERE userId = :userId AND isActive = 1 ORDER BY lastActivityTime DESC LIMIT 1")
+    suspend fun getActiveSessionForUser(userId: Long): PenggunaSession?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSession(session: PenggunaSession): Long
 

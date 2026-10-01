@@ -3,6 +3,7 @@ package com.chibychibystore.service.impl
 import com.chibychibystore.data.local.entity.Promotion
 import com.chibychibystore.data.local.entity.PromotionType
 import com.chibychibystore.repository.PromotionRepository
+import com.chibychibystore.util.CalendarDates
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -15,6 +16,7 @@ import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
+import java.time.LocalDate
 import java.util.Calendar
 import java.util.Date
 
@@ -145,21 +147,18 @@ class PromoServiceImplTest {
     }
 
     @Test
-    fun `savePromotion normalises the end date to the end of its day`() = runTest {
-        // The picker returns midnight; without normalisation a same-day promotion
-        // would be eligible only at that instant.
-        val calendar = Calendar.getInstance().apply {
-            set(2026, Calendar.OCTOBER, 1, 0, 0, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val startOfDay = calendar.time
+    fun `savePromotion normalises a UTC picker day to local day boundaries`() = runTest {
+        // Material's picker reports UTC midnight of the chosen day. Storing that
+        // instant verbatim would put the boundary in the previous local day on a
+        // device west of UTC, so the promotion would never apply on its final day.
+        val pickerDay = CalendarDates.utcDayMarker(LocalDate.of(2026, 10, 1))
         val promo = Promotion(
             name = "Same Day",
             description = "Desc",
             type = PromotionType.PERCENTAGE,
             value = 0.1,
-            startDate = startOfDay,
-            endDate = startOfDay
+            startDate = pickerDay,
+            endDate = pickerDay
         )
         `when`(promotionRepository.insertPromotion(any())).thenReturn(1L)
 
@@ -168,11 +167,49 @@ class PromoServiceImplTest {
         assertTrue(result.isSuccess)
         val saved = org.mockito.kotlin.argumentCaptor<Promotion>()
         verify(promotionRepository).insertPromotion(saved.capture())
-        val endOfDay = Calendar.getInstance().apply {
-            set(2026, Calendar.OCTOBER, 1, 23, 59, 59)
-            set(Calendar.MILLISECOND, 999)
-        }.time
-        assertEquals(endOfDay, saved.firstValue.endDate)
+        assertEquals(CalendarDates.startOfUtcDay(pickerDay), saved.firstValue.startDate)
+        assertEquals(CalendarDates.endOfUtcDay(pickerDay), saved.firstValue.endDate)
+        // The stored period must cover the whole picked day, so the end is strictly
+        // after the day it starts on.
+        assertTrue(saved.firstValue.endDate!!.after(saved.firstValue.startDate!!))
+    }
+
+    @Test
+    fun `savePromotion stores a period that covers the picked local day`() = runTest {
+        // Zone-independent check: whatever the device zone, the stored window
+        // brackets the local calendar day the user picked.
+        val pickerDay = CalendarDates.utcDayMarker(LocalDate.of(2026, 10, 1))
+        val promo = Promotion(
+            name = "Window",
+            description = "Desc",
+            type = PromotionType.FIXED_AMOUNT,
+            value = 5_000.0,
+            startDate = pickerDay,
+            endDate = pickerDay
+        )
+        `when`(promotionRepository.insertPromotion(any())).thenReturn(1L)
+
+        promoService.savePromotion(promo)
+
+        val saved = org.mockito.kotlin.argumentCaptor<Promotion>()
+        verify(promotionRepository).insertPromotion(saved.capture())
+        val stored = saved.firstValue
+        assertEquals(LocalDate.of(2026, 10, 1), CalendarDates.localDay(stored.startDate!!))
+        assertEquals(LocalDate.of(2026, 10, 1), CalendarDates.localDay(stored.endDate!!))
+    }
+
+    @Test
+    fun `calculateDiscount queries from the start of the local day`() = runTest {
+        // A "now" boundary would drop a promotion whose start date is today but
+        // whose stored instant is later today; the query must open the whole day.
+        `when`(promotionRepository.getActivePromotionsForDate(any())).thenReturn(flowOf(emptyList()))
+
+        promoService.calculateDiscount(50_000.0)
+
+        val boundary = org.mockito.kotlin.argumentCaptor<Date>()
+        verify(promotionRepository).getActivePromotionsForDate(boundary.capture())
+        assertEquals(LocalDate.now(), CalendarDates.localDay(boundary.firstValue))
+        assertEquals(CalendarDates.startOfLocalDay(boundary.firstValue), boundary.firstValue)
     }
 
     @Test
