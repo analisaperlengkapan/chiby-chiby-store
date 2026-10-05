@@ -457,13 +457,17 @@ class AuthSessionRestoreTest {
         // Same account logs in again, creating a fresh row.
         svc.login(user.username, "pw")
         assertSame(user, svc.getCurrentUser())
+        val newRowId = dao.getActiveSessionForUser(user.id)!!.id
+        assertTrue("re-login must create a new row, not reuse the idle one", newRowId != sessionId)
 
         dao.deactivateGate = null
         gate.complete(Unit)
         job.join()
 
         assertSame(user, svc.getCurrentUser())
-        assertNotNull("the new login's session must survive", dao.getActiveSessionForUser(user.id))
+        assertFalse("the stale check must close the idle row it decided on", dao.isActive(sessionId))
+        assertTrue("the re-login's fresh row must survive", dao.isActive(newRowId))
+        assertEquals("exactly the re-login's row stays active", newRowId, dao.getActiveSessionForUser(user.id)?.id)
     }
 
     @Test
@@ -548,6 +552,9 @@ private class FakeSessionDao : PenggunaSessionDao {
     var gatedUserId: Long = -1
     var deactivateGate: CompletableDeferred<Unit>? = null
     var gatedDeactivateUserId: Long = -1
+
+    /** Test-only probe: whether the row with [id] still exists and is active. */
+    fun isActive(id: Long): Boolean = sessions.any { it.id == id && it.isActive }
 
     override suspend fun getActiveSessions(): List<PenggunaSession> =
         sessions.filter { it.isActive }.sortedByDescending { it.lastActivityTime }

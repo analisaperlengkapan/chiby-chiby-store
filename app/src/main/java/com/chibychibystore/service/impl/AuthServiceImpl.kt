@@ -216,15 +216,16 @@ class AuthServiceImpl @Inject constructor(
         if (session == null) {
             // Tolerate a transient read failure while the session was verified
             // recently; otherwise the absence is confirmed (or the failure has
-            // outlived the idle window) and the session is revoked.
+            // outlived the idle window) and the session is revoked. There is no
+            // row to close in that case.
             if (sessionResult.isFailure && verifiedRecently()) return true
-            return revokeSession(startedUser, startedRevision)
+            return revokeSession(startedUser, startedRevision, sessionId = null)
         }
 
         if (!stillCurrent(startedUser, startedRevision)) return true
 
         val expired = now() - session.lastActivityTime.time > SESSION_TIMEOUT_MS
-        if (expired) return revokeSession(startedUser, startedRevision)
+        if (expired) return revokeSession(startedUser, startedRevision, sessionId = session.id)
 
         lastVerifiedMillis = now()
         return true
@@ -245,31 +246,32 @@ class AuthServiceImpl @Inject constructor(
         currentUser.value?.id == userId && sessionRevision.get() == revision
 
     /**
-     * Closes at most one stored session and signs the user out — but only if
-     * nothing changed since the check started. Re-reading the row immediately
-     * before deactivating, and re-checking the identity and revision right after,
-     * is what makes this safe: the read yields the row to close (or none, if it
-     * vanished), so a login that lands during the deactivation's suspension is not
-     * confused with the row this check meant to close, and its identity is not
-     * cleared.
+     * Closes the session row that was found idle and signs the user out — but
+     * only if nothing changed since the check started.
      *
-     * Closing a single row rather than every row for the user matters too: a
-     * same-account login creates a fresh row, and it must not be swept away by a
-     * check that predates it.
+     * The caller passes the exact [sessionId] it decided on, so there is no
+     * second read here: a same-account login that lands after that decision
+     * creates a fresh row with a different id, and closing the decided row cannot
+     * touch it. Re-reading "the newest active row" instead would race that login —
+     * the re-read could return the row the login just created and deactivate it.
+     *
+     * A row with [sessionId] `null` means the session was already confirmed
+     * absent (or the read failed past the idle window); there is nothing to
+     * deactivate, only the identity to clear.
+     *
+     * Re-checking the identity and revision *after* the (suspending) deactivate is
+     * what stops a login that completed meanwhile from being signed out: its
+     * identity is left alone and its session row is not cleared.
      *
      * @return true when a newer login (or logout) has superseded this check, so
      *   the caller must not treat the session as revoked; false when the user was
      *   actually signed out.
      */
-    private suspend fun revokeSession(userId: Long, startedRevision: Long): Boolean {
+    private suspend fun revokeSession(userId: Long, startedRevision: Long, sessionId: Long?): Boolean {
         if (!stillCurrent(userId, startedRevision)) return true
 
-        // Which row to close, captured before the (suspending) deactivate. A row
-        // that a concurrent login just replaced is not it.
-        val row = penggunaSessionRepository.getActiveSessionForUser(userId).getOrNull()
-
-        if (row != null) {
-            penggunaSessionRepository.deactivateSession(row.id)
+        if (sessionId != null) {
+            penggunaSessionRepository.deactivateSession(sessionId)
         }
 
         // Re-check after the suspension: if a login/logout happened meanwhile,

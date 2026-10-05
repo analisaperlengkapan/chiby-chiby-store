@@ -114,4 +114,39 @@ class BackupServiceIntegrationTest : BaseTest() {
         assertFalse("Corrupted backup should be invalid", v2.isValid)
 
     }
+
+    @Test
+    fun backupHistory_lists_created_backups() = runBlocking {
+        // Restores the `getBackupHistory` cases the deleted `BackupServiceTest`
+        // covered.
+        val dir = File(File(System.getProperty("java.io.tmpdir"), "chiby-backup-history-${System.nanoTime()}"), "ChibyChibyBackup")
+        dir.mkdirs()
+        backupService.setBackupDirectoryForTest(dir)
+
+        val created = backupService.createBackup()
+        assertTrue("createBackup failed: ${created.exceptionOrNull()}", created.isSuccess)
+
+        val history = backupService.getBackupHistory()
+        assertTrue(history.isSuccess)
+        val files = history.getOrNull()!!
+        assertEquals(1, files.size)
+        assertEquals(created.getOrNull()!!.fileName, files.first().fileName)
+    }
+
+    @Test
+    fun deleteBackup_removes_the_file_and_errors_when_missing() = runBlocking {
+        val dir = File(File(System.getProperty("java.io.tmpdir"), "chiby-backup-delete-${System.nanoTime()}"), "ChibyChibyBackup")
+        dir.mkdirs()
+        backupService.setBackupDirectoryForTest(dir)
+
+        val created = backupService.createBackup().getOrNull()!!
+        val history = backupService.getBackupHistory().getOrNull()!!
+        val backupId = history.first().id
+
+        assertTrue(backupService.deleteBackup(backupId).isSuccess)
+        assertFalse("the file must be gone after delete", File(created.filePath).exists())
+        assertTrue(backupService.getBackupHistory().getOrNull()!!.isEmpty())
+
+        assertTrue("deleting a missing backup must fail", backupService.deleteBackup(backupId).isFailure)
+    }
 }

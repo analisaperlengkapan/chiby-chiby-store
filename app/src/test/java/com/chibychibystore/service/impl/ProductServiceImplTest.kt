@@ -185,4 +185,49 @@ class ProductServiceImplTest {
 
         database.close()
     }
+
+    @Test
+    fun `create update and delete round-trip against a real database`() = runBlocking {
+        // Restores the create/update/delete flow the deleted
+        // `ProductDetailViewModelIntegrationTest` exercised through the ViewModel.
+        val database = Room.inMemoryDatabaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            ChibyChibyDatabase::class.java
+        ).allowMainThreadQueries().build()
+
+        val kategoriId = database.kategoriDao().insertKategori(Kategori(name = "Kat"))
+        val gudangId = database.gudangDao().insertGudang(Gudang(name = "Gudang"))
+
+        val realService = ProductServiceImpl(
+            ProdukRepository(database.produkDao()),
+            StokGudangRepository(database.stokGudangDao(), database.produkDao()),
+            authService
+        )
+
+        val created = realService.createProduk(
+            Produk(
+                name = "NewProd",
+                barcode = "8990001",
+                categoryId = kategoriId,
+                costPrice = 10_000.0,
+                sellingPrice = 15_000.0,
+                stockQuantity = 5,
+                warehouseId = gudangId
+            )
+        ).getOrNull()!!
+        assertEquals(5, created.stockQuantity)
+
+        val updated = realService.updateProduk(created.copy(name = "UpdatedName", sellingPrice = 16_000.0)).getOrNull()!!
+        assertEquals("UpdatedName", updated.name)
+        assertEquals("UpdatedName", database.produkDao().getProdukById(created.id)?.name)
+
+        assertTrue(realService.updateStock(created.id.toString(), 12).isSuccess)
+        assertEquals(12, database.produkDao().getProdukById(created.id)?.stockQuantity)
+        assertEquals(12, database.stokGudangDao().getStock(created.id, gudangId)?.quantity)
+
+        assertTrue(realService.deleteProduk(created.id.toString()).isSuccess)
+        assertTrue(database.produkDao().getProdukById(created.id) == null)
+
+        database.close()
+    }
 }
