@@ -67,6 +67,7 @@ import com.chibychibystore.ui.inventory.WarehouseDetailScreen
 import com.chibychibystore.ui.inventory.WarehouseListScreen
 import com.chibychibystore.ui.inventory.WarehouseUiState
 import com.chibychibystore.ui.inventory.WarehouseViewModel
+import com.chibychibystore.ui.navigation.RestoreFailedScreen
 import com.chibychibystore.ui.pelanggan.PelangganAddEditScreen
 import com.chibychibystore.ui.pelanggan.PelangganListScreen
 import com.chibychibystore.ui.pelanggan.PelangganUiState
@@ -142,6 +143,10 @@ class ScreenshotCatalog(
             whenever(uiState).thenReturn(state(LoginUiState(username = "", password = "")))
         }
         LoginScreen(onLoginSuccess = {}, viewModel = vm)
+    }
+
+    fun captureRestoreFailed() = capture("01b-restore-failed") {
+        RestoreFailedScreen(onRetry = {})
     }
 
     fun captureDashboard() = capture("02-dashboard") {
@@ -656,6 +661,7 @@ class ScreenshotCatalog(
 
     fun captureAll() {
         captureLogin()
+        captureRestoreFailed()
         captureDashboard()
         captureDashboardDrawer()
         captureInventory()

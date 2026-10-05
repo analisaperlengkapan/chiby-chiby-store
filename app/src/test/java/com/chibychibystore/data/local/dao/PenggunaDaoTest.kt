@@ -13,8 +13,11 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import java.util.Date
 
+@RunWith(RobolectricTestRunner::class)
 class PenggunaDaoTest {
 
     private lateinit var database: ChibyChibyDatabase
@@ -25,7 +28,7 @@ class PenggunaDaoTest {
         database = Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext(),
             ChibyChibyDatabase::class.java
-        ).build()
+        ).allowMainThreadQueries().build()
         penggunaDao = database.penggunaDao()
     }
 

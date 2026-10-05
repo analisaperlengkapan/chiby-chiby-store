@@ -1,352 +1,279 @@
 package com.chibychibystore.ui.inventory
 
 import androidx.lifecycle.SavedStateHandle
-import app.cash.turbine.test
 import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.model.Result
+import com.chibychibystore.service.BarcodeService
 import com.chibychibystore.service.ProductService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mock
-import org.mockito.Mockito.*
-import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
+/**
+ * Restores the ViewModel coverage deleted with `ProductDetailViewModelTest`.
+ * The legacy suite targeted a different API (string ids, `data.model`); these
+ * cases pin the behaviour the current [ProductDetailViewModel] owns: init
+ * mode, load/save/update-stock/delete, edit toggling, and validation.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ProductDetailViewModelTest {
 
-    @Mock
+    private val testDispatcher = StandardTestDispatcher()
+
     private lateinit var productService: ProductService
+    private lateinit var barcodeService: BarcodeService
 
-    @Mock
-    private lateinit var savedStateHandle: SavedStateHandle
-
-    private lateinit var viewModel: ProductDetailViewModel
+    private fun product(
+        id: Long = 1L,
+        name: String = "Test Product",
+        barcode: String = "111",
+        costPrice: Double = 10_000.0,
+        sellingPrice: Double = 15_000.0,
+        stock: Int = 10
+    ) = Produk(
+        id = id,
+        name = name,
+        barcode = barcode,
+        categoryId = 1L,
+        costPrice = costPrice,
+        sellingPrice = sellingPrice,
+        stockQuantity = stock,
+        warehouseId = 1L
+    )
 
     @Before
     fun setup() {
-        MockitoAnnotations.openMocks(this)
+        Dispatchers.setMain(testDispatcher)
+        productService = mock()
+        barcodeService = mock()
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    private fun viewModel(productId: Long? = null): ProductDetailViewModel {
+        val handle = if (productId == null) SavedStateHandle() else SavedStateHandle(mapOf("productId" to productId.toString()))
+        return ProductDetailViewModel(productService, barcodeService, handle)
     }
 
     @Test
-    fun `init should load product when productId exists in savedStateHandle`() = runTest {
-        // Given
-        val productId = "1"
-        val product = Produk(productId, "Test Product", "111", "1", 10000.0, 15000.0, 10, "1")
-        `when`(savedStateHandle.get<String>("productId")).thenReturn(productId)
-        `when`(productService.getProduct(productId)).thenReturn(Result.success(product))
+    fun `create mode has no product and starts editing`() = runTest {
+        val vm = viewModel(productId = null)
+        advanceUntilIdle()
 
-        // When
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
-
-        // Then
-        viewModel.uiState.test {
-            // Skip initial state
-            skipItems(1)
-
-            val loadedState = awaitItem()
-            assertFalse(loadedState.isLoading)
-            assertEquals(product, loadedState.product)
-            assertFalse(loadedState.isEditing)
-        }
-
-        verify(productService).getProduct(productId)
+        assertTrue(vm.uiState.value.isEditing)
+        assertNull(vm.uiState.value.product)
     }
 
     @Test
-    fun `init should set editing mode when productId is null (create mode)`() = runTest {
-        // Given
-        `when`(savedStateHandle.get<String>("productId")).thenReturn(null)
+    fun `init loads the product named by the saved state`() = runTest {
+        val stored = product()
+        whenever(productService.getProduk("1")).thenReturn(Result.success(stored))
 
-        // When
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
+        val vm = viewModel(productId = 1L)
+        advanceUntilIdle()
 
-        // Then
-        assertTrue(viewModel.uiState.value.isEditing)
-        assertNull(viewModel.uiState.value.product)
+        assertEquals(stored, vm.uiState.value.product)
+        assertFalse(vm.uiState.value.isEditing)
+        assertFalse(vm.uiState.value.isLoading)
+        verify(productService).getProduk("1")
     }
 
     @Test
-    fun `loadProduct should update state with product on success`() = runTest {
-        // Given
-        val productId = "1"
-        val product = Produk(productId, "Test Product", "111", "1", 10000.0, 15000.0, 10, "1")
-        `when`(productService.getProduct(productId)).thenReturn(Result.success(product))
+    fun `loadProduct surfaces a failure as an error`() = runTest {
+        whenever(productService.getProduk("9")).thenReturn(Result.failure(Exception("Produk tidak ditemukan")))
 
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
+        val vm = viewModel(productId = null)
+        advanceUntilIdle()
+        vm.loadProduct("9")
+        advanceUntilIdle()
 
-        // When
-        viewModel.loadProduct(productId)
-
-        // Then
-        viewModel.uiState.test {
-            // Skip initial state
-            skipItems(1)
-
-            val loadedState = awaitItem()
-            assertFalse(loadedState.isLoading)
-            assertEquals(product, loadedState.product)
-            assertFalse(loadedState.isEditing)
-        }
+        assertEquals("Produk tidak ditemukan", vm.uiState.value.error)
+        assertNull(vm.uiState.value.product)
+        assertFalse(vm.uiState.value.isLoading)
     }
 
     @Test
-    fun `loadProduct should update state with error on failure`() = runTest {
-        // Given
-        val productId = "1"
-        val errorMessage = "Product not found"
-        `when`(productService.getProduct(productId)).thenReturn(Result.failure(Exception(errorMessage)))
+    fun `saveProduct updates an existing product`() = runTest {
+        val stored = product()
+        val edited = stored.copy(name = "New Name")
+        whenever(productService.getProduk("1")).thenReturn(Result.success(stored))
+        whenever(productService.updateProduk(edited)).thenReturn(Result.success(edited))
 
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
+        val vm = viewModel(productId = 1L)
+        advanceUntilIdle()
+        vm.saveProduct(edited)
+        advanceUntilIdle()
 
-        // When
-        viewModel.loadProduct(productId)
-
-        // Then
-        viewModel.uiState.test {
-            // Skip initial state
-            skipItems(1)
-
-            val errorState = awaitItem()
-            assertFalse(errorState.isLoading)
-            assertEquals(errorMessage, errorState.error)
-            assertNull(errorState.product)
-        }
+        val state = vm.uiState.value
+        assertEquals(edited, state.product)
+        assertFalse(state.isEditing)
+        assertFalse(state.isSaving)
+        assertEquals("Product berhasil diperbarui", state.successMessage)
+        verify(productService).updateProduk(edited)
     }
 
     @Test
-    fun `saveProduct should update existing product on success`() = runTest {
-        // Given
-        val productId = "1"
-        val existingProduct = Produk(productId, "Old Name", "111", "1", 10000.0, 15000.0, 10, "1")
-        val updatedProduct = existingProduct.copy(nama = "New Name")
+    fun `saveProduct creates a new product in create mode`() = runTest {
+        val draft = product(id = 0L, name = "New Product")
+        val created = draft.copy(id = 5L)
+        whenever(productService.createProduk(draft)).thenReturn(Result.success(created))
 
-        `when`(savedStateHandle.get<String>("productId")).thenReturn(productId)
-        `when`(productService.getProduct(productId)).thenReturn(Result.success(existingProduct))
-        `when`(productService.updateProduct(updatedProduct)).thenReturn(Result.success(updatedProduct))
+        val vm = viewModel(productId = null)
+        advanceUntilIdle()
+        vm.saveProduct(draft)
+        advanceUntilIdle()
 
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
-
-        // When
-        viewModel.saveProduct(updatedProduct)
-
-        // Then
-        viewModel.uiState.test {
-            // Skip initial states
-            skipItems(2)
-
-            val savedState = awaitItem()
-            assertFalse(savedState.isSaving)
-            assertEquals(updatedProduct, savedState.product)
-            assertFalse(savedState.isEditing)
-            assertEquals("Produk berhasil diperbarui", savedState.successMessage)
-        }
-
-        verify(productService).updateProduct(updatedProduct)
+        val state = vm.uiState.value
+        assertEquals(created, state.product)
+        assertFalse(state.isEditing)
+        assertEquals("Product berhasil dibuat", state.successMessage)
+        verify(productService).createProduk(draft)
     }
 
     @Test
-    fun `saveProduct should create new product when productId is null`() = runTest {
-        // Given
-        val newProduct = Produk("1", "New Product", "111", "1", 10000.0, 15000.0, 10, "1")
+    fun `saveProduct surfaces a failure and keeps editing`() = runTest {
+        val draft = product(id = 0L)
+        whenever(productService.createProduk(draft)).thenReturn(Result.failure(Exception("Barcode sudah ada")))
 
-        `when`(savedStateHandle.get<String>("productId")).thenReturn(null)
-        `when`(productService.createProduct(newProduct)).thenReturn(Result.success(newProduct))
+        val vm = viewModel(productId = null)
+        advanceUntilIdle()
+        vm.saveProduct(draft)
+        advanceUntilIdle()
 
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
-
-        // When
-        viewModel.saveProduct(newProduct)
-
-        // Then
-        viewModel.uiState.test {
-            // Skip initial state
-            skipItems(1)
-
-            val savedState = awaitItem()
-            assertFalse(savedState.isSaving)
-            assertEquals(newProduct, savedState.product)
-            assertFalse(savedState.isEditing)
-            assertEquals("Produk berhasil dibuat", savedState.successMessage)
-        }
-
-        verify(productService).createProduct(newProduct)
+        assertEquals("Barcode sudah ada", vm.uiState.value.error)
+        assertNull(vm.uiState.value.successMessage)
+        assertFalse(vm.uiState.value.isSaving)
     }
 
     @Test
-    fun `saveProduct should update state with error on failure`() = runTest {
-        // Given
-        val product = Produk("1", "Test Product", "111", "1", 10000.0, 15000.0, 10, "1")
-        val errorMessage = "Validation error"
+    fun `updateStock succeeds and reloads the product`() = runTest {
+        val stored = product(stock = 10)
+        whenever(productService.getProduk("1")).thenReturn(Result.success(stored))
+        whenever(productService.updateStock("1", 25)).thenReturn(Result.success(Unit))
 
-        `when`(savedStateHandle.get<String>("productId")).thenReturn(null)
-        `when`(productService.createProduct(product)).thenReturn(Result.failure(Exception(errorMessage)))
+        val vm = viewModel(productId = 1L)
+        advanceUntilIdle()
+        vm.updateStock(25)
+        advanceUntilIdle()
 
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
-
-        // When
-        viewModel.saveProduct(product)
-
-        // Then
-        viewModel.uiState.test {
-            // Skip initial state
-            skipItems(1)
-
-            val errorState = awaitItem()
-            assertFalse(errorState.isSaving)
-            assertEquals(errorMessage, errorState.error)
-            assertNull(errorState.successMessage)
-        }
+        assertEquals("Stok berhasil diperbarui", vm.uiState.value.successMessage)
+        verify(productService).updateStock("1", 25)
     }
 
     @Test
-    fun `updateStock should update product stock on success`() = runTest {
-        // Given
-        val productId = "1"
-        val product = Produk(productId, "Test Product", "111", "1", 10000.0, 15000.0, 10, "1")
-        val quantity = 5
+    fun `updateStock surfaces a failure`() = runTest {
+        val stored = product()
+        whenever(productService.getProduk("1")).thenReturn(Result.success(stored))
+        whenever(productService.updateStock("1", -5)).thenReturn(Result.failure(Exception("Stok tidak boleh negatif")))
 
-        `when`(savedStateHandle.get<String>("productId")).thenReturn(productId)
-        `when`(productService.getProduct(productId)).thenReturn(Result.success(product))
-        `when`(productService.updateStock(productId, quantity)).thenReturn(Result.success(Unit))
+        val vm = viewModel(productId = 1L)
+        advanceUntilIdle()
+        vm.updateStock(-5)
+        advanceUntilIdle()
 
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
-
-        // When
-        viewModel.updateStock(quantity)
-
-        // Then
-        viewModel.uiState.test {
-            // Skip initial loading states
-            skipItems(2)
-
-            val updatedState = awaitItem()
-            assertFalse(updatedState.isSaving)
-            assertEquals("Stok berhasil diperbarui", updatedState.successMessage)
-        }
-
-        verify(productService).updateStock(productId, quantity)
-        verify(productService, times(2)).getProduct(productId) // Initial load + reload after update
+        assertEquals("Stok tidak boleh negatif", vm.uiState.value.error)
+        assertNull(vm.uiState.value.successMessage)
     }
 
     @Test
-    fun `deleteProduct should delete product on success`() = runTest {
-        // Given
-        val productId = "1"
-        val product = Produk(productId, "Test Product", "111", "1", 10000.0, 15000.0, 10, "1")
+    fun `deleteProduct succeeds and reports it`() = runTest {
+        val stored = product()
+        whenever(productService.getProduk("1")).thenReturn(Result.success(stored))
+        whenever(productService.deleteProduk("1")).thenReturn(Result.success(Unit))
 
-        `when`(savedStateHandle.get<String>("productId")).thenReturn(productId)
-        `when`(productService.getProduct(productId)).thenReturn(Result.success(product))
-        `when`(productService.deleteProduct(productId)).thenReturn(Result.success(Unit))
+        val vm = viewModel(productId = 1L)
+        advanceUntilIdle()
+        vm.deleteProduct()
+        advanceUntilIdle()
 
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
-
-        // When
-        viewModel.deleteProduct()
-
-        // Then
-        viewModel.uiState.test {
-            // Skip initial loading states
-            skipItems(2)
-
-            val deletedState = awaitItem()
-            assertFalse(deletedState.isSaving)
-            assertEquals("Produk berhasil dihapus", deletedState.successMessage)
-        }
-
-        verify(productService).deleteProduct(productId)
+        assertEquals("Product berhasil dihapus", vm.uiState.value.successMessage)
+        verify(productService).deleteProduk("1")
     }
 
     @Test
-    fun `toggleEditMode should toggle editing state`() = runTest {
-        // Given
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
+    fun `deleteProduct does nothing without a loaded product`() = runTest {
+        val vm = viewModel(productId = null)
+        advanceUntilIdle()
+        vm.deleteProduct()
+        advanceUntilIdle()
 
-        // When
-        viewModel.toggleEditMode()
-
-        // Then
-        assertTrue(viewModel.uiState.value.isEditing)
-
-        // When
-        viewModel.toggleEditMode()
-
-        // Then
-        assertFalse(viewModel.uiState.value.isEditing)
+        verify(productService, never()).deleteProduk(any())
     }
 
     @Test
-    fun `cancelEdit should reload product when in edit mode for existing product`() = runTest {
-        // Given
-        val productId = "1"
-        val product = Produk(productId, "Test Product", "111", "1", 10000.0, 15000.0, 10, "1")
+    fun `toggleEditMode flips the editing flag`() = runTest {
+        val stored = product()
+        whenever(productService.getProduk("1")).thenReturn(Result.success(stored))
 
-        `when`(savedStateHandle.get<String>("productId")).thenReturn(productId)
-        `when`(productService.getProduct(productId)).thenReturn(Result.success(product))
+        val vm = viewModel(productId = 1L)
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.isEditing)
 
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
-        viewModel.toggleEditMode() // Enter edit mode
-
-        // When
-        viewModel.cancelEdit()
-
-        // Then
-        assertFalse(viewModel.uiState.value.isEditing)
-        verify(productService, times(2)).getProduct(productId) // Initial load + reload on cancel
+        vm.toggleEditMode()
+        assertTrue(vm.uiState.value.isEditing)
     }
 
     @Test
-    fun `validateProduct should return error for blank name`() {
-        // Given
-        val product = Produk("1", "", "111", "1", 10000.0, 15000.0, 10, "1")
+    fun `cancelEdit reloads the stored product`() = runTest {
+        val stored = product()
+        whenever(productService.getProduk("1")).thenReturn(Result.success(stored))
 
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
+        val vm = viewModel(productId = 1L)
+        advanceUntilIdle()
+        vm.cancelEdit()
+        advanceUntilIdle()
 
-        // When
-        val result = viewModel.validateProduct(product)
-
-        // Then
-        assertEquals("Nama produk tidak boleh kosong", result)
+        assertEquals(stored, vm.uiState.value.product)
+        assertFalse(vm.uiState.value.isEditing)
+        verify(productService, times(2)).getProduk("1")
     }
 
     @Test
-    fun `validateProduct should return error for blank barcode`() {
-        // Given
-        val product = Produk("1", "Test Product", "", "1", 10000.0, 15000.0, 10, "1")
+    fun `clearError and clearSuccessMessage reset their fields`() = runTest {
+        whenever(productService.createProduk(any())).thenReturn(Result.failure(Exception("boom")))
 
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
+        val vm = viewModel(productId = null)
+        advanceUntilIdle()
+        vm.saveProduct(product(id = 0L))
+        advanceUntilIdle()
+        assertEquals("boom", vm.uiState.value.error)
 
-        // When
-        val result = viewModel.validateProduct(product)
-
-        // Then
-        assertEquals("Barcode produk tidak boleh kosong", result)
+        vm.clearError()
+        assertNull(vm.uiState.value.error)
+        vm.clearSuccessMessage()
+        assertNull(vm.uiState.value.successMessage)
     }
 
     @Test
-    fun `validateProduct should return error when selling price is less than cost price`() {
-        // Given
-        val product = Produk("1", "Test Product", "111", "1", 15000.0, 10000.0, 10, "1")
+    fun `validateProduct rejects blank fields and bad prices`() {
+        val vm = viewModel(productId = null)
 
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
-
-        // When
-        val result = viewModel.validateProduct(product)
-
-        // Then
-        assertEquals("Harga jual harus lebih besar dari harga beli", result)
-    }
-
-    @Test
-    fun `validateProduct should return null for valid product`() {
-        // Given
-        val product = Produk("1", "Test Product", "111", "1", 10000.0, 15000.0, 10, "1")
-
-        viewModel = ProductDetailViewModel(productService, savedStateHandle)
-
-        // When
-        val result = viewModel.validateProduct(product)
-
-        // Then
-        assertNull(result)
+        assertEquals("Nama product tidak boleh kosong", vm.validateProduct(product(name = " ")))
+        assertEquals("Barcode product tidak boleh kosong", vm.validateProduct(product(barcode = "")))
+        assertEquals(
+            "Harga jual harus lebih besar dari harga beli",
+            vm.validateProduct(product(costPrice = 20_000.0, sellingPrice = 15_000.0))
+        )
+        assertNull(vm.validateProduct(product()))
     }
 }

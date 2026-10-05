@@ -1,138 +1,120 @@
 package com.chibychibystore.ui.inventory
 
-import app.cash.turbine.test
 import com.chibychibystore.data.local.entity.Gudang
 import com.chibychibystore.data.local.entity.Produk
+import com.chibychibystore.data.model.Result
 import com.chibychibystore.service.WarehouseService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mock
-import org.mockito.Mockito.*
-import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class WarehouseViewModelTest {
 
-    @Mock
+    private val testDispatcher = StandardTestDispatcher()
+
     private lateinit var warehouseService: WarehouseService
 
-    private lateinit var viewModel: WarehouseViewModel
-
-    private val sampleWarehouse = Gudang(
-        id = 1,
-        name = "Main Warehouse",
-        location = "Jakarta",
-        capacity = 1000,
-        createdAt = java.util.Date()
-    )
+    private val sampleWarehouse = Gudang(id = 1, name = "Main Warehouse", location = "Jakarta", capacity = 1000)
 
     @Before
     fun setup() {
-        MockitoAnnotations.openMocks(this)
+        Dispatchers.setMain(testDispatcher)
+        warehouseService = mock()
+        whenever(warehouseService.observeGudangs()).thenReturn(flowOf(listOf(sampleWarehouse)))
+        whenever(warehouseService.observeStokGudang(any())).thenReturn(flowOf(emptyList()))
+    }
 
-        // Default mocks
-        `when`(warehouseService.observeGudangs()).thenReturn(flowOf(listOf(sampleWarehouse)))
-        `when`(warehouseService.observeStokGudang(anyLong())).thenReturn(flowOf(emptyList()))
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
-    fun `initial state should load warehouses`() = runTest {
-        viewModel = WarehouseViewModel(warehouseService)
+    fun `initial state loads warehouses`() = runTest {
+        val viewModel = WarehouseViewModel(warehouseService)
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
 
-        viewModel.uiState.test {
-            // Initial loading
-            val item1 = awaitItem()
-            assertTrue(item1.isLoading)
-
-            // Loaded
-            val item2 = awaitItem()
-            assertFalse(item2.isLoading)
-            assertEquals(1, item2.warehouses.size)
-            assertEquals(sampleWarehouse, item2.warehouses[0])
-        }
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertEquals(listOf(sampleWarehouse), state.warehouses)
+        assertNull(state.selectedWarehouse)
     }
 
     @Test
-    fun `selectWarehouse should update selectedWarehouse and load stock`() = runTest {
-        // Given
-        val products = listOf(
-            Produk("1", "Prod1", "111", "1", 1000.0, 2000.0, 10, "1", warehouseId = 1)
-        )
-        `when`(warehouseService.observeStokGudang(1)).thenReturn(flowOf(products))
+    fun `selectWarehouse updates selection and streams its stock`() = runTest {
+        val product = Produk(id = 1, name = "Prod1", barcode = "111", categoryId = 1, costPrice = 1000.0, sellingPrice = 2000.0, stockQuantity = 10, warehouseId = 1)
+        whenever(warehouseService.observeStokGudang(1)).thenReturn(flowOf(listOf(product)))
 
-        viewModel = WarehouseViewModel(warehouseService)
+        val viewModel = WarehouseViewModel(warehouseService)
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
 
-        viewModel.uiState.test {
-            awaitItem() // Initial loading
-            awaitItem() // Loaded warehouses
+        viewModel.selectWarehouse(sampleWarehouse)
+        advanceUntilIdle()
 
-            // When
-            viewModel.selectWarehouse(sampleWarehouse)
-
-            // Then
-            val selectedState = awaitItem()
-            assertEquals(sampleWarehouse, selectedState.selectedWarehouse)
-            assertEquals(products, selectedState.products)
-        }
+        val state = viewModel.uiState.value
+        assertEquals(sampleWarehouse, state.selectedWarehouse)
+        assertEquals(listOf(product), state.products)
     }
 
     @Test
-    fun `createWarehouse should call service and show success message`() = runTest {
-        // Given
-        val newWarehouse = sampleWarehouse.copy(id = 2, name = "New WH")
-        `when`(warehouseService.createWarehouse(any())).thenReturn(Result.success(newWarehouse))
+    fun `createWarehouse delegates to the service and reports success`() = runTest {
+        whenever(warehouseService.createGudang(any())).thenReturn(Result.success(sampleWarehouse.copy(id = 2, name = "New WH")))
 
-        viewModel = WarehouseViewModel(warehouseService)
+        val viewModel = WarehouseViewModel(warehouseService)
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
 
-        // When
         viewModel.createWarehouse("New WH", "Loc", 100)
+        advanceUntilIdle()
 
-        // Then
-        viewModel.uiState.test {
-            // Skip initial emissions
-            val current = awaitItem() // Initial loading
-            // If already loaded, we might see loaded state
-
-            // Wait for success message
-            // Note: Since createWarehouse is a coroutine launch, we need to capture the state update
-            // However, Turbine captures distinct emissions.
-            // The flow might emit loading=true then loading=false + success
-
-            // Let's verify via service call verification mainly
-            verify(warehouseService).createWarehouse(any())
-        }
+        verify(warehouseService).createGudang(any())
+        assertEquals("Gudang 'New WH' berhasil dibuat", viewModel.uiState.value.successMessage)
     }
 
     @Test
-    fun `deleteWarehouse should call service and show success message`() = runTest {
-        // Given
-        `when`(warehouseService.deleteGudang(1)).thenReturn(Result.success(Unit))
+    fun `deleteWarehouse delegates to the service`() = runTest {
+        whenever(warehouseService.deleteGudang(1)).thenReturn(Result.success(Unit))
 
-        viewModel = WarehouseViewModel(warehouseService)
+        val viewModel = WarehouseViewModel(warehouseService)
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
 
-        // When
         viewModel.deleteWarehouse(1)
+        advanceUntilIdle()
 
-        // Then
-        // Verify service called
         verify(warehouseService).deleteGudang(1)
     }
 
     @Test
-    fun `deleteWarehouse failure should show error message`() = runTest {
-        // Given
-        val errorMessage = "Gagal menghapus"
-        `when`(warehouseService.deleteGudang(1)).thenReturn(Result.failure(Exception(errorMessage)))
+    fun `deleteWarehouse failure surfaces the error message`() = runTest {
+        whenever(warehouseService.deleteGudang(1)).thenReturn(Result.failure(Exception("Gagal menghapus")))
 
-        viewModel = WarehouseViewModel(warehouseService)
+        val viewModel = WarehouseViewModel(warehouseService)
+        backgroundScope.launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
 
-        // When
         viewModel.deleteWarehouse(1)
+        advanceUntilIdle()
 
-        // Then
-        verify(warehouseService).deleteGudang(1)
-        // Note: verifying state update requires Turbine on uiState, but simple verify is enough for integration check
+        assertEquals("Gagal menghapus", viewModel.uiState.value.error)
     }
 }

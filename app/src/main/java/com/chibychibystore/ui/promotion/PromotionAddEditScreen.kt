@@ -19,6 +19,7 @@ import com.chibychibystore.data.local.entity.PromotionType
 import com.chibychibystore.ui.components.DatePickerDialog
 import com.chibychibystore.ui.components.shared.AppTopBar
 import com.chibychibystore.ui.components.shared.LoadingIndicator
+import com.chibychibystore.util.CalendarDates
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -31,6 +32,10 @@ fun PromotionAddEditScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
+    // Promotion days are UTC day markers (the picker's convention), so the
+    // formatter must read them in UTC too — otherwise a UTC-7 device shows
+    // "30 Sep" for a promotion the user picked as October 1.
+    dateFormat.timeZone = TimeZone.getTimeZone("UTC")
 
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -72,8 +77,10 @@ fun PromotionAddEditScreen(
                 minPurchaseAmount = promo.minPurchaseAmount.toString()
                 maxDiscountAmount = promo.maxDiscountAmount?.toString() ?: ""
                 isActive = promo.isActive
-                startDate = promo.startDate
-                endDate = promo.endDate
+                // Stored dates are the UTC boundaries of the picked day; read the
+                // day back in UTC so editing and re-saving does not shift it.
+                startDate = promo.startDate?.let { CalendarDates.utcDayMarker(CalendarDates.utcDay(it)) }
+                endDate = promo.endDate?.let { CalendarDates.utcDayMarker(CalendarDates.utcDay(it)) }
                 originalCreatedAt = promo.createdAt
             }
             isLoadingInitial = false
@@ -239,7 +246,9 @@ fun PromotionAddEditScreen(
     if (showStartDatePicker) {
         DatePickerDialog(
             initialDate = startDate,
-            onDateSelected = { startDate = it },
+            // The picker reports UTC midnight; normalise so the stored day is
+            // exactly the day the user tapped on any device zone.
+            onDateSelected = { startDate = CalendarDates.utcDayMarker(CalendarDates.utcDay(it)) },
             onDismiss = { showStartDatePicker = false }
         )
     }
@@ -247,7 +256,7 @@ fun PromotionAddEditScreen(
     if (showEndDatePicker) {
         DatePickerDialog(
             initialDate = endDate,
-            onDateSelected = { endDate = it },
+            onDateSelected = { endDate = CalendarDates.utcDayMarker(CalendarDates.utcDay(it)) },
             onDismiss = { showEndDatePicker = false }
         )
     }

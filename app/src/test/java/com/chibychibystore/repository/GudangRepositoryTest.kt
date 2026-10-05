@@ -112,4 +112,50 @@ class GudangRepositoryTest {
         // Ensure delete is NOT called
         org.mockito.kotlin.verify(gudangDao, org.mockito.kotlin.never()).deleteGudangById(1L)
     }
+
+    // The deleted `WarehouseServiceTest` pinned the warehouse validation rules;
+    // they now live in [GudangRepository], so they are restored here.
+
+    @Test
+    fun `createGudang should reject a blank name`() = runTest {
+        val gudang = Gudang(id = 0L, name = " ", location = "Jakarta", capacity = 20, createdAt = Date())
+
+        val result = repository.createGudang(gudang)
+
+        assertTrue(result.isFailure)
+        org.mockito.kotlin.verify(gudangDao, org.mockito.kotlin.never()).insertGudang(org.mockito.kotlin.any())
+    }
+
+    @Test
+    fun `createGudang should reject a name shorter than two characters`() = runTest {
+        val gudang = Gudang(id = 0L, name = "A", location = "Jakarta", capacity = 20, createdAt = Date())
+
+        val result = repository.createGudang(gudang)
+
+        assertTrue(result.isFailure)
+        org.mockito.kotlin.verify(gudangDao, org.mockito.kotlin.never()).insertGudang(org.mockito.kotlin.any())
+    }
+
+    @Test
+    fun `createGudang should reject a negative capacity`() = runTest {
+        val gudang = Gudang(id = 0L, name = "Gudang Baru", location = "Jakarta", capacity = -1, createdAt = Date())
+
+        val result = repository.createGudang(gudang)
+
+        assertTrue(result.isFailure)
+        org.mockito.kotlin.verify(gudangDao, org.mockito.kotlin.never()).insertGudang(org.mockito.kotlin.any())
+    }
+
+    @Test
+    fun `createGudang should reject a duplicate name`() = runTest {
+        val gudang = Gudang(id = 0L, name = "Gudang Utama", location = "Jakarta", capacity = 20, createdAt = Date())
+        whenever(gudangDao.getGudangByName("Gudang Utama")).thenReturn(
+            Gudang(id = 5L, name = "Gudang Utama", location = "Bandung", capacity = 10, createdAt = Date())
+        )
+
+        val result = repository.createGudang(gudang)
+
+        assertTrue(result.isFailure)
+        org.mockito.kotlin.verify(gudangDao, org.mockito.kotlin.never()).insertGudang(org.mockito.kotlin.any())
+    }
 }

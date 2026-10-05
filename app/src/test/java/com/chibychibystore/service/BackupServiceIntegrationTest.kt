@@ -27,6 +27,18 @@ class BackupServiceIntegrationTest : BaseTest() {
     private lateinit var db: ChibyChibyDatabase
     private lateinit var backupService: BackupServiceImpl
 
+    /** Temp roots registered by [useTempBackupDir], cleaned recursively in teardown. */
+    private val tempBackupDirs = mutableListOf<File>()
+
+    private fun useTempBackupDir(prefix: String): File {
+        val root = File(System.getProperty("java.io.tmpdir"), "$prefix-${System.nanoTime()}")
+        val dir = File(root, "ChibyChibyBackup")
+        dir.mkdirs()
+        tempBackupDirs += root
+        backupService.setBackupDirectoryForTest(dir)
+        return dir
+    }
+
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -66,6 +78,10 @@ class BackupServiceIntegrationTest : BaseTest() {
         } catch (e: Exception) {
             // Some Android Environment methods are not available in the test runtime; ignore cleanup failure
         }
+        // Remove every temp directory a test redirected the service into, so
+        // repeated runs do not accumulate backup artifacts.
+        tempBackupDirs.forEach { root -> root.deleteRecursively() }
+        tempBackupDirs.clear()
         db.close()
     }
 
@@ -113,5 +129,36 @@ class BackupServiceIntegrationTest : BaseTest() {
         val v2 = valRes2.getOrNull()!!
         assertFalse("Corrupted backup should be invalid", v2.isValid)
 
+    }
+
+    @Test
+    fun backupHistory_lists_created_backups() = runBlocking {
+        // Restores the `getBackupHistory` cases the deleted `BackupServiceTest`
+        // covered.
+        useTempBackupDir("chiby-backup-history")
+
+        val created = backupService.createBackup()
+        assertTrue("createBackup failed: ${created.exceptionOrNull()}", created.isSuccess)
+
+        val history = backupService.getBackupHistory()
+        assertTrue(history.isSuccess)
+        val files = history.getOrNull()!!
+        assertEquals(1, files.size)
+        assertEquals(created.getOrNull()!!.fileName, files.first().fileName)
+    }
+
+    @Test
+    fun deleteBackup_removes_the_file_and_errors_when_missing() = runBlocking {
+        useTempBackupDir("chiby-backup-delete")
+
+        val created = backupService.createBackup().getOrNull()!!
+        val history = backupService.getBackupHistory().getOrNull()!!
+        val backupId = history.first().id
+
+        assertTrue(backupService.deleteBackup(backupId).isSuccess)
+        assertFalse("the file must be gone after delete", File(created.filePath).exists())
+        assertTrue(backupService.getBackupHistory().getOrNull()!!.isEmpty())
+
+        assertTrue("deleting a missing backup must fail", backupService.deleteBackup(backupId).isFailure)
     }
 }
