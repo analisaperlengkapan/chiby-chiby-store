@@ -2,6 +2,7 @@ package com.chibychibystore.util
 
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.Date
 
@@ -16,23 +17,29 @@ import java.util.Date
  * calendar date, not on the device zone at save time, so a period means the
  * same day everywhere and never shifts if the device zone later changes.
  *
- * The active-promotion query compares full timestamps, so it must open the day
- * at its *UTC* start (see [startOfUtcDay]) — not a local start-of-day, which on
- * a device west of UTC would fall before the stored boundary and drop the
- * promotion on its final day.
+ * The active-promotion query compares full timestamps against those stored
+ * boundaries, so it must use the day-marker of the device's current **local
+ * calendar date**, not a marker derived from the current UTC instant. Otherwise
+ * at local midnight outside UTC the query opens the wrong calendar day — in
+ * Jakarta an October 1 promotion would start at 07:00 local and stay active
+ * until 07:00 on October 2.
  *
  * The invariant is:
  *
  *  - the day the user picked is the day that is stored and matched, in every
  *    zone and after any later zone change;
- *  - a period stored with [startOfUtcDay] / [endOfUtcDay] brackets a UTC
- *    query boundary from [startOfUtcDay] of the same day.
+ *  - a period stored with [startOfUtcDay] / [endOfUtcDay] brackets the
+ *    day-marker ([utcDayMarker]) of each card date it covers.
  */
 object CalendarDates {
 
     /** The UTC calendar date a picker day-marker stands for. */
     fun utcDay(date: Date): LocalDate =
         Instant.ofEpochMilli(date.time).atZone(ZoneOffset.UTC).toLocalDate()
+
+    /** The local calendar date of an instant, in [zone]. */
+    fun localDate(instant: Date, zone: ZoneId = ZoneId.systemDefault()): LocalDate =
+        instant.toInstant().atZone(zone).toLocalDate()
 
     /** A picker day-marker (UTC midnight) for [day]. */
     fun utcDayMarker(day: LocalDate): Date =

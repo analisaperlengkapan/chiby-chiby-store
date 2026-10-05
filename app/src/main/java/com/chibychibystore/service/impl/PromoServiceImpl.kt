@@ -17,14 +17,21 @@ class PromoServiceImpl @Inject constructor(
     private val promotionRepository: PromotionRepository
 ) : PromoService {
 
+    /**
+     * Wall clock, read through a field so tests can pin "now" and exercise the
+     * local-day boundary without waiting. Production uses [System.currentTimeMillis].
+     */
+    internal var now: () -> Long = System::currentTimeMillis
+
     override suspend fun calculateDiscount(subtotal: Double): Double {
-        // A promotion period is stored as the UTC boundaries of the picked day,
-        // and the query compares full timestamps. Opening the day at its UTC
-        // start matches those boundaries in every device zone; a local
-        // start-of-day would fall before the stored start on a device west of
-        // UTC and drop the promotion on its first and last days.
-        val dayStart = CalendarDates.startOfUtcDay(Date())
-        val promotions = promotionRepository.getActivePromotionsForDate(dayStart).first()
+        // A period is stored as the UTC boundaries of the picked day, and the
+        // list shows those days in UTC. The query therefore has to ask for the
+        // day-marker of the *current local calendar date*: deriving the day from
+        // the current UTC instant would, at local midnight outside UTC, open
+        // yesterday's or tomorrow's marker and apply the wrong day's promotions
+        // (a Jakarta October 1 promotion would miss its first and last hours).
+        val today = CalendarDates.utcDayMarker(CalendarDates.localDate(Date(now())))
+        val promotions = promotionRepository.getActivePromotionsForDate(today).first()
 
         val applicablePromotions = promotions.filter { promo ->
              subtotal >= promo.minPurchaseAmount

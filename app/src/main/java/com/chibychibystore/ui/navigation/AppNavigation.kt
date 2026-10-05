@@ -98,17 +98,20 @@ fun AppNavigation(
     // Enforce the idle timeout while the app is open, not only at cold start.
     // AuthGuard and the drawer gate on observeCurrentUser(), which cannot change
     // by itself while the app sits untouched, so an unattended device would keep
-    // protected screens mounted forever. Re-check on a timer and revoke the
-    // session once it is *confirmed* expired; the user flow then emits null and
-    // the graph falls back to the login screen. An UNKNOWN result (a transient
-    // session-read failure) is deliberately left alone — the next tick retries
-    // instead of signing out a user whose session may still be valid.
+    // protected screens mounted forever. Re-check on a timer; once the session is
+    // *confirmed* idle it is revoked and the user flow emits null, so the graph
+    // falls back to the login screen.
+    //
+    // The service performs the check-and-revoke atomically for the user it
+    // started with. The screen must not poll a status and then call logout()
+    // itself: between those two calls a different user can sign in, and the
+    // logout would then deactivate the *new* user. A transient read failure is
+    // left alone — the next tick retries rather than signing out a user whose
+    // session may still be valid.
     LaunchedEffect(sessionRestored) {
         while (sessionRestored) {
             delay(SESSION_EXPIRY_CHECK_INTERVAL_MS)
-            if (authService.sessionStatus() == AuthService.SessionStatus.EXPIRED) {
-                authService.logout()
-            }
+            authService.enforceIdleTimeout()
         }
     }
 

@@ -274,18 +274,86 @@ class PromoServiceImplTest {
     }
 
     @Test
-    fun `calculateDiscount opens the day at its UTC start`() = runTest {
-        // The query compares full timestamps against UTC-stored boundaries, so a
-        // local start-of-day (which falls before the stored start west of UTC)
-        // would drop the promotion on its first and last days.
+    fun `calculateDiscount queries the day-marker of today's local calendar date in Jakarta`() = runTest {
+        // The finding: at 01:00 local on 1 October in Jakarta the UTC instant is
+        // still 30 September 18:00, so deriving the day from "now" in UTC opened
+        // 30 September and dropped the October 1 promotion until 07:00 local.
         `when`(promotionRepository.getActivePromotionsForDate(any())).thenReturn(flowOf(emptyList()))
 
-        promoService.calculateDiscount(50_000.0)
+        val zone = java.time.ZoneId.of("Asia/Jakarta")
+        withZone(zone) {
+            promoService.now = { localEpoch(2026, 10, 1, 1, 0, zone) }
 
-        val boundary = org.mockito.kotlin.argumentCaptor<Date>()
-        verify(promotionRepository).getActivePromotionsForDate(boundary.capture())
-        assertEquals(CalendarDates.utcDay(Date()), CalendarDates.utcDay(boundary.firstValue))
-        assertEquals(CalendarDates.startOfUtcDay(boundary.firstValue), boundary.firstValue)
+            promoService.calculateDiscount(50_000.0)
+
+            val boundary = org.mockito.kotlin.argumentCaptor<Date>()
+            verify(promotionRepository).getActivePromotionsForDate(boundary.capture())
+            assertEquals(
+                "the query must open the local day, not the UTC day",
+                CalendarDates.utcDayMarker(LocalDate.of(2026, 10, 1)),
+                boundary.firstValue
+            )
+        }
+    }
+
+    @Test
+    fun `calculateDiscount queries the day-marker of today's local calendar date west of UTC`() = runTest {
+        // The symmetric case: at 01:00 local on 1 October in Los Angeles the UTC
+        // instant is 08:00 on 1 October, so a UTC-derived day happens to agree —
+        // but the intended local day is what must be queried and stored.
+        `when`(promotionRepository.getActivePromotionsForDate(any())).thenReturn(flowOf(emptyList()))
+
+        val zone = java.time.ZoneId.of("America/Los_Angeles")
+        withZone(zone) {
+            promoService.now = { localEpoch(2026, 10, 1, 1, 0, zone) }
+
+            promoService.calculateDiscount(50_000.0)
+
+            val boundary = org.mockito.kotlin.argumentCaptor<Date>()
+            verify(promotionRepository).getActivePromotionsForDate(boundary.capture())
+            assertEquals(
+                CalendarDates.utcDayMarker(LocalDate.of(2026, 10, 1)),
+                boundary.firstValue
+            )
+        }
+    }
+
+    @Test
+    fun `a same-day promotion is active for the whole local day in Jakarta`() = runTest {
+        // Save a 1 October period, then query at 01:00 and at 23:00 local on that
+        // day. Both must fall inside the stored window; the old UTC-derived day
+        // missed everything before 07:00 local.
+        val zone = java.time.ZoneId.of("Asia/Jakarta")
+        withZone(zone) {
+            val pickerDay = CalendarDates.utcDayMarker(LocalDate.of(2026, 10, 1))
+            val promo = Promotion(
+                name = "Sehari",
+                description = "Desc",
+                type = PromotionType.FIXED_AMOUNT,
+                value = 5_000.0,
+                startDate = pickerDay,
+                endDate = pickerDay
+            )
+            `when`(promotionRepository.insertPromotion(any())).thenReturn(1L)
+            promoService.savePromotion(promo)
+            val saved = org.mockito.kotlin.argumentCaptor<Promotion>()
+            verify(promotionRepository).insertPromotion(saved.capture())
+            val stored = saved.firstValue
+
+            for (hour in intArrayOf(1, 12, 23)) {
+                val query = CalendarDates.utcDayMarker(
+                    CalendarDates.localDate(Date(localEpoch(2026, 10, 1, hour, 0, zone)))
+                )
+                assertTrue(
+                    "start must not be after the query at ${hour}:00 local",
+                    !stored.startDate!!.after(query)
+                )
+                assertTrue(
+                    "end must not be before the query at ${hour}:00 local",
+                    !stored.endDate!!.before(query)
+                )
+            }
+        }
     }
 
     @Test
@@ -347,5 +415,22 @@ class PromoServiceImplTest {
         val subtotal = 100_000.0
         val discount = promoService.calculateDiscount(subtotal)
         assertEquals(10_000.0, discount, 0.001)
+    }
+
+    private companion object {
+        /** Epoch millis for a wall-clock time in [zone] (for the injected clock). */
+        fun localEpoch(year: Int, month: Int, day: Int, hour: Int, minute: Int, zone: java.time.ZoneId): Long =
+            java.time.LocalDateTime.of(year, month, day, hour, minute).atZone(zone).toInstant().toEpochMilli()
+
+        /** Runs suspending [block] with the JVM default zone set to [zone]. */
+        suspend fun withZone(zone: java.time.ZoneId, block: suspend () -> Unit) {
+            val original = java.util.TimeZone.getDefault()
+            try {
+                java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone(zone))
+                block()
+            } finally {
+                java.util.TimeZone.setDefault(original)
+            }
+        }
     }
 }

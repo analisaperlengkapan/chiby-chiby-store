@@ -55,6 +55,7 @@ class PosViewModelIntegrationTest {
         override suspend fun changePassword(oldPassword: String, newPassword: String) = com.chibychibystore.data.model.Result.success(Unit)
         override fun observeCurrentUser() = kotlinx.coroutines.flow.flowOf(null)
         override suspend fun initializeSession() = com.chibychibystore.data.model.Result.success(Unit)
+        override suspend fun enforceIdleTimeout() = true
     }
 
     @Before

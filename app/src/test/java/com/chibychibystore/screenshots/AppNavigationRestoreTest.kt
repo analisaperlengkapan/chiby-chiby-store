@@ -98,7 +98,7 @@ class AppNavigationRestoreTest {
             if (restoreResult.isSuccess) user.value = restoredUser
             return restoreResult
         }
-        override suspend fun sessionStatus() = AuthService.SessionStatus.VALID
+        override suspend fun enforceIdleTimeout() = true
     }
 
     private fun render(authService: AuthService) {
