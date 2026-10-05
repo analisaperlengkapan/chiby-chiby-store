@@ -27,6 +27,18 @@ class BackupServiceIntegrationTest : BaseTest() {
     private lateinit var db: ChibyChibyDatabase
     private lateinit var backupService: BackupServiceImpl
 
+    /** Temp roots registered by [useTempBackupDir], cleaned recursively in teardown. */
+    private val tempBackupDirs = mutableListOf<File>()
+
+    private fun useTempBackupDir(prefix: String): File {
+        val root = File(System.getProperty("java.io.tmpdir"), "$prefix-${System.nanoTime()}")
+        val dir = File(root, "ChibyChibyBackup")
+        dir.mkdirs()
+        tempBackupDirs += root
+        backupService.setBackupDirectoryForTest(dir)
+        return dir
+    }
+
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -66,6 +78,10 @@ class BackupServiceIntegrationTest : BaseTest() {
         } catch (e: Exception) {
             // Some Android Environment methods are not available in the test runtime; ignore cleanup failure
         }
+        // Remove every temp directory a test redirected the service into, so
+        // repeated runs do not accumulate backup artifacts.
+        tempBackupDirs.forEach { root -> root.deleteRecursively() }
+        tempBackupDirs.clear()
         db.close()
     }
 
@@ -119,9 +135,7 @@ class BackupServiceIntegrationTest : BaseTest() {
     fun backupHistory_lists_created_backups() = runBlocking {
         // Restores the `getBackupHistory` cases the deleted `BackupServiceTest`
         // covered.
-        val dir = File(File(System.getProperty("java.io.tmpdir"), "chiby-backup-history-${System.nanoTime()}"), "ChibyChibyBackup")
-        dir.mkdirs()
-        backupService.setBackupDirectoryForTest(dir)
+        useTempBackupDir("chiby-backup-history")
 
         val created = backupService.createBackup()
         assertTrue("createBackup failed: ${created.exceptionOrNull()}", created.isSuccess)
@@ -135,9 +149,7 @@ class BackupServiceIntegrationTest : BaseTest() {
 
     @Test
     fun deleteBackup_removes_the_file_and_errors_when_missing() = runBlocking {
-        val dir = File(File(System.getProperty("java.io.tmpdir"), "chiby-backup-delete-${System.nanoTime()}"), "ChibyChibyBackup")
-        dir.mkdirs()
-        backupService.setBackupDirectoryForTest(dir)
+        useTempBackupDir("chiby-backup-delete")
 
         val created = backupService.createBackup().getOrNull()!!
         val history = backupService.getBackupHistory().getOrNull()!!
