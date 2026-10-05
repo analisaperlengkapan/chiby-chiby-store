@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flow
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicLong
 import com.chibychibystore.data.model.Result
@@ -90,7 +90,8 @@ class AuthServiceImpl @Inject constructor(
 
             // Establish the in-flight window *before* publishing the user, so a
             // session check for the previous user cannot land in between and
-            // mistake this login for its own.
+            // mistake this login for its own. The newly created session row is
+            // authoritative, so this identity starts verified.
             sessionRevision.incrementAndGet()
             lastVerifiedMillis = now()
             currentUser.value = user
@@ -170,74 +171,111 @@ class AuthServiceImpl @Inject constructor(
     }
 
     override fun observeCurrentUser(): Flow<Pengguna?> {
-        // Re-check the stored session whenever the *identity* changes. A profile
-        // edit (changePassword replaces the object but keeps the id) must not
-        // re-run the check, and a real identity change must. The stored session
-        // is the authority, so the emitted value is whatever the enforced check
-        // left in [currentUser].
-        return currentUser.asStateFlow()
-            .distinctUntilChanged { old, new -> old?.id == new?.id }
-            .map { user ->
-                if (user == null) {
-                    null
-                } else {
-                    enforceIdleTimeout()
-                    currentUser.value
-                }
+        // Every emitted value is re-checked against the stored session, but the
+        // check is keyed by *identity*: a profile edit (changePassword replaces
+        // the user object but keeps the id) is passed straight through without a
+        // second session round-trip, while a real identity change — login as a
+        // different user, or the logout that clears the user — re-runs it. The
+        // stored session is the authority, so what a check leaves in [currentUser]
+        // is what is emitted; when it revokes, the null is emitted too.
+        return flow {
+            val seen = mutableMapOf<Long, Pengguna>()
+            currentUser.asStateFlow().collect { user ->
+                emit(
+                    when {
+                        user == null -> null
+                        seen[user.id] == user -> user
+                        seen.containsKey(user.id) -> user.also { seen[user.id] = it }
+                        else -> {
+                            enforceIdleTimeout()
+                            currentUser.value?.also { if (it.id == user.id) seen[user.id] = it }
+                        }
+                    }
+                )
             }
-            .distinctUntilChanged()
+        }.distinctUntilChanged()
     }
 
     override suspend fun enforceIdleTimeout(): Boolean {
         val user = currentUser.value ?: return false
+        val startedUser = user.id
 
         // Capture the identity this pass is for. A login/logout bumps the
-        // revision; if that happened while the read below was suspended, the
-        // result belongs to a user who is no longer current and must be ignored
-        // — otherwise a slow check for A would sign out the user who logged in
-        // as B in the meantime.
+        // revision; if that happened while a read below is suspended, the result
+        // belongs to a user who is no longer current and must be ignored — a
+        // slow check for A must not sign out B or close a session B just created.
         val startedRevision = sessionRevision.get()
 
-        // A failed read is not an expiry: keep the user signed in and retry on
-        // the next pass. Only a *confirmed* absence or timeout revokes. But if
-        // the session stays unverifiable past the idle timeout, stop defending
-        // it — a sustained database failure must not keep access alive forever.
-        val sessionResult = penggunaSessionRepository.getActiveSessionForUser(user.id)
+        // Confirm the stored session is still present, still this identity, and
+        // still fresh. A failed read is not an expiry: keep the user signed in
+        // and retry — but only while the session was verified recently. A
+        // *successful* read that returns no row is not a failure to decide: the
+        // session is confirmed gone, so revoke even if the last check failed.
+        val sessionResult = penggunaSessionRepository.getActiveSessionForUser(startedUser)
         val session = sessionResult.getOrNull()
         if (session == null) {
-            if (sessionResult.isFailure) {
-                val verifiedAt = lastVerifiedMillis
-                if (verifiedAt != null && now() - verifiedAt > SESSION_TIMEOUT_MS) {
-                    return revokeSession(user.id, startedRevision)
-                }
-            }
-            return true
+            // Tolerate a transient read failure while the session was verified
+            // recently; otherwise the absence is confirmed (or the failure has
+            // outlived the idle window) and the session is revoked.
+            if (sessionResult.isFailure && verifiedRecently()) return true
+            return revokeSession(startedUser, startedRevision)
         }
 
-        if (sessionRevision.get() != startedRevision) return true
+        if (!stillCurrent(startedUser, startedRevision)) return true
 
         val expired = now() - session.lastActivityTime.time > SESSION_TIMEOUT_MS
-        if (expired) return revokeSession(user.id, startedRevision)
+        if (expired) return revokeSession(startedUser, startedRevision)
 
         lastVerifiedMillis = now()
         return true
     }
 
     /**
-     * Closes every stored session for [userId] and signs the user out — but only
-     * if [userId] is still the current user at the revision the check started
-     * under. Both guards matter: the identity check stops a stale check for an
-     * older user from cancelling a newer login, and the revision check stops one
-     * that merely resolved after a logout from tearing down the next login.
+     * True while the session was verified within the idle window. The window is
+     * reset on every login, logout and revocation, so it can never outlive the
+     * identity it was recorded for.
+     */
+    private fun verifiedRecently(): Boolean {
+        val verifiedAt = lastVerifiedMillis ?: return false
+        return now() - verifiedAt <= SESSION_TIMEOUT_MS
+    }
+
+    /** True while [userId] is still the current identity at [revision]. */
+    private fun stillCurrent(userId: Long, revision: Long): Boolean =
+        currentUser.value?.id == userId && sessionRevision.get() == revision
+
+    /**
+     * Closes at most one stored session and signs the user out — but only if
+     * nothing changed since the check started. Re-reading the row immediately
+     * before deactivating, and re-checking the identity and revision right after,
+     * is what makes this safe: the read yields the row to close (or none, if it
+     * vanished), so a login that lands during the deactivation's suspension is not
+     * confused with the row this check meant to close, and its identity is not
+     * cleared.
      *
-     * @return true when the session is considered handled (including the case
-     *   where a newer login superseded this check, so the caller must not act).
+     * Closing a single row rather than every row for the user matters too: a
+     * same-account login creates a fresh row, and it must not be swept away by a
+     * check that predates it.
+     *
+     * @return true when a newer login (or logout) has superseded this check, so
+     *   the caller must not treat the session as revoked; false when the user was
+     *   actually signed out.
      */
     private suspend fun revokeSession(userId: Long, startedRevision: Long): Boolean {
-        if (currentUser.value?.id != userId) return true
-        if (sessionRevision.get() != startedRevision) return true
+        if (!stillCurrent(userId, startedRevision)) return true
 
-        penggunaSessionRepository.deactivateUserSessions(userId)
+        // Which row to close, captured before the (suspending) deactivate. A row
+        // that a concurrent login just replaced is not it.
+        val row = penggunaSessionRepository.getActiveSessionForUser(userId).getOrNull()
+
+        if (row != null) {
+            penggunaSessionRepository.deactivateSession(row.id)
+        }
+
+        // Re-check after the suspension: if a login/logout happened meanwhile,
+        // leave the new identity (and its freshly created session) alone.
+        if (!stillCurrent(userId, startedRevision)) return true
+
         sessionRevision.incrementAndGet()
         lastVerifiedMillis = null
         currentUser.value = null

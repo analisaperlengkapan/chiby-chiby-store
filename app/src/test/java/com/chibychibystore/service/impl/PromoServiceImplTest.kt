@@ -14,6 +14,7 @@ import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
+import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import java.time.LocalDate
@@ -298,23 +299,28 @@ class PromoServiceImplTest {
 
     @Test
     fun `calculateDiscount queries the day-marker of today's local calendar date west of UTC`() = runTest {
-        // The symmetric case: at 01:00 local on 1 October in Los Angeles the UTC
-        // instant is 08:00 on 1 October, so a UTC-derived day happens to agree —
-        // but the intended local day is what must be queried and stored.
+        // 23:00 local on 1 October in Los Angeles is 06:00 UTC on 2 October, so a
+        // UTC-derived day would open 2 October while the device still shows the
+        // 1st — the promotion would be applied a day late. 01:00 local is the
+        // other boundary: it agrees with UTC but must still resolve to the local
+        // day. Both must query 1 October.
         `when`(promotionRepository.getActivePromotionsForDate(any())).thenReturn(flowOf(emptyList()))
 
         val zone = java.time.ZoneId.of("America/Los_Angeles")
         withZone(zone) {
-            promoService.now = { localEpoch(2026, 10, 1, 1, 0, zone) }
+            for (hour in intArrayOf(1, 23)) {
+                promoService.now = { localEpoch(2026, 10, 1, hour, 0, zone) }
 
-            promoService.calculateDiscount(50_000.0)
+                promoService.calculateDiscount(50_000.0)
 
-            val boundary = org.mockito.kotlin.argumentCaptor<Date>()
-            verify(promotionRepository).getActivePromotionsForDate(boundary.capture())
-            assertEquals(
-                CalendarDates.utcDayMarker(LocalDate.of(2026, 10, 1)),
-                boundary.firstValue
-            )
+                val boundary = org.mockito.kotlin.argumentCaptor<Date>()
+                verify(promotionRepository, atLeastOnce()).getActivePromotionsForDate(boundary.capture())
+                assertEquals(
+                    "at ${hour}:00 local the query must open the local day",
+                    CalendarDates.utcDayMarker(LocalDate.of(2026, 10, 1)),
+                    boundary.firstValue
+                )
+            }
         }
     }
 
